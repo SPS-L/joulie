@@ -1,5 +1,9 @@
 # EV Efficiency Tracker
 
+**Author:** [Sustainable Power Systems Lab (SPS-Lab)](https://sps-lab.org/)  
+**License:** MIT  
+**Repository:** https://github.com/SPS-L/EV-android-app
+
 An Android application for recording and analyzing electric vehicle charging efficiency. Track energy consumption, mileage, and efficiency metrics per charge event, with beautiful charts and flexible reporting periods.
 
 ## Features
@@ -18,6 +22,7 @@ An Android application for recording and analyzing electric vehicle charging eff
 ```
 EV-android-app/
 ├── README.md                  # This file
+├── LICENSE                    # MIT License
 ├── DESIGN.md                  # Full product & technical design
 ├── AGENT_INSTRUCTIONS.md      # Step-by-step guide for AI coding agent to build & package APK
 ├── TEST_PLAN.md               # Unit, integration, and UI test descriptions
@@ -47,4 +52,4 @@ EV-android-app/
 
 ## License
 
-MIT
+MIT — © 2026 [Sustainable Power Systems Lab](https://sps-lab.org/)
