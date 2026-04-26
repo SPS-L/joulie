@@ -1,4 +1,4 @@
-# EV Efficiency Tracker — Full Product & Technical Design
+# EV Efficiency Tracker — Full Product & Technical Design (v3)
 
 ## 1. Overview
 
@@ -11,8 +11,9 @@
 **Build system:** Gradle (Kotlin DSL)
 
 ### Core Goals
-- Simple, fast charge-event logging (mileage + kWh)
-- Per-car efficiency statistics over flexible time periods
+- Simple, fast charge-event logging (mileage + kWh + AC/DC + location + optional cost)
+- Per-car efficiency and cost statistics over flexible time periods
+- Multi-metric display (km/kWh, mi/kWh, kWh/100km, cost/km, cost/100km)
 - Local-first; optional Google Drive backup
 - No login required
 - Beautiful Material You charts
@@ -23,24 +24,134 @@
 
 | # | Feature | Notes |
 |---|---------|-------|
-| F1 | Add/edit/delete charge event | mileage (km or mi), kWh, date-time, optional note |
-| F2 | Multi-car management | Add/rename/delete cars; quick switch via Spinner or bottom sheet |
-| F3 | Unit toggle | km ↔ miles; stored in preferences, applied globally |
-| F4 | Statistics dashboard | Last charge, last 7 days, last 30 days, last year, custom range |
-| F5 | Charts | Bar (monthly kWh), Line (efficiency trend), Scatter (kWh vs distance) |
-| F6 | Local SQLite storage | No account needed; data lives in app DB |
-| F7 | Google Drive backup | Optional; toggle in Settings; JSON export per car |
-| F8 | Drive restore | On first activation, pulls all `evtracker_*.json` from Drive app folder |
-| F9 | Data reset | Per-car reset or full reset in Settings |
-| F10 | CSV export | Export charge log for selected car to Downloads |
-| F11 | Dark/Light theme | Material You dynamic colour + manual override |
-| F12 | Custom period analysis | Date-range picker → instant statistics update |
+| F1 | Add/edit/delete charge event | mileage, kWh, AC/DC, location (chip+text), cost (optional), note |
+| F2 | Multi-car management | Add/rename/delete; quick switch via Spinner |
+| F3 | Unit toggle | km ↔ miles; global, display-only conversion |
+| F4 | Currency setting | EUR default; user-selectable |
+| F5 | **First-boot setup wizard** | One-time: primary metric + unit + currency |
+| F6 | Statistics dashboard | Last charge, 7 days, 30 days, year, custom range |
+| F7 | Multi-metric stats cards | km/kWh, mi/kWh, kWh/100km, cost/km, cost/100km (based on preference) |
+| F8 | Charts | Line (efficiency trend AC vs DC), Bar (monthly kWh), Bar (monthly cost), Pie (AC/DC split + location split) |
+| F9 | Dashboard filter chips | All / AC / DC |
+| F10 | Location quick-chips | Home, Work, Public (fixed) + up to 5 custom learned chips |
+| F11 | Local SQLite storage | Room, no account needed |
+| F12 | Google Drive backup | Optional; App Data folder (hidden from Drive UI); restore on first activation |
+| F13 | Data reset | Per-car or global |
+| F14 | CSV export | All fields included, sharing via FileProvider |
+| F15 | Dark/Light/System theme | Material 3 DayNight |
+| F16 | Custom period analysis | Date-range picker (MaterialDatePicker) |
 
 ---
 
-## 3. Data Model
+## 3. First-Boot Setup Wizard
 
-### 3.1 SQLite Tables
+### 3.1 Trigger
+
+Show on first app launch when DataStore key `setupComplete` is `false` (default). After the wizard completes successfully, write `setupComplete = true`. The wizard is **never shown again** unless the user explicitly taps **Reset preferences** in Settings.
+
+In `MainActivity.onCreate()`:
+```kotlin
+lifecycleScope.launch {
+    val complete = prefsDataStore.data.first()[SETUP_COMPLETE] ?: false
+    if (!complete) {
+        findNavController(R.id.nav_host).navigate(R.id.wizardFragment)
+    }
+}
+```
+
+### 3.2 Wizard Screens
+
+Implemented as a `WizardFragment` backed by `ViewPager2` with 3 pages. Back/Next/Finish buttons are in the host fragment, not per-page. Progress dots shown via `TabLayout` or a custom indicator.
+
+---
+
+**Screen 1 of 3 — Welcome**
+
+```
+┌────────────────────────────────┐
+│                                │
+│  ⚡  EV Efficiency Tracker     │
+│                                │
+│  Let's set up your preferences │
+│  — you can change these later  │
+│  in Settings at any time.      │
+│                                │
+│           [Get Started]        │
+│                                │
+└────────────────────────────────┘
+```
+
+---
+
+**Screen 2 of 3 — Efficiency metric & units**
+
+```
+┌────────────────────────────────┐
+│  How do you like to see        │
+│  efficiency?                   │
+│                                │
+│  ◉ km / kWh  (distance/energy) │
+│  ○ kWh / 100 km (energy/dist.) │
+│  ○ mi / kWh  (miles)           │
+│                                │
+│  ─────────────────────         │
+│  Distance unit                 │
+│  [ km ]  [ miles ]  ← toggle   │
+│                                │
+│  [← Back]         [Next →]     │
+└────────────────────────────────┘
+```
+
+Use a `RadioGroup` (or 3 `RadioButton`s) for metric; a `MaterialButtonToggleGroup` for km/miles.
+
+---
+
+**Screen 3 of 3 — Currency**
+
+```
+┌────────────────────────────────┐
+│  What currency do you use      │
+│  for charging costs?           │
+│                                │
+│  [ ▼  EUR — Euro         ]     │
+│                                │
+│  Supported: EUR, USD, GBP,     │
+│  CHF, JPY, CZK, PLN, HUF,     │
+│  DKK, SEK, NOK, AUD, CAD      │
+│                                │
+│  ℹ  Cost entry is optional —  │
+│  leave 0 to skip tracking.     │
+│                                │
+│  [← Back]        [Finish ✓]   │
+└────────────────────────────────┘
+```
+
+Use an `AutoCompleteTextView` (ExposedDropdownMenu) populated from a `string-array` resource.
+
+### 3.3 DataStore Keys (complete list)
+
+| Key | Type | Default | Written by |
+|-----|------|---------|------------|
+| `setupComplete` | Boolean | `false` | Wizard — on Finish |
+| `primaryMetric` | String | `"km_per_kwh"` | Wizard / Settings |
+| `distanceUnit` | String | `"km"` | Wizard / Settings |
+| `currency` | String | `"EUR"` | Wizard / Settings |
+| `activeCarId` | Int | `-1` | Car selector |
+| `driveEnabled` | Boolean | `false` | Settings |
+
+All keys declared as `Preferences.Key<T>` constants in a `PreferenceKeys` object.
+
+### 3.4 Edge Cases
+
+- User kills app mid-wizard → `setupComplete` stays `false`; wizard shown again next launch
+- User taps **Reset preferences** in Settings → set `setupComplete = false`; navigate to wizard
+- Wizard page 2: selecting **mi/kWh** auto-selects **miles** unit (and vice versa for km)
+
+---
+
+## 4. Data Model
+
+### 4.1 SQLite Tables
 
 #### `cars`
 ```sql
@@ -50,363 +161,215 @@ CREATE TABLE cars (
     make        TEXT,
     model       TEXT,
     year        INTEGER,
-    created_at  INTEGER NOT NULL   -- epoch millis
+    battery_kwh REAL,
+    created_at  INTEGER NOT NULL  -- Unix ms
 );
 ```
 
 #### `charge_events`
 ```sql
 CREATE TABLE charge_events (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    car_id      INTEGER NOT NULL REFERENCES cars(id) ON DELETE CASCADE,
-    event_date  INTEGER NOT NULL,   -- epoch millis
-    odometer_km REAL    NOT NULL,   -- always stored in km; displayed in user unit
-    kwh_added   REAL    NOT NULL,
-    note        TEXT,
-    created_at  INTEGER NOT NULL
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    car_id          INTEGER NOT NULL REFERENCES cars(id) ON DELETE CASCADE,
+    event_date      INTEGER NOT NULL,  -- Unix ms
+    odometer_km     REAL    NOT NULL,  -- always stored in km; display converts
+    kwh_added       REAL    NOT NULL,
+    charge_type     TEXT    NOT NULL DEFAULT 'AC',  -- 'AC' | 'DC'
+    cost_total      REAL,        -- NULL if user left cost blank/zero
+    cost_per_kwh    REAL,        -- NULL if user left cost blank/zero
+    currency        TEXT,        -- snapshot of currency at time of entry
+    location        TEXT,        -- free text (chip label or typed)
+    note            TEXT,
+    created_at      INTEGER NOT NULL
 );
 CREATE INDEX idx_ce_car_date ON charge_events(car_id, event_date);
+CREATE INDEX idx_ce_type     ON charge_events(charge_type);
+CREATE INDEX idx_ce_location ON charge_events(location);
 ```
 
-### 3.2 Derived Metrics
+**Cost entry rules:**
 
-| Metric | Formula |
-|--------|--------|
-| Efficiency (km/kWh) | distance_since_last_charge_km / kwh_added |
-| Efficiency (mi/kWh) | efficiency_km_per_kwh × 0.621371 |
-| Energy consumption (kWh/100km) | (kwh_added / distance) × 100 |
-| Average over period | SUM(kwh) / SUM(distance_km) aggregated |
+| User action | `cost_total` stored | `cost_per_kwh` stored |
+|-------------|---------------------|-----------------------|
+| Blank or 0 in either field | `NULL` | `NULL` |
+| Total cost only | `X` | `X / kwh_added` |
+| Price per kWh only | `Y × kwh_added` | `Y` |
+| Both entered | Total takes precedence; per-kWh = total / kWh | |
 
-Distance since last charge = current_odometer − previous_odometer (for same car, ordered by event_date).
+> Events with `cost_total IS NULL` are **excluded** from all cost statistics and cost chart series.
 
-### 3.3 Google Drive Backup Format
-
-File name pattern: `evtracker_<car_id>_<car_name_slug>.json`  
-Stored in Google Drive **App Data folder** (hidden from user's Drive UI, no extra permissions).
-
-```json
-{
-  "version": 1,
-  "car": { "id": 1, "name": "Tesla Model 3", "make": "Tesla", "model": "Model 3", "year": 2023 },
-  "events": [
-    { "id": 1, "event_date": 1714000000000, "odometer_km": 12345.6, "kwh_added": 42.5, "note": "" }
-  ]
-}
+#### `custom_locations`
+```sql
+CREATE TABLE custom_locations (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    label       TEXT    NOT NULL UNIQUE,
+    use_count   INTEGER NOT NULL DEFAULT 1,
+    last_used   INTEGER NOT NULL  -- Unix ms
+);
 ```
+
+Top 5 by `use_count DESC, last_used DESC` are shown as quick chips in the charge form.
+
+### 4.2 Room Database Version History
+
+| Version | Changes |
+|---------|--------|
+| 1 | Initial: `cars`, `charge_events` |
+| 2 | Added `charge_type`, `location`, `note` columns to `charge_events` |
+| 3 | Added `custom_locations` table; added cost columns |
+
+Migration 2→3 must `CREATE TABLE custom_locations …` and `ALTER TABLE charge_events ADD COLUMN cost_total REAL` etc.
 
 ---
 
-## 4. Architecture
+## 5. Architecture
 
 ```
-ui/
-  MainActivity              — single-activity host, NavController
-  cars/
-    CarListFragment         — list + FAB to add car
-    CarEditFragment         — create/edit car form
-  dashboard/
-    DashboardFragment       — stats cards + period selector
-  log/
-    ChargeLogFragment       — RecyclerView of charge events
-    ChargeEditFragment      — add/edit charge event form
-  charts/
-    ChartsFragment          — MPAndroidChart views
-  settings/
-    SettingsFragment        — Drive backup toggle, units, theme, reset
-
-viewmodel/
-  CarsViewModel
-  DashboardViewModel
-  ChargeLogViewModel
-  ChartsViewModel
-  SettingsViewModel
-
-repository/
-  CarRepository
-  ChargeEventRepository
-  BackupRepository          — Drive API calls
-
-data/
-  db/
-    AppDatabase             — Room database
-    CarDao
-    ChargeEventDao
-  model/
-    Car.kt
-    ChargeEvent.kt
-    Stats.kt                — data class for aggregated stats
-  prefs/
-    AppPreferences          — DataStore (units, theme, active car id, drive enabled)
-
-drive/
-  DriveBackupManager        — encapsulates Drive REST calls
-  DriveAuthManager          — Google Sign-In (silent; no UI login needed for Drive app folder)
-
-util/
-  UnitConverter.kt
-  DateUtils.kt
-  CsvExporter.kt
-  Extensions.kt
+┌─────────────────────────────────────────────────────┐
+│  UI Layer (Fragments + ViewModels)                  │
+│  WizardFragment · DashboardFragment                 │
+│  ChargeEditFragment · CarsFragment · SettingsFragment│
+│  ChartsFragment · HistoryFragment                   │
+├─────────────────────────────────────────────────────┤
+│  Repository Layer                                   │
+│  CarRepository · ChargeRepository                  │
+│  LocationRepository · StatsRepository               │
+│  PrefsRepository · DriveRepository                 │
+├─────────────────────────────────────────────────────┤
+│  Data Layer                                        │
+│  Room (CarDao, ChargeEventDao, CustomLocationDao)   │
+│  Preferences DataStore (PreferenceKeys)             │
+│  Drive API (AppDataFolder, JSON backup)             │
+└─────────────────────────────────────────────────────┘
 ```
 
----
+### Key ViewModels
 
-## 5. Navigation Graph
-
-```
-StartDestination: DashboardFragment
-
-DashboardFragment
-  ├── [FAB] → ChargeEditFragment (add)
-  ├── [Row tap] → ChargeEditFragment (edit)
-  ├── [Charts tab] → ChartsFragment
-  ├── [Car name tap] → CarListFragment
-  └── [Settings icon] → SettingsFragment
-
-CarListFragment
-  ├── [FAB] → CarEditFragment (add)
-  └── [Row tap] → CarEditFragment (edit)
-```
+| ViewModel | Owns |
+|-----------|------|
+| `WizardViewModel` | Wizard page state; writes all DataStore keys on finish |
+| `DashboardViewModel` | Active car; period filter; stats StateFlow |
+| `ChargeEditViewModel` | Form state; location chips Flow; cost parsing |
+| `CarsViewModel` | Car list; add/rename/delete |
+| `SettingsViewModel` | Prefs; reset; Drive toggle |
+| `ChartsViewModel` | Chart data for selected period |
 
 ---
 
 ## 6. UI Screens Detail
 
-### 6.1 Dashboard (Main Screen)
+### Dashboard
+- Car spinner top-right (fast switch)
+- Period tabs: Last charge / 7d / 30d / Year / Custom
+- Filter chips row: All · AC · DC
+- **Primary metric card** (large): value derived from `primaryMetric` pref
+- Secondary metric cards (smaller): remaining 2 efficiency metrics
+- Cost summary row (hidden when all `cost_total IS NULL` for that period)
+- "No data yet" empty state with CTA to log first charge
 
-**Top bar:** App name | Car selector (Spinner or chip) | Settings icon
+### Charge Edit
+- Date/time picker (default: now)
+- Odometer input (km or miles label per unit pref)
+- kWh added input
+- AC / DC segmented toggle (`MaterialButtonToggleGroup`)
+- **Location row:**
+  - Fixed chips: 🏠 Home · 💼 Work · ⚡ Public
+  - Top 5 learned custom chips (from `custom_locations`)
+  - `+ Add` chip → focuses free-text field
+  - Tapping any chip fills the text field
+- **Cost section (collapsed by default, tap to expand):**
+  - Toggle: Total cost / Price per kWh
+  - Currency label from pref
+  - Hint: "Leave blank to skip — won't affect statistics"
+- Note field (optional, single line)
+- Save → validates odometer > last entry, persists, updates `custom_locations`
 
-**Stats Cards (horizontal scroll or 2×2 grid):**
-- Last Charge: X km/kWh · Y kWh · Z km
-- Last 7 days: avg efficiency, total kWh, total km, # charges
-- Last 30 days: same
-- This Year: same
-- Custom Period: date-range picker → same card
+### Charts
+- Line chart: efficiency trend over time, AC series (blue) vs DC series (orange)
+- Bar chart: monthly kWh consumed
+- Bar chart: monthly cost (hidden if no cost data)
+- Pie chart: AC vs DC split
+- Pie chart: location distribution
+- All charts use MPAndroidChart; support pinch-zoom and value markers
 
-**Recent Log:** last 5 events in a compact list with swipe-to-delete
-
-**FAB:** ➕ Log Charge
-
-### 6.2 Charts Screen
-
-**Tab bar:** Efficiency Trend | Monthly Energy | Scatter
-
-1. **Efficiency Trend (Line chart):** X = date, Y = km/kWh per charge, rolling 30-day avg line
-2. **Monthly Energy (Bar chart):** X = month, Y = total kWh charged
-3. **Scatter (Scatter chart):** X = kWh added, Y = distance driven
-
-All charts: pinch-zoom, highlight on tap (shows values), legend, dark/light aware colours.
-
-### 6.3 Add/Edit Charge Event Form
-
-Fields:
-- Date & time (DateTimePicker, default = now)
-- Odometer reading (km or mi, based on setting)
-- kWh added
-- Note (optional, single line)
-
-Validation:
-- Odometer must be > previous event's odometer for the same car
-- kWh > 0
-- Real-time error hints below fields
-
-### 6.4 Car Management
-
-- List of cars with make/model/year subtitle
-- Swipe to delete (with confirmation dialog)
-- Active car highlighted
-
-### 6.5 Settings
-
-| Setting | Type | Default |
-|---------|------|---------|
-| Distance unit | Toggle km/miles | km |
-| Theme | Radio: Light / Dark / System | System |
-| Active car | (set from dashboard) | — |
-| Google Drive backup | Switch | Off |
-| Backup now | Button (visible when Drive on) | — |
-| Restore from Drive | Button (visible when Drive on) | — |
-| Export to CSV | Button | — |
-| Reset car data | Destructive button | — |
-| Reset all data | Destructive button | — |
+### Settings
+- Primary efficiency metric (RadioGroup)
+- Distance unit (toggle)
+- Currency (dropdown)
+- Theme: Light / Dark / System
+- **Google Drive backup** (Switch)
+  - On enable: show Drive auth flow; on success pull backup, merge, confirm
+  - Manual backup now button
+  - Last backup timestamp
+- **Manage custom locations** → list with delete swipe
+- **Reset preferences** → re-shows wizard
+- **Reset all data** → confirmation dialog; per-car or global
+- **Export CSV** → share sheet
 
 ---
 
-## 7. Google Drive Integration
+## 7. Derived Metrics Formulas
 
-### 7.1 Auth Flow (no visible login)
+All efficiency uses the **delta odometer** method: subtract previous event's odometer.
 
-- Use **Google Sign-In** with `DriveScopes.APPFOLDER` scope
-- Silent sign-in attempted on app start if Drive is enabled
-- If silent sign-in fails → show one-time consent dialog
-- After consent, all backup operations are background (WorkManager)
+Let `d_km` = odometer delta in km, `e` = kWh added.
 
-### 7.2 Backup Logic
+| Metric | Formula |
+|--------|---------|
+| km/kWh | `d_km / e` |
+| kWh/100km | `(e / d_km) × 100` |
+| mi/kWh | `(d_km × 0.621371) / e` |
+| cost/km | `cost_total / d_km` (NULL if no cost) |
+| cost/100km | `(cost_total / d_km) × 100` (NULL if no cost) |
 
-```
-ON FIRST ENABLE:
-  1. Pull all evtracker_*.json from Drive App Folder
-  2. Merge into local DB (insert new events; skip duplicates by id+date)
-  3. Push current local DB to Drive
+Aggregate stats use weighted averages: `Σ d_km / Σ e` for efficiency, `Σ cost / Σ d_km` for cost rate.
 
-PERIODIC SYNC (daily, WiFi preferred):
-  1. For each car, serialize to JSON
-  2. Overwrite matching file in Drive App Folder
-  
-ON DEMAND ("Backup now"):
-  Same as periodic sync, immediate
-```
-
-### 7.3 Conflict Resolution
-
-Last-write-wins at the event level. Events with the same `id` and `car_id` but different data → Drive version wins during restore.
+First charge event for a car **cannot** compute efficiency (no prior odometer). Show "—" on card.
 
 ---
 
-## 8. Dependencies (build.gradle app)
+## 8. Google Drive Backup
 
-See `app/build.gradle.kts` for the complete, pinned dependency list.
+**Scope:** `https://www.googleapis.com/auth/drive.appdata` (non-sensitive / non-restricted)
 
-Key libraries:
-- **Room 2.6.1** — SQLite ORM
-- **MPAndroidChart v3.1.0** — charts (via JitPack)
-- **Google Play Services Auth 20.7.0** — Drive sign-in
-- **Google Drive API v3** — file backup
-- **WorkManager 2.9.0** — background sync
-- **DataStore 1.0.0** — preferences
-- **Navigation Component 2.7.6** — fragment navigation
-- **Material 3 (1.11.0)** — UI components and theming
+**Location:** App Data folder (hidden from Drive UI; only this app can access it)
 
----
+**File:** `evtracker_backup.json`
 
-## 9. Permissions (AndroidManifest.xml)
-
-```xml
-<uses-permission android:name="android.permission.INTERNET" />
-<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-<!-- No storage permissions needed: Room uses internal storage; Drive uses App Folder -->
+### Backup JSON structure (v3)
+```json
+{
+  "backup_version": 3,
+  "exported_at": "2026-04-26T10:00:00Z",
+  "cars": [ { ...all car fields... } ],
+  "charge_events": [ { ...all charge_event fields... } ],
+  "custom_locations": [ { "label": "Supercharger A6", "use_count": 4 } ]
+}
 ```
 
----
+### Restore flow
+1. User enables Drive in Settings
+2. OAuth consent shown
+3. App fetches `evtracker_backup.json` from App Data folder
+4. If file exists: parse → show "Found backup from [date]. Restore?" dialog
+5. On confirm: clear local DB, import backup, set `driveEnabled = true`
+6. On skip: keep local data, continue with Drive backup enabled going forward
+7. If no file exists: start backup schedule immediately
 
-## 10. Error Handling & Edge Cases
-
-| Case | Handling |
-|------|----------|
-| First charge event for a car | No efficiency computed (no previous odometer); show "First charge — efficiency not yet available" |
-| Drive auth failure | Toast + retry button; local data unaffected |
-| Odometer lower than previous | Validation error on form |
-| Delete car with events | Cascade delete after confirmation dialog |
-| No events in selected period | Empty state illustration + "No charges recorded" |
-| Unit change mid-use | All stored values remain in km; conversion applied at display time only |
-
----
-
-## 11. Theming
-
-- Base: `Theme.Material3.DayNight.NoActionBar`
-- Primary colour: Electric blue `#1565C0`
-- Secondary: Teal `#00796B`
-- Chart palette: `[#1565C0, #00796B, #F57F17, #AD1457, #6A1B9A]`
-- Typography: Roboto (system default)
+### Auto-backup trigger
+- After every successful charge event save (WorkManager `OneTimeWorkRequest`, network NOT required)
 
 ---
 
-## 12. File Structure to Generate
+## 9. Edge Cases
 
-```
-EV-android-app/
-├── README.md
-├── DESIGN.md                        ← this file
-├── AGENT_INSTRUCTIONS.md
-├── TEST_PLAN.md
-├── LICENSE
-├── settings.gradle.kts
-├── build.gradle.kts                 ← project-level
-├── gradle/
-│   └── wrapper/
-│       └── gradle-wrapper.properties
-├── app/
-│   ├── build.gradle.kts             ← app-level
-│   └── src/
-│       ├── main/
-│       │   ├── AndroidManifest.xml
-│       │   ├── java/org/spsl/evtracker/
-│       │   │   ├── MainActivity.kt
-│       │   │   ├── data/
-│       │   │   │   ├── db/
-│       │   │   │   │   ├── AppDatabase.kt
-│       │   │   │   │   ├── CarDao.kt
-│       │   │   │   │   └── ChargeEventDao.kt
-│       │   │   │   ├── model/
-│       │   │   │   │   ├── Car.kt
-│       │   │   │   │   ├── ChargeEvent.kt
-│       │   │   │   │   └── Stats.kt
-│       │   │   │   └── prefs/
-│       │   │   │       └── AppPreferences.kt
-│       │   │   ├── repository/
-│       │   │   │   ├── CarRepository.kt
-│       │   │   │   ├── ChargeEventRepository.kt
-│       │   │   │   └── BackupRepository.kt
-│       │   │   ├── drive/
-│       │   │   │   ├── DriveAuthManager.kt
-│       │   │   │   └── DriveBackupManager.kt
-│       │   │   ├── ui/
-│       │   │   │   ├── cars/
-│       │   │   │   │   ├── CarListFragment.kt
-│       │   │   │   │   └── CarEditFragment.kt
-│       │   │   │   ├── dashboard/
-│       │   │   │   │   └── DashboardFragment.kt
-│       │   │   │   ├── log/
-│       │   │   │   │   ├── ChargeLogFragment.kt
-│       │   │   │   │   └── ChargeEditFragment.kt
-│       │   │   │   ├── charts/
-│       │   │   │   │   └── ChartsFragment.kt
-│       │   │   │   └── settings/
-│       │   │   │       └── SettingsFragment.kt
-│       │   │   ├── viewmodel/
-│       │   │   │   ├── CarsViewModel.kt
-│       │   │   │   ├── DashboardViewModel.kt
-│       │   │   │   ├── ChargeLogViewModel.kt
-│       │   │   │   ├── ChartsViewModel.kt
-│       │   │   │   └── SettingsViewModel.kt
-│       │   │   └── util/
-│       │   │       ├── UnitConverter.kt
-│       │   │       ├── DateUtils.kt
-│       │   │       ├── CsvExporter.kt
-│       │   │       └── Extensions.kt
-│       │   └── res/
-│       │       ├── layout/
-│       │       │   ├── activity_main.xml
-│       │       │   ├── fragment_dashboard.xml
-│       │       │   ├── fragment_charge_log.xml
-│       │       │   ├── fragment_charge_edit.xml
-│       │       │   ├── fragment_charts.xml
-│       │       │   ├── fragment_car_list.xml
-│       │       │   ├── fragment_car_edit.xml
-│       │       │   ├── fragment_settings.xml
-│       │       │   ├── item_charge_event.xml
-│       │       │   ├── item_car.xml
-│       │       │   └── card_stats.xml
-│       │       ├── navigation/
-│       │       │   └── nav_graph.xml
-│       │       ├── menu/
-│       │       │   └── bottom_nav_menu.xml
-│       │       ├── values/
-│       │       │   ├── strings.xml
-│       │       │   ├── colors.xml
-│       │       │   └── themes.xml
-│       │       ├── values-night/
-│       │       │   └── themes.xml
-│       │       └── drawable/
-│       │           └── ic_launcher_foreground.xml
-│       ├── test/
-│       │   └── java/org/spsl/evtracker/
-│       │       ├── UnitConverterTest.kt
-│       │       ├── StatsCalculatorTest.kt
-│       │       └── ChargeEventDaoTest.kt
-│       └── androidTest/
-│           └── java/org/spsl/evtracker/
-│               ├── DashboardFragmentTest.kt
-│               └── ChargeEditFragmentTest.kt
-```
+| Scenario | Handling |
+|----------|----------|
+| Cost = 0 | Stored as NULL; excluded from cost stats |
+| First event for car | Efficiency = "—"; distance delta = 0 |
+| Odometer regression | Validation error: "Odometer must be greater than previous entry" |
+| Wizard killed mid-flow | `setupComplete` stays false; wizard re-shown on next launch |
+| Custom locations > 5 | Only top 5 shown as chips; all accessible via Manage Locations |
+| Unit change | Never rewrites stored km values; all display conversions are in-memory |
+| Drive backup fails | Silent retry via WorkManager; show last-backup timestamp in Settings |
+| DB migration fails | Destructive fallback with user warning |

@@ -4,85 +4,54 @@
 **License:** MIT  
 **Repository:** https://github.com/SPS-L/EV-android-app
 
-An Android application for recording and analyzing electric vehicle charging efficiency. Track energy consumption, mileage, and efficiency metrics per charge event, with beautiful charts and flexible reporting periods.
+An Android app for recording and analyzing electric vehicle charging efficiency and cost. Log mileage, kWh added, AC/DC charge type, location, and optional cost after each charge. View multi-metric statistics over any period with rich charts and an optional Google Drive backup.
+
+---
 
 ## Features
 
-- **Multi-car support** — add multiple EVs and switch between them easily
-- **Per-charge logging** — record mileage (km or miles) and energy added (kWh) after each charging session
-- **Efficiency statistics** — last charge, 7-day, monthly, yearly, and custom period views
-- **Rich charts** — bar, line, and scatter plots via MPAndroidChart
-- **Local-first storage** — all data stored locally in SQLite via Room; no account needed
-- **Google Drive backup** — optional; pulls all existing data on first activation, then syncs incrementally
-- **Reset & export** — full data reset per car or global; CSV export available
-- **Dark/Light theme** — Material 3 adaptive theming
+- **First-boot setup wizard** — one-time preference setup (efficiency metric, distance unit, currency)
+- **Per-charge logging** — mileage, kWh, AC/DC toggle, location quick-chips + free text, optional cost
+- **Smart cost handling** — cost left at 0 or blank is stored as NULL and excluded from all statistics
+- **Multi-metric dashboard** — km/kWh, mi/kWh, kWh/100km, cost/km, cost/100km
+- **Location quick-chips** — fixed: 🏠 Home · 💼 Work · ⚡ Public; plus top 5 learned custom labels
+- **AC vs DC tracking** — separate chart series and filter chips for AC and DC charges
+- **Multi-car support** — add any number of cars; switch via top spinner
+- **Custom period analysis** — date-range picker for any arbitrary period
+- **Google Drive backup** — optional; uses hidden App Data folder; auto-backup after each charge
+- **CSV export** — share all data via Android share sheet
+- **Material You theming** — Light / Dark / System, electric blue + teal palette
 
-## Repository Layout
+---
 
-```
-EV-android-app/
-├── README.md                         # This file
-├── LICENSE                           # MIT License
-├── DESIGN.md                         # Full product & technical design
-├── AGENT_INSTRUCTIONS.md             # Step-by-step guide for AI coding agent to build & package APK
-├── TEST_PLAN.md                      # Unit, integration, and UI test descriptions
-├── settings.gradle.kts
-├── build.gradle.kts                  # Project-level Gradle config
-├── gradle/wrapper/
-│   └── gradle-wrapper.properties
-└── app/
-    ├── build.gradle.kts              # App-level Gradle config
-    └── src/
-        ├── main/
-        │   ├── AndroidManifest.xml
-        │   ├── java/org/spsl/evtracker/   # Source stubs (see AGENT_INSTRUCTIONS.md)
-        │   └── res/
-        │       ├── layout/               # XML layout stubs
-        │       ├── navigation/           # Nav graph
-        │       ├── values/               # strings, colors, themes
-        │       ├── xml/                  # file_paths for FileProvider
-        │       └── drawable/
-        ├── test/                         # Unit + Room integration tests
-        └── androidTest/                  # Espresso UI tests
-```
+## Documentation
 
-## Quick Start (Developer)
+| File | Purpose |
+|------|---------|
+| `DESIGN.md` | Canonical product + technical design spec (v3) |
+| `GOOGLE_CLOUD_SETUP.md` | Drive API OAuth client setup instructions |
+| `AGENT_INSTRUCTIONS.md` | AI agent implementation steps — phase 1 (project scaffold, DB, basic UI) |
+| `AGENT_INSTRUCTIONS_V2.md` | AI agent implementation steps — phase 2 (charts, Drive backup, CSV) |
+| `AGENT_INSTRUCTIONS_V3.md` | AI agent implementation steps — phase 3 (wizard, location chips, cost rule) |
+| `TEST_PLAN.md` | Test specification — phase 1 |
+| `TEST_PLAN_V2.md` | Test specification — phase 2 |
+| `TEST_PLAN_V3.md` | Test specification — phase 3 |
 
-1. Clone the repo: `git clone git@github.com:SPS-L/EV-android-app.git`
-2. Open in Android Studio Iguana (2023.2.1) or later
-3. Sync Gradle
-4. Run on emulator (API 26+) or physical device
+---
 
-## Build APK
+## Build
 
 ```bash
+git clone https://github.com/SPS-L/EV-android-app.git
+cd EV-android-app
 ./gradlew assembleDebug
-# Output: app/build/outputs/apk/debug/app-debug.apk
+# APK: app/build/outputs/apk/debug/app-debug.apk
 ```
 
-## AI Agent Build
+Requires JDK 17 and Android SDK with Build Tools 34.
 
-See `AGENT_INSTRUCTIONS.md` for the complete step-by-step implementation guide targeting an AI coding agent.
+---
 
-## Tests
+## Google Drive Setup
 
-```bash
-./gradlew test                  # unit tests
-./gradlew connectedAndroidTest  # instrumented tests (device/emulator required)
-```
-
-See `TEST_PLAN.md` for full test descriptions.
-
-## Architecture
-
-- **MVVM** with ViewModels exposing StateFlow/LiveData
-- **Room** (SQLite) for local persistence
-- **DataStore** for preferences
-- **Navigation Component** (single-activity, multiple fragments)
-- **MPAndroidChart** for charts
-- **Google Drive App Folder** for optional backup (no visible Drive storage used)
-- **WorkManager** for background sync
-
-## License
-
-MIT — © 2026 [Sustainable Power Systems Lab](https://sps-lab.org/)
+See `GOOGLE_CLOUD_SETUP.md` for step-by-step instructions to enable the Drive API, create an OAuth 2.0 Android client, and add the SHA-1 fingerprint of your debug keystore.

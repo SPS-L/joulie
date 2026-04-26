@@ -1,47 +1,72 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">EV Tracker</string>
-    <string name="nav_dashboard">Dashboard</string>
-    <string name="nav_log">Charges</string>
-    <string name="nav_charts">Charts</string>
-    <string name="add_charge">Log Charge</string>
-    <string name="odometer">Odometer</string>
-    <string name="kwh_added">kWh Added</string>
-    <string name="note">Note (optional)</string>
-    <string name="save">Save</string>
-    <string name="cancel">Cancel</string>
-    <string name="delete">Delete</string>
-    <string name="last_charge">Last Charge</string>
-    <string name="last_7_days">Last 7 Days</string>
-    <string name="last_30_days">Last 30 Days</string>
-    <string name="this_year">This Year</string>
-    <string name="custom_period">Custom Period</string>
-    <string name="no_charges">No charges recorded yet</string>
-    <string name="efficiency_fmt">%.1f km/kWh</string>
-    <string name="efficiency_mi_fmt">%.1f mi/kWh</string>
-    <string name="select_period">Select Period</string>
-    <string name="add_car">Add Car</string>
-    <string name="car_name">Car name</string>
-    <string name="make">Make</string>
-    <string name="model">Model</string>
-    <string name="year">Year</string>
-    <string name="settings">Settings</string>
-    <string name="distance_unit">Distance Unit</string>
-    <string name="theme">Theme</string>
-    <string name="google_drive_backup">Google Drive Backup</string>
-    <string name="backup_now">Backup Now</string>
-    <string name="restore_from_drive">Restore from Drive</string>
-    <string name="export_csv">Export to CSV</string>
-    <string name="reset_car_data">Reset Car Data</string>
-    <string name="reset_all_data">Reset All Data</string>
+
+    <!-- Wizard -->
+    <string name="wizard_welcome_title">⚡ EV Efficiency Tracker</string>
+    <string name="wizard_welcome_body">Let\u2019s set up your preferences \u2014 you can change these later in Settings at any time.</string>
+    <string name="wizard_metric_title">How do you like to see efficiency?</string>
+    <string name="wizard_metric_km_kwh">km / kWh</string>
+    <string name="wizard_metric_kwh_100km">kWh / 100 km</string>
+    <string name="wizard_metric_mi_kwh">mi / kWh</string>
+    <string name="wizard_unit_label">Distance unit</string>
+    <string name="wizard_unit_km">km</string>
+    <string name="wizard_unit_miles">miles</string>
+    <string name="wizard_currency_title">What currency do you use for charging costs?</string>
+    <string name="wizard_currency_hint">Cost entry is optional \u2014 leave 0 to skip tracking.</string>
+    <string name="wizard_btn_get_started">Get Started</string>
+    <string name="wizard_btn_next">Next \u2192</string>
+    <string name="wizard_btn_back">\u2190 Back</string>
+    <string name="wizard_btn_finish">Finish \u2713</string>
+
+    <!-- Location chips -->
+    <string name="location_chip_home">\uD83C\uDFE0 Home</string>
+    <string name="location_chip_work">\uD83D\uDCBC Work</string>
+    <string name="location_chip_public">\u26A1 Public</string>
+    <string name="location_chip_add">+ Add</string>
+
+    <!-- Cost form -->
+    <string name="cost_hint_zero">Leave 0 or blank to skip \u2014 won\u2019t be counted in statistics</string>
+    <string name="cost_toggle_total">Total cost</string>
+    <string name="cost_toggle_per_kwh">Price per kWh</string>
+
+    <!-- Settings -->
+    <string name="pref_primary_metric">Primary efficiency metric</string>
+    <string name="pref_distance_unit">Distance unit</string>
+    <string name="pref_currency">Currency</string>
+    <string name="pref_theme">Theme</string>
+    <string name="pref_drive_backup">Google Drive backup</string>
+    <string name="pref_manage_locations">Manage custom locations</string>
+    <string name="pref_reset_preferences">Reset preferences</string>
+    <string name="pref_reset_data">Reset all data</string>
+    <string name="pref_export_csv">Export CSV</string>
+
+    <!-- Dashboard -->
+    <string name="period_last_charge">Last charge</string>
+    <string name="period_7d">7 days</string>
+    <string name="period_30d">30 days</string>
+    <string name="period_year">Year</string>
+    <string name="period_custom">Custom</string>
+    <string name="filter_all">All</string>
+    <string name="filter_ac">AC</string>
+    <string name="filter_dc">DC</string>
+    <string name="empty_state_title">No charges yet</string>
+    <string name="empty_state_body">Tap + to log your first charge</string>
+
+    <!-- Cars -->
+    <string name="add_car">Add car</string>
+    <string name="car_name_hint">Car name (e.g. Tesla Model 3)</string>
+
+    <!-- Drive -->
+    <string name="drive_found_backup">Found backup from %s. Restore?</string>
+    <string name="drive_restore">Restore</string>
+    <string name="drive_skip">Skip</string>
+    <string name="drive_last_backup">Last backup: %s</string>
+    <string name="drive_backup_now">Back up now</string>
+
+    <!-- Misc -->
     <string name="confirm_reset">This will permanently delete all data. Continue?</string>
-    <string name="km">km</string>
-    <string name="miles">miles</string>
-    <string name="first_charge_hint">First charge — efficiency available after next charge</string>
-    <string name="chart_efficiency_trend">Efficiency Trend</string>
-    <string name="chart_monthly_energy">Monthly Energy</string>
-    <string name="chart_scatter">kWh vs Distance</string>
-    <string name="backup_success">Backup successful</string>
-    <string name="restore_success">Restore successful</string>
-    <string name="drive_auth_failed">Drive authentication failed. Please try again.</string>
+    <string name="reset_per_car">Reset this car</string>
+    <string name="reset_all">Reset all cars</string>
+    <string name="efficiency_not_available">\u2014</string>
 </resources>
