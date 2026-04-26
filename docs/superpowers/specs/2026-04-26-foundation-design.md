@@ -14,7 +14,7 @@ The work has been decomposed into 6 sub-projects, each with its own spec/plan/im
 
 | # | Sub-project | What ships |
 |---|---|---|
-| **A** | **Foundation** *(this spec)* | Hilt + Application + DataStore + Nav graph + 8 Fragment skeletons + functional Wizard + MainActivity gate + remove `google-services.json`. Builds and launches. |
+| **A** | **Foundation** *(this spec)* | Hilt + Application + DataStore + Nav graph + 8 Fragment skeletons + functional Wizard + MainActivity gate. Builds and launches. |
 | B | Data layer | Room v3 entities/DAOs/migrations + repositories + Migration tests. |
 | C | Domain core | `StatsCalculator`, `CostParser`, `UnitConverter`, `DateRangeResolver`, `BackupSerializer` + their use cases. |
 | D | Core UI | Dashboard, ChargeEdit, Cars, History — the daily-use loop. |
@@ -35,8 +35,7 @@ This document covers **A only**.
 - Wizard finish persists `setupComplete=true`, `primaryMetric`, `distanceUnit`, `currency` to DataStore atomically before navigating.
 - `MainActivity` reads `setupComplete` at launch and routes to wizard or dashboard accordingly, with no UI flash on first launch.
 - Theme preference is read at launch and applied via `AppCompatDelegate`. Default `"system"` means this is a no-op until Sub-project F adds a Settings switch.
-- `SettingsRepository` exposes Flow accessors and writers for the 5 keys A actually uses (`setupComplete`, `primaryMetric`, `distanceUnit`, `currency`, `theme`).
-- Cleanup: delete `app/google-services.json` from the working tree.
+- `PreferenceKeys.kt` declares the **full canonical key set** (all 7 keys) so later sub-projects extend a stable contract rather than fork it. `SettingsRepository` only exposes Flow accessors and writers for the 5 keys A actually uses; B and E each add a Flow + writer for their key (`activeCarId`, `driveEnabled`) as a one-line repository extension when their feature lands.
 
 ### 2.2 Out of scope (deferred to later sub-projects)
 
@@ -49,7 +48,7 @@ This document covers **A only**.
 | Real UI for Dashboard, ChargeEdit, Cars, History | D |
 | Drive auth, backup serialization, BackupScheduler, restore flow | E |
 | Settings screen, Charts, CSV export, Manage Locations | F |
-| `activeCarId` and `driveEnabled` DataStore keys | B (activeCarId), E (driveEnabled) |
+| `activeCarId` / `driveEnabled` Flow accessors and writers in `SettingsRepository` | B (activeCarId), E (driveEnabled). The keys themselves are declared in `PreferenceKeys.kt` in A. |
 | The Settings → Reset preferences action | F (when Settings UI lands). The gate already supports it; F just flips the flag. |
 
 ### 2.3 Acceptance criteria
@@ -232,7 +231,7 @@ object AppModule {
 
 ## 7. SettingsRepository contract
 
-`PreferenceKeys.kt` declares only the 5 keys this sub-project uses:
+`PreferenceKeys.kt` declares the **full canonical key set** (all 7 keys from `DESIGN.md §3.3`), even though A only reads/writes 5 of them. This keeps the canonical preferences contract in one place from day 1; later sub-projects consume keys without ever editing this file.
 
 ```kotlin
 object PreferenceKeys {
@@ -240,11 +239,13 @@ object PreferenceKeys {
     val PRIMARY_METRIC = stringPreferencesKey("primaryMetric")
     val DISTANCE_UNIT  = stringPreferencesKey("distanceUnit")
     val CURRENCY       = stringPreferencesKey("currency")
+    val ACTIVE_CAR_ID  = intPreferencesKey("activeCarId")     // consumed by B
+    val DRIVE_ENABLED  = booleanPreferencesKey("driveEnabled") // consumed by E
     val THEME          = stringPreferencesKey("theme")
 }
 ```
 
-`activeCarId` and `driveEnabled` are deliberately not declared yet. B and E add them as one-line additions when their feature lands.
+`SettingsRepository` only exposes Flow + writer methods for the 5 keys A actually uses (below). B and E each add a Flow + writer for their key as a one-line repository extension at the time their feature lands.
 
 ```kotlin
 @Singleton
@@ -339,8 +340,16 @@ Only one action is wired in A:
 
 ### 10.1 Architecture
 
-- `WizardFragment` is the host — owns `ViewPager2`, the progress dots (a `TabLayout` mediated against the pager), and the Back / Next / Finish buttons.
-- The 3 page Fragments (`WizardPage1Fragment` … `WizardPage3Fragment`) share the parent's `WizardViewModel` via `activityViewModels()`.
+- `WizardFragment` is the host — owns `ViewPager2`, the progress dots (a `TabLayout` mediated against the pager), and the Back / Next / Finish buttons. `WizardFragment` owns the `WizardViewModel` via the standard `by viewModels()` delegate.
+- The 3 page Fragments (`WizardPage1Fragment` … `WizardPage3Fragment`) are `@AndroidEntryPoint` and share the host's `WizardViewModel` by scoping to the parent fragment's `ViewModelStore`:
+
+  ```kotlin
+  private val viewModel: WizardViewModel by viewModels(
+      ownerProducer = { requireParentFragment() }
+  )
+  ```
+
+  This is **not** `activityViewModels()`. Activity-scoped state would survive the wizard being popped and would re-appear with stale values if the user later triggers Settings → Reset preferences (Sub-project F). Parent-fragment scoping ties the VM lifecycle to `WizardFragment`: when the wizard destination is removed by the `popUpToInclusive=true` action, the host fragment is destroyed and its `ViewModelStore` is cleared. The next time the wizard is opened, page state, metric, unit, and currency are all back to defaults.
 - `viewPager.isUserInputEnabled = false` — page changes happen only through the host buttons. This avoids the user swiping past a partially-filled page.
 - `WizardPagerAdapter : FragmentStateAdapter` returns the 3 page fragments by position.
 
@@ -456,7 +465,12 @@ Runs against a debug APK on an emulator (API 26+).
 | `firstLaunch_showsWizard` | Clear app data, launch | WizardFragment page 1 visible, no Dashboard flash |
 | `completedSetup_skipsWizard` | Pre-seed DataStore with `setupComplete=true`, launch | DashboardFragment placeholder visible directly |
 | `finishWizard_landsOnDashboard` | First launch, walk through 3 pages, press Finish | DashboardFragment visible; back press exits app (does not return to wizard) |
-| `killMidWizard_reShowsWizard` | First launch, advance to page 2 in the ViewPager, then kill the app process *before* tapping Finish; relaunch | Wizard re-appears at page 1 on next launch (`setupComplete` was never written) |
+
+We deliberately do **not** include a "force-stop the app process mid-wizard" instrumented test. Force-stopping the target package routinely tears down the instrumentation runner with it on Android, which makes the test flaky-to-non-implementable for reasons unrelated to product behavior. The property that test would assert — *if `finish()` was never called, `setupComplete` is still `false` and the next launch re-shows the wizard* — is already covered by:
+
+- `WizardViewModelTest.finish_writesAllPrefs` (only `finish()` writes `SETUP_COMPLETE`)
+- `SettingsRepositoryTest.completeSetup_writesAllFourKeysAtomically` (the four wizard keys land in one `edit{}`, not piecemeal as the user advances pages)
+- `WizardFlowTest.firstLaunch_showsWizard` (gate routes to wizard whenever `setupComplete=false`, regardless of how the flag came to be `false`)
 
 Tests use `HiltTestApplication` and a custom test runner. `app/src/androidTest/java/org/spsl/evtracker/HiltTestRunner.kt` extends `AndroidJUnitRunner` and overrides `newApplication` to return `HiltTestApplication`. The runner is registered in `app/build.gradle.kts`:
 
@@ -468,9 +482,9 @@ testInstrumentationRunner = "org.spsl.evtracker.HiltTestRunner"
 
 ## 12. Cleanup actions
 
-- `rm app/google-services.json` (already gitignored; not tracked; delete from working tree). Every doc states the project does not use Firebase or `google-services` plugin; the file's presence on disk creates ambiguity.
+No source-tree cleanup is required for Sub-project A. Existing manifest, themes, colors, strings, and `file_paths.xml` are correct as-is.
 
-No other cleanup. Existing manifest, themes, colors, strings, and `file_paths.xml` are correct as-is.
+The `app/google-services.json` file present on some developer machines is already gitignored (`.gitignore:16-20`) and the project never references it (no `google-services` Gradle plugin, no Firebase SDK). Whether it exists locally is the developer's choice and outside the scope of this sub-project. The repo policy is "do not depend on it, do not commit it" — both already hold.
 
 ---
 
@@ -478,6 +492,6 @@ No other cleanup. Existing manifest, themes, colors, strings, and `file_paths.xm
 
 - **`runBlocking` at app launch.** Used twice: once for theme in `EVTrackerApp.onCreate`, once for `setupComplete` in `MainActivity.onCreate`. Both are single-key DataStore reads; expected total cost is single-digit milliseconds. SplashScreen API hides any visible delay. If profiling later shows this matters, theme can move to a Flow-collected lifecycle observer and the gate can use a conditional start destination via the splash-keep-on-screen condition.
 - **Hilt + KSP.** Hilt-via-KSP has been GA since Hilt 2.48. We pin to 2.50. If we hit a known-issue around generated `Hilt_*` classes during incremental builds, the fallback is moving Hilt to kapt while leaving Room on KSP — both processors can coexist.
-- **`activeCarId` / `driveEnabled` deferred.** Tests in B and E will need to add their preference key + Flow + writer at the same time as the feature. This is a one-line addition each; not a refactor.
+- **`activeCarId` / `driveEnabled` deferred.** The keys themselves ship in A's `PreferenceKeys.kt`, so the canonical contract is intact. B and E each add a one-line Flow + a one-line writer to `SettingsRepository` when their feature lands; not a refactor.
 - **Reset preferences action.** `SettingsRepository.resetSetupComplete()` exists in A but isn't called by any UI yet. F wires the Settings entry. The function is shipped now because it's trivially testable and keeps the repo's public surface stable.
 - **Wizard gate edge case — DataStore I/O failure.** If the DataStore read throws (e.g., disk corruption), `runBlocking` will rethrow and crash the app at launch. This matches Android's default behavior for unrecoverable storage failures and is acceptable for A. A graceful fallback (assume `setupComplete=false`, log and continue) can be added in F if telemetry shows it.
