@@ -480,6 +480,20 @@ Room runtime, room-ktx, and room-compiler (KSP) are already declared in `app/bui
 
 ### 10.1 Instrumented (in-memory Room)
 
+> **Important pattern — Room does not mutate the entity's `id` field on insert.**
+>
+> `CarDao.insert(car)` returns the new rowId as a `Long`. The `car` instance you passed in still has its original `id = 0`. Tests that subsequently call `delete(car)`, query `car.id`, or use `carA.id` as a foreign key MUST capture the returned rowId and use it explicitly:
+>
+> ```kotlin
+> val rowId = carDao.insert(CarEntity(name = "Test")).toInt()
+> val saved = carDao.getById(rowId)!!         // either fetch the persisted row…
+> // …or reconstruct: val saved = original.copy(id = rowId)
+> carDao.delete(saved)                         // now deletes the right row
+> chargeEventDao.insert(ChargeEventEntity(carId = rowId, …))  // valid FK
+> ```
+>
+> The same applies at the repository layer (`CarRepository.insert` and `ChargeEventRepository.insert` return `Long` rowIds; tests must capture and convert to `Int`). Each test description below assumes this pattern is in use.
+
 Standard pattern for all 4 DAO + migration test classes:
 
 ```kotlin
@@ -537,12 +551,12 @@ Each test: build a v1 DB via raw `SupportSQLiteOpenHelper`, insert representativ
 
 #### `CarRepositoryTest` (1 case)
 
-- `deleteCar_cascadesEvents_throughRepository` — insert car + 3 events via `CarRepository.insert` and `ChargeEventRepository.insert`; call `CarRepository.delete(car)`; `ChargeEventRepository.observeForCar(carId).first()` is empty. Verifies the FK cascade fires through the repo path, not just at the SQL level.
+- `deleteCar_cascadesEvents_throughRepository` — `val carId = carRepository.insert(CarEntity(name = "T")).toInt()` (capture the rowId; the original local has `id = 0`). Insert 3 `ChargeEventEntity(carId = carId, …)`. Then `carRepository.delete(carRepository.getById(carId)!!)`. Assert `chargeEventRepository.observeForCar(carId).first()` is empty. Verifies the FK cascade fires through the repo path, not just at the SQL level.
 
 #### `ChargeEventRepositoryTest` (2 cases)
 
-- `observeForCar_emitsOnlyForGivenCar` — insert 2 cars + 3 events for car A + 2 events for car B; `observeForCar(carA.id).first()` returns 3.
-- `getInRange_excludesOutOfRange` — insert 4 events spanning 60 days; `getInRange(carId, t-30d, t)` returns events ≥ t-30d.
+- `observeForCar_emitsOnlyForGivenCar` — `val carAId = carRepository.insert(CarEntity(name = "A")).toInt()` and `val carBId = carRepository.insert(CarEntity(name = "B")).toInt()`. Insert 3 events with `carId = carAId` and 2 events with `carId = carBId` via `chargeEventRepository.insert(...)`. Assert `chargeEventRepository.observeForCar(carAId).first()` has size 3 and `observeForCar(carBId).first()` has size 2.
+- `getInRange_excludesOutOfRange` — `val carId = carRepository.insert(CarEntity(name = "C")).toInt()`. Insert 4 events at `eventDate` values spanning 60 days. Assert `chargeEventRepository.getInRange(carId, t - 30 * MILLIS_PER_DAY, t)` returns the events with `eventDate >= t - 30d`.
 
 #### `LocationRepositoryTest` (1 case)
 
