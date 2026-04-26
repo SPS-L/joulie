@@ -284,7 +284,7 @@ class SettingsRepository @Inject constructor(
 
 ## 8. MainActivity wizard gate
 
-The naive `lifecycleScope.launch { … if (!complete) navigate(…) }` pattern would render the dashboard for one frame before redirecting. Instead, set the nav graph's start destination *before* binding it to the controller:
+The naive `lifecycleScope.launch { … if (!complete) navigate(…) }` pattern would render the dashboard for one frame before redirecting. Instead, follow the documented Android "modify inflated navigation graphs" pattern: the XML graph declares its real default start destination (`dashboardFragment`), `MainActivity` inflates the graph, *overrides* the start destination only when the wizard gate fires, and *then* binds the graph to the controller:
 
 ```kotlin
 @AndroidEntryPoint
@@ -302,9 +302,9 @@ class MainActivity : AppCompatActivity() {
         val graph = navController.navInflater.inflate(R.navigation.nav_graph)
 
         val complete = runBlocking { settingsRepository.setupComplete.first() }
-        graph.setStartDestination(
-            if (complete) R.id.dashboardFragment else R.id.wizardFragment
-        )
+        if (!complete) {
+            graph.setStartDestination(R.id.wizardFragment)
+        }
         navController.graph = graph
 
         splash.setKeepOnScreenCondition { false }
@@ -312,13 +312,15 @@ class MainActivity : AppCompatActivity() {
 }
 ```
 
-`activity_main.xml` is a `FragmentContainerView` with `android:id="@+id/nav_host_fragment"`, `android:name="androidx.navigation.fragment.NavHostFragment"`, and `app:defaultNavHost="true"`. The graph file does **not** declare a `startDestination` attribute — it's set programmatically.
+`activity_main.xml` is a `FragmentContainerView` with `android:id="@+id/nav_host_fragment"`, `android:name="androidx.navigation.fragment.NavHostFragment"`, and `app:defaultNavHost="true"`. The graph keeps a real `app:startDestination` so it stays a valid, inflatable resource (Studio's nav editor renders it; lint validates it; tests that load the graph standalone don't break). The override only runs when needed.
 
 ---
 
 ## 9. Nav graph
 
 `res/navigation/nav_graph.xml` declares 8 destinations: `wizardFragment`, `dashboardFragment`, `chargeEditFragment`, `carsFragment`, `settingsFragment`, `chartsFragment`, `historyFragment`, `manageLocationsFragment`.
+
+The graph declares `app:startDestination="@id/dashboardFragment"` — the steady-state landing screen used by every launch *after* first-time setup. `MainActivity` overrides this to `wizardFragment` only on first launch (see §8). Keeping a real `startDestination` in XML keeps the resource valid for Studio's nav editor, lint, and any test that loads the graph in isolation.
 
 Only one action is wired in A:
 
