@@ -7,7 +7,11 @@ import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import org.spsl.evtracker.R
 import org.spsl.evtracker.databinding.FragmentWizardPage3Binding
 
@@ -40,9 +44,18 @@ class WizardPage3Fragment : Fragment() {
             currencies
         )
         binding.wizardPage3CurrencyInput.setAdapter(adapter)
-        binding.wizardPage3CurrencyInput.setText(viewModel.state.value.currency, false)
         binding.wizardPage3CurrencyInput.setOnItemClickListener { _, _, position, _ ->
             viewModel.selectCurrency(currencies[position])
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.state.collect { state ->
+                    if (binding.wizardPage3CurrencyInput.text.toString() != state.currency) {
+                        binding.wizardPage3CurrencyInput.setText(state.currency, false)
+                    }
+                }
+            }
         }
     }
 

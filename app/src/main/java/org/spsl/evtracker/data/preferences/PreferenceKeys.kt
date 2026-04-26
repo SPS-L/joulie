@@ -9,6 +9,7 @@ object PreferenceKeys {
     val PRIMARY_METRIC = stringPreferencesKey("primaryMetric")
     val DISTANCE_UNIT  = stringPreferencesKey("distanceUnit")
     val CURRENCY       = stringPreferencesKey("currency")
+    /** Sentinel value `-1` means no car selected (DataStore default when key absent). */
     val ACTIVE_CAR_ID  = intPreferencesKey("activeCarId")     // consumed by Sub-project B
     val DRIVE_ENABLED  = booleanPreferencesKey("driveEnabled") // consumed by Sub-project E
     val THEME          = stringPreferencesKey("theme")
