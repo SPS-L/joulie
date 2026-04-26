@@ -197,6 +197,8 @@ Uses `TestCoroutineDispatcher` + in-memory Room.
 
 Uses `androidx.work:work-testing` for WorkManager plus fakes for `BackupRepository`, `BackupScheduler`, and Drive auth.
 
+For real-device Drive auth and backup verification, complete the external OAuth setup in `GOOGLE_CLOUD_SETUP.md` first. That is a test prerequisite, not a product-design issue.
+
 | Test | Description |
 |------|-------------|
 | `backupWorker_enqueuedAfterChargeSave` | Save a ChargeEvent; assert exactly one unique work `drive_backup` is enqueued with `NetworkType.CONNECTED` and exponential backoff |

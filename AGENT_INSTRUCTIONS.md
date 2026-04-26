@@ -70,6 +70,17 @@ Preferred dependency setup: **Hilt**.
 
 Do not scatter object construction across Fragments or ViewModels.
 
+### 2.1 Navigation scaffold
+
+Create the Navigation Component files and IDs before implementing Fragment logic.
+
+- Add `app/src/main/res/navigation/nav_graph.xml`.
+- Define destinations for `wizardFragment`, `dashboardFragment`, `chargeEditFragment`, `carsFragment`, `settingsFragment`, `chartsFragment`, `historyFragment`, and `manageLocationsFragment`.
+- Add navigation actions that are already referenced elsewhere in the docs, such as `action_wizard_to_dashboard`.
+- Wire the host container in the activity layout using a stable ID such as `nav_host_fragment` and keep that ID consistent with `MainActivity` navigation calls.
+
+This should be created alongside the first Fragment so references like `R.id.wizardFragment` and `R.id.nav_host_fragment` are real from the start.
+
 ---
 
 ## Step 3 — Implement Core Models And Data Sources
@@ -299,7 +310,33 @@ class CostParser {
 }
 ```
 
-Also create `UnitConverter.kt`, `DateRangeResolver.kt`, and `BackupSerializer.kt` as pure Kotlin helpers.
+**DateRangeResolver.kt**
+
+```kotlin
+data class DateRange(val startMillis: Long, val endMillis: Long)
+
+class DateRangeResolver {
+    fun resolve(period: DashboardPeriod, nowMillis: Long = System.currentTimeMillis()): DateRange {
+        // convert SincePreviousCharge / 7d / 30d / Year / Custom into an inclusive epoch-millis range
+    }
+}
+```
+
+**BackupSerializer.kt**
+
+```kotlin
+class BackupSerializer {
+    fun toJson(data: BackupData): String {
+        // serialize using the authoritative v3 schema from DESIGN.md §8
+    }
+
+    fun fromJson(json: String): BackupData {
+        // deserialize and validate backup_version before returning BackupData
+    }
+}
+```
+
+Also create `UnitConverter.kt` as a pure Kotlin helper.
 
 ### 5.2 Use cases (`domain/usecase/`)
 
@@ -390,25 +427,43 @@ Do not inject Room DAOs directly into ViewModels.
 `WizardViewModel` should talk to `SettingsRepository`, not raw DataStore. Finishing the wizard must be a suspendable completion path so persistence finishes before navigation.
 
 ```kotlin
+data class WizardUiState(
+    val selectedMetric: String = "km_per_kwh",
+    val selectedUnit: String = "km",
+    val selectedCurrency: String = "EUR"
+)
+
 @HiltViewModel
 class WizardViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository
 ) : ViewModel() {
-    var selectedMetric by mutableStateOf("km_per_kwh")
-    var selectedUnit by mutableStateOf("km")
-    var selectedCurrency by mutableStateOf("EUR")
+    private val _uiState = MutableStateFlow(WizardUiState())
+    val uiState: StateFlow<WizardUiState> = _uiState.asStateFlow()
+
+    fun updateMetric(metric: String) {
+        _uiState.update { it.copy(selectedMetric = metric) }
+    }
+
+    fun updateUnit(unit: String) {
+        _uiState.update { it.copy(selectedUnit = unit) }
+    }
+
+    fun updateCurrency(currency: String) {
+        _uiState.update { it.copy(selectedCurrency = currency) }
+    }
 
     suspend fun finish() {
+        val state = uiState.value
         settingsRepository.completeSetup(
-            metric = selectedMetric,
-            unit = selectedUnit,
-            currency = selectedCurrency
+            metric = state.selectedMetric,
+            unit = state.selectedUnit,
+            currency = state.selectedCurrency
         )
     }
 }
 ```
 
-In `WizardFragment`, call `finish()` from a coroutine and navigate only after it completes.
+In `WizardFragment`, collect `uiState`, render the selected values into the View-based widgets, and call `finish()` from a coroutine before navigating.
 
 ### 6.3 Screen implementation notes
 
