@@ -50,7 +50,7 @@ Sub-projects D (Dashboard/ChargeEdit/Cars/History UI), E (Drive auth + real back
 |---|---|
 | Real Drive backup or restore I/O | E (replaces `NoOpBackupScheduler`/`NoOpBackupRepository` bindings) |
 | `DriveAuthManager` and Google Drive client wiring | E |
-| `SettingsRepository.driveEnabled` Flow accessor | E (only consumed by E's scheduler/UI) |
+| `SettingsRepository.driveEnabled` *Flow accessor* (read-side) | E — consumed only by E's real scheduler and F's Settings UI. C ships only the *writer* (`setDriveEnabled`) because `RestoreBackupUseCase` must set the flag post-restore per `DESIGN.md §8`. |
 | Dashboard, ChargeEdit, Cars, History ViewModels and UI | D |
 | MPAndroidChart wiring (charts UI) | F (consumes `StatsCalculator.computeMonthlyBuckets` shipped now) |
 | Settings screen, Manage Locations screen | F |
@@ -59,7 +59,7 @@ Sub-projects D (Dashboard/ChargeEdit/Cars/History UI), E (Drive auth + real back
 ### 2.3 Acceptance criteria
 
 1. `./gradlew assembleDebug` succeeds.
-2. `./gradlew test` passes — JVM count grows from 14 (A+B) to **61** (47 new JVM tests across 11 new test classes).
+2. `./gradlew test` passes — JVM count grows from 14 (A+B) to **64** (50 new JVM tests across 11 new test classes).
 3. `./gradlew connectedDebugAndroidTest` is **expected** to pass on a connected emulator (compile-only verification in this development environment) — 25 instrumented tests total (3 from A's `WizardFlowTest` + 22 from B; C adds none).
 4. Manual smoke: app still launches, wizard gate still works, dashboard placeholder still appears post-wizard. No-op backup wiring is invisible to users (no-op `enqueueBackup` does nothing; `readRemoteBackup` returns null).
 
@@ -86,6 +86,7 @@ app/src/main/java/org/spsl/evtracker/
       LocationReader.kt                          interface
       LocationWriter.kt                          interface
       SettingsReader.kt                          interface
+      SettingsWriter.kt                          interface (NEW — setActiveCarId, setDriveEnabled)
     backup/
       BackupScheduler.kt                         interface
       BackupRepository.kt                        interface
@@ -116,7 +117,7 @@ Plus B-side modifications:
 | `data/repository/CarRepository.kt` | Append `: CarReader` to class declaration. No method changes — `observeAll` and `getById` are already present and match the interface. |
 | `data/repository/ChargeEventRepository.kt` | Append `: ChargeEventQueries, ChargeEventWriter`. |
 | `data/repository/LocationRepository.kt` | Append `: LocationReader, LocationWriter`. |
-| `data/repository/SettingsRepository.kt` | Append `: SettingsReader`. |
+| `data/repository/SettingsRepository.kt` | Append `: SettingsReader, SettingsWriter`. Add `suspend fun setDriveEnabled(enabled: Boolean) { dataStore.edit { it[PreferenceKeys.DRIVE_ENABLED] = enabled } }` (mirrors the `setActiveCarId` pattern from B Task 13; the `DRIVE_ENABLED` key was declared in A's `PreferenceKeys`). |
 | `data/local/dao/CarDao.kt` | Add `@Query("DELETE FROM cars") suspend fun deleteAll()`. |
 | `data/local/dao/ChargeEventDao.kt` | Add `@Query("DELETE FROM charge_events") suspend fun deleteAll()`. |
 | `data/local/dao/CustomLocationDao.kt` | Add `@Query("DELETE FROM custom_locations") abstract suspend fun deleteAll()`. |
@@ -170,9 +171,17 @@ interface SettingsReader {
     val distanceUnit: Flow<String>
     val currency: Flow<String>
 }
+
+// SettingsWriter.kt
+interface SettingsWriter {
+    suspend fun setActiveCarId(id: Int)            // already implemented in SettingsRepository (B Task 13)
+    suspend fun setDriveEnabled(enabled: Boolean)  // NEW in C; required by RestoreBackupUseCase
+}
 ```
 
 **`SettingsReader` deliberately omits `setupComplete` and `theme`.** Those are the wizard's and F's theme switcher's concerns — no use case in C reads them. D/E/F can extend `SettingsReader` (or add narrower interfaces) as they need new fields.
+
+**`SettingsWriter` exposes `setDriveEnabled` even though no current C-or-earlier code reads `driveEnabled`.** `RestoreBackupUseCase` MUST set the flag to `true` after a successful restore or after detecting no remote backup, per `DESIGN.md §8` (restore flow steps 5.4 / 6 / 7). Without this writer, the use case can't honor the restore contract.
 
 B's repository class declarations get one-line modifications:
 
@@ -205,7 +214,7 @@ class LocationRepository @Inject constructor(
 @Singleton
 class SettingsRepository @Inject constructor(
     private val dataStore: DataStore<Preferences>
-) : SettingsReader {     // <-- added
+) : SettingsReader, SettingsWriter {     // <-- added (setActiveCarId already exists from B; setDriveEnabled is the new method added in this PR)
     // existing methods unchanged
 }
 ```
@@ -516,6 +525,22 @@ sealed class RestoreResult {
 ### 7.1 Interfaces (`domain/backup/`)
 
 ```kotlin
+/**
+ * Requests a backup of current local state.
+ *
+ * **Contract:** implementations own the `driveEnabled` gate. If Drive is disabled, the
+ * implementation MUST no-op rather than schedule a Worker. Use cases (SaveChargeEvent,
+ * DeleteChargeEvent, RestoreBackup) call `enqueueBackup()` unconditionally after every
+ * persisted state change — they do NOT read `driveEnabled` themselves.
+ *
+ * Bindings:
+ * - C ships `NoOpBackupScheduler` which always no-ops (Drive isn't wired yet).
+ * - E swaps in `WorkManagerBackupScheduler` which reads `driveEnabled` from
+ *   SettingsRepository and either schedules a `OneTimeWorkRequest` or no-ops.
+ *
+ * This contract is what makes `enqueueBackup()` a fire-and-forget call site
+ * everywhere it's used; tests assert the call happened, not what it did.
+ */
 interface BackupScheduler {
     fun enqueueBackup()
 }
@@ -570,37 +595,45 @@ class ObserveDashboardStatsUseCase @Inject constructor(
         }.flatMapLatest { (activeCarId, cars) ->
             when {
                 cars.isEmpty() || activeCarId == -1 -> flowOf(DashboardUiState(emptyState = EmptyState.NoCar))
-                else -> buildStatsFlow(activeCarId, period, filter)
+                else -> chargeEventQueries.observeForCar(activeCarId).map { allEventsForCar ->
+                    buildUiState(allEventsForCar, period, filter)
+                }
             }
         }
     }
 
-    private fun buildStatsFlow(carId: Int, period: DashboardPeriod, filter: ChargeTypeFilter): Flow<DashboardUiState> = flow {
-        val events = when (period) {
-            DashboardPeriod.SincePreviousCharge -> {
-                chargeEventQueries.getAllForCarSorted(carId).takeLast(2)
-            }
+    private fun buildUiState(
+        allEventsForCar: List<ChargeEventEntity>,
+        period: DashboardPeriod,
+        filter: ChargeTypeFilter
+    ): DashboardUiState {
+        // Period filter (in-memory; allEventsForCar is sorted ascending by eventDate per ChargeEventDao).
+        val periodEvents = when (period) {
+            DashboardPeriod.SincePreviousCharge -> allEventsForCar.takeLast(2)
             else -> {
                 val range = dateRangeResolver.resolve(period)
-                chargeEventQueries.getInRange(carId, range.startMillis, range.endMillis)
+                allEventsForCar.filter { it.eventDate in range.startMillis..range.endMillis }
             }
         }
+        // AC/DC filter.
         val filtered = when (filter) {
-            ChargeTypeFilter.ALL -> events
-            ChargeTypeFilter.AC -> events.filter { it.chargeType == "AC" }
-            ChargeTypeFilter.DC -> events.filter { it.chargeType == "DC" }
+            ChargeTypeFilter.ALL -> periodEvents
+            ChargeTypeFilter.AC -> periodEvents.filter { it.chargeType == "AC" }
+            ChargeTypeFilter.DC -> periodEvents.filter { it.chargeType == "DC" }
         }
-        if (filtered.isEmpty()) {
-            emit(DashboardUiState(emptyState = EmptyState.NoEvents))
+        return if (filtered.isEmpty()) {
+            DashboardUiState(emptyState = EmptyState.NoEvents)
         } else {
             val stats = statsCalculator.computeStats(filtered, label = period.toString())
-            emit(DashboardUiState(stats = stats, showMultiCurrencyBanner = stats.mixedCurrency))
+            DashboardUiState(stats = stats, showMultiCurrencyBanner = stats.mixedCurrency)
         }
     }
 }
 ```
 
-The flow re-emits when `activeCarId` changes or when the car list changes. It does NOT re-emit on every event insert — that would require observing per-car events. For Sub-project C's scope, suspend fetches inside the flow are acceptable; D can refine to a hot per-car observation if performance demands.
+The flow uses `chargeEventQueries.observeForCar(activeCarId)` (a Room-backed `Flow<List<…>>`) so it re-emits whenever events for the active car change — insert, update, or delete. After saving or deleting a charge for the active car, the dashboard updates without any additional plumbing. Period filtering and AC/DC filtering happen in-memory after each emission; this is fine because per-car event counts stay small (typical user: a few hundred events per year).
+
+`combine` re-emits when `activeCarId` changes or when the car list changes; `flatMapLatest` cancels the previous events Flow when the active car switches, so no leaked subscriptions.
 
 ### 8.2 `SaveChargeEventUseCase`
 
@@ -707,16 +740,25 @@ class RestoreBackupUseCase @Inject constructor(
     private val carReader: CarReader,
     private val chargeEventQueries: ChargeEventQueries,
     private val locationReader: LocationReader,
+    private val settingsWriter: SettingsWriter,
     private val backupScheduler: BackupScheduler
 ) {
     suspend operator fun invoke(): RestoreResult {
         // 1. Fetch remote.
-        val json = backupRepository.readRemoteBackup() ?: return RestoreResult.NoRemoteBackup
+        val json = backupRepository.readRemoteBackup()
+        if (json == null) {
+            // No remote file — Drive is fresh. Enable Drive for future backups
+            // and queue an initial upload of current local state per DESIGN.md §8 step 7.
+            settingsWriter.setDriveEnabled(true)
+            backupScheduler.enqueueBackup()
+            return RestoreResult.NoRemoteBackup
+        }
 
         // 2. Parse + version check.
         val parsed = try {
             backupSerializer.fromJson(json)
         } catch (e: BackupVersionMismatch) {
+            // Don't enable Drive on version mismatch — caller decides what to do.
             return RestoreResult.VersionMismatch(e.actual)
         }
 
@@ -731,7 +773,9 @@ class RestoreBackupUseCase @Inject constructor(
         val (newCars, newEvents, newLocations) = parsed.toEntities()
         transactionRunner.replaceAll(newCars, newEvents, newLocations)
 
-        // 5. Schedule backup so post-restore state is what future backups upload.
+        // 5. Enable Drive (DESIGN.md §8 step 5.4) and schedule a backup so the
+        //    post-restore state is what future backups upload.
+        settingsWriter.setDriveEnabled(true)
         backupScheduler.enqueueBackup()
 
         return RestoreResult.Success(
@@ -742,6 +786,8 @@ class RestoreBackupUseCase @Inject constructor(
     }
 }
 ```
+
+**Skip path (DESIGN.md §8 step 6).** When the user is shown the "Found backup from [date]. Restore?" dialog and chooses Skip, F's `SettingsViewModel` does NOT call `RestoreBackupUseCase`; it just calls `settingsWriter.setDriveEnabled(true)` directly and (if it wants) `backupScheduler.enqueueBackup()`. C does not introduce a `SkipRestoreUseCase` — it would be a one-line wrapper over two `SettingsWriter`/`BackupScheduler` calls. F can add one if it prefers explicit naming; the writers and scheduler are already injectable.
 
 ```kotlin
 // data/backup/RoomRestoreTransactionRunner.kt
@@ -873,6 +919,7 @@ abstract class DomainModule {
     @Binds abstract fun bindLocationReader(impl: LocationRepository): LocationReader
     @Binds abstract fun bindLocationWriter(impl: LocationRepository): LocationWriter
     @Binds abstract fun bindSettingsReader(impl: SettingsRepository): SettingsReader
+    @Binds abstract fun bindSettingsWriter(impl: SettingsRepository): SettingsWriter
 
     // Backup interface bindings — no-op until E swaps these.
     @Binds abstract fun bindBackupScheduler(impl: NoOpBackupScheduler): BackupScheduler
@@ -905,6 +952,7 @@ testing/
   FakeLocationReader.kt
   FakeLocationWriter.kt
   FakeSettingsReader.kt
+  FakeSettingsWriter.kt               // captures setActiveCarId / setDriveEnabled calls
   FakeBackupScheduler.kt              // counter on enqueueBackup()
   FakeBackupRepository.kt             // settable readRemoteBackup return
 ```
@@ -960,17 +1008,17 @@ class FakeChargeEventWriter(private val queries: FakeChargeEventQueries) : Charg
 
 | Class | Cases | Coverage |
 |---|---|---|
-| `ObserveDashboardStatsUseCaseTest` | 4 | `noCars_emitsNoCarEmptyState`, `activeCarMinusOne_emitsNoCarEmptyState`, `noEventsForActiveCar_emitsNoEventsEmptyState`, `eventsPresent_emitsStatsAndMultiCurrencyFlag`. |
+| `ObserveDashboardStatsUseCaseTest` | 5 | `noCars_emitsNoCarEmptyState`, `activeCarMinusOne_emitsNoCarEmptyState`, `noEventsForActiveCar_emitsNoEventsEmptyState`, `eventsPresent_emitsStatsAndMultiCurrencyFlag`, `reEmitsWhenEventInsertedForActiveCar` (seed events, collect first emission, insert another event, collect next emission, assert the new event is included — verifies the Flow re-emits on event changes). |
 | `SaveChargeEventUseCaseTest` | 5 | `insert_success_recordsLocationAndEnqueuesBackup`, `update_success_keepsId`, `insertOdometerNotIncreasing_returnsResultAndPersistsNothing`, `updateOdometerCheck_ignoresOwnId`, `costInputZero_costFieldsAreNull` (verifies CostParser integration). |
 | `DeleteChargeEventUseCaseTest` | 1 | `invoke_deletesAndEnqueuesBackup`. |
-| `RestoreBackupUseCaseTest` | 4 | `noRemoteBackup_returnsShortCircuit`, `versionMismatch_propagatesActualVersion`, `success_clearsAndImportsAndEnqueuesBackup` (asserts the fake `RestoreTransactionRunner` received the parsed entity lists), `success_writesCacheSnapshotBeforeDestructive` (asserts the fake `RestoreSnapshotWriter` was called before the transaction runner — sequence verified via call-order assertions on a single shared `MutableList<String>`). |
+| `RestoreBackupUseCaseTest` | 6 | `noRemoteBackup_setsDriveEnabledAndQueuesBackup` (returns `NoRemoteBackup`; `FakeSettingsWriter.driveEnabled == true`; `FakeBackupScheduler.enqueueCount == 1`), `versionMismatch_doesNotSetDriveEnabled` (returns `VersionMismatch(actual)`; `FakeSettingsWriter.driveEnabled` stays at its default), `success_clearsAndImportsAndEnqueuesBackup` (asserts the fake `RestoreTransactionRunner` received the parsed entity lists), `success_writesCacheSnapshotBeforeDestructive` (asserts the fake `RestoreSnapshotWriter` was called before the transaction runner — sequence verified via a shared `MutableList<String>` recording call ordering), `success_setsDriveEnabledAndQueuesBackup` (after a successful restore: `FakeSettingsWriter.driveEnabled == true` and `FakeBackupScheduler.enqueueCount == 1`), `success_setsDriveEnabledAfterTransactionCompletes` (sequence: snapshot → transaction → setDriveEnabled → enqueueBackup; verified via the same call-order recorder). |
 | `ExportCsvUseCaseTest` | 2 | `headerLineUsesKmOrMilesPerFlag`, `rowCountMatchesEventCount`. Tests call the package-private `writeCsv(StringWriter, events, useKm)` helper directly — no `CsvFileSink` needed, no Android, no file I/O. The Android sink itself (`AndroidCsvFileSink`) is integration-covered when D wires the History export button. |
 
-**Use case tests subtotal: 16**
+**Use case tests subtotal: 19** (5 + 5 + 1 + 6 + 2)
 
 ### 10.4 New JVM total
 
-47 new JVM tests across 11 new test classes. Combined with A+B's 14, the project will have **61 JVM tests** after this PR.
+50 new JVM tests across 11 new test classes. Combined with A+B's 14, the project will have **64 JVM tests** after this PR.
 
 ### 10.5 Instrumented tests
 
