@@ -28,14 +28,10 @@ An Android app for recording and analyzing electric vehicle charging efficiency 
 
 | File | Purpose |
 |------|---------|
-| `DESIGN.md` | Canonical product + technical design spec (v3) |
-| `GOOGLE_CLOUD_SETUP.md` | Drive API OAuth client setup instructions |
-| `AGENT_INSTRUCTIONS.md` | AI agent implementation steps — phase 1 (project scaffold, DB, basic UI) |
-| `AGENT_INSTRUCTIONS_V2.md` | AI agent implementation steps — phase 2 (charts, Drive backup, CSV) |
-| `AGENT_INSTRUCTIONS_V3.md` | AI agent implementation steps — phase 3 (wizard, location chips, cost rule) |
-| `TEST_PLAN.md` | Test specification — phase 1 |
-| `TEST_PLAN_V2.md` | Test specification — phase 2 |
-| `TEST_PLAN_V3.md` | Test specification — phase 3 |
+| [`DESIGN.md`](DESIGN.md) | Canonical product + technical design spec |
+| [`GOOGLE_CLOUD_SETUP.md`](GOOGLE_CLOUD_SETUP.md) | Drive API + OAuth 2.0 Android client setup |
+| [`AGENT_INSTRUCTIONS.md`](AGENT_INSTRUCTIONS.md) | Complete AI agent implementation guide (all phases) |
+| [`TEST_PLAN.md`](TEST_PLAN.md) | Complete test specification (all phases) |
 
 ---
 
@@ -54,4 +50,4 @@ Requires JDK 17 and Android SDK with Build Tools 34.
 
 ## Google Drive Setup
 
-See `GOOGLE_CLOUD_SETUP.md` for step-by-step instructions to enable the Drive API, create an OAuth 2.0 Android client, and add the SHA-1 fingerprint of your debug keystore.
+See [`GOOGLE_CLOUD_SETUP.md`](GOOGLE_CLOUD_SETUP.md) for step-by-step instructions to enable the Drive API, create an OAuth 2.0 Android client, and add the SHA-1 fingerprint of your debug keystore.
