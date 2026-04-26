@@ -175,6 +175,8 @@ Uses `TestCoroutineDispatcher` + in-memory Room.
 | `unitToggle_km_to_miles` | toggle unit | dashboard shows mi/kWh |
 | `resetCarData_confirmDialog` | tap Reset Car | confirmation dialog shown |
 | `resetCarData_confirm_deletesData` | confirm reset | events gone from log |
+| `driveEnable_remoteBackupPromptsReplaceOrSkip` | enable Drive when fake remote backup exists | replace/skip dialog shown; no merge option |
+| `driveEnable_noRemoteBackupQueuesInitialBackup` | enable Drive when fake remote backup is absent | `driveEnabled=true`; initial backup queued |
 
 ### 4.5 ChartsFragmentTest.kt
 
@@ -193,14 +195,20 @@ Uses `TestCoroutineDispatcher` + in-memory Room.
 
 ### 4.7 WorkManager / Drive / Empty-state / CSV
 
-Uses `androidx.work:work-testing` for WorkManager and a fake `DriveBackupManager` for restore.
+Uses `androidx.work:work-testing` for WorkManager plus fakes for `BackupRepository`, `BackupScheduler`, and Drive auth.
 
 | Test | Description |
 |------|-------------|
 | `backupWorker_enqueuedAfterChargeSave` | Save a ChargeEvent; assert exactly one unique work `drive_backup` is enqueued with `NetworkType.CONNECTED` and exponential backoff |
+| `backupWorker_enqueuedAfterCarMutation` | Create, rename, or delete a car; assert a unique `drive_backup` work item is enqueued because cars are part of the snapshot |
+| `backupWorker_enqueuedAfterCommittedLocationDelete` | Delete a custom location and let the undo window expire; assert a unique `drive_backup` work item is enqueued |
+| `backupWorker_notEnqueuedBeforeDeleteCommit` | Swipe-delete a charge event or custom location but trigger undo before expiry; assert no backup is enqueued for the transient delete |
 | `backupWorker_rapidSavesDebounced` | Save 5 events in quick succession; only the **last** enqueued worker remains pending (REPLACE policy) |
-| `restoreFlow_clearsAndImports` | Pre-populate DB with 1 car + 2 events; trigger restore with a fake backup containing 3 cars + 5 events + 2 custom_locations; DB now contains exactly the backup contents and `cacheDir/last_overwritten_backup.json` exists with the prior contents |
-| `restoreFlow_skipKeepsLocal` | Same setup; user picks "Skip"; local data unchanged, `driveEnabled=true` |
+| `restoreFlow_replaceClearsAndImports` | Pre-populate DB with 1 car + 2 events; trigger replace with a fake backup containing 3 cars + 5 events + 2 custom_locations; DB now contains exactly the backup contents and `cacheDir/last_overwritten_backup.json` exists with the prior contents |
+| `restoreFlow_replaceDoesNotMerge` | Local DB and remote backup contain overlapping-but-different rows; choose Replace; resulting DB matches the remote snapshot exactly, with no merged local rows retained |
+| `restoreFlow_skipKeepsLocal` | Same setup; user picks "Skip"; local data unchanged, `driveEnabled=true`, and future backups use the existing local state |
+| `restoreFlow_requiresExplicitConfirmation` | fake remote backup exists; do not confirm replace | local data remains unchanged until user explicitly chooses Replace |
+| `restoreFlow_successQueuesFollowupBackup` | complete a successful restore | backup scheduler receives a follow-up enqueue request for the restored local state |
 | `emptyStates_noCarVsNoEvents` | (a) `cars` empty → "Add a car" CTA visible, "Log charge" CTA absent. (b) ≥ 1 car, no events → "Log charge" CTA visible, "Add a car" CTA absent |
 | `csv_firstEventEfficiencyBlank` | Export CSV for car with 3 events; first event row has empty Efficiency column, subsequent rows have numeric values; header reads `Efficiency (km/kWh)` or `Efficiency (mi/kWh)` per unit pref |
 
@@ -218,14 +226,17 @@ Uses `androidx.work:work-testing` for WorkManager and a fake `DriveBackupManager
 8. Add 3 charges with same location → chip count increments; chip visible on next open
 9. Add 8 unique locations → only 5 custom chips in form; all 8 in Manage Locations
 10. Reset preferences → wizard shown; previous car data intact
-11. Enable Drive backup → complete auth → verify backup file via Drive API explorer
-12. Uninstall & reinstall → enable Drive → restore → verify data + location chips present
-13. Reset car data → confirm events gone, car still present
-14. Export CSV → open in spreadsheet app → verify columns and values
-15. Custom period picker → select last 60 days → stats card updates
-16. Dark mode → launch app → verify no illegible text or invisible elements
-17. Add second car → switch → logs and stats are independent
-18. Swipe-to-delete charge event → removed from list; stats update
+11. Enable Drive backup with no remote snapshot → complete auth → verify initial backup file created in App Data folder
+12. Enable Drive backup with an existing remote snapshot → verify Replace / Skip dialog appears and no merge option is offered
+13. Choose Skip on the existing-remote-snapshot flow → verify local data is unchanged and subsequent edits back up normally
+14. Uninstall & reinstall → enable Drive → choose Replace → verify remote snapshot fully replaces local data and location chips are restored
+15. Reset car data → confirm events gone, car still present, and backup re-queued
+16. Export CSV → open in spreadsheet app → verify columns and values
+17. Custom period picker → select last 60 days → stats card updates
+18. Dark mode → launch app → verify no illegible text or invisible elements
+19. Add second car → switch → logs and stats are independent
+20. Swipe-to-delete charge event → tap Undo before timeout → row restored and no backup triggered for the transient delete
+21. Swipe-to-delete charge event → let timeout expire → row removed, stats update, and backup triggered
 
 ---
 

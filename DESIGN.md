@@ -239,34 +239,93 @@ Top 5 by `use_count DESC, last_used DESC` are shown as quick chips in the charge
 ## 5. Architecture
 
 ```
-┌─────────────────────────────────────────────────────┐
-│  UI Layer (Fragments + ViewModels)                  │
-│  WizardFragment · DashboardFragment                 │
-│  ChargeEditFragment · CarsFragment · SettingsFragment│
-│  ChartsFragment · HistoryFragment                   │
-├─────────────────────────────────────────────────────┤
-│  Repository Layer                                   │
-│  CarRepository · ChargeRepository                  │
-│  LocationRepository · StatsRepository               │
-│  PrefsRepository · DriveRepository                 │
-├─────────────────────────────────────────────────────┤
-│  Data Layer                                        │
-│  Room (CarDao, ChargeEventDao, CustomLocationDao)   │
-│  Preferences DataStore (PreferenceKeys)             │
-│  Drive API (AppDataFolder, JSON backup)             │
-└─────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────┐
+│  UI Layer (Fragments + ViewModels)                   │
+│  Wizard · Dashboard · ChargeEdit · Cars · Settings   │
+│  Charts · History · ManageLocations                  │
+├──────────────────────────────────────────────────────┤
+│  Domain Layer (Use Cases + Pure Services)            │
+│  SaveChargeEvent · DeleteChargeEvent                 │
+│  ObserveDashboardStats · RestoreBackup · ExportCsv   │
+│  StatsCalculator · CostParser · UnitConverter        │
+├──────────────────────────────────────────────────────┤
+│  Repository Layer                                    │
+│  CarRepository · ChargeEventRepository               │
+│  LocationRepository · SettingsRepository             │
+│  BackupRepository                                    │
+├──────────────────────────────────────────────────────┤
+│  Data Sources / Infrastructure                       │
+│  Room (CarDao, ChargeEventDao, CustomLocationDao)    │
+│  Preferences DataStore (PreferenceKeys)              │
+│  Google Drive AppData client                         │
+│  WorkManager backup scheduler                        │
+└──────────────────────────────────────────────────────┘
 ```
+
+### Architecture Principles
+
+- Keep Fragments thin: bind UI state, forward user actions, and handle navigation or other Android-only concerns.
+- Keep ViewModels focused on UI state and intent handling; they orchestrate use cases but do not own persistence rules, stats math, or backup logic.
+- Keep repositories narrow: they aggregate data sources and expose CRUD/query APIs, but they do not implement business workflows.
+- Put cross-source workflows in use cases so validation, persistence, learned-location updates, and backup enqueueing happen in one place.
+- Keep metric calculations, cost parsing, unit conversion, and backup serialization in pure Kotlin services with no Android dependencies.
+
+### Recommended Composition
+
+**UI layer**
+- Fragments render state from `StateFlow`/`Flow`, collect one-off UI effects, and delegate all mutations to their ViewModel.
+- Each screen has a dedicated ViewModel with a single screen-state model rather than multiple loosely related LiveData streams.
+
+**Domain layer**
+- `SaveChargeEventUseCase`: validates odometer ordering, normalizes cost input, persists the event, records location usage, and enqueues backup when Drive is enabled.
+- `DeleteChargeEventUseCase`: deletes an event only after undo expiry or explicit confirmation, then schedules backup.
+- `ObserveDashboardStatsUseCase`: combines active car, period, AC/DC filter, preferences, and events into one UI-ready stats model.
+- `RestoreBackupUseCase`: downloads backup data, validates schema version, snapshots current local state for undo, replaces local state transactionally, and restores settings needed for a consistent post-restore app state.
+- `ExportCsvUseCase`: maps stored km values to the selected display unit at export time and derives row-level metrics consistently.
+
+**Repository layer**
+- `CarRepository`: car CRUD plus active-car-safe delete helpers.
+- `ChargeEventRepository`: charge-event CRUD and filtered queries only.
+- `LocationRepository`: learned-location persistence and ranking only.
+- `SettingsRepository`: DataStore-backed preferences only.
+- `BackupRepository`: raw backup read/write operations only.
+
+**Data / infrastructure layer**
+- Room is the source of truth for cars, charge events, and custom locations.
+- DataStore is the source of truth for setup completion, metric/unit preferences, currency, active car, Drive enabled state, and theme.
+- Google Drive access is isolated behind a dedicated backup client; the rest of the app should not know about Drive SDK details.
+- WorkManager is used only for scheduled backup execution, not for core business logic.
+
+### Dependency Management
+
+- Use a single composition root in `Application`.
+- Preferred approach: Hilt for ViewModel injection, repository wiring, test replacements, and lifecycle-safe scoping.
+- Acceptable fallback for a smaller build: a manual `AppContainer`, but object construction must remain centralized and testable.
 
 ### Key ViewModels
 
 | ViewModel | Owns |
 |-----------|------|
-| `WizardViewModel` | Wizard page state; writes all DataStore keys on finish |
-| `DashboardViewModel` | Active car; period filter; stats StateFlow |
-| `ChargeEditViewModel` | Form state; location chips Flow; cost parsing |
-| `CarsViewModel` | Car list; add/rename/delete |
-| `SettingsViewModel` | Prefs; reset; Drive toggle |
-| `ChartsViewModel` | Chart data for selected period |
+| `WizardViewModel` | Wizard page state and completion action via `SettingsRepository` |
+| `DashboardViewModel` | Active car, period, AC/DC filter, empty state, and dashboard cards via `ObserveDashboardStatsUseCase` |
+| `ChargeEditViewModel` | Charge form state, learned locations, validation errors, and save/edit intents via `SaveChargeEventUseCase` |
+| `CarsViewModel` | Car list plus add/rename/delete intents via `CarRepository` and small car-management use cases when needed |
+| `SettingsViewModel` | Preferences, theme, Drive enable/disable, restore prompts, and reset flows via `SettingsRepository` + backup use cases |
+| `ChartsViewModel` | Chart models for the selected period built from the same stats/query rules used by the dashboard |
+| `HistoryViewModel` | Paged event list, filters, edit targets, and delete-with-undo flow |
+| `ManageLocationsViewModel` | Full custom-location list, delete actions, and empty state |
+
+### Package Direction
+
+Recommended package layout for long-term maintainability:
+
+- `core/` for framework-free models and utilities shared across layers
+- `data/local/` for Room entities, DAOs, and database wiring
+- `data/preferences/` for DataStore access
+- `data/backup/` for Drive backup client and serialization
+- `domain/usecase/` for orchestration logic
+- `domain/service/` for pure business rules such as stats and cost parsing
+- `ui/<feature>/` for each screen's Fragment, ViewModel, adapters, and UI models
 
 ---
 
@@ -313,14 +372,14 @@ Top 5 by `use_count DESC, last_used DESC` are shown as quick chips in the charge
 - Paginated `RecyclerView` of every `charge_event` for the active car, newest first
 - Row shows: date, odometer (in display unit), kWh, AC/DC badge, location chip, cost (if non-null with currency)
 - Tap row → opens `ChargeEditFragment` with the event prefilled (edit flow)
-- Swipe-to-delete with Snackbar undo (5 s); deletion re-runs stats and re-enqueues a Drive backup
+- Swipe-to-delete with Snackbar undo (5 s); deletion is only committed after the undo window expires, then re-runs stats and re-enqueues a Drive backup
 - Filter chips at top mirror the Dashboard's All / AC / DC
 
 ### Manage Locations (ManageLocationsFragment)
 - Reachable from Settings → "Manage custom locations"
 - `RecyclerView` of every `custom_locations` row, sorted by `useCount DESC, lastUsed DESC`
 - Each row shows label + last-used relative date + use count
-- Swipe-to-delete with Snackbar undo (5 s); deletion does not affect existing `charge_events.location` strings
+- Swipe-to-delete with Snackbar undo (5 s); deletion is only committed after the undo window expires, does not affect existing `charge_events.location` strings, and re-enqueues a Drive backup because `custom_locations` is part of the backup payload
 - Empty state: "Locations you save on charge events will appear here."
 
 ### Settings
@@ -329,7 +388,10 @@ Top 5 by `use_count DESC, last_used DESC` are shown as quick chips in the charge
 - Currency (dropdown)
 - Theme: Light / Dark / System
 - **Google Drive backup** (Switch)
-  - On enable: show Drive auth flow; on success pull backup, merge, confirm
+  - On enable: show Drive auth flow; if a remote backup exists, ask whether to **replace** local data with that snapshot
+  - "Skip" keeps local data unchanged, sets `driveEnabled = true`, and enables future backups from the current local state
+  - Merge is **not** supported; the backup model is full-snapshot replace-or-skip only
+  - If no remote backup exists, set `driveEnabled = true` and queue an initial backup from the current local state
   - Manual backup now button
   - Last backup timestamp
 - **Manage custom locations** → list with delete swipe
@@ -370,6 +432,14 @@ First charge event for a car **cannot** compute efficiency (no prior odometer). 
 **File:** `evtracker_backup.json`
 
 > The Android manifest sets `android:allowBackup="false"` — system Auto Backup is disabled deliberately. Google Drive (this section) is the canonical and only backup channel.
+
+### Backup model
+
+- The Drive file is a **full snapshot** of app data, not an append-only log and not a merge source.
+- Enabling Drive follows a **replace-or-skip** model when a remote snapshot already exists.
+- "Replace" means local `cars`, `charge_events`, and `custom_locations` are overwritten by the remote snapshot in one transaction.
+- "Skip" means local data remains authoritative and future backups upload that local state.
+- The app never attempts field-level or row-level merge between local and remote data.
 
 ### Backup JSON structure (v3) — authoritative field list
 
@@ -420,17 +490,30 @@ A `BackupSchemaTest` round-trips a sample DB and asserts every field on every en
 3. App fetches `evtracker_backup.json` from the App Data folder
 4. If file exists: parse → show "Found backup from [date]. Restore?" dialog with explicit "This will replace any data already on this device." warning
 5. On confirm:
-   1. Export the **current** local DB to `cacheDir/last_overwritten_backup.json` (so the user has a 24-hour undo)
+  1. Export the **current** local DB to `cacheDir/last_overwritten_backup.json` before any destructive step
    2. Clear all rows from `cars`, `charge_events`, `custom_locations`
-   3. Import the backup
+  3. Import the backup in the same database transaction as the clear step
    4. Set `driveEnabled = true`
-   5. Surface a persistent Settings entry "Undo restore (expires in 24 h)" until the cached file is purged
-6. On skip: keep local data, set `driveEnabled = true`, continue with Drive backup enabled going forward
-7. If no file exists: start backup schedule immediately
+  5. Surface a Settings entry "Undo restore" while `cacheDir/last_overwritten_backup.json` still exists; target retention is 24 h, but cache eviction may remove it sooner
+6. On skip: keep local data unchanged, set `driveEnabled = true`, and continue with backup enabled going forward
+7. If no file exists: set `driveEnabled = true` and queue an initial backup from the current local state
+
+Restore notes:
+
+- Restore is an explicit user action; the app must never auto-replace local data without confirmation.
+- Restore and skip are the only two outcomes when a remote snapshot exists. Merge is not supported.
+- After a successful restore, local data becomes the source of truth for all subsequent edits and backups.
 
 ### Auto-backup trigger
-- After every successful charge event save **and** after every event delete
-- Implementation: WorkManager `OneTimeWorkRequest` enqueued via `enqueueUniqueWork("drive_backup", REPLACE, ...)` so rapid saves debounce to one upload
+- Queue a backup after every persisted change that affects the backup payload:
+  - charge event create, edit, or committed delete
+  - car create, edit, or delete
+  - custom location committed delete
+  - reset-all-data and per-car reset flows
+  - successful restore
+  - first-time Drive enable when no remote backup exists
+- Do **not** queue backup for transient UI actions that are still undoable; enqueue only after the local state change is committed
+- Implementation: WorkManager `OneTimeWorkRequest` enqueued via `enqueueUniqueWork("drive_backup", REPLACE, ...)` so rapid successive changes debounce to one upload
 - Constraints: `NetworkType.CONNECTED` — offline saves queue and run when the device reconnects
 - Backoff: exponential, starting at 30 s
 
@@ -446,5 +529,6 @@ A `BackupSchemaTest` round-trips a sample DB and asserts every field on every en
 | Wizard killed mid-flow | `setupComplete` stays false; wizard re-shown on next launch |
 | Custom locations > 5 | Only top 5 shown as chips; all accessible via Manage Locations |
 | Unit change | Never rewrites stored km values; all display conversions are in-memory |
-| Drive backup fails | Silent retry via WorkManager; show last-backup timestamp in Settings |
+| Remote backup exists when Drive is enabled | Prompt user to replace or skip; never merge automatically |
+| Drive backup fails | Local data remains source of truth; retry via WorkManager and show last-backup timestamp in Settings |
 | DB migration fails | Destructive fallback with user warning |

@@ -6,7 +6,7 @@
 
 An Android app for recording and analyzing electric vehicle charging efficiency and cost. Log mileage, kWh added, AC/DC charge type, location, and optional cost after each charge. View multi-metric statistics over any period with rich charts and an optional Google Drive backup.
 
-> **Status: pre-implementation.** The repository currently contains the design specification, build configuration, and resource scaffolding only. Kotlin source has not been written yet — see `AGENT_INSTRUCTIONS.md` for the implementation walkthrough.
+> **Status: pre-implementation.** The repository currently contains the design specification, build configuration, and resource scaffolding only. Kotlin source has not been written yet, so `./gradlew assembleDebug` is expected to fail until the implementation in `AGENT_INSTRUCTIONS.md` is completed.
 
 ---
 
@@ -20,7 +20,7 @@ An Android app for recording and analyzing electric vehicle charging efficiency 
 - **AC vs DC tracking** — separate chart series and filter chips for AC and DC charges
 - **Multi-car support** — add any number of cars; switch via top spinner
 - **Custom period analysis** — date-range picker for any arbitrary period
-- **Google Drive backup** — optional; uses hidden App Data folder; auto-backup after each charge
+- **Google Drive backup** — optional; uses hidden App Data folder; replace-or-skip restore on first enable if a remote snapshot exists; auto-backup after committed local data changes
 - **CSV export** — share all data via Android share sheet
 - **Material You theming** — Light / Dark / System, electric blue + teal palette
 
@@ -38,6 +38,8 @@ An Android app for recording and analyzing electric vehicle charging efficiency 
 ---
 
 ## Build
+
+Current repo state: documentation and scaffolding only. The command below is the target build command once the implementation has been added.
 
 ```bash
 git clone https://github.com/SPS-L/EV-android-app.git

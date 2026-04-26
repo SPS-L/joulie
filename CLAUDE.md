@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Android app (`org.spsl.evtracker`) for logging EV charge events and analyzing efficiency/cost. Kotlin, MVVM + Repository, Gradle Kotlin DSL. Min SDK 26, target/compile SDK 34, JDK 17. Room compiler runs via **KSP** (not kapt).
+Android app (`org.spsl.evtracker`) for logging EV charge events and analyzing efficiency/cost. Kotlin, MVVM with a domain/use-case layer plus narrow repositories, Gradle Kotlin DSL, and Hilt-based dependency injection. Min SDK 26, target/compile SDK 34, JDK 17. Room compiler runs via **KSP** (not kapt).
 
 > **Status: pre-implementation.** No Kotlin source has been written yet — only docs, Gradle config, manifest, and a few resource XMLs are committed. `./gradlew assembleDebug` will fail until `MainActivity.kt` and the rest of `AGENT_INSTRUCTIONS.md` Steps 2–8 land.
 
@@ -17,7 +17,7 @@ Root docs:
 ## Build & Test
 
 ```bash
-./gradlew assembleDebug                        # APK at app/build/outputs/apk/debug/app-debug.apk
+./gradlew assembleDebug                        # target APK path: app/build/outputs/apk/debug/app-debug.apk
 ./gradlew assembleRelease                      # needs keystore
 ./gradlew test                                 # JVM unit tests
 ./gradlew connectedAndroidTest                 # Espresso/Room — needs API 26+ device or emulator
@@ -26,15 +26,17 @@ Root docs:
 
 Requires `ANDROID_HOME` set and Build Tools 34.
 
-## Architecture (3-layer)
+## Architecture (4-layer)
 
 ```
-UI:    Fragments + ViewModels (Wizard, Dashboard, ChargeEdit, Cars, Settings, Charts, History, ManageLocations)
-Repo:  CarRepository · ChargeRepository · LocationRepository · StatsRepository · PrefsRepository · DriveRepository
-Data:  Room (CarDao, ChargeEventDao, CustomLocationDao) · Preferences DataStore · Drive API (AppDataFolder)
+UI:       Fragments + ViewModels (Wizard, Dashboard, ChargeEdit, Cars, Settings, Charts, History, ManageLocations)
+Domain:   SaveChargeEvent · DeleteChargeEvent · ObserveDashboardStats · RestoreBackup · ExportCsv
+Services: StatsCalculator · CostParser · UnitConverter · BackupSerializer
+Repo:     CarRepository · ChargeEventRepository · LocationRepository · SettingsRepository · BackupRepository
+Data:     Room (CarDao, ChargeEventDao, CustomLocationDao) · Preferences DataStore · Drive AppData client · WorkManager backup scheduler
 ```
 
-Single-Activity + Navigation Component. ViewBinding enabled. MPAndroidChart for charts. WorkManager for backup scheduling.
+Single-Activity + Navigation Component. ViewBinding enabled. MPAndroidChart for charts. WorkManager is used for backup scheduling only, not as a substitute for domain logic.
 
 ## Invariants — read before changing data, math, or storage
 
@@ -63,8 +65,9 @@ Indices on `charge_events`: composite `(carId, eventDate)` (matches dominant ran
 
 - Scope: `https://www.googleapis.com/auth/drive.appdata` (non-sensitive). File lives in the **App Data folder** (hidden from Drive UI), filename `evtracker_backup.json`.
 - Backup JSON schema is versioned: current `backup_version = 3` and **must include `custom_locations`** with `label`, `useCount`, `lastUsed`. Bumping any entity requires bumping `backup_version` and updating the authoritative field list in `DESIGN.md §8`.
-- Auto-backup: WorkManager `OneTimeWorkRequest` after every successful charge save **and** event delete. Required configuration: `NetworkType.CONNECTED` constraint (offline saves queue), `enqueueUniqueWork("drive_backup", REPLACE, ...)` so rapid saves debounce to one upload, exponential backoff starting 30 s.
-- Restore flow: on first Drive enable, fetch the file → if present, prompt "Found backup from [date]. This will replace data already on this device. Restore?" → on confirm, **first** export current local DB to `cacheDir/last_overwritten_backup.json` (24-hour undo), then clear local DB and import; on skip, keep local data and continue with backup enabled.
+- Backup model: the Drive file is a full snapshot. On first Drive enable, an existing remote snapshot uses a **replace-or-skip** flow; merge is not supported.
+- Auto-backup: WorkManager `OneTimeWorkRequest` after every committed local change that affects the snapshot payload: charge event create/edit/committed delete, car create/edit/delete, custom-location committed delete, reset flows, successful restore, and first-time Drive enable when no remote backup exists. Required configuration: `NetworkType.CONNECTED`, `enqueueUniqueWork("drive_backup", REPLACE, ...)`, and exponential backoff starting at 30 s.
+- Restore flow: on first Drive enable, fetch the file → if present, prompt "Found backup from [date]. This will replace data already on this device. Restore?" → on confirm, **first** export current local DB to `cacheDir/last_overwritten_backup.json`, then clear and import in one transaction; on skip, keep local data unchanged and continue with backup enabled. The undo snapshot is best-effort because cache eviction can remove it before the 24 h target.
 - Multi-currency rule: `StatsCalculator` returns `null` cost stats whenever a period contains charge events with more than one distinct `currency`. Dashboard surfaces a "Multi-currency period — cost stats hidden" banner.
 
 OAuth setup (full walkthrough in `GOOGLE_CLOUD_SETUP.md`):
@@ -80,7 +83,7 @@ Declared in a single `PreferenceKeys` object: `setupComplete`, `primaryMetric` (
 
 ## CSV export
 
-`CsvExporter.export(...)` writes to `getExternalFilesDir(DIRECTORY_DOWNLOADS)` and shares via `FileProvider` authority `${packageName}.fileprovider`. Odometer column header switches label per unit pref but conversion happens at export time only — stored values stay in km.
+`ExportCsvUseCase` writes to `getExternalFilesDir(DIRECTORY_DOWNLOADS)` and shares via `FileProvider` authority `${packageName}.fileprovider`. Odometer column header switches label per unit pref but conversion happens at export time only — stored values stay in km.
 
 ## Conventions
 
