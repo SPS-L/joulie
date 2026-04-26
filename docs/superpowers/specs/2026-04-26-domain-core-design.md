@@ -25,7 +25,7 @@ Sub-project C ships the framework-free domain layer that D's UI, E's Drive backu
 
 - **5 pure services** in `domain/service/`: `StatsCalculator`, `CostParser`, `UnitConverter`, `DateRangeResolver`, `BackupSerializer`.
 - **5 use cases** in `domain/usecase/`: `ObserveDashboardStatsUseCase`, `SaveChargeEventUseCase`, `DeleteChargeEventUseCase`, `RestoreBackupUseCase`, `ExportCsvUseCase`.
-- **6 narrow role-specific interfaces** in `domain/repository/` that B's existing repos implement (no renames; just `: …` additions to existing class declarations).
+- **7 narrow role-specific interfaces** in `domain/repository/` (`CarReader`, `ChargeEventQueries`, `ChargeEventWriter`, `LocationReader`, `LocationWriter`, `SettingsReader`, `SettingsWriter`) that B's existing repos implement (no renames; just `: …` additions to existing class declarations).
 - **2 backup interfaces** in `domain/backup/` (`BackupScheduler`, `BackupRepository`) plus **no-op implementations** in `data/backup/` that E will replace by editing the binding module.
 - **Pure-data domain models** in `core/model/`: `Stats`, `MonthBucket`, `BackupData`, `DateRange`, `DashboardPeriod`, `DashboardUiState`, `SaveChargeEventInput`, `SaveChargeEventResult`.
 - A new Hilt module `di/DomainModule.kt` wiring all 8 interfaces (6 repo + 2 backup).
@@ -39,9 +39,9 @@ Sub-projects D (Dashboard/ChargeEdit/Cars/History UI), E (Drive auth + real back
 
 ### 2.1 In scope
 
-- 5 pure services, 5 use cases, 6 repository interfaces, 2 backup interfaces + 2 no-op implementations.
+- 5 pure services, 5 use cases, 7 repository interfaces, 2 backup interfaces + 2 no-op implementations, 3 Android-boundary interfaces (`RestoreTransactionRunner`, `RestoreSnapshotWriter`, `CsvFileSink`) with production implementations under `data/backup/`.
 - Pure-data domain models for `Stats`, `MonthBucket`, `BackupData`, `DateRange`, `DashboardPeriod`, `DashboardUiState`, `SaveChargeEventInput`, `SaveChargeEventResult`.
-- Hilt `DomainModule` providing 8 `@Binds` declarations.
+- Hilt `DomainModule` providing 12 `@Binds` declarations (7 repo + 2 backup + 2 restore-infrastructure + 1 CSV sink).
 - B-side touches: append `: SomeReader, SomeWriter` to the four existing repository class declarations; add `deleteAll()` `@Query` methods to the three DAOs.
 
 ### 2.2 Out of scope
@@ -92,7 +92,7 @@ app/src/main/java/org/spsl/evtracker/
       BackupRepository.kt                        interface
     service/
       StatsCalculator.kt
-      CostParser.kt                              + enum CostMode (re-exported from core/model? — see §5.2)
+      CostParser.kt                              (declares `enum class CostMode { TOTAL, PER_KWH }` in the same file — see §5.2; not re-exported from core/model)
       UnitConverter.kt
       DateRangeResolver.kt
       BackupSerializer.kt
@@ -107,7 +107,7 @@ app/src/main/java/org/spsl/evtracker/
       NoOpBackupScheduler.kt
       NoOpBackupRepository.kt
   di/
-    DomainModule.kt                              (new) 6 @Binds for repo interfaces, 2 @Binds for backup interfaces
+    DomainModule.kt                              (new) 12 @Binds: 7 repo + 2 backup + 2 restore-infrastructure + 1 CSV sink
 ```
 
 Plus B-side modifications:
