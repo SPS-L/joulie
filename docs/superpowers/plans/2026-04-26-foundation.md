@@ -6,7 +6,7 @@
 
 **Architecture:** Single-Activity, MVVM, Hilt-injected. Wizard state lives in a `WizardViewModel` scoped to the `WizardFragment`'s `ViewModelStore` (cleared when the wizard destination is popped). Preferences live in `SettingsRepository` over Jetpack DataStore. The wizard gate is implemented by overriding the inflated nav graph's `startDestination` in `MainActivity.onCreate` before binding the graph to the controller.
 
-**Tech Stack:** Kotlin 1.9.21 · Android Gradle 8.2 · Hilt 2.50 (KSP processor) · Jetpack Navigation 2.7.6 · Jetpack DataStore 1.0.0 · `androidx.core:core-splashscreen` 1.0.1 · JUnit 4 + mockito-kotlin (JVM tests) · Espresso + Hilt testing (instrumented).
+**Tech Stack:** Kotlin 1.9.21 · Android Gradle 8.2 · Hilt 2.50 (KSP processor) · Jetpack Navigation 2.7.6 · Jetpack DataStore 1.0.0 · `androidx.core:core-splashscreen` 1.0.1 · JUnit 4 with real-collaborator integration tests over in-memory DataStore (no Mockito needed in this sub-project) · Espresso + Hilt testing (instrumented).
 
 **Spec source:** `docs/superpowers/specs/2026-04-26-foundation-design.md` (commit `1279010` or later).
 
@@ -468,27 +468,44 @@ git commit -m "feat(foundation): apply theme preference at app launch"
 
 - [ ] **Step 1: Write the failing test file**
 
+The test uses a real `SettingsRepository` over a temp-file DataStore (no mocking). All `selectMetric` / `selectUnit` / page-clamp assertions are pure state checks against `vm.state.value` and don't touch the repo at all; only `finish_writesAllPrefs` exercises the round-trip and asserts the expected DataStore writes via the repo's own Flow accessors.
+
 `app/src/test/java/org/spsl/evtracker/ui/wizard/WizardViewModelTest.kt`:
 
 ```kotlin
 package org.spsl.evtracker.ui.wizard
 
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.Preferences
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.verify
+import org.junit.rules.TemporaryFolder
 import org.spsl.evtracker.data.repository.SettingsRepository
 
 class WizardViewModelTest {
 
+    @get:Rule
+    val tempFolder = TemporaryFolder()
+
+    private lateinit var dataStore: DataStore<Preferences>
     private lateinit var repo: SettingsRepository
     private lateinit var vm: WizardViewModel
 
     @Before
     fun setUp() {
-        repo = mock()
+        dataStore = PreferenceDataStoreFactory.create(
+            scope = TestScope(UnconfinedTestDispatcher()),
+            produceFile = { tempFolder.newFile("test.preferences_pb") }
+        )
+        repo = SettingsRepository(dataStore)
         vm = WizardViewModel(repo)
     }
 
@@ -497,7 +514,10 @@ class WizardViewModelTest {
         vm.selectMetric("mi_per_kwh")    // forces unit to "miles"
         vm.selectCurrency("USD")
         vm.finish()
-        verify(repo).completeSetup(metric = "mi_per_kwh", unit = "miles", currency = "USD")
+        assertEquals("mi_per_kwh", repo.primaryMetric.first())
+        assertEquals("miles", repo.distanceUnit.first())
+        assertEquals("USD", repo.currency.first())
+        assertTrue(repo.setupComplete.first())
     }
 
     @Test
@@ -1708,7 +1728,9 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.test.core.app.ActivityScenario
+import androidx.test.espresso.Espresso
 import androidx.test.espresso.Espresso.onView
+import androidx.test.espresso.NoActivityResumedException
 import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
@@ -1761,7 +1783,7 @@ class WizardFlowTest {
     }
 
     @Test
-    fun finishWizard_landsOnDashboard() {
+    fun finishWizard_landsOnDashboard_andBackPressExitsApp() {
         ActivityScenario.launch(MainActivity::class.java).use {
             // Page 1 → Get Started
             onView(withId(R.id.wizard_button_next)).perform(click())
@@ -1771,6 +1793,16 @@ class WizardFlowTest {
             onView(withId(R.id.wizard_button_next)).perform(click())
             // Dashboard placeholder visible
             onView(withId(R.id.dashboard_placeholder_text)).check(matches(isDisplayed()))
+            // Back press exits the app — wizard must NOT be on the back stack
+            // (regression guard for losing popUpToInclusive on action_wizard_to_dashboard).
+            try {
+                Espresso.pressBack()
+                throw AssertionError(
+                    "Expected NoActivityResumedException — wizard is still on the back stack"
+                )
+            } catch (expected: NoActivityResumedException) {
+                // Pass: there is no destination to pop, so the activity is finishing.
+            }
         }
     }
 }
@@ -1787,7 +1819,7 @@ Expected: 3 tests, 3 passing.
 
 If `firstLaunch_showsWizard` fails because the dashboard is shown instead, the wizard gate is broken — verify that `MainActivity.onCreate` reads `setupComplete` *before* `navController.graph = graph`.
 
-If `finishWizard_landsOnDashboard` fails on the third click, check that `WizardFragment.onPrimaryButtonClicked` calls `findNavController().navigate(R.id.action_wizard_to_dashboard)` *after* `viewModel.finish()` returns.
+If `finishWizard_landsOnDashboard_andBackPressExitsApp` fails on the third click, check that `WizardFragment.onPrimaryButtonClicked` calls `findNavController().navigate(R.id.action_wizard_to_dashboard)` *after* `viewModel.finish()` returns. If the back-press assertion fails (no `NoActivityResumedException`), check that `action_wizard_to_dashboard` in `nav_graph.xml` still has `app:popUpTo="@id/wizardFragment"` and `app:popUpToInclusive="true"`.
 
 - [ ] **Step 3: Commit**
 

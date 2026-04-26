@@ -139,7 +139,6 @@ app/src/main/java/org/spsl/evtracker/
     AppModule.kt
   data/preferences/
     PreferenceKeys.kt
-    SettingsLocalDataSource.kt
   data/repository/
     SettingsRepository.kt
   ui/wizard/
@@ -156,7 +155,11 @@ app/src/main/java/org/spsl/evtracker/
   ui/charts/       ChartsFragment.kt + ChartsViewModel.kt
   ui/history/      HistoryFragment.kt + HistoryViewModel.kt
   ui/locations/    ManageLocationsFragment.kt + ManageLocationsViewModel.kt
+```
 
+> **Note on `SettingsLocalDataSource`.** Earlier drafts of this design listed a separate `data/preferences/SettingsLocalDataSource.kt` between DataStore and `SettingsRepository`. With only one preferences-backed repository in this sub-project and a one-line `dataStore.data.map { … }` per Flow, an intermediate data source would be a no-op pass-through. YAGNI: `SettingsRepository` injects `DataStore<Preferences>` directly. If a second consumer or a non-DataStore preferences backend appears later, B can introduce the abstraction at that point — until then, every layer would just forward calls.
+
+```text
 app/src/main/res/
   layout/
     activity_main.xml
@@ -466,7 +469,7 @@ Runs against a debug APK on an emulator (API 26+).
 |---|---|---|
 | `firstLaunch_showsWizard` | Clear app data, launch | WizardFragment page 1 visible, no Dashboard flash |
 | `completedSetup_skipsWizard` | Pre-seed DataStore with `setupComplete=true`, launch | DashboardFragment placeholder visible directly |
-| `finishWizard_landsOnDashboard` | First launch, walk through 3 pages, press Finish | DashboardFragment visible; back press exits app (does not return to wizard) |
+| `finishWizard_landsOnDashboard_andBackPressExitsApp` | First launch, walk through 3 pages, press Finish, then press Back | DashboardFragment visible after Finish; Back press throws `NoActivityResumedException` (wizard is not on the back stack — regression guard for losing `popUpToInclusive`) |
 
 We deliberately do **not** include a "force-stop the app process mid-wizard" instrumented test. Force-stopping the target package routinely tears down the instrumentation runner with it on Android, which makes the test flaky-to-non-implementable for reasons unrelated to product behavior. The property that test would assert — *if `finish()` was never called, `setupComplete` is still `false` and the next launch re-shows the wizard* — is already covered by:
 
