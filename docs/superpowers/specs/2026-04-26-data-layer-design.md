@@ -56,7 +56,7 @@ Sub-projects C (domain core), D (Dashboard/ChargeEdit/Cars/History UI), E (Drive
 
 1. `./gradlew assembleDebug` succeeds.
 2. `./gradlew test` passes — existing 13 JVM tests + 1 new = **14 JVM tests**.
-3. `./gradlew connectedDebugAndroidTest` is **expected** to pass on a connected emulator (compile-only verification in this development environment) — **24 instrumented tests** total (3 from A's `WizardFlowTest` + 21 new from B; see §10.1 for the breakdown).
+3. `./gradlew connectedDebugAndroidTest` is **expected** to pass on a connected emulator (compile-only verification in this development environment) — **25 instrumented tests** total (3 from A's `WizardFlowTest` + 22 new from B; see §10.1 for the breakdown).
 4. Manual smoke (carryover from A): wizard gate still works on first launch; dashboard placeholder still appears post-wizard. Room v3 DB is created automatically on first launch via `createAllTables` (no migration runs because v3 is the first version this app ever ships).
 
 ---
@@ -520,26 +520,29 @@ class CarDaoTest {
 
 #### `CarDaoTest` (3 cases per `TEST_PLAN §2.2`)
 
-- `insertCar_idIsAssigned` — insert returns rowId > 0; the inserted car has the same id back from `getById`.
-- `updateCar_changesPersist` — insert, then update name, observe new value via `observeAll`.
-- `deleteCar_removesFromList` — insert two, delete one, `observeAll` returns one.
+- `insertCar_idIsAssigned` — `val rowId = carDao.insert(CarEntity(name = "T"))`. Assert `rowId > 0`. Assert `carDao.getById(rowId.toInt())?.name == "T"`.
+- `updateCar_changesPersist` — `val rowId = carDao.insert(CarEntity(name = "T")).toInt()`. **Re-fetch:** `val saved = carDao.getById(rowId)!!`. Then `carDao.update(saved.copy(name = "T2"))`. Assert `carDao.observeAll().first().single().name == "T2"`. (Calling `update` on the original local — which still has `id = 0` — would silently update zero rows.)
+- `deleteCar_removesFromList` — Insert two cars and capture both rowIds: `val id1 = carDao.insert(CarEntity(name = "A")).toInt(); val id2 = carDao.insert(CarEntity(name = "B")).toInt()`. **Re-fetch one** before delete: `carDao.delete(carDao.getById(id1)!!)`. Assert `carDao.observeAll().first().map { it.id }` is `listOf(id2)`.
 
 #### `ChargeEventDaoTest` (5 cases per `TEST_PLAN §2.1`)
 
-- `insertAndRetrieve_returnsAllForCar` — insert 3 events for one car, `observeForCar` emits all 3.
-- `cascadeDelete_deletesEventsWhenCarDeleted` — insert car + 3 events, delete car, `observeForCar` emits empty.
-- `getInRange_filtersOutOfRange` — insert events at t-7d, t-15d, t-45d; query last 30 days returns 2.
-- `observeForCar_isSortedByEventDateAsc` — insert in random date order; `observeForCar` emits sorted ascending.
-- `update_persistsChanges` — insert an event, update its `kwhAdded` and `note`, query by id; updated values are returned. (TEST_PLAN §2.1 listed `insertDuplicate_replaces` here. We deliberately diverge: `ChargeEventDao.insert` uses default `OnConflictStrategy.ABORT` because charge events are append-only-by-design — edits go through `@Update`, not a re-`@Insert`. Testing ABORT semantics would just exercise Room's defensive throw on `SQLiteConstraintException`, which is uninteresting domain behavior. Testing the `update` path is more valuable, and there's no other coverage of it in B.)
+All test setup: `val carId = carDao.insert(CarEntity(name = "T")).toInt()` first, then use `carId` as the FK in inserted events.
 
-#### `CustomLocationDaoTest` (6 cases per `TEST_PLAN §2.3`)
+- `insertAndRetrieve_returnsAllForCar` — insert 3 events with `carId = carId`, `observeForCar(carId).first()` has size 3.
+- `cascadeDelete_deletesEventsWhenCarDeleted` — insert 3 events with `carId = carId`. **Re-fetch the car before delete:** `carDao.delete(carDao.getById(carId)!!)`. Assert `chargeEventDao.observeForCar(carId).first()` is empty. (Calling `delete` on the original local — `id = 0` — would no-op and leave events in place; the FK cascade only fires when the actual row is deleted.)
+- `getInRange_filtersOutOfRange` — insert events at `eventDate = now - 7d`, `now - 15d`, `now - 45d`; `getInRange(carId, now - 30 * MILLIS_PER_DAY, now)` returns 2.
+- `observeForCar_isSortedByEventDateAsc` — insert events in random `eventDate` order; `observeForCar(carId).first()` is sorted ascending by `eventDate`.
+- `update_persistsChanges` — `val eventRowId = chargeEventDao.insert(ChargeEventEntity(carId = carId, eventDate = …, odometerKm = 100.0, kwhAdded = 10.0)).toInt()`. **Re-fetch:** `val saved = chargeEventDao.getById(eventRowId)!!`. Then `chargeEventDao.update(saved.copy(kwhAdded = 12.5, note = "topped up"))`. Assert `chargeEventDao.getById(eventRowId)!!.kwhAdded == 12.5` and `note == "topped up"`. (TEST_PLAN §2.1 listed `insertDuplicate_replaces` here. We deliberately diverge: `ChargeEventDao.insert` uses default `OnConflictStrategy.ABORT` because charge events are append-only-by-design — edits go through `@Update`, not a re-`@Insert`. Testing ABORT semantics would just exercise Room's defensive throw on `SQLiteConstraintException`, which is uninteresting domain behavior. Testing the `update` path is more valuable, and there's no other coverage of it in B.)
 
-- `insertIfMissing_newLabel_stored` — `insertIfMissing("Home")`, `observeAll` includes it with `useCount = 1`.
-- `insertIfMissing_duplicate_returnsMinusOne` — second `insertIfMissing("Home")` returns `-1L`, `observeAll` count is still 1.
-- `recordUsage_increments_existingLabel` — call `recordUsage("Home", now1)`, then `recordUsage("Home", now2)`. After both calls: useCount = 2 (NOT 3 — the rowId-of-`-1L` guard).
-- `recordUsage_freshLabel_useCountIsOne` — single call to `recordUsage("Work", now)` produces useCount = 1.
-- `getTopLocations_maxFive` — insert 8 distinct labels via `recordUsage`, `observeTop5` emits 5.
-- `getTopLocations_sortedByUseCount` — 5 labels with varying useCounts (call `recordUsage` differently for each), `observeTop5` emits highest-useCount first.
+#### `CustomLocationDaoTest` (7 cases — 6 from `TEST_PLAN §2.3` plus a `recordUsage_freshLabel_useCountIsOne` case unique to this design)
+
+- `insertIfMissing_newLabel_stored` — `insertIfMissing(CustomLocationEntity(label = "Home", lastUsed = now))`, `observeAll().first()` has one entry with `useCount = 1`.
+- `insertIfMissing_duplicate_returnsMinusOne` — `insertIfMissing(...)` once, then again with the same label; the second call returns `-1L`. `observeAll().first()` size is still 1.
+- `recordUsage_increments_existingLabel` — call `recordUsage("Home", now1)`, then `recordUsage("Home", now2)`. After both calls: useCount == 2 (NOT 3 — the rowId-of-`-1L` guard) and `lastUsed == now2`.
+- `recordUsage_freshLabel_useCountIsOne` — single call to `recordUsage("Work", now)` produces useCount == 1.
+- `getTopLocations_maxFive` — call `recordUsage` for 8 distinct labels, `observeTop5().first()` has size 5.
+- `getTopLocations_sortedByUseCount` — 5 labels: call `recordUsage("A")` 5×, `recordUsage("B")` 4×, `recordUsage("C")` 3×, `recordUsage("D")` 2×, `recordUsage("E")` 1×. `observeTop5().first().map { it.label }` is `listOf("A", "B", "C", "D", "E")`.
+- `delete_removesEntry` — `recordUsage("Home", now)`. **Re-fetch:** `val saved = customLocationDao.observeAll().first().single()` (id was assigned by Room; the entity built inside `recordUsage` had `id = 0` and is no longer reachable from the test). Then `customLocationDao.delete(saved)`. Assert `observeAll().first()` is empty.
 
 #### `MigrationTest` (3 cases per `TEST_PLAN §2.4`)
 
@@ -562,7 +565,7 @@ Each test: build a v1 DB via raw `SupportSQLiteOpenHelper`, insert representativ
 
 - `recordUsage_isAtomicAndIncrementsOnSecondCall` — call `recordUsage("Home", now1)` and `recordUsage("Home", now2)`; `observeTop5().first()` contains a single entry with `useCount = 2` and `lastUsed = now2`. Validates the `@Transaction` is bound through the repo and the rowId guard works at the repo seam.
 
-**Total instrumented tests added by B: 21** (3 + 5 + 6 + 3 + 1 + 2 + 1). Combined with A's 3 (`WizardFlowTest`), the project will have **24** instrumented tests after this PR.
+**Total instrumented tests added by B: 22** (3 + 5 + 7 + 3 + 1 + 2 + 1). Combined with A's 3 (`WizardFlowTest`), the project will have **25** instrumented tests after this PR.
 
 ### 10.2 JVM (extends existing `SettingsRepositoryTest`)
 
