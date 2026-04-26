@@ -13,4 +13,9 @@
         <item name="colorOnBackground">@color/on_background</item>
         <item name="colorOnSurface">@color/on_surface</item>
     </style>
+
+    <style name="Theme.EVTracker.SplashScreen" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">?android:colorBackground</item>
+        <item name="postSplashScreenTheme">@style/Theme.EVTracker</item>
+    </style>
 </resources>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="supported_currencies">
+        <item>EUR</item>
+        <item>USD</item>
+        <item>GBP</item>
+        <item>CHF</item>
+        <item>JPY</item>
+        <item>CZK</item>
+        <item>PLN</item>
+        <item>HUF</item>
+        <item>DKK</item>
+        <item>SEK</item>
+        <item>NOK</item>
+        <item>AUD</item>
+        <item>CAD</item>
+    </string-array>
+</resources>

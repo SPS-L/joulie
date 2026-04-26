@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/dashboardFragment">
+
+    <fragment
+        android:id="@+id/wizardFragment"
+        android:name="org.spsl.evtracker.ui.wizard.WizardFragment"
+        android:label="Setup">
+        <action
+            android:id="@+id/action_wizard_to_dashboard"
+            app:destination="@id/dashboardFragment"
+            app:popUpTo="@id/wizardFragment"
+            app:popUpToInclusive="true"/>
+    </fragment>
+
+    <fragment
+        android:id="@+id/dashboardFragment"
+        android:name="org.spsl.evtracker.ui.dashboard.DashboardFragment"
+        android:label="Dashboard"/>
+
+    <fragment
+        android:id="@+id/chargeEditFragment"
+        android:name="org.spsl.evtracker.ui.chargeedit.ChargeEditFragment"
+        android:label="Charge"/>
+
+    <fragment
+        android:id="@+id/carsFragment"
+        android:name="org.spsl.evtracker.ui.cars.CarsFragment"
+        android:label="Cars"/>
+
+    <fragment
+        android:id="@+id/settingsFragment"
+        android:name="org.spsl.evtracker.ui.settings.SettingsFragment"
+        android:label="Settings"/>
+
+    <fragment
+        android:id="@+id/chartsFragment"
+        android:name="org.spsl.evtracker.ui.charts.ChartsFragment"
+        android:label="Charts"/>
+
+    <fragment
+        android:id="@+id/historyFragment"
+        android:name="org.spsl.evtracker.ui.history.HistoryFragment"
+        android:label="History"/>
+
+    <fragment
+        android:id="@+id/manageLocationsFragment"
+        android:name="org.spsl.evtracker.ui.locations.ManageLocationsFragment"
+        android:label="Manage Locations"/>
+
+</navigation>
