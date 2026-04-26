@@ -1,64 +1,16 @@
 # Google Cloud Setup — Drive API & OAuth for EV Tracker
 
-This guide walks you through enabling the Google Drive API and creating an OAuth 2.0 Android client so the app can use the hidden App Data folder for backup.
+Follow these steps **in order**. There is one path. Do not skip steps.
 
-> **Scope used:** `https://www.googleapis.com/auth/drive.appdata`  
-> This is a **non-sensitive, non-restricted** scope — no Google OAuth verification required for personal or internal use.
-
----
-
-## Step 1 — Create a Google Cloud Project
-
-1. Go to [https://console.cloud.google.com/](https://console.cloud.google.com/)
-2. Click the project selector (top-left) → **New Project**
-3. Name it (e.g. `EV Tracker`) and click **Create**
-4. Make sure the new project is selected in the top bar
+> **Scope used:** `drive.appdata` — non-sensitive, no Google verification required.
 
 ---
 
-## Step 2 — Enable the Google Drive API
+## Step 1 — Get your debug SHA-1 fingerprint
 
-1. In the left menu go to **APIs & Services → Library**
-2. Search for **Google Drive API**
-3. Click it → **Enable**
+You need this before anything else.
 
----
-
-## Step 3 — Configure the OAuth Consent Screen
-
-1. Go to **APIs & Services → OAuth consent screen**
-2. Choose **External** (works for personal use; for internal org use choose Internal)
-3. Fill in:
-   - **App name:** EV Efficiency Tracker
-   - **User support email:** your email
-   - **Developer contact email:** your email
-4. Click **Save and Continue**
-5. On the **Scopes** page click **Add or Remove Scopes**
-6. Search for `drive.appdata` and check `../auth/drive.appdata` → **Update** → **Save and Continue**
-7. On the **Test users** page add your Google account email (required while app is in Testing status)
-8. Click **Save and Continue** → **Back to Dashboard**
-
-> You do **not** need to publish the app or go through verification for personal or lab use. Keep it in **Testing** status.
-
----
-
-## Step 4 — Create an OAuth 2.0 Android Client ID
-
-1. Go to **APIs & Services → Credentials**
-2. Click **+ Create Credentials → OAuth client ID**
-3. Application type: **Android**
-4. Fill in:
-   - **Name:** EV Tracker Android
-   - **Package name:** `org.spsl.evtracker`
-   - **SHA-1 certificate fingerprint:** (see Step 5 below)
-5. Click **Create**
-6. Copy the **Client ID** — you will not need to paste it anywhere in code; Google Sign-In resolves it automatically from the package name + SHA-1 combination
-
----
-
-## Step 5 — Get Your Debug Keystore SHA-1
-
-Run this command on your development machine:
+Open a terminal and run:
 
 ```bash
 keytool -list -v \
@@ -70,59 +22,105 @@ keytool -list -v \
 
 On Windows:
 ```cmd
-keytool -list -v ^
-  -keystore %USERPROFILE%\.android\debug.keystore ^
-  -alias androiddebugkey ^
-  -storepass android ^
-  -keypass android
+keytool -list -v -keystore %USERPROFILE%\.android\debug.keystore -alias androiddebugkey -storepass android -keypass android
 ```
 
-Copy the **SHA1** fingerprint (format: `AA:BB:CC:...`) and paste it into the Android OAuth client in Step 4.
+Find the line that starts with `SHA1:` and copy the fingerprint. It looks like:
+```
+SHA1: AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD
+```
 
-> For a **release build** you will need to repeat Step 4 with the SHA-1 of your release keystore and create a second OAuth client ID.
-
----
-
-## Step 6 — Add google-services.json to the Project
-
-1. In Google Cloud Console go to **APIs & Services → Credentials**
-2. At the top click **Download OAuth client** (the Android entry you just created)
-
-   *Alternatively:* go to [https://console.firebase.google.com/](https://console.firebase.google.com/), add the same project, register your Android app with package `org.spsl.evtracker` and SHA-1, then download `google-services.json` directly — this is the preferred method.
-
-3. Place the downloaded `google-services.json` file at:
-   ```
-   EV-android-app/app/google-services.json
-   ```
-4. The `app/build.gradle.kts` already includes:
-   ```kotlin
-   apply(plugin = "com.google.gms.google-services")
-   ```
-   so no further build changes are needed.
-
-> ⚠️ `google-services.json` contains your OAuth client ID but **no private keys**. It is safe to commit for open-source projects. If you prefer to keep it private, add it to `.gitignore` and distribute it separately.
+Keep it handy — you will paste it in Step 3.
 
 ---
 
-## Step 7 — Verify the Setup
+## Step 2 — Create a Firebase project
 
-1. Build and install the debug APK on a device or emulator that has a Google account signed in
-2. In Settings, toggle **Google Drive backup** ON
-3. The Google Sign-In consent screen should appear requesting "See and manage files created by EV Tracker" (the `drive.appdata` scope)
-4. After granting, the app will upload `evtracker_backup.json` to the hidden App Data folder
-5. Verify via the [Google Drive API Try-it tool](https://developers.google.com/workspace/drive/api/reference/rest/v3/files/list):
-   - Method: `files.list`
-   - Set `spaces = appDataFolder`
-   - Click **Execute** — you should see `evtracker_backup.json` listed
+1. Go to [https://console.firebase.google.com/](https://console.firebase.google.com/)
+2. Click **Add project**
+3. Name it `EV Tracker` → click **Continue**
+4. Disable Google Analytics (not needed) → click **Create project**
+5. Wait for it to provision, then click **Continue**
+
+---
+
+## Step 3 — Register your Android app in Firebase
+
+1. On the Firebase project overview page, click the **Android icon** (‹/›) to add an Android app
+2. Fill in:
+   - **Android package name:** `org.spsl.evtracker`
+   - **App nickname:** EV Tracker (optional)
+   - **Debug signing certificate SHA-1:** paste the fingerprint from Step 1
+3. Click **Register app**
+4. On the next screen click **Download google-services.json**
+5. Save the file — you will place it in the project in Step 6
+6. Click **Next** → **Next** → **Continue to console** (skip the SDK setup instructions)
+
+---
+
+## Step 4 — Enable the Google Drive API
+
+1. Go to [https://console.cloud.google.com/](https://console.cloud.google.com/)
+2. In the project selector (top-left) choose the project named **EV Tracker** (same one Firebase just created)
+3. In the left menu go to **APIs & Services → Library**
+4. Search for **Google Drive API**
+5. Click it → click **Enable**
+
+---
+
+## Step 5 — Configure the OAuth consent screen
+
+1. In Google Cloud Console go to **APIs & Services → OAuth consent screen**
+2. Choose **External** → click **Create**
+3. Fill in:
+   - **App name:** EV Efficiency Tracker
+   - **User support email:** your email address
+   - **Developer contact email:** your email address
+4. Click **Save and Continue**
+5. On the **Scopes** screen click **Add or Remove Scopes**
+6. In the filter box type `drive.appdata`
+7. Check the scope `https://www.googleapis.com/auth/drive.appdata` → click **Update**
+8. Click **Save and Continue**
+9. On the **Test users** screen click **+ Add users** → enter your Google account email → click **Add**
+10. Click **Save and Continue** → **Back to Dashboard**
+
+---
+
+## Step 6 — Place google-services.json in the project
+
+Take the `google-services.json` file you downloaded in Step 3 and copy it to:
+
+```
+EV-android-app/app/google-services.json
+```
+
+That's it. The build files already reference it.
+
+> `google-services.json` contains no private keys. It is safe to commit to the repo.
+
+---
+
+## Step 7 — Build and verify
+
+1. Build and install the debug APK:
+   ```bash
+   ./gradlew assembleDebug
+   # install on connected device or emulator
+   adb install app/build/outputs/apk/debug/app-debug.apk
+   ```
+2. Open the app → go to **Settings** → toggle **Google Drive backup** ON
+3. A Google Sign-In screen appears asking for permission to manage EV Tracker files
+4. Sign in with the same Google account you added as a test user in Step 5
+5. The app will upload `evtracker_backup.json` to the hidden App Data folder
 
 ---
 
 ## Troubleshooting
 
-| Problem | Likely cause | Fix |
-|---------|-------------|-----|
-| Sign-in fails silently | SHA-1 mismatch | Re-run `keytool`, compare with Cloud Console entry |
-| "Access blocked: app not verified" | Consent screen in Testing but your account not in test users | Add your account in OAuth consent screen → Test users |
-| `drive.appdata` scope not granted | Scope not added to consent screen | Re-do Step 3.6 |
-| Backup file not found after restore | Wrong project / package name | Ensure package name exactly matches `org.spsl.evtracker` |
-| Release build can't sign in | Release SHA-1 not registered | Create second OAuth client with release keystore SHA-1 |
+| Problem | Fix |
+|---------|-----|
+| "Another project contains an OAuth 2.0 client with this SHA-1 and package name" | Your SHA-1 + package name is already registered in an old Firebase project. Open [https://console.firebase.google.com/](https://console.firebase.google.com/), find that old project, go to **Project Settings → Your apps**, delete the Android app entry there, then retry Step 3. |
+| Sign-in fails silently | SHA-1 mismatch. Re-run the `keytool` command, compare the output with what is registered in Firebase Project Settings → Your apps. |
+| "Access blocked: app not verified" | Your Google account is not in the test users list. Re-do Step 5.9. |
+| `google-services.json` not found at build time | File is missing from `app/` folder. Re-do Step 6. |
+| Backup file not found after restore | Wrong package name registered. Must be exactly `org.spsl.evtracker`. |
