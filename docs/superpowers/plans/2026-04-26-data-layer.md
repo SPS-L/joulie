@@ -1015,11 +1015,9 @@ import androidx.sqlite.db.SupportSQLiteOpenHelper
 import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -1142,18 +1140,18 @@ class MigrationTest {
             "INSERT INTO charge_events (carId, eventDate, odometerKm, kwhAdded, createdAt) " +
                 "VALUES (1, 2000, 100.0, 10.0, 2000)"
         )
-        v1.close()
 
-        // Open through Room — runs MIGRATION_1_2 (and MIGRATION_2_3, since v3 is current);
-        // schema validation runs against v3 entities. If anything is wrong, Room throws.
-        val room = openWithRoom()
-        try {
-            // Verify chargeType is present and defaulted.
-            val event = room.chargeEventDao().getAllForCarSorted(1).single()
-            assertEquals("AC", event.chargeType)
-        } finally {
-            room.close()
+        // Run MIGRATION_1_2 directly against the v1 raw SQLite DB — isolated, no
+        // MIGRATION_2_3 and no Room schema validation.
+        AppDatabase.MIGRATION_1_2.migrate(v1)
+
+        // Verify chargeType column was added with the 'AC' default value applied to
+        // pre-existing rows.
+        v1.query("SELECT chargeType FROM charge_events WHERE id = 1").use { cursor ->
+            assertTrue("expected one row in charge_events", cursor.moveToFirst())
+            assertEquals("AC", cursor.getString(0))
         }
+        v1.close()
     }
 
     @Test
@@ -1165,24 +1163,25 @@ class MigrationTest {
                 "(carId, eventDate, odometerKm, kwhAdded, chargeType, createdAt) " +
                 "VALUES (1, 2000, 100.0, 10.0, 'DC', 2000)"
         )
-        v2.close()
 
-        val room = openWithRoom()
-        try {
-            // Pre-existing event survives. New columns get their migration defaults.
-            val event = room.chargeEventDao().getAllForCarSorted(1).single()
-            assertEquals("DC", event.chargeType)
-            assertEquals(null, event.costTotal)
-            assertEquals("", event.note)
+        // Run MIGRATION_2_3 directly — isolated, no Room schema validation.
+        AppDatabase.MIGRATION_2_3.migrate(v2)
 
-            // custom_locations table exists and is empty. observeAll is a Flow;
-            // consume the first emission via the Flow.first() extension.
-            val list = room.customLocationDao().observeAll().first()
-            assertNotNull(list)
-            assertTrue("expected empty custom_locations, got $list", list.isEmpty())
-        } finally {
-            room.close()
+        // Verify new columns exist on pre-existing rows with their migration defaults.
+        v2.query("SELECT chargeType, costTotal, note FROM charge_events WHERE id = 1")
+            .use { cursor ->
+                assertTrue("expected one row in charge_events", cursor.moveToFirst())
+                assertEquals("DC", cursor.getString(0))     // unchanged from v2
+                assertTrue("costTotal should be NULL", cursor.isNull(1))
+                assertEquals("", cursor.getString(2))         // NOT NULL DEFAULT ''
+            }
+
+        // Verify the new custom_locations table exists and is empty.
+        v2.query("SELECT COUNT(*) FROM custom_locations").use { cursor ->
+            assertTrue("expected COUNT(*) row", cursor.moveToFirst())
+            assertEquals(0, cursor.getInt(0))
         }
+        v2.close()
     }
 
     @Test
@@ -1195,8 +1194,10 @@ class MigrationTest {
         )
         v1.close()
 
-        // Room runs both migrations and validates the post-migration schema against v3 entities.
-        // If column names, indices, or defaults drift, Room throws IllegalStateException.
+        // Open through Room with both migrations registered. Room runs MIGRATION_1_2
+        // then MIGRATION_2_3, then validates the resulting schema against v3 entity
+        // declarations. If column names, indices, or defaults drift, Room throws
+        // IllegalStateException.
         val room = openWithRoom()
         try {
             val event = room.chargeEventDao().getAllForCarSorted(1).single()
