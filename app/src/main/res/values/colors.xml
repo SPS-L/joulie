@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="primary">#1565C0</color>
+    <color name="primary_variant">#003c8f</color>
+    <color name="secondary">#00796B</color>
+    <color name="secondary_variant">#004c40</color>
+    <color name="background">#FAFAFA</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="error">#B00020</color>
+    <color name="on_primary">#FFFFFF</color>
+    <color name="on_secondary">#FFFFFF</color>
+    <color name="on_background">#000000</color>
+    <color name="on_surface">#000000</color>
+    <color name="chart_1">#1565C0</color>
+    <color name="chart_2">#00796B</color>
+    <color name="chart_3">#F57F17</color>
+    <color name="chart_4">#AD1457</color>
+    <color name="chart_5">#6A1B9A</color>
+</resources>
