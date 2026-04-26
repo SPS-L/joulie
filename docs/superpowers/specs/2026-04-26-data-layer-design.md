@@ -8,7 +8,17 @@
 
 ## 1. Context — what landed in A, what B picks up
 
-Sub-project A (merged on `main` as `4ec1e88`) shipped a buildable, launchable app with Hilt + DataStore + Navigation Component, a functional 3-page first-boot wizard, the `MainActivity` wizard gate, and 7 placeholder destination Fragments. **No Room code exists yet** — A deliberately deferred the entire data layer to this sub-project so the wizard could be designed and tested in isolation.
+### 1.1 Prerequisites
+
+This spec assumes Sub-project A is already merged into `main`. At the time of writing, that was commit `4ec1e88` ("Merge Sub-project A (Foundation) into main"). The acceptance criteria, file map, and "extends existing X" references throughout this document are **additive on top of that state** — they are not standalone instructions for a fresh repo.
+
+If the workspace is at any state earlier than `4ec1e88` (for example, on a branch that hasn't merged A yet, or on a fork that started before A landed), this design cannot be applied as-is — you'll be missing `EVTrackerApp`, `MainActivity`, `SettingsRepository`, the wizard, and the Hilt scaffolding that B builds on.
+
+### 1.2 What A delivered
+
+Sub-project A shipped a buildable, launchable app with Hilt + DataStore + Navigation Component, a functional 3-page first-boot wizard, the `MainActivity` wizard gate, and 7 placeholder destination Fragments. **No Room code exists yet** — A deliberately deferred the entire data layer to this sub-project so the wizard could be designed and tested in isolation.
+
+### 1.3 What B introduces
 
 Sub-project B introduces the Room v3 database with three entities, three DAOs, two migrations, and three narrow repositories. It also extends `SettingsRepository` with the `activeCarId` accessor that was deferred from A's narrower repository surface.
 
@@ -40,6 +50,7 @@ Sub-projects C (domain core), D (Dashboard/ChargeEdit/Cars/History UI), E (Drive
 | Domain models distinct from entities for car/event/location | None of the planned sub-projects need them; entities double as domain types |
 | Stats, cost parsing, unit conversion, backup serialization | C / E |
 | Real Dashboard / ChargeEdit / Cars / History UI | D |
+| `SettingsLocalDataSource` (mentioned in `AGENT_INSTRUCTIONS.md §3.3` but never introduced) | Not coming back in B. Sub-project A explicitly dropped it as YAGNI when `SettingsRepository` had only one DataStore consumer; B keeps the same posture — adding the `activeCarId` accessor still keeps `SettingsRepository` thin enough that an intermediate data source layer would be a no-op pass-through. If a second consumer appears later (e.g., a non-DataStore preferences backend), the sub-project that needs it can introduce the abstraction. |
 
 ### 2.3 Acceptance criteria
 
@@ -443,16 +454,17 @@ DAO providers are deliberately **not** `@Singleton` — Room internally caches D
 
 ### 9.1 Schema export
 
-Add to `app/build.gradle.kts` inside `android.defaultConfig`:
+Add a **top-level** `ksp { … }` block to `app/build.gradle.kts` (NOT nested under `android` or `defaultConfig` — KSP's Gradle DSL is registered at the project level by the `com.google.devtools.ksp` plugin):
 
 ```kotlin
+// app/build.gradle.kts — at the top level, alongside `android { … }` and `dependencies { … }`:
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
     arg("room.incremental", "true")
 }
 ```
 
-(KSP-style argument syntax, since Room runs via KSP per A's build config.) Generated schema JSONs land at `app/schemas/org.spsl.evtracker.data.local.db.AppDatabase/3.json`.
+Generated schema JSONs land at `app/schemas/org.spsl.evtracker.data.local.db.AppDatabase/3.json`.
 
 ### 9.2 `app/schemas/` is tracked in git
 
@@ -504,7 +516,7 @@ class CarDaoTest {
 - `cascadeDelete_deletesEventsWhenCarDeleted` — insert car + 3 events, delete car, `observeForCar` emits empty.
 - `getInRange_filtersOutOfRange` — insert events at t-7d, t-15d, t-45d; query last 30 days returns 2.
 - `observeForCar_isSortedByEventDateAsc` — insert in random date order; `observeForCar` emits sorted ascending.
-- `insertSameId_doesNotReplace` — insert event id 0 twice (autoGenerate), both rows should land. (This is verifying the autoGenerate behavior; we don't use REPLACE on insert here because charge events are append-only-ish.)
+- `update_persistsChanges` — insert an event, update its `kwhAdded` and `note`, query by id; updated values are returned. (TEST_PLAN §2.1 listed `insertDuplicate_replaces` here. We deliberately diverge: `ChargeEventDao.insert` uses default `OnConflictStrategy.ABORT` because charge events are append-only-by-design — edits go through `@Update`, not a re-`@Insert`. Testing ABORT semantics would just exercise Room's defensive throw on `SQLiteConstraintException`, which is uninteresting domain behavior. Testing the `update` path is more valuable, and there's no other coverage of it in B.)
 
 #### `CustomLocationDaoTest` (6 cases per `TEST_PLAN §2.3`)
 
