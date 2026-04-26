@@ -90,3 +90,10 @@ Declared in a single `PreferenceKeys` object: `setupComplete`, `primaryMetric` (
 - Add new screens by creating a Fragment + ViewModel pair and wiring into the Nav graph; do not introduce a second Activity.
 - New efficiency or cost metrics: extend `Stats` / `EfficiencyStats` and the dashboard card layout; keep the formulas table in `DESIGN.md §7` in sync.
 - When changing the wizard, update `WizardViewModelTest` and `WizardFlowTest` (TEST_PLAN §3.2, §4.1) — the gate behavior is covered by tests.
+
+
+## gitflow
+
+- If needed to use gitflow, add 
+  - name: Write google-services.json
+    run: echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > app/google-services.json
