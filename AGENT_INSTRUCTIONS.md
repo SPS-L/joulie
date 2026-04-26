@@ -1,6 +1,8 @@
 # Agent Instructions — Build EV Efficiency Tracker APK
 
-This document gives a step-by-step guide for an AI coding agent (or developer) to implement the full application defined in `DESIGN.md` and produce a signed debug APK.
+This document gives a complete step-by-step guide for an AI coding agent (or developer) to implement the full application defined in `DESIGN.md` and produce a debug APK.
+
+> **Covers all phases:** project scaffold, DB, basic UI, charts, Drive backup, CSV, first-boot wizard, location chips, cost handling, multi-metric display.
 
 ---
 
@@ -23,7 +25,7 @@ git clone git@github.com:SPS-L/EV-android-app.git
 cd EV-android-app
 ```
 
-The repo contains design docs and Gradle config stubs. The agent must implement all Kotlin source files and XML resources described in `DESIGN.md § 12`.
+The repo contains design docs and Gradle config stubs. Implement all Kotlin source files and XML resources described in `DESIGN.md`.
 
 ---
 
@@ -40,6 +42,7 @@ data class Car(
     val make: String = "",
     val model: String = "",
     val year: Int? = null,
+    val batteryKwh: Double? = null,
     val createdAt: Long = System.currentTimeMillis()
 )
 ```
@@ -50,16 +53,32 @@ data class Car(
     tableName = "charge_events",
     foreignKeys = [ForeignKey(entity = Car::class, parentColumns = ["id"],
         childColumns = ["carId"], onDelete = ForeignKey.CASCADE)],
-    indices = [Index("carId"), Index("eventDate")]
+    indices = [Index("carId"), Index("eventDate"), Index("chargeType"), Index("location")]
 )
 data class ChargeEvent(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val carId: Int,
     val eventDate: Long,
-    val odometerKm: Double,
+    val odometerKm: Double,        // always stored in km; display converts
     val kwhAdded: Double,
+    val chargeType: String = "AC", // "AC" | "DC"
+    val costTotal: Double? = null, // NULL = excluded from cost stats
+    val costPerKwh: Double? = null,
+    val currency: String? = null,
+    val location: String? = null,
     val note: String = "",
     val createdAt: Long = System.currentTimeMillis()
+)
+```
+
+**CustomLocation.kt**
+```kotlin
+@Entity(tableName = "custom_locations")
+data class CustomLocation(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val label: String,
+    val useCount: Int = 1,
+    val lastUsed: Long = System.currentTimeMillis()
 )
 ```
 
@@ -69,12 +88,24 @@ data class Stats(
     val label: String,
     val totalKwh: Double,
     val totalDistanceKm: Double,
-    val avgEfficiencyKmPerKwh: Double,
-    val chargeCount: Int
+    val avgEfficiencyKmPerKwh: Double?,
+    val chargeCount: Int,
+    val costPerKm: Double? = null,
+    val costPer100km: Double? = null
 ) {
-    val avgConsumptionPer100km: Double
-        get() = if (totalDistanceKm > 0) (totalKwh / totalDistanceKm) * 100.0 else 0.0
+    val kwhPer100km: Double?
+        get() = if (totalDistanceKm > 0) (totalKwh / totalDistanceKm) * 100.0 else null
+    val miPerKwh: Double?
+        get() = avgEfficiencyKmPerKwh?.let { it * 0.621371 }
 }
+
+data class EfficiencyStats(
+    val kmPerKwh: Double?,
+    val kwhPer100km: Double?,
+    val miPerKwh: Double?,
+    val costPerKm: Double?,
+    val costPer100km: Double?
+)
 ```
 
 ### 2.2 DAOs
@@ -104,8 +135,7 @@ interface ChargeEventDao {
     @Query("SELECT * FROM charge_events WHERE carId = :carId ORDER BY eventDate DESC")
     fun getEventsForCar(carId: Int): Flow<List<ChargeEvent>>
 
-    @Query("""SELECT * FROM charge_events WHERE carId = :carId 
-              AND eventDate BETWEEN :from AND :to ORDER BY eventDate ASC""")
+    @Query("SELECT * FROM charge_events WHERE carId = :carId AND eventDate BETWEEN :from AND :to ORDER BY eventDate ASC")
     suspend fun getEventsInRange(carId: Int, from: Long, to: Long): List<ChargeEvent>
 
     @Query("SELECT * FROM charge_events WHERE carId = :carId ORDER BY eventDate ASC")
@@ -125,18 +155,74 @@ interface ChargeEventDao {
 }
 ```
 
+**CustomLocationDao.kt**
+```kotlin
+@Dao
+interface CustomLocationDao {
+    @Query("SELECT * FROM custom_locations ORDER BY use_count DESC, last_used DESC LIMIT 5")
+    fun getTopLocations(): Flow<List<CustomLocation>>
+
+    @Query("SELECT label FROM custom_locations ORDER BY use_count DESC, last_used DESC")
+    suspend fun getAllLabels(): List<String>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insert(loc: CustomLocation): Long
+
+    @Query("UPDATE custom_locations SET use_count = use_count + 1, last_used = :ts WHERE label = :label")
+    suspend fun increment(label: String, ts: Long = System.currentTimeMillis())
+
+    @Query("SELECT COUNT(*) FROM custom_locations WHERE label = :label")
+    suspend fun exists(label: String): Int
+
+    @Delete
+    suspend fun delete(loc: CustomLocation)
+}
+```
+
 ### 2.3 AppDatabase.kt
 ```kotlin
-@Database(entities = [Car::class, ChargeEvent::class], version = 1, exportSchema = false)
+@Database(
+    entities = [Car::class, ChargeEvent::class, CustomLocation::class],
+    version = 3,
+    exportSchema = false
+)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun carDao(): CarDao
     abstract fun chargeEventDao(): ChargeEventDao
+    abstract fun customLocationDao(): CustomLocationDao
 
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null
+
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE charge_events ADD COLUMN chargeType TEXT NOT NULL DEFAULT 'AC'")
+            }
+        }
+
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS custom_locations (
+                        id        INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        label     TEXT    NOT NULL,
+                        useCount  INTEGER NOT NULL DEFAULT 1,
+                        lastUsed  INTEGER NOT NULL
+                    )
+                """)
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS idx_cl_label ON custom_locations(label)")
+                db.execSQL("ALTER TABLE charge_events ADD COLUMN cost_total   REAL")
+                db.execSQL("ALTER TABLE charge_events ADD COLUMN cost_per_kwh REAL")
+                db.execSQL("ALTER TABLE charge_events ADD COLUMN currency     TEXT")
+                db.execSQL("ALTER TABLE charge_events ADD COLUMN location     TEXT")
+                db.execSQL("ALTER TABLE charge_events ADD COLUMN note         TEXT")
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase =
             INSTANCE ?: synchronized(this) {
                 Room.databaseBuilder(context, AppDatabase::class.java, "ev_tracker.db")
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                     .build().also { INSTANCE = it }
             }
     }
@@ -159,88 +245,184 @@ class CarRepository(private val dao: CarDao) {
 
 ### ChargeEventRepository.kt
 
-Key method — compute Stats from a list of sorted events:
+Key stats computation — always use delta-odometer method:
 ```kotlin
 fun computeStats(events: List<ChargeEvent>, label: String): Stats {
-    if (events.isEmpty()) return Stats(label, 0.0, 0.0, 0.0, 0)
+    if (events.size < 2) return Stats(label, 0.0, 0.0, null, 0)
     var totalKwh = 0.0; var totalDist = 0.0
+    var totalCost = 0.0; var costCount = 0
     for (i in 1 until events.size) {
         val dist = events[i].odometerKm - events[i-1].odometerKm
-        if (dist > 0) { totalKwh += events[i].kwhAdded; totalDist += dist }
+        if (dist > 0) {
+            totalKwh += events[i].kwhAdded
+            totalDist += dist
+            events[i].costTotal?.let { totalCost += it; costCount++ }
+        }
     }
-    val avg = if (totalKwh > 0) totalDist / totalKwh else 0.0
-    return Stats(label, totalKwh, totalDist, avg, events.size - 1)
+    val avg = if (totalKwh > 0) totalDist / totalKwh else null
+    val costPerKm = if (costCount > 0 && totalDist > 0) totalCost / totalDist else null
+    return Stats(label, totalKwh, totalDist, avg, events.size - 1,
+        costPerKm, costPerKm?.let { it * 100 })
 }
 ```
 
----
-
-## Step 4 — Implement ViewModels
-
-Each ViewModel exposes `StateFlow` or `LiveData` consumed by its Fragment.
-
-### DashboardViewModel.kt
+### LocationRepository.kt
 ```kotlin
-class DashboardViewModel(app: Application) : AndroidViewModel(app) {
-    private val repo = ChargeEventRepository(AppDatabase.getInstance(app).chargeEventDao())
-    private val _activeCarId = MutableStateFlow<Int>(-1)
+class LocationRepository(private val dao: CustomLocationDao) {
+    val topLocations: Flow<List<CustomLocation>> = dao.getTopLocations()
 
-    val lastChargeStats: StateFlow<Stats?> = ...  // derived from _activeCarId + DB
-    val last7DaysStats: StateFlow<Stats?> = ...
-    val last30DaysStats: StateFlow<Stats?> = ...
-    val yearStats: StateFlow<Stats?> = ...
-    val customStats: MutableStateFlow<Stats?> = MutableStateFlow(null)
+    suspend fun recordUsage(label: String) {
+        if (label.isBlank()) return
+        if (dao.exists(label) > 0) dao.increment(label)
+        else dao.insert(CustomLocation(label = label))
+    }
 
-    fun setCustomPeriod(from: Long, to: Long) { /* query DB and update customStats */ }
+    suspend fun delete(loc: CustomLocation) = dao.delete(loc)
+    suspend fun getAllLabels() = dao.getAllLabels()
 }
 ```
 
 ---
 
-## Step 5 — Implement UI
+## Step 4 — DataStore (Preferences)
 
-### 5.1 activity_main.xml
+```kotlin
+object PreferenceKeys {
+    val SETUP_COMPLETE   = booleanPreferencesKey("setupComplete")
+    val PRIMARY_METRIC   = stringPreferencesKey("primaryMetric")  // km_per_kwh | kwh_per_100km | mi_per_kwh
+    val DISTANCE_UNIT    = stringPreferencesKey("distanceUnit")    // km | miles
+    val CURRENCY         = stringPreferencesKey("currency")        // EUR, USD, …
+    val ACTIVE_CAR_ID    = intPreferencesKey("activeCarId")        // -1 = none
+    val DRIVE_ENABLED    = booleanPreferencesKey("driveEnabled")
+    val THEME            = stringPreferencesKey("theme")           // system | light | dark
+}
+```
 
-Single `FragmentContainerView` + `BottomNavigationView` with three tabs:
-- Dashboard (ic_home)
-- Charges log (ic_list)
-- Charts (ic_bar_chart)
+---
 
-Top-right: Settings icon button.
+## Step 5 — First-Boot Wizard
 
-### 5.2 fragment_dashboard.xml
+### WizardViewModel.kt
+```kotlin
+class WizardViewModel(private val dataStore: DataStore<Preferences>) : ViewModel() {
+    var selectedMetric   by mutableStateOf("km_per_kwh")
+    var selectedUnit     by mutableStateOf("km")
+    var selectedCurrency by mutableStateOf("EUR")
 
-- `MaterialToolbar` with car-selector `Spinner`
-- `HorizontalScrollView` > `LinearLayout` containing 5 `MaterialCardView` (stats cards)
-- `RecyclerView` for recent 5 events
+    fun finish() {
+        viewModelScope.launch {
+            dataStore.edit { prefs ->
+                prefs[PreferenceKeys.PRIMARY_METRIC]  = selectedMetric
+                prefs[PreferenceKeys.DISTANCE_UNIT]   = selectedUnit
+                prefs[PreferenceKeys.CURRENCY]        = selectedCurrency
+                prefs[PreferenceKeys.SETUP_COMPLETE]  = true
+            }
+        }
+    }
+}
+```
+
+### WizardFragment.kt (ViewPager2, 3 pages)
+```kotlin
+class WizardFragment : Fragment() {
+    private val vm: WizardViewModel by viewModels()
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        val adapter = WizardPagerAdapter(this)   // 3 pages
+        binding.viewPager.adapter = adapter
+        TabLayoutMediator(binding.tabs, binding.viewPager) { _, _ -> }.attach()
+
+        binding.btnNext.setOnClickListener {
+            val cur = binding.viewPager.currentItem
+            if (cur < 2) binding.viewPager.currentItem = cur + 1
+            else { vm.finish(); findNavController().navigate(R.id.action_wizard_to_dashboard) }
+        }
+        binding.btnBack.setOnClickListener {
+            if (binding.viewPager.currentItem > 0) binding.viewPager.currentItem--
+        }
+    }
+}
+```
+
+Pages: `WizardWelcomePage`, `WizardMetricPage` (RadioGroup + MaterialButtonToggleGroup; selecting mi/kWh auto-checks miles), `WizardCurrencyPage` (ExposedDropdownMenu from `R.array.currencies`).
+
+### MainActivity first-run routing
+```kotlin
+lifecycleScope.launch {
+    val done = dataStore.data.first()[PreferenceKeys.SETUP_COMPLETE] ?: false
+    if (!done) findNavController(R.id.nav_host_fragment).navigate(R.id.wizardFragment)
+}
+```
+
+Settings → Reset preferences sets `SETUP_COMPLETE = false` and navigates to wizard.
+
+---
+
+## Step 6 — Implement UI
+
+### activity_main.xml
+Single `FragmentContainerView` + `BottomNavigationView` (Dashboard · Charges · Charts). Top-right Settings icon.
+
+### fragment_dashboard.xml
+- `MaterialToolbar` with car `Spinner`
+- Filter `ChipGroup`: All / AC / DC
+- Period `TabLayout`: Last charge · 7d · 30d · Year · Custom
+- **Primary metric** large `MaterialCardView`; two smaller side-by-side cards for other metrics
+- Cost row (hidden when all `costTotal IS NULL` for period)
+- `RecyclerView` recent 5 events
 - `FloatingActionButton` (ic_add)
 
-Each stats card (`card_stats.xml`) contains:
-- Title (e.g., "Last 30 days")
-- Big number: efficiency in km/kWh or mi/kWh
-- Secondary row: total kWh · total distance · # charges
-
-### 5.3 fragment_charge_edit.xml
-
-- `TextInputLayout` + `TextInputEditText` for odometer, kWh, note
-- `MaterialButton` for date-time picker (shows current selection)
-- Save / Cancel buttons
-
-### 5.4 fragment_charts.xml
-
-- `TabLayout` (3 tabs)
-- `ViewPager2` with 3 child fragments, each containing one `LineChart`/`BarChart`/`ScatterChart`
-
-### 5.5 Charts implementation (MPAndroidChart)
+### fragment_charge_edit.xml
+- Date/time `MaterialButton` (default: now)
+- Odometer `TextInputLayout` (label adapts to unit pref)
+- kWh added `TextInputLayout`
+- AC / DC `MaterialButtonToggleGroup`
+- Location row: fixed chips (Home, Work, Public) + top-5 dynamic chips + `+ Add` chip → free-text field
+- Cost section (collapsed): Total cost / Per kWh toggle + amount field + currency label
+- Note `TextInputLayout`
 
 ```kotlin
-// Efficiency Trend (LineChart)
+// Dynamic location chips
+vm.topLocations.observe(viewLifecycleOwner) { locations ->
+    binding.chipGroupLocations.removeViews(3, binding.chipGroupLocations.childCount - 4)
+    locations.forEach { loc ->
+        val chip = Chip(requireContext()).apply {
+            text = loc.label; isCheckable = true
+            setOnClickListener { binding.etLocation.setText(loc.label) }
+        }
+        binding.chipGroupLocations.addView(chip, binding.chipGroupLocations.childCount - 1)
+    }
+}
+binding.chipAdd.setOnClickListener { binding.etLocation.requestFocus() }
+```
+
+### Cost parsing (call before every ChargeEvent insert)
+```kotlin
+enum class CostMode { TOTAL, PER_KWH }
+
+fun parseCost(value: Double?, kwh: Double, mode: CostMode): Pair<Double?, Double?> {
+    if (value == null || value <= 0.0 || kwh <= 0.0) return Pair(null, null)
+    return when (mode) {
+        CostMode.TOTAL   -> Pair(value, value / kwh)
+        CostMode.PER_KWH -> Pair(value * kwh, value)
+    }
+}
+```
+
+### fragment_charts.xml
+`TabLayout` + `ViewPager2`; 5 child fragments:
+1. Line chart: efficiency trend (AC series blue, DC series orange)
+2. Bar chart: monthly kWh
+3. Bar chart: monthly cost (hidden if no cost data)
+4. Pie chart: AC vs DC split
+5. Pie chart: location distribution
+
+```kotlin
+// Efficiency Trend (LineChart via MPAndroidChart)
 val entries = events.mapIndexed { i, e -> Entry(i.toFloat(), e.efficiency.toFloat()) }
 val dataSet = LineDataSet(entries, "km/kWh").apply {
-    color = Color.parseColor("#1565C0")
-    setCircleColor(color)
-    lineWidth = 2f
-    setDrawValues(false)
+    color = Color.parseColor("#1565C0"); setCircleColor(color)
+    lineWidth = 2f; setDrawValues(false)
 }
 chart.data = LineData(dataSet)
 chart.xAxis.valueFormatter = DateAxisValueFormatter(events)
@@ -249,14 +431,15 @@ chart.invalidate()
 
 ---
 
-## Step 6 — Google Drive Backup
+## Step 7 — Google Drive Backup
+
+**Scope:** `https://www.googleapis.com/auth/drive.appdata` (non-sensitive)
 
 ### DriveAuthManager.kt
 ```kotlin
 class DriveAuthManager(private val context: Context) {
     private val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-        .requestScopes(Scope(DriveScopes.DRIVE_APPDATA))
-        .build()
+        .requestScopes(Scope(DriveScopes.DRIVE_APPDATA)).build()
     val client: GoogleSignInClient = GoogleSignIn.getClient(context, gso)
 
     suspend fun silentSignIn(): GoogleSignInAccount? = suspendCancellableCoroutine { cont ->
@@ -270,19 +453,22 @@ class DriveAuthManager(private val context: Context) {
 ### DriveBackupManager.kt
 
 Key methods:
-- `suspend fun backupCar(car: Car, events: List<ChargeEvent>)` — serialize to JSON, upload/overwrite file
-- `suspend fun restoreAll(): List<Pair<Car, List<ChargeEvent>>>` — list app folder files, download & parse each
-- `suspend fun deleteCarBackup(car: Car)` — delete file from Drive
+- `suspend fun backup(cars, events, locations)` — serialize to JSON (backup_version=3), upload to App Data folder
+- `suspend fun restore(): BackupData?` — download & parse `evtracker_backup.json`
+- Auto-trigger via WorkManager `OneTimeWorkRequest` after every charge save
 
----
+**Backup JSON (v3):**
+```json
+{
+  "backup_version": 3,
+  "exported_at": "<ISO8601>",
+  "cars": [...],
+  "charge_events": [...],
+  "custom_locations": [ { "label": "Supercharger A6", "use_count": 4 } ]
+}
+```
 
-## Step 7 — AppPreferences (DataStore)
-
-Keys:
-- `distanceUnit`: `"km"` | `"miles"`
-- `theme`: `"system"` | `"light"` | `"dark"`
-- `activeCarId`: Int (-1 = none)
-- `driveEnabled`: Boolean
+**Restore flow:** fetch file → if exists show dialog "Found backup from [date]. Restore?" → on confirm clear DB and import → on skip keep local data.
 
 ---
 
@@ -294,12 +480,12 @@ object CsvExporter {
         val file = File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS),
             "ev_${car.name}_${System.currentTimeMillis()}.csv")
         file.printWriter().use { out ->
-            out.println("Date,Odometer (${if (useKm) "km" else "mi"}),kWh Added,Efficiency,Note")
-            for (i in events.indices) {
-                val odo = if (useKm) events[i].odometerKm else events[i].odometerKm * 0.621371
-                val dist = if (i > 0) events[i].odometerKm - events[i-1].odometerKm else 0.0
-                val eff = if (dist > 0 && events[i].kwhAdded > 0) dist / events[i].kwhAdded else 0.0
-                out.println("${events[i].eventDate},${odo},${events[i].kwhAdded},${eff},${events[i].note}")
+            out.println("Date,Odometer (${if (useKm) "km" else "mi"}),kWh Added,Charge Type,Location,Cost Total,Cost/kWh,Currency,Efficiency,Note")
+            events.forEachIndexed { i, e ->
+                val odo = if (useKm) e.odometerKm else e.odometerKm * 0.621371
+                val dist = if (i > 0) e.odometerKm - events[i-1].odometerKm else 0.0
+                val eff = if (dist > 0 && e.kwhAdded > 0) dist / e.kwhAdded else 0.0
+                out.println("${e.eventDate},$odo,${e.kwhAdded},${e.chargeType},${e.location ?: ""},${e.costTotal ?: ""},${e.costPerKwh ?: ""},${e.currency ?: ""},$eff,${e.note}")
             }
         }
         return FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
@@ -314,9 +500,8 @@ object CsvExporter {
 ```bash
 cd EV-android-app
 ./gradlew assembleDebug
+# Output: app/build/outputs/apk/debug/app-debug.apk
 ```
-
-Output APK: `app/build/outputs/apk/debug/app-debug.apk`
 
 For release (requires keystore):
 ```bash
@@ -337,15 +522,23 @@ For release (requires keystore):
 
 ---
 
-## Checklist
+## Final Checklist
 
-- [ ] All Kotlin files implemented (see DESIGN.md § 12 file tree)
+- [ ] All Kotlin files implemented per DESIGN.md
 - [ ] All XML layouts implemented
-- [ ] Room migrations not needed (fresh install, version 1)
-- [ ] Nav graph connects all fragments
+- [ ] DB version = 3; migrations 1→2 and 2→3 registered
+- [ ] `setupComplete` defaults to `false`; wizard shown on first launch
+- [ ] Wizard sets all 5 DataStore keys; navigates to Dashboard on Finish
+- [ ] `custom_locations` table created; top-5 chips rendered dynamically
+- [ ] Home / Work / Public chips always present in charge form
+- [ ] Cost = 0 or blank → `costTotal = NULL`; excluded from all stats
+- [ ] Dashboard hides cost rows when no cost data
+- [ ] All 3 efficiency metrics visible on dashboard; primary metric highlighted per pref
+- [ ] Drive backup JSON version = 3; includes `custom_locations`
+- [ ] Nav graph connects all fragments including WizardFragment
 - [ ] Dark theme tested
-- [ ] Drive backup tested with emulator (add fake Google account)
-- [ ] CSV export tested — file appears in Downloads
+- [ ] Drive backup tested with emulator
+- [ ] CSV export tested — file opens in spreadsheet app
 - [ ] All unit tests pass
 - [ ] All instrumented tests pass
 - [ ] APK installs on API 26+ device/emulator
