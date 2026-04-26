@@ -1,0 +1,89 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project
+
+Android app (`org.spsl.evtracker`) for logging EV charge events and analyzing efficiency/cost. Kotlin, MVVM + Repository, Gradle Kotlin DSL. Min SDK 26, target/compile SDK 34, JDK 17. Room compiler runs via **KSP** (not kapt).
+
+> **Status: pre-implementation.** No Kotlin source has been written yet — only docs, Gradle config, manifest, and a few resource XMLs are committed. `./gradlew assembleDebug` will fail until `MainActivity.kt` and the rest of `AGENT_INSTRUCTIONS.md` Steps 2–8 land.
+
+Root docs:
+- `DESIGN.md` — canonical product + technical spec (v3). Source of truth when in conflict with anything else.
+- `AGENT_INSTRUCTIONS.md` — full implementation walkthrough (all phases merged).
+- `TEST_PLAN.md` — full test specification (all phases merged).
+- `GOOGLE_CLOUD_SETUP.md` — Drive API + OAuth Android client setup.
+
+## Build & Test
+
+```bash
+./gradlew assembleDebug                        # APK at app/build/outputs/apk/debug/app-debug.apk
+./gradlew assembleRelease                      # needs keystore
+./gradlew test                                 # JVM unit tests
+./gradlew connectedAndroidTest                 # Espresso/Room — needs API 26+ device or emulator
+./gradlew :app:testDebugUnitTest --tests "org.spsl.evtracker.UnitConverterTest.kmToMiles_positive"
+```
+
+Requires `ANDROID_HOME` set and Build Tools 34.
+
+## Architecture (3-layer)
+
+```
+UI:    Fragments + ViewModels (Wizard, Dashboard, ChargeEdit, Cars, Settings, Charts, History, ManageLocations)
+Repo:  CarRepository · ChargeRepository · LocationRepository · StatsRepository · PrefsRepository · DriveRepository
+Data:  Room (CarDao, ChargeEventDao, CustomLocationDao) · Preferences DataStore · Drive API (AppDataFolder)
+```
+
+Single-Activity + Navigation Component. ViewBinding enabled. MPAndroidChart for charts. WorkManager for backup scheduling.
+
+## Invariants — read before changing data, math, or storage
+
+These are easy to break by accident and are scattered across DESIGN.md / AGENT_INSTRUCTIONS.md:
+
+- **Odometer is always stored in km.** Unit toggle (km ↔ miles) is display-only; never rewrite stored values.
+- **Cost = 0 or blank ⇒ `costTotal` and `costPerKwh` are stored `NULL`.** Events with `costTotal IS NULL` are excluded from every cost stat, every cost chart series, and the dashboard cost row hides when no costed events exist in the period. Use `parseCost(value, kwh, mode)` (returns `Pair<Double?, Double?>`) before insert. When `parseCost` is called with both fields populated, the **total** wins (per DESIGN §4.1).
+- **Multi-currency periods:** if any two costed events in the visible period have different `currency` values, every cost stat returns `null` and the Dashboard shows a "Multi-currency period — cost stats hidden" banner instead of the cost cards.
+- **Efficiency uses delta-odometer:** for sorted events, `dist = events[i].odometerKm - events[i-1].odometerKm`; skip rows where `dist <= 0`. The first event for a car cannot compute efficiency — show `"—"`. Aggregates use weighted averages: `Σ d_km / Σ e`, `Σ cost / Σ d_km`. Single-event periods still report `totalKwh` and `chargeCount` — only delta-based metrics are `null`.
+- **Wizard gate:** on `MainActivity.onCreate`, if DataStore key `setupComplete` is `false` (default), navigate to `wizardFragment`. The wizard's `finish()` writes `primaryMetric`, `distanceUnit`, `currency`, and `setupComplete=true` together. Settings → Reset preferences sets `setupComplete=false` and re-routes to the wizard. Mid-wizard kill must leave `setupComplete=false`.
+- **Wizard page 2 coupling:** see DESIGN §3.4 for the full metric→unit table. `mi_per_kwh` ⇒ `miles`; `km_per_kwh` and `kwh_per_100km` ⇒ `km`.
+- **Location chips:** the form always shows three fixed chips (🏠 Home · 💼 Work · ⚡ Public) followed by the **top 5** custom labels from `custom_locations` (`ORDER BY useCount DESC, lastUsed DESC LIMIT 5`), then a `+ Add` chip. On save, call `LocationRepository.recordUsage(label)` (insert-or-increment).
+- **Multi-car scope:** `activeCarId` lives in DataStore (`-1` = none). All queries filter by `carId`. Deleting a car cascades to its `charge_events` (FK `ON DELETE CASCADE`). "Reset all data" supports per-car or global.
+
+## Database — Room v3
+
+Entities: `Car`, `ChargeEvent`, `CustomLocation`. Current `@Database(version = 3)`.
+
+Migrations are mandatory and registered in `AppDatabase.getInstance`:
+- `MIGRATION_1_2`: adds `chargeType TEXT NOT NULL DEFAULT 'AC'` to `charge_events`.
+- `MIGRATION_2_3`: creates `custom_locations` (camelCase columns `useCount`, `lastUsed`; unique index on `label`) and adds `costTotal`, `costPerKwh`, `currency`, `location`, `note` to `charge_events`. Note `note` ALTER must include `NOT NULL DEFAULT ''` to match the entity's non-nullable `String = ""`.
+
+Indices on `charge_events`: composite `(carId, eventDate)` (matches dominant range query), `chargeType`, `location`. When adding a column, bump the version, add a migration that uses **camelCase** column names (Room's default for entity fields without `@ColumnInfo`), and add a `MigrationTest` case (see TEST_PLAN §2.4).
+
+## Google Drive backup
+
+- Scope: `https://www.googleapis.com/auth/drive.appdata` (non-sensitive). File lives in the **App Data folder** (hidden from Drive UI), filename `evtracker_backup.json`.
+- Backup JSON schema is versioned: current `backup_version = 3` and **must include `custom_locations`** with `label`, `useCount`, `lastUsed`. Bumping any entity requires bumping `backup_version` and updating the authoritative field list in `DESIGN.md §8`.
+- Auto-backup: WorkManager `OneTimeWorkRequest` after every successful charge save **and** event delete. Required configuration: `NetworkType.CONNECTED` constraint (offline saves queue), `enqueueUniqueWork("drive_backup", REPLACE, ...)` so rapid saves debounce to one upload, exponential backoff starting 30 s.
+- Restore flow: on first Drive enable, fetch the file → if present, prompt "Found backup from [date]. This will replace data already on this device. Restore?" → on confirm, **first** export current local DB to `cacheDir/last_overwritten_backup.json` (24-hour undo), then clear local DB and import; on skip, keep local data and continue with backup enabled.
+- Multi-currency rule: `StatsCalculator` returns `null` cost stats whenever a period contains charge events with more than one distinct `currency`. Dashboard surfaces a "Multi-currency period — cost stats hidden" banner.
+
+OAuth setup (full walkthrough in `GOOGLE_CLOUD_SETUP.md`):
+- Android OAuth client is bound to package name `org.spsl.evtracker` + keystore SHA-1. Don't change `applicationId` casually — it invalidates the OAuth client.
+- Debug and release builds need **separate** OAuth clients (one per keystore SHA-1). Consent screen can stay in "Testing" status; tester emails must be allow-listed.
+- **No `google-services.json`, no Firebase, no `com.google.gms.google-services` plugin.** The Authorization API (`Identity.getAuthorizationClient`) reads the OAuth client at runtime from your package + signing-cert SHA-1; nothing else is needed at build time. If you see references to placing `google-services.json` in `app/`, they are stale — the file is in `.gitignore` solely to defang accidental commits if a contributor adds Firebase later.
+- The deprecated `GoogleSignIn.getClient(...)` API must not be used in new code. Use the Authorization API.
+- Verify a backup landed by calling Drive `files.list` with `spaces=appDataFolder` — the App Data folder is hidden from the Drive UI.
+
+## DataStore keys
+
+Declared in a single `PreferenceKeys` object: `setupComplete`, `primaryMetric` (`km_per_kwh` | `kwh_per_100km` | `mi_per_kwh`), `distanceUnit` (`km` | `miles`), `currency`, `activeCarId`, `driveEnabled`, `theme`. Add new keys here, not inline.
+
+## CSV export
+
+`CsvExporter.export(...)` writes to `getExternalFilesDir(DIRECTORY_DOWNLOADS)` and shares via `FileProvider` authority `${packageName}.fileprovider`. Odometer column header switches label per unit pref but conversion happens at export time only — stored values stay in km.
+
+## Conventions
+
+- Add new screens by creating a Fragment + ViewModel pair and wiring into the Nav graph; do not introduce a second Activity.
+- New efficiency or cost metrics: extend `Stats` / `EfficiencyStats` and the dashboard card layout; keep the formulas table in `DESIGN.md §7` in sync.
+- When changing the wizard, update `WizardViewModelTest` and `WizardFlowTest` (TEST_PLAN §3.2, §4.1) — the gate behavior is covered by tests.

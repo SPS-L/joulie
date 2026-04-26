@@ -6,6 +6,8 @@
 
 An Android app for recording and analyzing electric vehicle charging efficiency and cost. Log mileage, kWh added, AC/DC charge type, location, and optional cost after each charge. View multi-metric statistics over any period with rich charts and an optional Google Drive backup.
 
+> **Status: pre-implementation.** The repository currently contains the design specification, build configuration, and resource scaffolding only. Kotlin source has not been written yet — see `AGENT_INSTRUCTIONS.md` for the implementation walkthrough.
+
 ---
 
 ## Features

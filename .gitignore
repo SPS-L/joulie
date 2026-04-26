@@ -1,0 +1,28 @@
+# Gradle
+.gradle/
+build/
+out/
+local.properties
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+captures/
+
+# Build outputs
+app/build/
+app/release/
+
+# Drive setup — never commit OAuth/Firebase configs.
+# This app does not need google-services.json (see GOOGLE_CLOUD_SETUP.md),
+# but ignore it defensively in case Firebase is added later.
+app/google-services.json
+
+# Keystores & signing
+*.jks
+*.keystore
+keystore.properties
+
+# OS noise
+.DS_Store
+Thumbs.db

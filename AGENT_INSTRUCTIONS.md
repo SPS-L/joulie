@@ -19,13 +19,14 @@ This document gives a complete step-by-step guide for an AI coding agent (or dev
 
 ## Step 1 — Scaffold Project
 
-Clone the repo and verify files:
+Verify the working tree:
 ```bash
-git clone git@github.com:SPS-L/EV-android-app.git
-cd EV-android-app
+git status
 ```
 
-The repo contains design docs and Gradle config stubs. Implement all Kotlin source files and XML resources described in `DESIGN.md`.
+The repo currently contains only docs and Gradle config — no Kotlin source. Start by creating `app/src/main/java/org/spsl/evtracker/MainActivity.kt`, then implement all other Kotlin source files and XML resources described in `DESIGN.md`.
+
+> **Column-naming convention (critical):** Room generates **camelCase** column names from Kotlin field names by default. This guide uses camelCase consistently in `ALTER TABLE`, `CREATE TABLE`, and `@Query` SQL — do not switch to snake_case unless you also annotate every field with `@ColumnInfo(name = "...")`. The SQL shown in `DESIGN.md §4.1` is illustrative; the actual column names match the entity field names.
 
 ---
 
@@ -53,7 +54,11 @@ data class Car(
     tableName = "charge_events",
     foreignKeys = [ForeignKey(entity = Car::class, parentColumns = ["id"],
         childColumns = ["carId"], onDelete = ForeignKey.CASCADE)],
-    indices = [Index("carId"), Index("eventDate"), Index("chargeType"), Index("location")]
+    indices = [
+        Index(value = ["carId", "eventDate"]),  // composite — matches dominant range query
+        Index("chargeType"),
+        Index("location")
+    ]
 )
 data class ChargeEvent(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
@@ -73,7 +78,10 @@ data class ChargeEvent(
 
 **CustomLocation.kt**
 ```kotlin
-@Entity(tableName = "custom_locations")
+@Entity(
+    tableName = "custom_locations",
+    indices = [Index(value = ["label"], unique = true)]
+)
 data class CustomLocation(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val label: String,
@@ -159,16 +167,16 @@ interface ChargeEventDao {
 ```kotlin
 @Dao
 interface CustomLocationDao {
-    @Query("SELECT * FROM custom_locations ORDER BY use_count DESC, last_used DESC LIMIT 5")
+    @Query("SELECT * FROM custom_locations ORDER BY useCount DESC, lastUsed DESC LIMIT 5")
     fun getTopLocations(): Flow<List<CustomLocation>>
 
-    @Query("SELECT label FROM custom_locations ORDER BY use_count DESC, last_used DESC")
+    @Query("SELECT label FROM custom_locations ORDER BY useCount DESC, lastUsed DESC")
     suspend fun getAllLabels(): List<String>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(loc: CustomLocation): Long
 
-    @Query("UPDATE custom_locations SET use_count = use_count + 1, last_used = :ts WHERE label = :label")
+    @Query("UPDATE custom_locations SET useCount = useCount + 1, lastUsed = :ts WHERE label = :label")
     suspend fun increment(label: String, ts: Long = System.currentTimeMillis())
 
     @Query("SELECT COUNT(*) FROM custom_locations WHERE label = :label")
@@ -210,12 +218,12 @@ abstract class AppDatabase : RoomDatabase() {
                         lastUsed  INTEGER NOT NULL
                     )
                 """)
-                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS idx_cl_label ON custom_locations(label)")
-                db.execSQL("ALTER TABLE charge_events ADD COLUMN cost_total   REAL")
-                db.execSQL("ALTER TABLE charge_events ADD COLUMN cost_per_kwh REAL")
-                db.execSQL("ALTER TABLE charge_events ADD COLUMN currency     TEXT")
-                db.execSQL("ALTER TABLE charge_events ADD COLUMN location     TEXT")
-                db.execSQL("ALTER TABLE charge_events ADD COLUMN note         TEXT")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_custom_locations_label ON custom_locations(label)")
+                db.execSQL("ALTER TABLE charge_events ADD COLUMN costTotal   REAL")
+                db.execSQL("ALTER TABLE charge_events ADD COLUMN costPerKwh  REAL")
+                db.execSQL("ALTER TABLE charge_events ADD COLUMN currency    TEXT")
+                db.execSQL("ALTER TABLE charge_events ADD COLUMN location    TEXT")
+                db.execSQL("ALTER TABLE charge_events ADD COLUMN note        TEXT NOT NULL DEFAULT ''")
             }
         }
 
@@ -245,26 +253,72 @@ class CarRepository(private val dao: CarDao) {
 
 ### ChargeEventRepository.kt
 
-Key stats computation — always use delta-odometer method:
+Key stats computation — always use delta-odometer method. Single-event periods still report `totalKwh` and `chargeCount`; only efficiency/distance/cost-per-km require ≥ 2 events. Cost stats are suppressed when the period contains more than one currency.
+
 ```kotlin
 fun computeStats(events: List<ChargeEvent>, label: String): Stats {
-    if (events.size < 2) return Stats(label, 0.0, 0.0, null, 0)
-    var totalKwh = 0.0; var totalDist = 0.0
+    val totalKwhAll = events.sumOf { it.kwhAdded }
+    val chargeCount = events.size
+
+    // Need at least 2 events for any delta-based metric.
+    if (events.size < 2) {
+        return Stats(label, totalKwhAll, 0.0, null, chargeCount, null, null)
+    }
+
+    // Cost stats are only meaningful when costed events share a single currency.
+    val costedCurrencies = events.mapNotNull { e -> e.costTotal?.let { e.currency } }.distinct()
+    val mixedCurrency = costedCurrencies.size > 1
+
+    var pairKwh = 0.0; var totalDist = 0.0
     var totalCost = 0.0; var costCount = 0
     for (i in 1 until events.size) {
         val dist = events[i].odometerKm - events[i-1].odometerKm
         if (dist > 0) {
-            totalKwh += events[i].kwhAdded
+            pairKwh += events[i].kwhAdded
             totalDist += dist
-            events[i].costTotal?.let { totalCost += it; costCount++ }
+            if (!mixedCurrency) events[i].costTotal?.let { totalCost += it; costCount++ }
         }
     }
-    val avg = if (totalKwh > 0) totalDist / totalKwh else null
+    val avgKmPerKwh = if (pairKwh > 0) totalDist / pairKwh else null
     val costPerKm = if (costCount > 0 && totalDist > 0) totalCost / totalDist else null
-    return Stats(label, totalKwh, totalDist, avg, events.size - 1,
-        costPerKm, costPerKm?.let { it * 100 })
+    return Stats(
+        label = label,
+        totalKwh = totalKwhAll,
+        totalDistanceKm = totalDist,
+        avgEfficiencyKmPerKwh = avgKmPerKwh,
+        chargeCount = chargeCount,
+        costPerKm = costPerKm,
+        costPer100km = costPerKm?.let { it * 100 }
+    )
 }
 ```
+
+> **Multi-currency rule:** if any two costed events in the period have different `currency` values, all cost stats return `null`. The Dashboard must show a "Multi-currency period — cost stats hidden" banner instead of the cost cards.
+
+#### Monthly aggregation helper (used by ChartsViewModel)
+
+```kotlin
+data class MonthBucket(
+    val yearMonth: YearMonth,  // java.time
+    val totalKwh: Double,
+    val totalCost: Double?,    // null if no costed events or mixed currency
+    val currency: String?
+)
+
+fun monthlyTotals(events: List<ChargeEvent>): List<MonthBucket> {
+    val zone = ZoneId.systemDefault()
+    return events.groupBy { YearMonth.from(Instant.ofEpochMilli(it.eventDate).atZone(zone)) }
+        .toSortedMap()
+        .map { (ym, list) ->
+            val currencies = list.mapNotNull { it.currency }.distinct()
+            val mixed = currencies.size > 1
+            val cost = if (mixed) null
+                       else list.mapNotNull { it.costTotal }.takeIf { it.isNotEmpty() }?.sum()
+            MonthBucket(ym, list.sumOf { it.kwhAdded }, cost, currencies.singleOrNull())
+        }
+}
+```
+The monthly cost bar chart hides any bucket whose `totalCost` is `null`.
 
 ### LocationRepository.kt
 ```kotlin
@@ -435,38 +489,55 @@ chart.invalidate()
 
 **Scope:** `https://www.googleapis.com/auth/drive.appdata` (non-sensitive)
 
+> **API note:** the legacy `GoogleSignIn.getClient(...)` API is deprecated. New apps should use the **Authorization API** (`Identity.getAuthorizationClient`) for incremental scopes like `drive.appdata`. No `google-services.json` is required — the OAuth client is bound to the package name + signing certificate SHA-1 in Google Cloud Console.
+
 ### DriveAuthManager.kt
 ```kotlin
-class DriveAuthManager(private val context: Context) {
-    private val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-        .requestScopes(Scope(DriveScopes.DRIVE_APPDATA)).build()
-    val client: GoogleSignInClient = GoogleSignIn.getClient(context, gso)
+class DriveAuthManager(private val activity: ComponentActivity) {
+    private val client = Identity.getAuthorizationClient(activity)
 
-    suspend fun silentSignIn(): GoogleSignInAccount? = suspendCancellableCoroutine { cont ->
-        client.silentSignIn().addOnCompleteListener { task ->
-            cont.resume(if (task.isSuccessful) task.result else null)
-        }
+    suspend fun authorizeForAppData(): AuthorizationResult = suspendCancellableCoroutine { cont ->
+        val request = AuthorizationRequest.Builder()
+            .setRequestedScopes(listOf(Scope(DriveScopes.DRIVE_APPDATA)))
+            .build()
+        client.authorize(request)
+            .addOnSuccessListener { cont.resume(it) }
+            .addOnFailureListener { cont.resumeWithException(it) }
     }
+
+    fun pendingIntentLauncher(activity: ComponentActivity, onResult: (AuthorizationResult) -> Unit) =
+        activity.registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { res ->
+            onResult(client.getAuthorizationResultFromIntent(res.data))
+        }
 }
 ```
+On the first call, `AuthorizationResult.hasResolution()` will be `true`; launch the contained `PendingIntent` to show consent. Subsequent calls return tokens silently.
 
 ### DriveBackupManager.kt
 
 Key methods:
 - `suspend fun backup(cars, events, locations)` — serialize to JSON (backup_version=3), upload to App Data folder
 - `suspend fun restore(): BackupData?` — download & parse `evtracker_backup.json`
-- Auto-trigger via WorkManager `OneTimeWorkRequest` after every charge save
+- Auto-trigger via WorkManager **unique** `OneTimeWorkRequest` after every charge save (debounced)
 
-**Backup JSON (v3):**
-```json
-{
-  "backup_version": 3,
-  "exported_at": "<ISO8601>",
-  "cars": [...],
-  "charge_events": [...],
-  "custom_locations": [ { "label": "Supercharger A6", "use_count": 4 } ]
+```kotlin
+fun enqueueBackup(context: Context) {
+    val constraints = Constraints.Builder()
+        .setRequiredNetworkType(NetworkType.CONNECTED)  // do NOT run offline
+        .build()
+    val request = OneTimeWorkRequestBuilder<DriveBackupWorker>()
+        .setConstraints(constraints)
+        .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+        .setInitialDelay(5, TimeUnit.SECONDS)  // small debounce window
+        .build()
+    WorkManager.getInstance(context)
+        .enqueueUniqueWork("drive_backup", ExistingWorkPolicy.REPLACE, request)
 }
 ```
+- `enqueueUniqueWork(..., REPLACE, ...)` collapses rapid successive saves into a single backup.
+- `NetworkType.CONNECTED` lets WorkManager queue offline saves and run them when the device reconnects.
+
+**Backup JSON (v3):** authoritative per-entity field list lives in `DESIGN.md §8`. Use Gson with `FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES` so the on-disk JSON keys are snake_case (`cost_total`, `use_count`, `last_used`) while the in-memory entity fields stay camelCase. Bumping any entity requires bumping `backup_version` **and** updating §8.
 
 **Restore flow:** fetch file → if exists show dialog "Found backup from [date]. Restore?" → on confirm clear DB and import → on skip keep local data.
 
@@ -479,13 +550,18 @@ object CsvExporter {
     fun export(context: Context, car: Car, events: List<ChargeEvent>, useKm: Boolean): Uri {
         val file = File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS),
             "ev_${car.name}_${System.currentTimeMillis()}.csv")
+        val effHeader = if (useKm) "Efficiency (km/kWh)" else "Efficiency (mi/kWh)"
         file.printWriter().use { out ->
-            out.println("Date,Odometer (${if (useKm) "km" else "mi"}),kWh Added,Charge Type,Location,Cost Total,Cost/kWh,Currency,Efficiency,Note")
+            out.println("Date,Odometer (${if (useKm) "km" else "mi"}),kWh Added,Charge Type,Location,Cost Total,Cost/kWh,Currency,$effHeader,Note")
             events.forEachIndexed { i, e ->
                 val odo = if (useKm) e.odometerKm else e.odometerKm * 0.621371
-                val dist = if (i > 0) e.odometerKm - events[i-1].odometerKm else 0.0
-                val eff = if (dist > 0 && e.kwhAdded > 0) dist / e.kwhAdded else 0.0
-                out.println("${e.eventDate},$odo,${e.kwhAdded},${e.chargeType},${e.location ?: ""},${e.costTotal ?: ""},${e.costPerKwh ?: ""},${e.currency ?: ""},$eff,${e.note}")
+                val distKm = if (i > 0) e.odometerKm - events[i-1].odometerKm else 0.0
+                val effField = when {
+                    distKm <= 0 || e.kwhAdded <= 0 -> ""  // first event or odometer regression: blank, not 0
+                    useKm -> (distKm / e.kwhAdded).toString()
+                    else -> (distKm * 0.621371 / e.kwhAdded).toString()
+                }
+                out.println("${e.eventDate},$odo,${e.kwhAdded},${e.chargeType},${e.location ?: ""},${e.costTotal ?: ""},${e.costPerKwh ?: ""},${e.currency ?: ""},$effField,${e.note}")
             }
         }
         return FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)

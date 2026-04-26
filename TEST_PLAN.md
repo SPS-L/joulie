@@ -19,11 +19,12 @@
 
 | Test | Scenario | Expected |
 |------|----------|----------|
-| `emptyEvents_returnsZeroStats` | empty list | Stats with all zeros/nulls |
-| `singleEvent_noEfficiency` | 1 event only | chargeCount=0, avgEfficiency=null |
-| `twoEvents_correctEfficiency` | odo 0→100km, 20kWh | 5.0 km/kWh |
+| `emptyEvents_returnsZeroStats` | empty list | totalKwh=0, chargeCount=0, all efficiency/cost stats null |
+| `singleEvent_totalsButNoEfficiency` | 1 event, kwh=42 | totalKwh=42.0, chargeCount=1, avgEfficiency=null, costPerKm=null |
+| `twoEvents_correctEfficiency` | odo 0→100km, 20kWh | 5.0 km/kWh, chargeCount=2, totalKwh=Σ |
 | `multipleEvents_sumCorrect` | 3 events, mixed | sum kWh and dist correct |
-| `negativeOdometerDelta_skipped` | odo goes backwards | skipped; no contribution |
+| `negativeOdometerDelta_skipped` | odo goes backwards | skipped; no contribution to dist/efficiency |
+| `monthlyAggregation_correctBuckets` | 4 events across 3 calendar months | 3 MonthBuckets, kWh sums match, sorted ascending |
 
 ### 1.3 CostParserTest.kt
 
@@ -35,6 +36,7 @@
 | `costTotal_derivesPerKwh` | value=3.0, kwh=10, TOTAL | (3.0, 0.30) |
 | `costPerKwh_derivesTotal` | value=0.30, kwh=10, PER_KWH | (3.0, 0.30) |
 | `kwhZero_returnsNull` | value=5.0, kwh=0 | (null, null) |
+| `bothEntered_totalWins` | total=4.0, perKwh=0.20, kwh=10, TOTAL | (4.0, 0.40) — total takes precedence per DESIGN §4.1 |
 
 ### 1.4 StatsCalculatorCostTest.kt
 
@@ -43,6 +45,8 @@
 | `allCostNull_costStatsNull` | 3 events, all cost=NULL | costPerKm=null |
 | `mixedCost_sumNonNullOnly` | 5 events, 3 with cost, 2 NULL | sum over 3 events only |
 | `singleCostEvent_correct` | 1 event, cost=5.0, 50km | costPerKm=0.10 |
+| `multipleCurrencies_costStatsNull` | 4 events, 2 EUR + 2 USD | costPerKm=null, costPer100km=null (multi-currency guard) |
+| `singleCurrencyAcrossPeriod_costStatsComputed` | 4 events all EUR | costPerKm=Σcost/Σdist |
 
 ### 1.5 DateUtilsTest.kt
 
@@ -80,7 +84,7 @@
 |------|-------------|
 | `insert_newLabel_stored` | Insert label; query returns it |
 | `insert_duplicate_ignored` | Insert same label twice; count = 1 |
-| `increment_existingLabel` | Insert + increment; use_count = 2 |
+| `increment_existingLabel` | Insert + increment; useCount = 2 |
 | `getTopLocations_maxFive` | Insert 8 labels; top query returns 5 |
 | `getTopLocations_sortedByUseCount` | 5 labels with varying counts; highest first |
 | `delete_removesEntry` | Insert + delete; query returns empty |
@@ -90,8 +94,8 @@
 | Test | Description |
 |------|-------------|
 | `migrate_1_to_2` | Adds `chargeType` column |
-| `migrate_2_to_3` | Creates `custom_locations`; adds cost/location/note columns |
-| `migrate_1_to_3` | Full chain; all columns and tables present |
+| `migrate_2_to_3` | Creates `custom_locations`; adds cost/location/note columns (camelCase) |
+| `migrate_1_to_3_validatesSchema` | Full chain; opens via `Room.databaseBuilder(...).build().openHelper.writableDatabase` to force schema validation against the entity declarations (catches column-name casing drift) |
 
 ---
 
@@ -120,8 +124,8 @@ Uses `TestCoroutineDispatcher` + in-memory Room.
 
 | Test | Description |
 |------|-------------|
-| `saveWithCostZero_storesNull` | Submit form with cost=0; DB entry has `cost_total=null` |
-| `saveWithCost_storesBoth` | Submit form with cost=5.0, kwh=10; `cost_total=5.0`, `cost_per_kwh=0.5` |
+| `saveWithCostZero_storesNull` | Submit form with cost=0; DB entry has `costTotal=null` |
+| `saveWithCost_storesBoth` | Submit form with cost=5.0, kwh=10; `costTotal=5.0`, `costPerKwh=0.5` |
 | `saveLocation_recordsUsage` | Submit with location="Home"; `custom_locations` has "Home" with count ≥ 1 |
 
 ---
@@ -185,6 +189,20 @@ Uses `TestCoroutineDispatcher` + in-memory Room.
 |------|-------|----------|
 | `costZero_notInStatsCard` | all events have cost=0; open Dashboard | cost row not visible |
 | `costPresent_showsStatsCard` | at least 1 event has cost; open Dashboard | cost row visible |
+| `multipleCurrenciesInPeriod_showsBanner` | 2 EUR + 1 USD events in selected period | cost cards hidden, "Multi-currency period — cost stats hidden" banner visible |
+
+### 4.7 WorkManager / Drive / Empty-state / CSV
+
+Uses `androidx.work:work-testing` for WorkManager and a fake `DriveBackupManager` for restore.
+
+| Test | Description |
+|------|-------------|
+| `backupWorker_enqueuedAfterChargeSave` | Save a ChargeEvent; assert exactly one unique work `drive_backup` is enqueued with `NetworkType.CONNECTED` and exponential backoff |
+| `backupWorker_rapidSavesDebounced` | Save 5 events in quick succession; only the **last** enqueued worker remains pending (REPLACE policy) |
+| `restoreFlow_clearsAndImports` | Pre-populate DB with 1 car + 2 events; trigger restore with a fake backup containing 3 cars + 5 events + 2 custom_locations; DB now contains exactly the backup contents and `cacheDir/last_overwritten_backup.json` exists with the prior contents |
+| `restoreFlow_skipKeepsLocal` | Same setup; user picks "Skip"; local data unchanged, `driveEnabled=true` |
+| `emptyStates_noCarVsNoEvents` | (a) `cars` empty → "Add a car" CTA visible, "Log charge" CTA absent. (b) ≥ 1 car, no events → "Log charge" CTA visible, "Add a car" CTA absent |
+| `csv_firstEventEfficiencyBlank` | Export CSV for car with 3 events; first event row has empty Efficiency column, subsequent rows have numeric values; header reads `Efficiency (km/kWh)` or `Efficiency (mi/kWh)` per unit pref |
 
 ---
 
