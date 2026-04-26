@@ -69,4 +69,22 @@
     <string name="reset_per_car">Reset this car</string>
     <string name="reset_all">Reset all cars</string>
     <string name="efficiency_not_available">\u2014</string>
+
+    <!-- Wizard (Task 7 additions) -->
+    <string name="wizard_metric_question">How do you like to see efficiency?</string>
+    <string name="wizard_metric_km_per_kwh">km / kWh (distance / energy)</string>
+    <string name="wizard_metric_kwh_per_100km">kWh / 100 km (energy / distance)</string>
+    <string name="wizard_metric_mi_per_kwh">mi / kWh (miles)</string>
+    <string name="wizard_currency_question">What currency do you use for charging costs?</string>
+    <string name="wizard_button_back">\u2190 Back</string>
+    <string name="wizard_button_next">Next \u2192</string>
+    <string name="wizard_button_get_started">Get Started</string>
+    <string name="wizard_button_finish">Finish \u2713</string>
+    <string name="placeholder_dashboard">Dashboard \u2014 coming soon</string>
+    <string name="placeholder_charge_edit">Charge Edit \u2014 coming soon</string>
+    <string name="placeholder_cars">Cars \u2014 coming soon</string>
+    <string name="placeholder_settings">Settings \u2014 coming soon</string>
+    <string name="placeholder_charts">Charts \u2014 coming soon</string>
+    <string name="placeholder_history">History \u2014 coming soon</string>
+    <string name="placeholder_manage_locations">Manage Locations \u2014 coming soon</string>
 </resources>

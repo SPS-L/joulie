@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="24dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/wizard_metric_question"
+            android:textAppearance="?attr/textAppearanceTitleMedium"/>
+
+        <RadioGroup
+            android:id="@+id/wizard_page2_metric_group"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="vertical">
+
+            <RadioButton
+                android:id="@+id/wizard_page2_metric_km_per_kwh"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/wizard_metric_km_per_kwh"/>
+
+            <RadioButton
+                android:id="@+id/wizard_page2_metric_kwh_per_100km"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/wizard_metric_kwh_per_100km"/>
+
+            <RadioButton
+                android:id="@+id/wizard_page2_metric_mi_per_kwh"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/wizard_metric_mi_per_kwh"/>
+        </RadioGroup>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="@string/wizard_unit_label"
+            android:textAppearance="?attr/textAppearanceTitleMedium"/>
+
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/wizard_page2_unit_group"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            app:singleSelection="true"
+            app:selectionRequired="true"
+            xmlns:app="http://schemas.android.com/apk/res-auto">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/wizard_page2_unit_km"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/wizard_unit_km"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/wizard_page2_unit_miles"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/wizard_unit_miles"/>
+        </com.google.android.material.button.MaterialButtonToggleGroup>
+
+    </LinearLayout>
+</ScrollView>
