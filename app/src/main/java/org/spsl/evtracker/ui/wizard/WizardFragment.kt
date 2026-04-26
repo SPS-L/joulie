@@ -69,8 +69,7 @@ class WizardFragment : Fragment() {
             binding.wizardButtonNext.isEnabled = false
             viewLifecycleOwner.lifecycleScope.launch {
                 viewModel.finish()
-                // Real navigation is wired in Task 11 once nav_graph.xml exists.
-                android.util.Log.i("WizardFragment", "Wizard finished — navigation wired in Task 11")
+                findNavController().navigate(R.id.action_wizard_to_dashboard)
             }
         }
     }
