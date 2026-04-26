@@ -65,4 +65,14 @@ class SettingsRepositoryTest {
         assertEquals("km", repo.distanceUnit.first())
         assertEquals("GBP", repo.currency.first())
     }
+
+    @Test
+    fun setActiveCarId_persistsAndDefaultsToMinusOne() = runTest {
+        // Default when key has never been written.
+        assertEquals(-1, repo.activeCarId.first())
+
+        // Round-trip a non-default value.
+        repo.setActiveCarId(42)
+        assertEquals(42, repo.activeCarId.first())
+    }
 }

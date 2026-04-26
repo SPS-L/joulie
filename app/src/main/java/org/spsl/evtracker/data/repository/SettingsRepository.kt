@@ -28,6 +28,9 @@ class SettingsRepository @Inject constructor(
     val theme: Flow<String> =
         dataStore.data.map { it[PreferenceKeys.THEME] ?: "system" }
 
+    val activeCarId: Flow<Int> =
+        dataStore.data.map { it[PreferenceKeys.ACTIVE_CAR_ID] ?: -1 }
+
     suspend fun completeSetup(metric: String, unit: String, currency: String) {
         dataStore.edit { prefs ->
             prefs[PreferenceKeys.PRIMARY_METRIC] = metric
@@ -39,6 +42,10 @@ class SettingsRepository @Inject constructor(
 
     suspend fun setTheme(theme: String) {
         dataStore.edit { it[PreferenceKeys.THEME] = theme }
+    }
+
+    suspend fun setActiveCarId(id: Int) {
+        dataStore.edit { it[PreferenceKeys.ACTIVE_CAR_ID] = id }
     }
 
     /** Used by the future Settings → Reset preferences action (Sub-project F). */
