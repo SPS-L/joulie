@@ -43,8 +43,8 @@
 
     <!-- Dashboard -->
     <string name="period_last_charge">Last charge</string>
-    <string name="period_7d">7 days</string>
-    <string name="period_30d">30 days</string>
+    <string name="period_7d">7d</string>
+    <string name="period_30d">30d</string>
     <string name="period_year">Year</string>
     <string name="period_custom">Custom</string>
     <string name="filter_all">All</string>
@@ -87,4 +87,13 @@
     <string name="placeholder_charts">Charts \u2014 coming soon</string>
     <string name="placeholder_history">History \u2014 coming soon</string>
     <string name="placeholder_manage_locations">Manage Locations \u2014 coming soon</string>
+
+    <!-- Bottom nav -->
+    <string name="nav_dashboard">Dashboard</string>
+    <string name="nav_history">History</string>
+    <string name="nav_charts">Charts</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Period tabs -->
+    <string name="period_since_previous">Since previous</string>
 </resources>

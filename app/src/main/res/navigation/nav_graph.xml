@@ -18,12 +18,24 @@
     <fragment
         android:id="@+id/dashboardFragment"
         android:name="org.spsl.evtracker.ui.dashboard.DashboardFragment"
-        android:label="Dashboard"/>
+        android:label="Dashboard">
+        <action
+            android:id="@+id/action_dashboard_to_chargeEdit"
+            app:destination="@id/chargeEditFragment"/>
+        <action
+            android:id="@+id/action_dashboard_to_cars"
+            app:destination="@id/carsFragment"/>
+    </fragment>
 
     <fragment
         android:id="@+id/chargeEditFragment"
         android:name="org.spsl.evtracker.ui.chargeedit.ChargeEditFragment"
-        android:label="Charge"/>
+        android:label="Charge">
+        <argument
+            android:name="eventId"
+            app:argType="integer"
+            android:defaultValue="-1"/>
+    </fragment>
 
     <fragment
         android:id="@+id/carsFragment"
@@ -43,7 +55,11 @@
     <fragment
         android:id="@+id/historyFragment"
         android:name="org.spsl.evtracker.ui.history.HistoryFragment"
-        android:label="History"/>
+        android:label="History">
+        <action
+            android:id="@+id/action_history_to_chargeEdit"
+            app:destination="@id/chargeEditFragment"/>
+    </fragment>
 
     <fragment
         android:id="@+id/manageLocationsFragment"
