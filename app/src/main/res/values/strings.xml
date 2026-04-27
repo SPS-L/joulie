@@ -142,4 +142,7 @@
     <string name="location_work">Work</string>
     <string name="location_public">Public</string>
     <string name="chip_add_location">+ Add</string>
+
+    <!-- Cars error messages -->
+    <string name="error_car_name_required">Name is required</string>
 </resources>
