@@ -154,6 +154,27 @@ class FakeRestoreSnapshotWriter(
     }
 }
 
+class FakeSaveChargeEventGateway {
+    private val store = MutableStateFlow<List<ChargeEventEntity>>(emptyList())
+    val queries = FakeChargeEventQueries(store)
+    val writer = FakeChargeEventWriter(store)
+    val locationWriter = FakeLocationWriter()
+    val locationReader = FakeLocationReader()
+    val backupScheduler = FakeBackupScheduler()
+    val costParser = org.spsl.evtracker.domain.service.CostParser()
+
+    val useCase: org.spsl.evtracker.domain.usecase.SaveChargeEventUseCase =
+        org.spsl.evtracker.domain.usecase.SaveChargeEventUseCase(
+            chargeEventQueries = queries,
+            chargeEventWriter = writer,
+            locationWriter = locationWriter,
+            backupScheduler = backupScheduler,
+            costParser = costParser
+        )
+
+    fun seedEvents(events: List<ChargeEventEntity>) { store.value = events }
+}
+
 class FakeCarRepository(initial: List<CarEntity> = emptyList()) : CarReader, CarWriter {
     private val state = MutableStateFlow(initial)
     private var nextId = (initial.maxOfOrNull { it.id } ?: 0) + 1

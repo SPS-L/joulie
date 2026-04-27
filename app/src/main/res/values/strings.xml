@@ -114,4 +114,9 @@
     <string name="cost_card_per_km">Cost per km</string>
     <string name="cost_card_per_100km">Cost per 100km</string>
     <string name="fab_log_charge">Log charge</string>
+
+    <!-- Charge edit error messages (full ChargeEdit string set lands in Task 12) -->
+    <string name="error_odometer_required">Enter a valid odometer reading</string>
+    <string name="error_odometer_must_be_higher">Odometer must be greater than the previous entry</string>
+    <string name="error_kwh_required">Enter a valid kWh value</string>
 </resources>
