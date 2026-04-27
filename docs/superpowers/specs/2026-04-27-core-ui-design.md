@@ -109,7 +109,11 @@ app/src/androidTest/java/org/spsl/evtracker/
 
 ### 2.2 Dependencies
 
-No new Gradle dependencies. The bottom navigation comes from `com.google.android.material:material:1.11.0` (already present), and Material dialogs/dropdowns/date/time pickers are also in that AAR. `DiffUtil` and `ListAdapter` are part of `androidx.recyclerview:recyclerview` (transitively pulled via `material`).
+No new Gradle dependencies. The bottom navigation comes from `com.google.android.material:material` (already present), and Material dialogs/dropdowns/date/time pickers are also in that AAR. `DiffUtil` and `ListAdapter` are part of `androidx.recyclerview:recyclerview` (transitively pulled via `material`).
+
+> **Build note (pre-D cleanup):** the project now uses a Gradle version catalog at `gradle/libs.versions.toml`. All dependency references in `app/build.gradle.kts` go through `libs.*` aliases. If D ever needs to add a new dependency (it should not), the version belongs in the TOML, not inline.
+>
+> JitPack is now scoped via `exclusiveContent { … filter { includeGroup("com.github.PhilJay") } }` so a JitPack outage does not gate the whole build. Only `MPAndroidChart` is resolved through it.
 
 ### 2.3 Architecture pattern
 
@@ -135,22 +139,44 @@ Per the project's existing convention:
 
 ### 3.2 MainActivity wiring
 
-After the existing Wizard gate logic in `MainActivity.onCreate`:
+`MainActivity.onCreate` already runs the Wizard gate inside a `lifecycleScope.launch { ... }` coroutine that is splash-gated by an `isLoading` `MutableStateFlow<Boolean>` (the runBlocking startup pattern was removed in the pre-D cleanup commit). D adds the BottomNavigationView wiring synchronously in `onCreate` after `setContentView` — the listener can be attached before `navController.graph` is set; it simply won't fire until destinations change.
 
 ```kotlin
-val navController = (supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment).navController
-binding.bottomNav.setupWithNavController(navController)
+override fun onCreate(savedInstanceState: Bundle?) {
+    val splash = installSplashScreen()
+    splash.setKeepOnScreenCondition { isLoading.value }
+    super.onCreate(savedInstanceState)
+    setContentView(R.layout.activity_main)
 
-val hideOn = setOf(
-    R.id.wizardFragment,
-    R.id.chargeEditFragment,
-    R.id.carsFragment,
-    R.id.manageLocationsFragment
-)
-navController.addOnDestinationChangedListener { _, dest, _ ->
-    binding.bottomNav.isVisible = dest.id !in hideOn
+    val navHost = supportFragmentManager
+        .findFragmentById(R.id.nav_host_fragment) as NavHostFragment
+    val navController = navHost.navController
+    val graph = navController.navInflater.inflate(R.navigation.nav_graph)
+
+    // Bottom nav setup — D adds this. ViewBinding lookup since activity_main now has a CoordinatorLayout root.
+    val binding = ActivityMainBinding.bind(findViewById(R.id.activity_main_root))
+    binding.bottomNav.setupWithNavController(navController)
+    val hideOn = setOf(
+        R.id.wizardFragment,
+        R.id.chargeEditFragment,
+        R.id.carsFragment,
+        R.id.manageLocationsFragment
+    )
+    navController.addOnDestinationChangedListener { _, dest, _ ->
+        binding.bottomNav.isVisible = dest.id !in hideOn
+    }
+
+    // Existing splash-gated graph-setting coroutine — unchanged.
+    lifecycleScope.launch {
+        val complete = settingsRepository.setupComplete.first()
+        if (!complete) graph.setStartDestination(R.id.wizardFragment)
+        navController.graph = graph
+        isLoading.value = false
+    }
 }
 ```
+
+> The `activity_main` root LinearLayout becomes a `CoordinatorLayout` with `android:id="@+id/activity_main_root"` so ViewBinding's generated `ActivityMainBinding` provides typed access without `findViewById` for the bottom nav.
 
 ### 3.3 nav_graph.xml updates
 
