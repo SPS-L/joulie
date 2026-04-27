@@ -145,4 +145,23 @@
 
     <!-- Cars error messages -->
     <string name="error_car_name_required">Name is required</string>
+
+    <!-- Cars -->
+    <string name="cars_title">Cars</string>
+    <string name="car_active">Active</string>
+    <string name="car_action_set_active">Set active</string>
+    <string name="car_action_edit">Edit</string>
+    <string name="car_action_delete">Delete</string>
+    <string name="car_delete_title">Delete car?</string>
+    <string name="car_delete_message">All charge events for this car will also be deleted.</string>
+    <string name="car_delete_confirm">Delete</string>
+    <string name="car_dialog_add_title">Add car</string>
+    <string name="car_dialog_edit_title">Edit car</string>
+    <string name="car_dialog_save">Save</string>
+    <string name="car_dialog_cancel">Cancel</string>
+    <string name="car_form_name">Name</string>
+    <string name="car_form_make">Make</string>
+    <string name="car_form_model">Model</string>
+    <string name="car_form_year">Year</string>
+    <string name="car_form_battery_kwh">Battery (kWh)</string>
 </resources>
