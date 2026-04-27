@@ -76,6 +76,31 @@ class StatsCalculatorCostTest {
             event(4, 200.0,  10.0, costTotal = 12.0, currency = "EUR")
         ), "label")
         assertEquals(23.0 / 200.0, s.costPerKm!!, 0.0001)
+        assertEquals(23.0, s.totalCost!!, 0.0001)
+        assertEquals("EUR", s.currency)
         assertEquals(false, s.mixedCurrency)
+    }
+
+    @Test
+    fun multipleCurrencies_totalCostAndCurrencyAreNull() {
+        val s = calc.computeStats(listOf(
+            event(1, 0.0,    0.0),
+            event(2, 50.0,   10.0, costTotal = 5.0, currency = "EUR"),
+            event(3, 100.0,  10.0, costTotal = 7.0, currency = "USD")
+        ), "label")
+        assertNull(s.totalCost)
+        assertNull(s.currency)
+        assertTrue(s.mixedCurrency)
+    }
+
+    @Test
+    fun allCostNull_totalCostAndCurrencyAreNull() {
+        val s = calc.computeStats(listOf(
+            event(1, 0.0,   0.0),
+            event(2, 50.0,  10.0),
+            event(3, 100.0, 10.0)
+        ), "label")
+        assertNull(s.totalCost)
+        assertNull(s.currency)
     }
 }

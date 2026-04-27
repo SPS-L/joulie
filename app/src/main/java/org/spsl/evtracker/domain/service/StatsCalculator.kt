@@ -21,6 +21,8 @@ class StatsCalculator @Inject constructor() {
                 avgKwhPer100Km = null,
                 avgMiPerKwh = null,
                 chargeCount = chargeCount,
+                totalCost = null,
+                currency = null,
                 costPerKm = null,
                 costPer100Km = null,
                 mixedCurrency = false
@@ -50,6 +52,8 @@ class StatsCalculator @Inject constructor() {
         val avgKmPerKwh    = if (pairKwh > 0)  totalDist / pairKwh else null
         val avgKwhPer100Km = avgKmPerKwh?.let { 100.0 / it }
         val avgMiPerKwh    = avgKmPerKwh?.let { UnitConverter.kmPerKwhToMiPerKwh(it) }
+        val resolvedTotalCost = if (costCount > 0) totalCost else null
+        val resolvedCurrency  = if (costCount > 0) costedCurrencies.singleOrNull() else null
         val costPerKm      = if (costCount > 0 && totalDist > 0) totalCost / totalDist else null
         val costPer100Km   = costPerKm?.times(100.0)
 
@@ -61,6 +65,8 @@ class StatsCalculator @Inject constructor() {
             avgKwhPer100Km = avgKwhPer100Km,
             avgMiPerKwh = avgMiPerKwh,
             chargeCount = chargeCount,
+            totalCost = resolvedTotalCost,
+            currency = resolvedCurrency,
             costPerKm = costPerKm,
             costPer100Km = costPer100Km,
             mixedCurrency = mixedCurrency
