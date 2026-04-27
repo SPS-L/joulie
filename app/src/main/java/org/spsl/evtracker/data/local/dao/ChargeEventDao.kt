@@ -35,4 +35,7 @@ interface ChargeEventDao {
 
     @Delete
     suspend fun delete(event: ChargeEventEntity)
+
+    @Query("DELETE FROM charge_events")
+    suspend fun deleteAll()
 }

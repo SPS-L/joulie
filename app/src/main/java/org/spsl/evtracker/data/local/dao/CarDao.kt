@@ -30,4 +30,7 @@ interface CarDao {
 
     @Delete
     suspend fun delete(car: CarEntity)
+
+    @Query("DELETE FROM cars")
+    suspend fun deleteAll()
 }

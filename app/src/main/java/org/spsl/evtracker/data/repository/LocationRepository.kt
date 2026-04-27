@@ -5,16 +5,18 @@ import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import org.spsl.evtracker.data.local.dao.CustomLocationDao
 import org.spsl.evtracker.data.local.entity.CustomLocationEntity
+import org.spsl.evtracker.domain.repository.LocationReader
+import org.spsl.evtracker.domain.repository.LocationWriter
 
 @Singleton
 class LocationRepository @Inject constructor(
     private val customLocationDao: CustomLocationDao
-) {
-    fun observeTop5(): Flow<List<CustomLocationEntity>> = customLocationDao.observeTop5()
-    fun observeAll(): Flow<List<CustomLocationEntity>> = customLocationDao.observeAll()
+) : LocationReader, LocationWriter {
+    override fun observeTop5(): Flow<List<CustomLocationEntity>> = customLocationDao.observeTop5()
+    override fun observeAll(): Flow<List<CustomLocationEntity>> = customLocationDao.observeAll()
 
-    suspend fun recordUsage(label: String, now: Long = System.currentTimeMillis()) =
+    override suspend fun recordUsage(label: String, now: Long) =
         customLocationDao.recordUsage(label, now)
 
-    suspend fun delete(location: CustomLocationEntity) = customLocationDao.delete(location)
+    override suspend fun delete(location: CustomLocationEntity) = customLocationDao.delete(location)
 }
