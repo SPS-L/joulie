@@ -93,7 +93,15 @@ Declared in a single `PreferenceKeys` object: `setupComplete`, `primaryMetric` (
 
 
 ## gitflow
-
-- If needed to use gitflow, add 
+If needed to use gitflow, add 
   - name: Write google-services.json
     run: echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > app/google-services.json
+
+## Compaction Policy
+When compacting, always preserve:
+- Current step in the multi-step build plan and acceptance criteria
+- Architecture (MVVM/MVI/Clean), module graph, DI setup
+- Full list of modified/created files and current test/lint status
+- Gradle version catalog and dependency deltas
+- Open bugs, failing tests, and follow-ups
+Discard: file-exploration transcripts, resolved threads, verbose tool output.
