@@ -408,7 +408,7 @@ sealed class ChargeEditEvent {
 
 ### 5.2 ViewModel responsibilities
 
-Injects: `SaveChargeEventUseCase`, `LocationReader`, `ChargeEventQueries`, `SettingsReader`, `CostParser`, `SavedStateHandle`. `UnitConverter` is a Kotlin `object` and is called statically (e.g. `UnitConverter.milesToKm(value)`); it is **not** a Hilt-injected dependency.
+Injects: `SaveChargeEventUseCase`, `LocationReader`, `ChargeEventQueries`, `SettingsReader`, `SavedStateHandle`. `UnitConverter` is a Kotlin `object` and is called statically (e.g. `UnitConverter.milesToKm(value)`); it is **not** a Hilt-injected dependency. **`CostParser` is also not injected here** — `SaveChargeEventUseCase` already normalizes the `CostInput` internally via `CostParser`, so the VM's only job is to forward a raw `CostInput(value, mode, currency)` (or `null`) and let the use case do the math. Adding `CostParser` to the VM constructor would be dead surface that complicates fakes.
 
 Initialization:
 
@@ -416,7 +416,15 @@ Initialization:
 2. Read `settingsReader.activeCarId.first()`, `distanceUnit.first()`, `currency.first()`.
 3. If Create: `_uiState.value = ChargeEditUiState(mode=Create, carId=activeCarId, distanceUnit=…, currency=…)`.
 4. If Edit: `chargeEventQueries.getById(eventId)` (suspend). Convert `event.odometerKm` to display unit. Pre-fill all fields. Set `costExpanded = event.costTotal != null`. Choose `costMode = TOTAL` and `costValue = event.costTotal.toString()` when present.
-5. Launch a coroutine that collects `locationReader.observeTop5()` and updates `state.locationChips.custom`. (Initial empty list is fine.)
+5. Launch a coroutine that collects `locationReader.observeTop5()` (a `Flow<List<CustomLocationEntity>>`) and maps each emission into the chip-label list before updating state:
+   ```kotlin
+   viewModelScope.launch {
+       locationReader.observeTop5()
+           .map { entities -> entities.map { it.label } }
+           .collect { labels -> _uiState.update { it.copy(locationChips = it.locationChips.copy(custom = labels)) } }
+   }
+   ```
+   (Initial empty list is fine.) Chips only need the label string; if a future feature wants per-chip metadata (use count, last used), the right move is to widen `LocationChips.custom` to an entity-backed row model — not to push entity-shaped data through string state.
 
 ViewModel functions: `setEventDate`, `setOdometer`, `setKwh`, `setChargeType`, `selectLocationChip(label)` (sets `location` to the chip text), `setLocation`, `toggleCostExpanded`, `setCostMode`, `setCostValue`, `setNote`, `save()`.
 
@@ -480,7 +488,7 @@ CoordinatorLayout
 - Custom chips rebuilt on `state.locationChips.custom` change; same handler.
 - "+ Add" chip: `setOnClickListener { binding.locationField.requestFocus() }`.
 
-**Save button:** in toolbar's end icon (`menu/charge_edit_menu.xml` with single check item) OR as a check `ImageButton`. Click → `viewModel.save()`.
+**Save button:** a `MaterialToolbar` with `app:menu` is **not** used. Instead the toolbar carries an end icon set via `binding.toolbar.setNavigationIcon` plus a separate `ImageButton`/`MaterialButton` in the layout for save. Click → `viewModel.save()`. No `res/menu/charge_edit_menu.xml` is added.
 
 ### 5.4 JVM tests (`ChargeEditViewModelTest.kt`)
 
