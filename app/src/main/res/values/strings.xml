@@ -96,4 +96,22 @@
 
     <!-- Period tabs -->
     <string name="period_since_previous">Since previous</string>
+
+    <!-- Dashboard -->
+    <string name="dashboard_title">EV Tracker</string>
+    <string name="empty_no_car_headline">Add a car to get started</string>
+    <string name="empty_no_car_cta">Add car</string>
+    <string name="empty_no_events_headline">Log your first charge to see stats here</string>
+    <string name="empty_no_events_cta">Log charge</string>
+    <string name="multi_currency_banner">Multi-currency period — cost stats hidden</string>
+    <string name="manage_cars">Manage cars…</string>
+    <string name="metric_km_per_kwh">km/kWh</string>
+    <string name="metric_kwh_per_100km">kWh/100km</string>
+    <string name="metric_mi_per_kwh">mi/kWh</string>
+    <string name="metric_unavailable">—</string>
+    <string name="metric_need_two_charges">Need 2+ charges</string>
+    <string name="cost_card_total">Total cost</string>
+    <string name="cost_card_per_km">Cost per km</string>
+    <string name="cost_card_per_100km">Cost per 100km</string>
+    <string name="fab_log_charge">Log charge</string>
 </resources>
