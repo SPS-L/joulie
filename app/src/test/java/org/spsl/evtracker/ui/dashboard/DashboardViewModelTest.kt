@@ -3,6 +3,7 @@ package org.spsl.evtracker.ui.dashboard
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -126,7 +127,7 @@ class DashboardViewModelTest {
         val now = System.currentTimeMillis()
         val daysAgo = { d: Int -> now - d * 86_400_000L }
         val events = listOf(
-            ChargeEventEntity(id = 1, carId = 1, eventDate = daysAgo(40), odometerKm = 100.0, kwhAdded = 20.0, chargeType = "AC", createdAt = 0L),
+            ChargeEventEntity(id = 1, carId = 1, eventDate = daysAgo(20), odometerKm = 100.0, kwhAdded = 20.0, chargeType = "AC", createdAt = 0L),
             ChargeEventEntity(id = 2, carId = 1, eventDate = daysAgo(2),  odometerKm = 200.0, kwhAdded = 25.0, chargeType = "AC", createdAt = 0L)
         )
         val (vm, _) = build(cars = listOf(car), events = events, activeCarId = 1)
@@ -172,9 +173,14 @@ class DashboardViewModelTest {
         val car = CarEntity(id = 1, name = "Tesla", createdAt = 0L)
         val (vm, _) = build(cars = listOf(car), activeCarId = 1)
         vm.uiState.first { it.activeCarId == 1 }
+        val received = mutableListOf<DashboardEvent>()
+        val job = launch(start = kotlinx.coroutines.CoroutineStart.UNDISPATCHED) {
+            vm.events.collect { received += it }
+        }
         vm.onFabClick()
-        val collected = vm.events.first()
-        assertTrue(collected is DashboardEvent.NavigateToChargeEdit)
+        testScheduler.advanceUntilIdle()
+        job.cancel()
+        assertTrue("got $received", received.isNotEmpty() && received.first() is DashboardEvent.NavigateToChargeEdit)
     }
 
     @Test

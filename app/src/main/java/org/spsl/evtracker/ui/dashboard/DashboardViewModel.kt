@@ -37,11 +37,10 @@ class DashboardViewModel @Inject constructor(
     private val settingsWriter: SettingsWriter
 ) : ViewModel() {
 
-    private val period = MutableStateFlow<DashboardPeriod>(DashboardPeriod.Year)
+    private val period = MutableStateFlow<DashboardPeriod>(DashboardPeriod.Last30Days)
     private val filter = MutableStateFlow(ChargeTypeFilter.ALL)
 
     private val _events = MutableSharedFlow<DashboardEvent>(
-        replay = 1,
         extraBufferCapacity = 1,
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
