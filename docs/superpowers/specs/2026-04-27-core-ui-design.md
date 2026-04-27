@@ -6,6 +6,8 @@
 
 **Goal:** ship the four core screens fully wired through Hilt, the existing narrow repository interfaces, and the existing domain use cases, so a user can add a car, log charges, see stats, and edit/delete history.
 
+**Out of scope — C-layer API contracts are frozen:** D does not change any signature in `domain/usecase/`, `domain/service/`, `domain/repository/`, or `core/model/` that already shipped in sub-project C. The only domain-layer additions D introduces are the three new car-management use cases (§6.1) and a brand-new `CarWriter` interface (which doesn't yet exist). Everything else in `domain/` is consumed as-is.
+
 **In scope:**
 - `DashboardFragment` + `DashboardViewModel`
 - `ChargeEditFragment` + `ChargeEditViewModel` (Create + Edit modes)
@@ -213,7 +215,6 @@ data class DashboardScreenState(
     val activeCarId: Int = -1,
     val period: DashboardPeriod = DashboardPeriod.Last30Days,
     val filter: ChargeTypeFilter = ChargeTypeFilter.ALL,
-    val customRange: DateRange? = null,
     val primaryMetric: String = "km_per_kwh",
     val distanceUnit: String = "km",
     val currency: String = "EUR",
@@ -227,62 +228,71 @@ sealed class DashboardEvent {
 }
 ```
 
-> `DashboardUiState`, `EmptyState`, `ChargeTypeFilter`, `DashboardPeriod`, and `Stats` already exist in `core/model/` from sub-project C. `Stats.totalCost`, `Stats.currency`, `Stats.costPerKm`, `Stats.costPer100Km`, and `Stats.mixedCurrency` are already populated by `StatsCalculator`.
+> `DashboardUiState`, `EmptyState`, `ChargeTypeFilter`, `DashboardPeriod`, and `Stats` already exist in `core/model/` from sub-project C. `Stats.totalCost`, `Stats.currency`, `Stats.costPerKm`, `Stats.costPer100Km`, and `Stats.mixedCurrency` are already populated by `StatsCalculator`. `DashboardPeriod.Custom(fromMillis: Long, toMillis: Long)` already carries the date range — D does not introduce a separate `customRange` field; the picker writes directly into a new `DashboardPeriod.Custom(from, to)` instance.
 
 ### 4.2 ViewModel responsibilities
 
 `DashboardViewModel` injects:
 
-- `ObserveDashboardStatsUseCase` (Flow-driven, already exists)
+- `ObserveDashboardStatsUseCase` (Flow-driven, already exists; signature: `fun observe(period: DashboardPeriod, filter: ChargeTypeFilter): Flow<DashboardUiState>`)
 - `CarReader`
 - `SettingsReader`
 - `SettingsWriter`
 
-It owns two private `MutableStateFlow`s for the user-driven facets that don't belong in `SettingsRepository`:
+It owns two private `MutableStateFlow`s for the user-driven facets:
 
 ```kotlin
 private val period = MutableStateFlow<DashboardPeriod>(DashboardPeriod.Last30Days)
 private val filter = MutableStateFlow(ChargeTypeFilter.ALL)
 ```
 
-`uiState: StateFlow<DashboardScreenState>` is built by:
+The use case is invoked as a Flow inside `flatMapLatest`, re-subscribed whenever period or filter changes. `activeCarId` is **not** passed to the use case — the use case observes that itself from `SettingsReader`. The Dashboard VM's other inputs (cars, primaryMetric, distanceUnit, currency, activeCarId) are combined with the use case's emissions to build `DashboardScreenState`:
 
 ```kotlin
-val uiState: StateFlow<DashboardScreenState> =
+private val dashboardFlow: Flow<DashboardUiState> =
+    combine(period, filter) { p, f -> p to f }
+        .flatMapLatest { (p, f) -> observeDashboardStats.observe(p, f) }
+
+private data class DashboardInputs(
+    val cars: List<CarEntity>,
+    val activeCarId: Int,
+    val primaryMetric: String,
+    val distanceUnit: String,
+    val currency: String
+)
+
+private val inputsFlow: Flow<DashboardInputs> =
     combine(
         carReader.observeAll(),
         settingsReader.activeCarId,
         settingsReader.primaryMetric,
         settingsReader.distanceUnit,
-        settingsReader.currency,
-        period,
-        filter
-    ) { /* Tuple7 */ }
-    .flatMapLatest { tuple ->
-        observeDashboardStats(tuple.activeCarId, tuple.period, tuple.filter, tuple.customRange)
-            .map { dashboard -> DashboardScreenState(
-                cars = tuple.cars,
-                activeCarId = tuple.activeCarId,
-                period = tuple.period,
-                filter = tuple.filter,
-                customRange = tuple.customRange,
-                primaryMetric = tuple.primaryMetric,
-                distanceUnit = tuple.distanceUnit,
-                currency = tuple.currency,
-                dashboard = dashboard
-            ) }
-    }
-    .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DashboardScreenState())
+        settingsReader.currency
+    ) { cars, active, metric, unit, ccy -> DashboardInputs(cars, active, metric, unit, ccy) }
+
+val uiState: StateFlow<DashboardScreenState> =
+    combine(inputsFlow, dashboardFlow, period, filter) { inputs, dashboard, p, f ->
+        DashboardScreenState(
+            cars = inputs.cars,
+            activeCarId = inputs.activeCarId,
+            period = p,
+            filter = f,
+            primaryMetric = inputs.primaryMetric,
+            distanceUnit = inputs.distanceUnit,
+            currency = inputs.currency,
+            dashboard = dashboard
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DashboardScreenState())
 ```
 
-> Implementation note: Kotlin's `combine` only ships overloads up to 5 args. The implementer wraps the 7 inputs in a `data class DashboardInputs(...)` and `combine(carReader.observeAll(), settingsReader.activeCarId, period, filter) { ... }.flatMapLatest { combine(settingsReader.primaryMetric, ..., settingsReader.currency) { ... } }` or uses the vararg `combine(flows.toList()) { array -> ... }` overload. Either is fine.
+> The `combine(inputsFlow, dashboardFlow, period, filter) { ... }` is a 4-arg `combine` — within the stdlib's 5-arg ceiling. Including `period` and `filter` in the outer combine ensures the screen state's `period`/`filter` fields stay synchronized with the use case's emission.
 
-`events: SharedFlow<DashboardEvent>` for one-shot navigations.
+`events: SharedFlow<DashboardEvent>` for one-shot navigations (`MutableSharedFlow(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)`).
 
 ViewModel functions:
 
-- `selectPeriod(period: DashboardPeriod)` — updates internal flow.
-- `selectCustomRange(from: Long, to: Long)` — sets `period = Custom` and stores `DateRange`.
+- `selectPeriod(period: DashboardPeriod)` — updates internal `period` flow. For non-`Custom` variants only.
+- `selectCustomRange(from: Long, to: Long)` — sets `period.value = DashboardPeriod.Custom(from, to)`. There is no separate `customRange` state; the picker writes directly into the sealed-class variant.
 - `selectFilter(filter: ChargeTypeFilter)` — updates internal flow.
 - `selectCar(carId: Int)` — calls `settingsWriter.setActiveCarId`.
 - `onFabClick()` — emits `NavigateToChargeEdit` if `activeCarId != -1`; otherwise no-op (the FAB UI is visually disabled in this state).
@@ -316,8 +326,10 @@ CoordinatorLayout
 |-------|------------------|
 | `dashboard.emptyState == NoCar` | Empty-state container only (with "Add a car" CTA). Toolbar visible but Spinner hidden. FAB disabled. |
 | `dashboard.emptyState == NoEvents` | Empty-state container only ("Log your first charge"). Toolbar with car spinner. FAB enabled. |
-| Stats present, normal | Full scrollview. Cost card visible iff `stats.totalCost != null && !stats.mixedCurrency`. Banner hidden. |
-| `stats.mixedCurrency == true` | Scrollview visible; **banner shown**, cost card hidden. |
+| Stats present, normal | Full scrollview. Cost card visible iff `stats.totalCost != null && !dashboard.showMultiCurrencyBanner`. Banner hidden. |
+| `dashboard.showMultiCurrencyBanner == true` | Scrollview visible; **banner shown**, cost card hidden. |
+
+> The banner signal is owned exclusively by `DashboardUiState.showMultiCurrencyBanner`, populated by `ObserveDashboardStatsUseCase.buildUiState` from `stats.mixedCurrency`. Dashboard rendering reads the boolean from the use case's UI state, never `stats.mixedCurrency` directly. This keeps the banner contract single-sourced in the domain layer.
 
 The "primary" metric card is determined by `state.primaryMetric`:
 
@@ -335,10 +347,9 @@ Cost card layout: total cost (formatted via `MoneyFormat`), separator, "cost/km"
 
 ### 4.5 Period & date handling
 
-- TabLayout's tab indices map to `DashboardPeriod` variants: 0→`SincePreviousCharge`, 1→`Last7Days`, 2→`Last30Days`, 3→`ThisYear`, 4→`Custom(...)`.
+- TabLayout's tab indices map to `DashboardPeriod` variants: 0→`SincePreviousCharge`, 1→`Last7Days`, 2→`Last30Days`, 3→`Year`, 4→`Custom(...)`.
 - Default selected tab = `Last30Days` (index 2).
-- Tapping "Custom" tab opens `MaterialDatePicker.Builder.dateRangePicker()`. On positive button, the Fragment calls `viewModel.selectCustomRange(from, to)`. If the user dismisses without picking, the previous period stays selected (Fragment reverts the tab visually).
-- `Custom` period without a `customRange` is treated by the use case as `Last30Days` (defensive). The Fragment never enters this state because the picker fires before tab selection commits.
+- Tapping "Custom" tab opens `MaterialDatePicker.Builder.dateRangePicker()`. On positive button, the Fragment calls `viewModel.selectCustomRange(from, to)` — which writes a fully-formed `DashboardPeriod.Custom(from, to)` into the period flow. If the user dismisses without picking, the previous period stays selected (Fragment reverts the tab visually); the period flow is not touched, so the use case never sees a "custom-without-range" state.
 
 ### 4.6 JVM tests (`DashboardViewModelTest.kt`)
 
@@ -350,8 +361,8 @@ Cost card layout: total cost (formatted via `MoneyFormat`), separator, "cost/km"
 | `selectPeriod_invokesUseCaseWithNewPeriod` | call `selectPeriod(Last7Days)` | fake use case records the new period parameter |
 | `selectFilter_invokesUseCaseWithNewFilter` | call `selectFilter(DC)` | fake use case records the new filter |
 | `selectCar_writesToSettingsWriter` | call `selectCar(7)` | fake `SettingsWriter.setActiveCarId` recorded `7` |
-| `customRange_emitsCustomPeriodToUseCase` | call `selectCustomRange(t1, t2)` | use case parameter is `DashboardPeriod.Custom(DateRange(t1, t2))` |
-| `multiCurrency_propagatesShowBanner` | use case emits `DashboardUiState(stats=Stats(mixedCurrency=true, ...))` | the screen state surfaces banner-worthy data unchanged |
+| `customRange_emitsCustomPeriodToUseCase` | call `selectCustomRange(t1, t2)` | use case parameter is `DashboardPeriod.Custom(t1, t2)` |
+| `multiCurrency_propagatesShowBanner` | use case emits `DashboardUiState(stats=…, showMultiCurrencyBanner=true)` | `uiState.value.dashboard.showMultiCurrencyBanner == true` |
 | `onFabClick_emitsNavigateEvent_whenCarActive` | activeCarId=1 | event is `NavigateToChargeEdit` |
 | `onFabClick_emitsNothing_whenNoCar` | activeCarId=-1 | no event emitted (test via `events.replayCache.isEmpty()` after `runCurrent()`) |
 
@@ -397,7 +408,7 @@ sealed class ChargeEditEvent {
 
 ### 5.2 ViewModel responsibilities
 
-Injects: `SaveChargeEventUseCase`, `LocationReader`, `ChargeEventQueries`, `SettingsReader`, `CostParser`, `UnitConverter`, `SavedStateHandle`.
+Injects: `SaveChargeEventUseCase`, `LocationReader`, `ChargeEventQueries`, `SettingsReader`, `CostParser`, `SavedStateHandle`. `UnitConverter` is a Kotlin `object` and is called statically (e.g. `UnitConverter.milesToKm(value)`); it is **not** a Hilt-injected dependency.
 
 Initialization:
 
@@ -729,17 +740,21 @@ The adapter filters rows where `isPendingDelete == true` so they appear hidden; 
 
 ### 7.2 ViewModel responsibilities
 
-Injects: `ChargeEventQueries`, `DeleteChargeEventUseCase`, `SettingsReader`, `UnitConverter`.
+Injects: `ChargeEventQueries`, `DeleteChargeEventUseCase`, `SettingsReader`. `UnitConverter` is a Kotlin `object` and is called statically — it is **not** injected.
+
+`pendingDeletes` is keyed by event id but stores `(ChargeEventEntity, Job)` so that the cancellable timer has the entity to pass to `DeleteChargeEventUseCase` (which takes a `ChargeEventEntity`, not an id):
 
 ```kotlin
+private data class PendingDelete(val event: ChargeEventEntity, val job: Job)
+
 private data class HistoryInputs(
     val activeCarId: Int,
     val distanceUnit: String,
     val filter: ChargeTypeFilter,
-    val pendingDeletes: Map<Int, Job>
+    val pendingDeletes: Map<Int, PendingDelete>
 )
 
-private val pendingDeletes = MutableStateFlow<Map<Int, Job>>(emptyMap())
+private val pendingDeletes = MutableStateFlow<Map<Int, PendingDelete>>(emptyMap())
 private val filter = MutableStateFlow(ChargeTypeFilter.ALL)
 
 val uiState: StateFlow<HistoryUiState> =
@@ -777,19 +792,22 @@ val uiState: StateFlow<HistoryUiState> =
 Functions:
 
 - `setFilter(f)` → `filter.value = f`.
-- `onSwipeDelete(eventId: Int)`:
+- `onSwipeDelete(event: ChargeEventEntity)` — Fragment passes the entity from the row's `HistoryRow.event`:
   ```kotlin
-  val job = viewModelScope.launch {
-      delay(5_000)
-      deleteChargeEventUseCase(eventId)
-      pendingDeletes.update { it - eventId }
+  fun onSwipeDelete(event: ChargeEventEntity) {
+      val id = event.id
+      val job = viewModelScope.launch {
+          delay(5_000)
+          deleteChargeEventUseCase(event)              // takes ChargeEventEntity, not Int
+          pendingDeletes.update { it - id }
+      }
+      pendingDeletes.update { it + (id to PendingDelete(event, job)) }
+      _events.tryEmit(HistoryEvent.ShowUndoSnackbar(id))
   }
-  pendingDeletes.update { it + (eventId to job) }
-  events.tryEmit(HistoryEvent.ShowUndoSnackbar(eventId))
   ```
 - `onUndoDelete(eventId: Int)`:
   ```kotlin
-  pendingDeletes.value[eventId]?.cancel()
+  pendingDeletes.value[eventId]?.job?.cancel()
   pendingDeletes.update { it - eventId }
   ```
 - `onRowClick(eventId: Int)` → emit `NavigateToEdit(eventId)`.
@@ -808,7 +826,7 @@ CoordinatorLayout
 
 **`item_charge_event.xml`** rows: date (formatted), odometer with unit suffix, kWh, AC/DC badge, location chip (if non-null), cost text in currency (if showCost), note one-line.
 
-**Swipe-to-delete:** `SwipeToDeleteCallback` extends `ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT)`. `onSwiped(viewHolder, direction)` → `viewModel.onSwipeDelete(rowEventId)`. The Fragment collects `ShowUndoSnackbar` and shows `Snackbar.make(rootView, R.string.snackbar_charge_deleted, Snackbar.LENGTH_LONG).setAction(R.string.undo) { viewModel.onUndoDelete(eventId) }.show()`.
+**Swipe-to-delete:** `SwipeToDeleteCallback` extends `ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT)`. `onSwiped(viewHolder, direction)` reads the row from the adapter via `adapter.currentList[viewHolder.bindingAdapterPosition].event` and calls `viewModel.onSwipeDelete(event)` (passes `ChargeEventEntity`, not an id, because `DeleteChargeEventUseCase.invoke(event: ChargeEventEntity)`). The Fragment collects `ShowUndoSnackbar(eventId)` and shows `Snackbar.make(rootView, R.string.snackbar_charge_deleted, Snackbar.LENGTH_LONG).setAction(R.string.undo) { viewModel.onUndoDelete(eventId) }.show()`.
 
 **Snackbar duration vs timer:** `LENGTH_LONG` ≈ 3.5s, timer = 5s. Acceptable: the timer is the authoritative window; the Snackbar simply disappears slightly earlier on most devices. Per DESIGN §6 the requirement is "5s undo window", which the timer enforces.
 
@@ -824,15 +842,15 @@ Uses `kotlinx-coroutines-test` `runTest` with `UnconfinedTestDispatcher` for col
 | `eventsLoadedAndSortedNewestFirst` | 3 events with dates 100, 200, 300 | rows order = [300, 200, 100] |
 | `filterAc_filtersDcOut` | 2 AC + 1 DC; setFilter(AC) | rows.size == 2, all AC |
 | `filterDc_filtersAcOut` | same setup; setFilter(DC) | rows.size == 1, all DC |
-| `swipeDelete_addsPendingAndStartsTimer` | onSwipeDelete(7) | rows[i].isPendingDelete == true for id=7; deleteChargeEventUseCase NOT called yet |
-| `swipeDelete_after5s_callsDeleteUseCase` | swipe + advanceTimeBy(5_001) | use case called with 7 |
+| `swipeDelete_addsPendingAndStartsTimer` | onSwipeDelete(event with id=7) | rows[i].isPendingDelete == true for id=7; deleteChargeEventUseCase NOT called yet |
+| `swipeDelete_after5s_callsDeleteUseCase` | swipe + advanceTimeBy(5_001) | use case called with the entity (id=7) |
 | `swipeDelete_undo_cancelsTimer` | swipe + onUndoDelete(7) + advanceTimeBy(10_000) | use case NOT called; rows[i].isPendingDelete == false |
-| `swipeDelete_then_undo_then_swipeAgain_eventuallyDeletes` | sequence | use case eventually called once |
+| `swipeDelete_then_undo_then_swipeAgain_eventuallyDeletes` | sequence | use case eventually called once with the entity |
 | `pendingRow_hiddenFromUiList` | swipe; advanceTimeBy(0) | adapter (test-side filter) excludes pending row |
 | `milesUnit_displayOdometerConverted` | distanceUnit=miles, event.odometerKm=100 | row.displayOdometer ≈ 62.137 |
-| `multipleConcurrentDeletes_eachTracked` | swipe two events; undo one | pendingDeletes contains the other; use case called once |
+| `multipleConcurrentDeletes_eachTracked` | swipe two events; undo one | pendingDeletes contains the other; use case called once with the non-undone entity |
 | `onRowClick_emitsNavigateEvent` | onRowClick(11) | events has NavigateToEdit(11) |
-| `swipeDelete_emitsUndoSnackbarEvent` | swipe(7) | events has ShowUndoSnackbar(7) |
+| `swipeDelete_emitsUndoSnackbarEvent` | swipe(event id=7) | events has ShowUndoSnackbar(7) |
 
 ## 8. Common helpers (`ui/common/`)
 
@@ -854,10 +872,14 @@ object MoneyFormat {
 
 ```kotlin
 object DateFormat {
-    private val display = DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm").withZone(ZoneId.systemDefault())
-    fun formatEpochMs(ms: Long): String = display.format(Instant.ofEpochMilli(ms))
+    private val pattern: DateTimeFormatter = DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm")
+
+    fun formatEpochMs(ms: Long, zone: ZoneId = ZoneId.systemDefault()): String =
+        pattern.withZone(zone).format(Instant.ofEpochMilli(ms))
 }
 ```
+
+> The `zone` parameter defaults to `ZoneId.systemDefault()` for production callers, but the unit test passes `ZoneId.of("UTC")` so output is deterministic across CI machines and local timezones. Do not cache the formatter with a fixed zone — that closes off the test seam.
 
 ### 8.3 `PeriodLabels.kt`
 
@@ -866,7 +888,7 @@ object DateFormat {
 ### 8.4 Tests
 
 `MoneyFormatTest.kt`: EUR + locale roundtrip; unknown currency code falls back gracefully.
-`DateFormatTest.kt`: known epoch ms produces expected formatted string in a fixed `ZoneId.of("UTC")`.
+`DateFormatTest.kt`: passes `ZoneId.of("UTC")` to `formatEpochMs(ms, zone)` and asserts the exact formatted string for a fixed epoch — guaranteed stable across timezones and CI machines.
 
 ## 9. Hilt wiring
 
@@ -959,7 +981,7 @@ object DateFormat {
 | Rotation in ChargeEdit | `ChargeEditUiState` lives in ViewModel — survives. Date/time pickers re-shown only on user action; no extra state. |
 | Rotation during undo window | `pendingDeletes` lives in ViewModel — timer continues, row stays hidden. Snackbar dismisses on rotation; user cannot tap Undo after rotating, but the 5s commit still fires. Acceptable. |
 | Save tapped twice rapidly | `state.saving = true` disables the Save button until the use case returns. |
-| Multi-currency banner | Computed by C's `StatsCalculator` and surfaced via `Stats.mixedCurrency`. Dashboard reads it directly; no D-side state. |
+| Multi-currency banner | Single source of truth: `DashboardUiState.showMultiCurrencyBanner`, populated by C's `ObserveDashboardStatsUseCase` from `stats.mixedCurrency`. Dashboard renders the banner from the boolean — never the underlying `stats.mixedCurrency` flag — so the contract stays single-sourced. |
 | Bottom nav visible on `chargeEdit`/`cars` | Hidden via `addOnDestinationChangedListener` (see §3.2). |
 | Save with `costExpanded=true` and `costValue=""` | Treated as no cost (passes `null` `CostInput`). Use case + `CostParser` would handle it identically, but explicit early return keeps the contract clear. |
 | Edit mode currency mismatch | If editing a USD event while preferences say EUR, the form shows `state.currency = event.currency ?: prefCurrency`. On save the original currency is preserved. *(Implementer note: pre-fill `state.currency` from the event when in Edit mode.)* |
