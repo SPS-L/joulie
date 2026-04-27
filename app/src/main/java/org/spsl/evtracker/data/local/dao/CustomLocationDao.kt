@@ -27,6 +27,9 @@ abstract class CustomLocationDao {
     @Delete
     abstract suspend fun delete(location: CustomLocationEntity)
 
+    @Query("DELETE FROM custom_locations")
+    abstract suspend fun deleteAll()
+
     @Transaction
     open suspend fun recordUsage(label: String, now: Long) {
         val rowId = insertIfMissing(
