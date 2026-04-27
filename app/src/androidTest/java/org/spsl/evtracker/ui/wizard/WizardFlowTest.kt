@@ -54,7 +54,7 @@ class WizardFlowTest {
             dataStore.edit { it[PreferenceKeys.SETUP_COMPLETE] = true }
         }
         ActivityScenario.launch(MainActivity::class.java).use {
-            onView(withId(R.id.dashboard_placeholder_text)).check(matches(isDisplayed()))
+            onView(withId(R.id.dashboard_fab)).check(matches(isDisplayed()))
         }
     }
 
@@ -67,8 +67,8 @@ class WizardFlowTest {
             onView(withId(R.id.wizard_button_next)).perform(click())
             // Page 3 → Finish
             onView(withId(R.id.wizard_button_next)).perform(click())
-            // Dashboard placeholder visible
-            onView(withId(R.id.dashboard_placeholder_text)).check(matches(isDisplayed()))
+            // Dashboard FAB visible
+            onView(withId(R.id.dashboard_fab)).check(matches(isDisplayed()))
             // Back press exits the app — wizard must NOT be on the back stack
             // (regression guard for losing popUpToInclusive on action_wizard_to_dashboard).
             try {
