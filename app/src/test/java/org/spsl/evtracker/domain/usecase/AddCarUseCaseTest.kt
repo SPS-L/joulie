@@ -18,7 +18,7 @@ class AddCarUseCaseTest {
         val settingsReader = FakeSettingsReader(activeCarIdInit = activeCarId)
         val settingsWriter = FakeSettingsWriter()
         val scheduler = FakeBackupScheduler()
-        val useCase = AddCarUseCase(cars, cars, settingsReader, settingsWriter, scheduler)
+        val useCase = AddCarUseCase(cars, settingsReader, settingsWriter, scheduler)
         return Quadruple(useCase, cars, settingsWriter, scheduler)
     }
 

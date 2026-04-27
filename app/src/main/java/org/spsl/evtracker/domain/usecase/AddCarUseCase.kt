@@ -5,14 +5,12 @@ import kotlinx.coroutines.flow.first
 import org.spsl.evtracker.core.model.CarFormState
 import org.spsl.evtracker.data.local.entity.CarEntity
 import org.spsl.evtracker.domain.backup.BackupScheduler
-import org.spsl.evtracker.domain.repository.CarReader
 import org.spsl.evtracker.domain.repository.CarWriter
 import org.spsl.evtracker.domain.repository.SettingsReader
 import org.spsl.evtracker.domain.repository.SettingsWriter
 
 class AddCarUseCase @Inject constructor(
     private val carWriter: CarWriter,
-    private val carReader: CarReader,
     private val settingsReader: SettingsReader,
     private val settingsWriter: SettingsWriter,
     private val backupScheduler: BackupScheduler
