@@ -75,7 +75,7 @@ app/src/main/java/org/spsl/evtracker/
 
 app/src/main/res/
   layout/
-    activity_main.xml              (rewrite — add BottomNavigationView in CoordinatorLayout)
+    activity_main.xml              (rewrite — vertical LinearLayout with NavHost (weight=1) + BottomNavigationView)
     fragment_dashboard.xml         (rewrite — toolbar, tabs, chips, cards, banner, FAB, empty-state)
     fragment_charge_edit.xml       (rewrite — full form)
     fragment_cars.xml              (rewrite — RecyclerView + FAB)
@@ -143,20 +143,21 @@ Per the project's existing convention:
 
 `MainActivity.onCreate` already runs the Wizard gate inside a `lifecycleScope.launch { ... }` coroutine that is splash-gated by an `isLoading` `MutableStateFlow<Boolean>` (the runBlocking startup pattern was removed in the pre-D cleanup commit). D adds the BottomNavigationView wiring synchronously in `onCreate` after `setContentView` — the listener can be attached before `navController.graph` is set; it simply won't fire until destinations change.
 
+`activity_main.xml` becomes a vertical `LinearLayout` with the `FragmentContainerView` at `0dp`/`weight=1` and the `BottomNavigationView` at `wrap_content`. This avoids the well-known fragility of guessing the bottom-bar height with `?attr/actionBarSize` (Material 3 BottomNav is ~80dp; `actionBarSize` is ~56dp; both shift with font scale and theme). Snackbar/FAB anchoring still works because each Fragment's own root layout is a `CoordinatorLayout`.
+
 ```kotlin
 override fun onCreate(savedInstanceState: Bundle?) {
     val splash = installSplashScreen()
     splash.setKeepOnScreenCondition { isLoading.value }
     super.onCreate(savedInstanceState)
-    setContentView(R.layout.activity_main)
+    binding = ActivityMainBinding.inflate(layoutInflater)
+    setContentView(binding.root)
 
     val navHost = supportFragmentManager
         .findFragmentById(R.id.nav_host_fragment) as NavHostFragment
     val navController = navHost.navController
     val graph = navController.navInflater.inflate(R.navigation.nav_graph)
 
-    // Bottom nav setup — D adds this. ViewBinding lookup since activity_main now has a CoordinatorLayout root.
-    val binding = ActivityMainBinding.bind(findViewById(R.id.activity_main_root))
     binding.bottomNav.setupWithNavController(navController)
     val hideOn = setOf(
         R.id.wizardFragment,
@@ -178,7 +179,7 @@ override fun onCreate(savedInstanceState: Bundle?) {
 }
 ```
 
-> The `activity_main` root LinearLayout becomes a `CoordinatorLayout` with `android:id="@+id/activity_main_root"` so ViewBinding's generated `ActivityMainBinding` provides typed access without `findViewById` for the bottom nav.
+> ViewBinding (`ActivityMainBinding`) is inflated and bound directly via `inflate(layoutInflater)` — no `findViewById` lookup is needed.
 
 ### 3.3 nav_graph.xml updates
 
