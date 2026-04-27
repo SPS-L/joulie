@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Android app (`org.spsl.evtracker`) for logging EV charge events and analyzing efficiency/cost. Kotlin, MVVM with a domain/use-case layer plus narrow repositories, Gradle Kotlin DSL, and Hilt-based dependency injection. Min SDK 26, target/compile SDK 34, JDK 17. Room compiler runs via **KSP** (not kapt).
 
-> **Status: pre-implementation.** No Kotlin source has been written yet — only docs, Gradle config, manifest, and a few resource XMLs are committed. `./gradlew assembleDebug` will fail until `MainActivity.kt` and the rest of `AGENT_INSTRUCTIONS.md` Steps 2–8 land.
+> **Status:** Sub-projects A (foundation/DI/Room v3), B (repositories), C (domain services + use cases) are merged. Sub-project D (UI ViewModels) is partially landed: Wizard is wired; Dashboard/Charts/History/Cars/Settings/ChargeEdit/ManageLocations VMs are stubs. Sub-project E (Drive backup) lives behind no-op interfaces.
 
 Root docs:
 - `DESIGN.md` — canonical product + technical spec (v3). Source of truth when in conflict with anything else.
