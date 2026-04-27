@@ -119,4 +119,27 @@
     <string name="error_odometer_required">Enter a valid odometer reading</string>
     <string name="error_odometer_must_be_higher">Odometer must be greater than the previous entry</string>
     <string name="error_kwh_required">Enter a valid kWh value</string>
+
+    <!-- Charge edit -->
+    <string name="charge_edit_create_title">Add charge</string>
+    <string name="charge_edit_edit_title">Edit charge</string>
+    <string name="hint_odometer_km">Odometer (km)</string>
+    <string name="hint_odometer_mi">Odometer (mi)</string>
+    <string name="hint_kwh">kWh added</string>
+    <string name="hint_location">Location</string>
+    <string name="hint_cost">Cost</string>
+    <string name="hint_note">Note (optional)</string>
+    <string name="hint_date_time">Date &amp; time</string>
+    <string name="cost_section_header">Cost (optional)</string>
+    <string name="cost_mode_total">Total</string>
+    <string name="cost_mode_per_kwh">Per kWh</string>
+    <string name="charge_type_ac">AC</string>
+    <string name="charge_type_dc">DC</string>
+    <string name="charge_save">Save</string>
+
+    <!-- Location chips -->
+    <string name="location_home">Home</string>
+    <string name="location_work">Work</string>
+    <string name="location_public">Public</string>
+    <string name="chip_add_location">+ Add</string>
 </resources>
