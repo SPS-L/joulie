@@ -158,9 +158,11 @@ All Sub-project C tests are JVM unit tests (no `androidTest/`, no emulator neede
 
 ---
 
-## Task 1: Domain models
+## Task 1: Domain models (7 files; SaveChargeEventInput deferred to Task 6)
 
-Create all 8 model files under `core/model/` in one task. They're pure data classes with no behavior; nothing to TDD here.
+Create 7 model files under `core/model/` in one task. They're pure data classes with no behavior; nothing to TDD here.
+
+`SaveChargeEventInput.kt` is the 8th model file but it depends on `domain.service.CostMode` which doesn't exist until Task 6. To keep main compilable after every task, we defer its creation to Task 6 — the same task that introduces `CostMode`.
 
 **Files:**
 - Create: `app/src/main/java/org/spsl/evtracker/core/model/Stats.kt`
@@ -168,7 +170,6 @@ Create all 8 model files under `core/model/` in one task. They're pure data clas
 - Create: `app/src/main/java/org/spsl/evtracker/core/model/DateRange.kt`
 - Create: `app/src/main/java/org/spsl/evtracker/core/model/DashboardPeriod.kt`
 - Create: `app/src/main/java/org/spsl/evtracker/core/model/DashboardUiState.kt`
-- Create: `app/src/main/java/org/spsl/evtracker/core/model/SaveChargeEventInput.kt`
 - Create: `app/src/main/java/org/spsl/evtracker/core/model/RestoreResult.kt`
 - Create: `app/src/main/java/org/spsl/evtracker/core/model/BackupData.kt`
 
@@ -246,42 +247,7 @@ sealed class EmptyState {
 enum class ChargeTypeFilter { ALL, AC, DC }
 ```
 
-- [ ] **Step 6: Create `SaveChargeEventInput.kt`**
-
-```kotlin
-package org.spsl.evtracker.core.model
-
-import org.spsl.evtracker.domain.service.CostMode
-
-data class SaveChargeEventInput(
-    val eventId: Int? = null,
-    val carId: Int,
-    val eventDate: Long,
-    val odometerKm: Double,
-    val kwhAdded: Double,
-    val chargeType: String,
-    val costInput: CostInput? = null,
-    val location: String? = null,
-    val note: String = ""
-)
-
-data class CostInput(
-    val value: Double,
-    val mode: CostMode,
-    val currency: String
-)
-
-sealed class SaveChargeEventResult {
-    data class Success(val eventId: Long) : SaveChargeEventResult()
-    object OdometerNotIncreasing : SaveChargeEventResult()
-}
-```
-
-The `CostMode` import points to `domain/service/CostMode` which doesn't exist yet — that's fine; Task 6 creates it. The build will fail on this file until Task 6 lands. **DO NOT** try to fix this by inlining the enum here; the spec deliberately keeps `CostMode` co-located with `CostParser`.
-
-If your TDD discipline requires the build to pass after every task, you can defer `SaveChargeEventInput.kt` to between Tasks 6 and 12 (where it's first consumed by `SaveChargeEventUseCase`). Either order is acceptable.
-
-- [ ] **Step 7: Create `RestoreResult.kt`**
+- [ ] **Step 6: Create `RestoreResult.kt`**
 
 ```kotlin
 package org.spsl.evtracker.core.model
@@ -297,7 +263,7 @@ sealed class RestoreResult {
 }
 ```
 
-- [ ] **Step 8: Create `BackupData.kt`**
+- [ ] **Step 7: Create `BackupData.kt`**
 
 This is the largest model file. It includes the JSON DTOs for all three entity types and the `BackupVersionMismatch` exception.
 
@@ -404,24 +370,20 @@ class BackupVersionMismatch(val actual: Int) :
     RuntimeException("Backup version $actual is incompatible with current version ${BackupData.CURRENT_VERSION}")
 ```
 
-- [ ] **Step 9: Verify the build compiles**
+- [ ] **Step 8: Verify the build compiles**
 
-Run: `GRADLE_USER_HOME=/tmp/gradle-home ./gradlew assembleDebug 2>&1 | tail -10` with `dangerouslyDisableSandbox: true`.
+Run: `GRADLE_USER_HOME=/tmp/gradle-home ./gradlew assembleDebug 2>&1 | tail -5` with `dangerouslyDisableSandbox: true`.
 
-Expected: BUILD FAILED — `SaveChargeEventInput.kt` references `org.spsl.evtracker.domain.service.CostMode` which doesn't exist yet. That's expected; Task 6 creates `CostMode`.
+Expected: BUILD SUCCESSFUL. The 7 model files are pure data classes with no broken cross-references; `SaveChargeEventInput.kt` (the 8th model) lands in Task 6 once `CostMode` exists.
 
-If you'd rather have a green build at the end of every task, skip `SaveChargeEventInput.kt` until Task 6 (move its content to a later commit). Then assemble passes here.
-
-For this plan we accept the broken build — Task 6 fixes it within one task.
-
-- [ ] **Step 10: Commit**
+- [ ] **Step 9: Commit**
 
 ```bash
 git add app/src/main/java/org/spsl/evtracker/core/model/
 ```
 
 ```bash
-git commit -m "feat(domain): add core/model/ data classes (Stats, BackupData, DashboardUiState, etc.)"
+git commit -m "feat(domain): add 7 core/model data classes (Stats, BackupData, DashboardUiState, etc.)"
 ```
 
 ---
@@ -532,11 +494,11 @@ interface SettingsWriter {
 
 - [ ] **Step 8: Verify build**
 
-The interfaces are pure declarations; they reference only Kotlin types and B's entities. Build still has the `CostMode` reference broken from Task 1 — that persists until Task 6. No new errors should appear.
+The interfaces are pure declarations; they reference only Kotlin types and B's entities.
 
-Run: `GRADLE_USER_HOME=/tmp/gradle-home ./gradlew assembleDebug 2>&1 | tail -10` with `dangerouslyDisableSandbox: true`.
+Run: `GRADLE_USER_HOME=/tmp/gradle-home ./gradlew assembleDebug 2>&1 | tail -5` with `dangerouslyDisableSandbox: true`.
 
-Expected: same `CostMode unresolved` error as after Task 1. No new errors.
+Expected: BUILD SUCCESSFUL.
 
 - [ ] **Step 9: Commit**
 
@@ -655,9 +617,9 @@ interface CsvFileSink {
 
 - [ ] **Step 6: Verify build**
 
-Run: `GRADLE_USER_HOME=/tmp/gradle-home ./gradlew assembleDebug 2>&1 | tail -10` with `dangerouslyDisableSandbox: true`.
+Run: `GRADLE_USER_HOME=/tmp/gradle-home ./gradlew assembleDebug 2>&1 | tail -5` with `dangerouslyDisableSandbox: true`.
 
-Expected: same `CostMode unresolved` carry-over from Task 1. No new errors.
+Expected: BUILD SUCCESSFUL.
 
 - [ ] **Step 7: Commit**
 
@@ -804,7 +766,7 @@ The `abstract` modifier is required because `CustomLocationDao` is an abstract c
 
 Run: `GRADLE_USER_HOME=/tmp/gradle-home ./gradlew assembleDebug 2>&1 | tail -10` with `dangerouslyDisableSandbox: true`.
 
-Expected: still the `CostMode unresolved` from Task 1 (which Task 6 fixes). No new errors. `setDriveEnabled` and the `deleteAll` methods compile against existing infrastructure.
+Expected: BUILD SUCCESSFUL. `setDriveEnabled` and the `deleteAll` methods compile against existing infrastructure; the new `: SomeReader, SomeWriter` clauses match the existing method signatures exactly so no method bodies need editing.
 
 - [ ] **Step 9: Run JVM tests — they should still pass**
 
@@ -908,7 +870,7 @@ git commit -m "feat(domain): add UnitConverter (km↔mi)"
 - Create: `app/src/test/java/org/spsl/evtracker/domain/service/CostParserTest.kt`
 - Create: `app/src/main/java/org/spsl/evtracker/domain/service/CostParser.kt`
 
-This task creates `CostMode`, which Task 1's `SaveChargeEventInput.kt` referenced. After Step 4 of this task, the broken build from Tasks 1–4 finally goes green.
+This task creates `CostMode`, then creates `SaveChargeEventInput.kt` (deferred from Task 1 because it depends on `CostMode`).
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1000,26 +962,61 @@ class CostParser @Inject constructor() {
 }
 ```
 
-- [ ] **Step 4: Run tests — 7 pass; build is now green for SaveChargeEventInput.kt too**
+- [ ] **Step 4: Run tests — 7 pass**
 
 Run: `GRADLE_USER_HOME=/tmp/gradle-home ./gradlew :app:testDebugUnitTest --tests "org.spsl.evtracker.domain.service.CostParserTest" 2>&1 | tail -10` with `dangerouslyDisableSandbox: true`.
 
 Expected: BUILD SUCCESSFUL with all 7 cases passing.
 
-Then run a full assemble to confirm the project compiles end-to-end now:
+- [ ] **Step 5: Now create `SaveChargeEventInput.kt` (deferred from Task 1; CostMode now exists)**
+
+Create `app/src/main/java/org/spsl/evtracker/core/model/SaveChargeEventInput.kt`:
+
+```kotlin
+package org.spsl.evtracker.core.model
+
+import org.spsl.evtracker.domain.service.CostMode
+
+data class SaveChargeEventInput(
+    val eventId: Int? = null,
+    val carId: Int,
+    val eventDate: Long,
+    val odometerKm: Double,
+    val kwhAdded: Double,
+    val chargeType: String,
+    val costInput: CostInput? = null,
+    val location: String? = null,
+    val note: String = ""
+)
+
+data class CostInput(
+    val value: Double,
+    val mode: CostMode,
+    val currency: String
+)
+
+sealed class SaveChargeEventResult {
+    data class Success(val eventId: Long) : SaveChargeEventResult()
+    object OdometerNotIncreasing : SaveChargeEventResult()
+}
+```
+
+The `CostMode` import resolves cleanly because Step 3 just declared it. Don't inline a copy of the enum here — keep it co-located with `CostParser` per the spec.
+
+- [ ] **Step 6: Verify the full project compiles end-to-end**
 
 Run: `GRADLE_USER_HOME=/tmp/gradle-home ./gradlew assembleDebug 2>&1 | tail -5` with `dangerouslyDisableSandbox: true`.
 
 Expected: BUILD SUCCESSFUL.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
-git add app/src/main/java/org/spsl/evtracker/domain/service/CostParser.kt app/src/test/java/org/spsl/evtracker/domain/service/CostParserTest.kt
+git add app/src/main/java/org/spsl/evtracker/domain/service/CostParser.kt app/src/test/java/org/spsl/evtracker/domain/service/CostParserTest.kt app/src/main/java/org/spsl/evtracker/core/model/SaveChargeEventInput.kt
 ```
 
 ```bash
-git commit -m "feat(domain): add CostParser + CostMode enum"
+git commit -m "feat(domain): add CostParser + CostMode + SaveChargeEventInput"
 ```
 
 ---
