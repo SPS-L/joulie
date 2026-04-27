@@ -10,7 +10,17 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven { url = uri("https://jitpack.io") }
+        // Scope JitPack to MPAndroidChart only — JitPack outages otherwise gate the entire build.
+        exclusiveContent {
+            forRepository {
+                maven {
+                    url = uri("https://jitpack.io")
+                }
+            }
+            filter {
+                includeGroup("com.github.PhilJay")
+            }
+        }
     }
 }
 rootProject.name = "EV-android-app"
