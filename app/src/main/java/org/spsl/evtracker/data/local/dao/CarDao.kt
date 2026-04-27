@@ -32,7 +32,7 @@ interface CarDao {
     suspend fun rename(id: Int, name: String)
 
     @Query("DELETE FROM cars WHERE id = :id")
-    suspend fun deleteById(id: Int): Int
+    suspend fun deleteById(id: Int)
 
     @Delete
     suspend fun delete(car: CarEntity)
