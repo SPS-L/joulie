@@ -88,6 +88,12 @@
     <string name="placeholder_history">History \u2014 coming soon</string>
     <string name="placeholder_manage_locations">Manage Locations \u2014 coming soon</string>
 
+    <!-- History -->
+    <string name="history_title">History</string>
+    <string name="history_empty">No charges yet — tap + on Dashboard to log one</string>
+    <string name="snackbar_charge_deleted">Charge deleted</string>
+    <string name="undo">Undo</string>
+
     <!-- Bottom nav -->
     <string name="nav_dashboard">Dashboard</string>
     <string name="nav_history">History</string>
