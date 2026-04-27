@@ -65,7 +65,11 @@ app/src/main/java/org/spsl/evtracker/
     AddCarUseCase.kt               (new)
     RenameCarUseCase.kt            (new)
     DeleteCarUseCase.kt            (new)
-  di/DomainModule.kt               (modify — bind new use cases if needed; @Inject ctor on use cases means no @Binds change)
+  domain/repository/
+    CarWriter.kt                   (new — narrow writer interface; CarRepository will also implement it)
+  data/local/dao/CarDao.kt         (modify — add rename(id, name) and deleteById(id) @Query methods)
+  data/repository/CarRepository.kt (modify — implement CarWriter; add rename + deleteById methods)
+  di/DomainModule.kt               (modify — add @Binds CarWriter ← CarRepository; new use cases use ctor injection so need no binding)
 
 app/src/main/res/
   layout/
@@ -220,7 +224,7 @@ private val filter = MutableStateFlow(ChargeTypeFilter.ALL)
 ```kotlin
 val uiState: StateFlow<DashboardScreenState> =
     combine(
-        carReader.observeCars(),
+        carReader.observeAll(),
         settingsReader.activeCarId,
         settingsReader.primaryMetric,
         settingsReader.distanceUnit,
@@ -245,7 +249,7 @@ val uiState: StateFlow<DashboardScreenState> =
     .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DashboardScreenState())
 ```
 
-> Implementation note: Kotlin's `combine` only ships overloads up to 5 args. The implementer wraps the 7 inputs in a `data class DashboardInputs(...)` and `combine(carReader.observeCars(), settingsReader.activeCarId, period, filter) { ... }.flatMapLatest { combine(settingsReader.primaryMetric, ..., settingsReader.currency) { ... } }` or uses the vararg `combine(flows.toList()) { array -> ... }` overload. Either is fine.
+> Implementation note: Kotlin's `combine` only ships overloads up to 5 args. The implementer wraps the 7 inputs in a `data class DashboardInputs(...)` and `combine(carReader.observeAll(), settingsReader.activeCarId, period, filter) { ... }.flatMapLatest { combine(settingsReader.primaryMetric, ..., settingsReader.currency) { ... } }` or uses the vararg `combine(flows.toList()) { array -> ... }` overload. Either is fine.
 
 `events: SharedFlow<DashboardEvent>` for one-shot navigations.
 
@@ -530,7 +534,7 @@ class DeleteCarUseCase @Inject constructor(
     suspend operator fun invoke(carId: Int) {
         carWriter.deleteById(carId)         // cascade-delete handled by FK on charge_events
         if (settingsReader.activeCarId.first() == carId) {
-            val remaining = carReader.observeCars().first()
+            val remaining = carReader.observeAll().first()
             settingsWriter.setActiveCarId(remaining.firstOrNull()?.id ?: -1)
         }
         backupScheduler.enqueueBackup()
@@ -538,7 +542,29 @@ class DeleteCarUseCase @Inject constructor(
 }
 ```
 
-> **Repository surface additions:** `CarWriter.rename(id: Int, name: String)` and `CarWriter.deleteById(id: Int)` may already exist on `CarRepository`. The plan task adds whichever are missing. The new methods are 1-line wrappers around existing `CarDao.update(...)` / `CarDao.delete(...)` calls. No new DAO queries.
+> **Repository surface additions in D:**
+>
+> `CarWriter` is a new narrow interface in `domain/repository/`:
+>
+> ```kotlin
+> interface CarWriter {
+>     suspend fun insert(car: CarEntity): Long
+>     suspend fun rename(carId: Int, newName: String)
+>     suspend fun deleteById(carId: Int)
+> }
+> ```
+>
+> `CarRepository` (currently implements only `CarReader`) is extended to also implement `CarWriter`. The existing concrete `insert(car)`, `update(car)`, and `delete(car)` methods on `CarRepository` are kept (used internally and by tests). `rename` and `deleteById` are new. The `CarDao` adds two `@Query` methods:
+>
+> ```kotlin
+> @Query("UPDATE cars SET name = :name WHERE id = :id")
+> suspend fun rename(id: Int, name: String)
+>
+> @Query("DELETE FROM cars WHERE id = :id")
+> suspend fun deleteById(id: Int): Int
+> ```
+>
+> `CarRepository.rename(id, name)` and `CarRepository.deleteById(id)` simply forward to these DAO methods.
 
 ### 6.2 State models (new `core/model/CarsUiState.kt` and `CarFormState.kt`)
 
@@ -553,9 +579,9 @@ data class CarFormState(
 
 data class CarsUiState(
     val cars: List<CarRow> = emptyList(),
-    val activeCarId: Int = -1,
-    val empty: Boolean get() = cars.isEmpty()
+    val activeCarId: Int = -1
 ) {
+    val empty: Boolean get() = cars.isEmpty()
     data class CarRow(val car: CarEntity, val isActive: Boolean)
 }
 
@@ -573,7 +599,7 @@ Injects: `CarReader`, `SettingsReader`, `SettingsWriter`, `AddCarUseCase`, `Rena
 
 ```kotlin
 val uiState: StateFlow<CarsUiState> =
-    combine(carReader.observeCars(), settingsReader.activeCarId) { cars, activeId ->
+    combine(carReader.observeAll(), settingsReader.activeCarId) { cars, activeId ->
         CarsUiState(
             cars = cars.map { CarRow(it, it.id == activeId) },
             activeCarId = activeId
@@ -655,9 +681,10 @@ data class HistoryUiState(
     val rows: List<HistoryRow> = emptyList(),
     val filter: ChargeTypeFilter = ChargeTypeFilter.ALL,
     val distanceUnit: String = "km",
-    val activeCarId: Int = -1,
+    val activeCarId: Int = -1
+) {
     val isEmpty: Boolean get() = rows.isEmpty()
-)
+}
 
 data class HistoryRow(
     val event: ChargeEventEntity,
@@ -679,6 +706,13 @@ The adapter filters rows where `isPendingDelete == true` so they appear hidden; 
 Injects: `ChargeEventQueries`, `DeleteChargeEventUseCase`, `SettingsReader`, `UnitConverter`.
 
 ```kotlin
+private data class HistoryInputs(
+    val activeCarId: Int,
+    val distanceUnit: String,
+    val filter: ChargeTypeFilter,
+    val pendingDeletes: Map<Int, Job>
+)
+
 private val pendingDeletes = MutableStateFlow<Map<Int, Job>>(emptyMap())
 private val filter = MutableStateFlow(ChargeTypeFilter.ALL)
 
@@ -688,24 +722,27 @@ val uiState: StateFlow<HistoryUiState> =
         settingsReader.distanceUnit,
         filter,
         pendingDeletes
-    ) { active, unit, f, pending -> Quad(active, unit, f, pending) }
-    .flatMapLatest { (active, unit, f, pending) ->
-        if (active == -1) flowOf(HistoryUiState(activeCarId = -1, distanceUnit = unit, filter = f))
-        else chargeEventQueries.observeForCar(active).map { events ->
-            val visibleEvents = events
-                .filter { applyFilter(it, f) }
-                .sortedByDescending { it.eventDate }
-            HistoryUiState(
-                rows = visibleEvents.map { e ->
-                    HistoryRow(
-                        event = e,
-                        displayOdometer = if (unit == "miles") UnitConverter.kmToMiles(e.odometerKm) else e.odometerKm,
-                        showCost = e.costTotal != null && e.currency != null,
-                        isPendingDelete = e.id in pending.keys
-                    )
-                },
-                filter = f, distanceUnit = unit, activeCarId = active
-            )
+    ) { active, unit, f, pending -> HistoryInputs(active, unit, f, pending) }
+    .flatMapLatest { inputs ->
+        if (inputs.activeCarId == -1) {
+            flowOf(HistoryUiState(activeCarId = -1, distanceUnit = inputs.distanceUnit, filter = inputs.filter))
+        } else {
+            chargeEventQueries.observeForCar(inputs.activeCarId).map { events ->
+                val visibleEvents = events
+                    .filter { applyFilter(it, inputs.filter) }
+                    .sortedByDescending { it.eventDate }
+                HistoryUiState(
+                    rows = visibleEvents.map { e ->
+                        HistoryRow(
+                            event = e,
+                            displayOdometer = if (inputs.distanceUnit == "miles") UnitConverter.kmToMiles(e.odometerKm) else e.odometerKm,
+                            showCost = e.costTotal != null && e.currency != null,
+                            isPendingDelete = e.id in inputs.pendingDeletes.keys
+                        )
+                    },
+                    filter = inputs.filter, distanceUnit = inputs.distanceUnit, activeCarId = inputs.activeCarId
+                )
+            }
         }
     }
     .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HistoryUiState())
@@ -809,7 +846,7 @@ object DateFormat {
 
 - All three new use cases are `@Inject constructor(...)` — no `@Provides` or `@Binds` needed; Hilt finds them via constructor injection.
 - All new ViewModels are `@HiltViewModel class XxxViewModel @Inject constructor(...) : ViewModel()`.
-- `DomainModule.kt` already binds the seven repository interfaces and the four backup/CSV/restore interfaces. No changes required unless `CarWriter.rename`/`deleteById` need to be added (which is a method-on-existing-interface change, not a new binding).
+- **New binding in `DomainModule.kt`:** `@Binds @Singleton fun bindCarWriter(impl: CarRepository): CarWriter`. The existing `CarReader` binding stays as-is.
 - `MainActivity` and all Fragments stay `@AndroidEntryPoint` (already true from A).
 
 ## 10. Strings & resources
