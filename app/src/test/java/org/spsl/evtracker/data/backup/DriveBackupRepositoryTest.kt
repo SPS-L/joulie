@@ -140,4 +140,39 @@ class DriveBackupRepositoryTest {
             // ok — Worker will retry
         }
     }
+
+    @Test
+    fun backup_drive403UnknownReason_treatedAsAuthRequired() = runTest {
+        // Spec §6.1: "Drive 403 with unknown reason / unparseable body" → conservative auth.
+        // Locks in the implementation's `return reason !in QUOTA_REASONS` branch so a
+        // future refactor doesn't accidentally let unknown 403 reasons through as
+        // retryable IOException.
+        val s = build()
+        val body = """{"error":{"errors":[{"reason":"someNewReason"}],"code":403}}"""
+        s.remote.failNext = HttpResponseException
+            .Builder(403, "Forbidden", com.google.api.client.http.HttpHeaders())
+            .setContent(body)
+            .build()
+        try {
+            s.repo.backupCurrentData()
+            fail("expected DriveAuthRequiredException for unknown 403 reason")
+        } catch (_: DriveAuthRequiredException) {
+            // ok
+        }
+    }
+
+    @Test
+    fun backup_drive403UnparseableBody_treatedAsAuthRequired() = runTest {
+        val s = build()
+        s.remote.failNext = HttpResponseException
+            .Builder(403, "Forbidden", com.google.api.client.http.HttpHeaders())
+            .setContent("not json at all")
+            .build()
+        try {
+            s.repo.backupCurrentData()
+            fail("expected DriveAuthRequiredException for unparseable 403 body")
+        } catch (_: DriveAuthRequiredException) {
+            // ok
+        }
+    }
 }

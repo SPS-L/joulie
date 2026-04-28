@@ -25,18 +25,16 @@ class DriveBackupRepository @Inject constructor(
     private val locationReader: LocationReader
 ) : BackupRepository {
 
-    override suspend fun backupCurrentData() {
+    override suspend fun backupCurrentData(): Unit = runTranslating {
         val token = requireToken()
         val cars = carReader.observeAll().first()
         val events = cars.flatMap { chargeEventQueries.getAllForCarSorted(it.id) }
         val locations = locationReader.observeAll().first()
         val json = serializer.toJson(BackupData.fromEntities(cars, events, locations))
         val bytes = json.toByteArray(Charsets.UTF_8)
-        runTranslating {
-            val existing = remote.findBackupFileId(token)
-            if (existing == null) remote.createBackup(token, bytes)
-            else remote.updateBackup(token, existing, bytes)
-        }
+        val existing = remote.findBackupFileId(token)
+        if (existing == null) remote.createBackup(token, bytes)
+        else remote.updateBackup(token, existing, bytes)
     }
 
     override suspend fun readRemoteBackup(): String? = runTranslating {
