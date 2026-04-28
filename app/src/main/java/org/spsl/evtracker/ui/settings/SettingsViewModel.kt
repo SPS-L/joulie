@@ -23,7 +23,6 @@ import org.spsl.evtracker.R
 import org.spsl.evtracker.core.model.RestoreResult
 import org.spsl.evtracker.core.model.SettingsEvent
 import org.spsl.evtracker.core.model.SettingsUiState
-import org.spsl.evtracker.data.backup.WorkManagerBackupScheduler
 import org.spsl.evtracker.domain.backup.BackupRepository
 import org.spsl.evtracker.domain.backup.BackupScheduler
 import org.spsl.evtracker.domain.backup.DriveAuthRequiredException
@@ -129,7 +128,7 @@ class SettingsViewModel @Inject constructor(
     fun onToggleDriveOff() {
         viewModelScope.launch {
             settingsWriter.setDriveEnabled(false)
-            workManager.cancelUniqueWork(WorkManagerBackupScheduler.UNIQUE_NAME)
+            workManager.cancelUniqueWork(BackupScheduler.UNIQUE_WORK_NAME)
         }
     }
 

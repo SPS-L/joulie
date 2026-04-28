@@ -18,6 +18,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
+import org.spsl.evtracker.domain.backup.BackupScheduler
 import org.spsl.evtracker.testing.FakeSettingsReader
 
 class WorkManagerBackupSchedulerTest {
@@ -38,7 +39,7 @@ class WorkManagerBackupSchedulerTest {
         val sched = WorkManagerBackupScheduler(workManager, reader)
         sched.enqueueBackup()
         verify(workManager).enqueueUniqueWork(
-            eq(WorkManagerBackupScheduler.UNIQUE_NAME),
+            eq(BackupScheduler.UNIQUE_WORK_NAME),
             eq(ExistingWorkPolicy.REPLACE),
             any<OneTimeWorkRequest>()
         )
@@ -54,7 +55,7 @@ class WorkManagerBackupSchedulerTest {
         val sched = WorkManagerBackupScheduler(workManager, reader)
         repeat(5) { sched.enqueueBackup() }
         verify(workManager, times(5)).enqueueUniqueWork(
-            eq(WorkManagerBackupScheduler.UNIQUE_NAME),
+            eq(BackupScheduler.UNIQUE_WORK_NAME),
             eq(ExistingWorkPolicy.REPLACE),
             any<OneTimeWorkRequest>()
         )
@@ -71,7 +72,7 @@ class WorkManagerBackupSchedulerTest {
 
         val captor = argumentCaptor<OneTimeWorkRequest>()
         verify(workManager).enqueueUniqueWork(
-            eq(WorkManagerBackupScheduler.UNIQUE_NAME),
+            eq(BackupScheduler.UNIQUE_WORK_NAME),
             eq(ExistingWorkPolicy.REPLACE),
             captor.capture()
         )

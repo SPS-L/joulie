@@ -15,4 +15,9 @@ package org.spsl.evtracker.domain.backup
  */
 interface BackupScheduler {
     suspend fun enqueueBackup()
+
+    companion object {
+        /** Unique name for the WorkManager backup work. UI consumers cancel by this name on toggle-off. */
+        const val UNIQUE_WORK_NAME = "drive_backup"
+    }
 }

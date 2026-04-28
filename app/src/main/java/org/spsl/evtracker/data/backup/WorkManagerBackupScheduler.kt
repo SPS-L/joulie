@@ -30,11 +30,10 @@ class WorkManagerBackupScheduler @Inject constructor(
             .setInitialDelay(INITIAL_DELAY_SECONDS, TimeUnit.SECONDS)
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, BACKOFF_SECONDS, TimeUnit.SECONDS)
             .build()
-        workManager.enqueueUniqueWork(UNIQUE_NAME, ExistingWorkPolicy.REPLACE, request)
+        workManager.enqueueUniqueWork(BackupScheduler.UNIQUE_WORK_NAME, ExistingWorkPolicy.REPLACE, request)
     }
 
     companion object {
-        const val UNIQUE_NAME = "drive_backup"
         const val INITIAL_DELAY_SECONDS = 5L
         const val BACKOFF_SECONDS = 30L
     }
