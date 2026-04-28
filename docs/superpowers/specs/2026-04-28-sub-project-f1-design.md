@@ -88,7 +88,7 @@ After every successful write, the relevant row's summary updates because the VM'
   - "kWh / 100 km" → `kwh_per_100km`
   - "mi / kWh" → `mi_per_kwh`
 - **Confirm:** VM call `onPrimaryMetricSelected(metric)`.
-- **Auto-flip rule:** if the new metric's required unit (per DESIGN §3.4) differs from `distanceUnit`, the VM writes both keys atomically (see §6.1) and emits `SettingsEvent.AutoFlippedDistanceUnit(newUnit)`. The Fragment shows a Snackbar: "Distance unit also changed to miles" / "…to km".
+- **Auto-flip rule:** if the new metric's required unit (per DESIGN §3.4) differs from `distanceUnit`, the VM writes both keys atomically (see §6.1) and emits `SettingsEvent.AutoFlipped(@StringRes msgRes)` carrying `R.string.settings_unit_flipped_to_km` or `..._to_miles`. The Fragment shows a Snackbar by inflating the resource — no format args, no display strings cross the VM/UI boundary. See §8 for the event contract.
 
 ### 5.3 Distance unit
 
@@ -100,7 +100,7 @@ After every successful write, the relevant row's summary updates because the VM'
   - new unit = miles, current metric ∈ {km_per_kwh, kwh_per_100km} → metric becomes `mi_per_kwh`
   - new unit = km, current metric = mi_per_kwh → metric becomes `km_per_kwh` (deterministic default; user can change to `kwh_per_100km` afterward)
 
-  VM emits `SettingsEvent.AutoFlippedPrimaryMetric(newMetric)`; Fragment shows Snackbar.
+  VM emits `SettingsEvent.AutoFlipped(@StringRes msgRes)` carrying one of the three `R.string.settings_metric_flipped_*` resources (one per metric value). Fragment shows Snackbar.
 
 ### 5.4 Currency
 
@@ -148,11 +148,17 @@ After every successful write, the relevant row's summary updates because the VM'
 
 - **Title:** `R.string.settings_reset_all` ("Reset all data").
 - **Summary:** "Delete all cars, charge events, and custom locations."
-- **Tap:** Confirm dialog ("Delete everything? This cannot be undone.") On confirm:
+- **Tap:** Confirm dialog. The dialog text branches on the live Drive state:
+  - When `uiState.driveEnabled == false` ⇒ `R.string.settings_reset_all_confirm` ("Delete everything? This cannot be undone.")
+  - When `uiState.driveEnabled == true`  ⇒ `R.string.settings_reset_all_confirm_drive_on` ("Delete everything? This cannot be undone, and your Google Drive backup will be overwritten with empty data. To preserve the remote copy, turn Drive backup off first.")
+
+  On confirm:
   1. VM calls `ResetAllDataUseCase()` (see §6.3).
   2. VM emits `SettingsEvent.NavigateToWizard`.
 
   Post-wizard, Dashboard shows the empty-state ("Add a car to begin") because `activeCarId == -1`.
+
+  The Drive-on copy is intentionally informational rather than blocking — a user who genuinely wants to nuke local + remote together can do it in one action; the warning makes the consequence visible before they confirm.
 
 ### 5.10 Export CSV
 
@@ -185,6 +191,14 @@ interface SettingsWriter {
 
     /** Writes both keys in a single dataStore.edit { ... } block. */
     suspend fun setPrimaryMetricAndDistanceUnit(metric: String, unit: String)
+
+    /**
+     * Atomic Step 1 of ResetAllDataUseCase: writes setupComplete=false AND activeCarId=-1
+     * inside a single dataStore.edit { ... } block. Process death between the two
+     * individual writes would leave a stale activeCarId pointing into the not-yet-wiped
+     * cars table; the combined write closes that window.
+     */
+    suspend fun markGlobalResetInProgress()
 }
 ```
 
@@ -215,6 +229,7 @@ Custom locations are NOT cleared by this use case — a per-car reset shouldn't 
 
 ```kotlin
 class ResetAllDataUseCase @Inject constructor(
+    private val database: AppDatabase,
     private val chargeEventWriter: ChargeEventWriter,
     private val locationWriter: LocationWriter,
     private val carWriter: CarWriter,
@@ -222,13 +237,28 @@ class ResetAllDataUseCase @Inject constructor(
     private val backupScheduler: BackupScheduler
 ) {
     suspend operator fun invoke() {
-        // ChargeEvents first; cars last would also work because of FK ON DELETE CASCADE,
-        // but explicit ordering matches the order tests assert and avoids relying on cascade.
-        chargeEventWriter.deleteAll()
-        locationWriter.deleteAll()
-        carWriter.deleteAll()
-        settingsWriter.setActiveCarId(-1)
-        settingsWriter.setSetupComplete(false)
+        // Step 1 — flip the gate FIRST, atomically with clearing the active car id.
+        // Setup-complete is the durable startup signal (MainActivity reads it on cold
+        // start). If we crash between here and Step 2, the next launch always routes
+        // into the wizard, and activeCarId can never point into the not-yet-wiped
+        // cars table because both keys are written in the same DataStore edit.
+        settingsWriter.markGlobalResetInProgress()
+
+        // Step 2 — destructive deletes inside a single Room transaction so the three
+        // tables clear atomically. Crashing inside the transaction rolls all three
+        // deletes back; the tables stay populated. Combined with Step 1, the user
+        // re-enters the wizard with the OLD data still in place — they will need to
+        // run "Reset all data" a second time to finish the wipe. This trade-off is
+        // accepted: it is preferable to a half-wiped state that the wizard cannot
+        // detect or recover from.
+        database.withTransaction {
+            chargeEventWriter.deleteAll()
+            locationWriter.deleteAll()
+            carWriter.deleteAll()
+        }
+
+        // Step 3 — backup last. Reflects the post-reset (empty) snapshot. If Drive
+        // is off, this is a no-op per BackupScheduler's gate contract.
         backupScheduler.enqueueBackup()
     }
 }
@@ -236,9 +266,19 @@ class ResetAllDataUseCase @Inject constructor(
 
 `ChargeEventWriter`, `LocationWriter`, and `CarWriter` each gain a `suspend fun deleteAll()` that delegates to their existing DAO `deleteAll()`. The DAO methods are already in place (verified by reading `ChargeEventDao.kt:39-40`, `CarDao.kt:40-41`, `CustomLocationDao.kt:30-31`).
 
-The use case does **not** wrap its writes in a single transaction. The writes are sequenced through narrow interfaces (Room DAOs called from the data layer), and an interrupted reset just leaves the app on the wizard at next launch (which is also where `setSetupComplete(false)` would have taken it). Acceptable per DESIGN.md's "best-effort, no rollback" reset model.
+`AppDatabase` is already a Hilt singleton (provided by `DatabaseModule`); the use case takes a constructor dependency on it and uses `androidx.room.withTransaction` (a suspending coroutine-aware wrapper). All three writers' `deleteAll()` implementations call DAOs that share this same database, so they participate in the transaction.
 
-The post-reset `enqueueBackup()` causes WorkManager to upload an effectively-empty snapshot (no cars ⇒ no events) to Drive. That is the intended behaviour — if the user wants to abandon the cloud copy too, they should toggle Drive off **before** the global reset.
+**Failure semantics (explicit):**
+
+| Process death point | Observable state on next launch | Recovery |
+|---|---|---|
+| Before Step 1 commits | No change. setupComplete=true, all data intact. | None needed. |
+| After Step 1, before Step 2 commits | setupComplete=false ⇒ wizard runs. After wizard finishes (writes setupComplete=true), Dashboard loads with `activeCarId=-1`; Cars/History show the old data. | User runs "Reset all data" a second time. |
+| Inside the Room transaction | Room rolls all three deletes back. setupComplete=false (gate flipped). Equivalent to the row above. | Same. |
+| After Step 2 commits, before Step 3 | Tables empty, setupComplete=false. Wizard runs. After wizard, Dashboard shows empty state. Drive still holds the previous (pre-reset) backup. | None needed; no Drive overwrite occurred. |
+| After Step 3 commits | Clean reset. Tables empty, setupComplete=false, Drive holds an empty snapshot. | None needed. |
+
+The post-Step-3 `enqueueBackup()` causes WorkManager to upload an effectively-empty snapshot (no cars ⇒ no events) to Drive. **This overwrites the user's only cloud copy of their data.** The Reset-all confirm dialog (§5.9) MUST surface this when Drive is enabled — see the dialog-text fix below.
 
 ### 6.4 What about Drive backup pre-reset?
 
@@ -252,7 +292,14 @@ A user might want a "save current state to Drive" prompt before destroying every
 - `RecyclerView` (`androidx.recyclerview.widget.RecyclerView`) — `MATCH_PARENT`, vertical `LinearLayoutManager`, `MaterialDividerItemDecoration`.
 - Empty-state `TextView` — center-of-parent, `gone` by default, text `R.string.manage_locations_empty` ("Locations you save on charge events will appear here.").
 
-The Fragment toggles the empty-state visibility based on `uiState.locations.isEmpty()`.
+The Fragment toggles the empty-state visibility based on the **visible** (post-`pendingDeletions` filter) list, not the unfiltered source list. Concretely, the ViewModel exposes a derived `val visibleLocations: List<CustomLocationEntity>` (see §7.4) and the Fragment binds:
+
+```kotlin
+binding.emptyState.isVisible = state.visibleLocations.isEmpty()
+binding.recyclerView.isVisible = state.visibleLocations.isNotEmpty()
+```
+
+Why: when the user swipes the last row, the row visually disappears (filtered out by `pendingDeletions`) during the 5-second undo window. If the empty-state visibility were tied to the source list, the screen would show a blank RecyclerView with no empty-state hint until the delete commits. Tying it to the visible list shows the empty-state immediately on swipe; if the user undoes, the empty-state hides and the row reappears. Brief flicker on undo is acceptable and matches what users expect from an Undo affordance.
 
 ### 7.2 Row layout (`item_custom_location.xml`)
 
@@ -277,14 +324,20 @@ data class ManageLocationsUiState(
     val locations: List<CustomLocationEntity> = emptyList(),
     /** Labels currently in their 5-second cancel window. Filtered out of the visible list. */
     val pendingDeletions: Set<String> = emptySet()
-)
+) {
+    /**
+     * The list the Fragment renders, AND the source of truth for the empty-state.
+     * If the last row was just swiped, this is empty during the 5s undo window so the
+     * empty-state shows immediately rather than leaving a blank RecyclerView.
+     */
+    val visibleLocations: List<CustomLocationEntity>
+        get() = locations.filter { it.label !in pendingDeletions }
+}
 
 sealed class ManageLocationsEvent {
     data class ShowUndoSnackbar(val label: String) : ManageLocationsEvent()
 }
 ```
-
-The visible list shown to the Fragment is `locations.filter { it.label !in pendingDeletions }`.
 
 `onSwipeDelete(label)`:
 1. Adds `label` to `pendingDeletions` so the row visually disappears.
@@ -305,7 +358,7 @@ The visible list shown to the Fragment is `locations.filter { it.label !in pendi
 
 ### 7.5 Empty / loading
 
-- Empty list ⇒ empty-state TextView visible, RecyclerView gone.
+- Empty-state visibility is bound to `state.visibleLocations.isEmpty()` (see §7.1) — true both for "no rows in DB" and "all remaining rows are in the 5s undo window."
 - No explicit loading state — `observeAll` emits the current snapshot immediately and the fragment binds when STARTED.
 
 ### 7.6 Drive enqueue
@@ -339,12 +392,30 @@ sealed class SettingsEvent {
     data class ShowError(@StringRes val msg: Int) : SettingsEvent()
 
     // F1:
-    data class AutoFlippedDistanceUnit(val newUnit: String) : SettingsEvent()
-    data class AutoFlippedPrimaryMetric(val newMetric: String) : SettingsEvent()
+    /**
+     * Emitted after a metric→unit auto-flip. Carries a fully-localized string-resource
+     * id; the Fragment shows the Snackbar via `getString(msgRes)` with no format args.
+     * Keeps Android resource lookup OUT of the ViewModel — matches the E-era ShowError contract.
+     */
+    data class AutoFlipped(@StringRes val msgRes: Int) : SettingsEvent()
     data class LaunchCsvShareIntent(val uri: Uri) : SettingsEvent()
     object NavigateToWizard : SettingsEvent()
 }
 ```
+
+The single `AutoFlipped` shape covers both directions (unit-flipped-from-metric-pick and metric-flipped-from-unit-pick). The VM picks one of five pre-localized string resources based on the new value:
+
+```kotlin
+// Set on metric pick, when distanceUnit had to flip:
+R.string.settings_unit_flipped_to_km        // "Distance unit also changed to km."
+R.string.settings_unit_flipped_to_miles     // "Distance unit also changed to miles."
+// Set on unit pick, when primaryMetric had to flip:
+R.string.settings_metric_flipped_km_per_kwh     // "Primary metric also changed to km / kWh."
+R.string.settings_metric_flipped_kwh_per_100km  // "Primary metric also changed to kWh / 100 km."
+R.string.settings_metric_flipped_mi_per_kwh     // "Primary metric also changed to mi / kWh."
+```
+
+No format-string placeholders, no resource lookup in the VM. The `@StringRes` constants are plain `Int`s — importable in the ViewModel module without dragging in framework deps.
 
 The `init { ... }` block in the ViewModel adds new flow collectors for `primaryMetric`, `distanceUnit`, `currency`, `theme`, `activeCarId` (then derives `activeCarName` via `CarReader.getById`), and the count from `LocationReader.observeAll().map { it.size }`. Each `update` mutates the corresponding `uiState` field.
 
@@ -365,14 +436,27 @@ private fun defaultMetricFor(unit: String, currentMetric: String): String =
     }
 ```
 
+```kotlin
+private fun unitFlipMsgRes(newUnit: String): Int = when (newUnit) {
+    "miles" -> R.string.settings_unit_flipped_to_miles
+    else    -> R.string.settings_unit_flipped_to_km
+}
+
+private fun metricFlipMsgRes(newMetric: String): Int = when (newMetric) {
+    "kwh_per_100km" -> R.string.settings_metric_flipped_kwh_per_100km
+    "mi_per_kwh"    -> R.string.settings_metric_flipped_mi_per_kwh
+    else            -> R.string.settings_metric_flipped_km_per_kwh
+}
+```
+
 `onPrimaryMetricSelected(metric)`:
 - `requiredUnit = unitFor(metric)`
-- if `requiredUnit != current distanceUnit` → `setPrimaryMetricAndDistanceUnit(metric, requiredUnit)` + emit `AutoFlippedDistanceUnit(requiredUnit)`
+- if `requiredUnit != current distanceUnit` → `setPrimaryMetricAndDistanceUnit(metric, requiredUnit)` + emit `AutoFlipped(unitFlipMsgRes(requiredUnit))`
 - else → `setPrimaryMetric(metric)`
 
 `onDistanceUnitSelected(unit)`:
 - `newMetric = defaultMetricFor(unit, current primaryMetric)`
-- if `newMetric != current primaryMetric` → `setPrimaryMetricAndDistanceUnit(newMetric, unit)` + emit `AutoFlippedPrimaryMetric(newMetric)`
+- if `newMetric != current primaryMetric` → `setPrimaryMetricAndDistanceUnit(newMetric, unit)` + emit `AutoFlipped(metricFlipMsgRes(newMetric))`
 - else → `setDistanceUnit(unit)`
 
 ## 9. Navigation graph
@@ -413,18 +497,18 @@ settings_reset_active_car_done       Charge events deleted.
 settings_reset_all                   Reset all data
 settings_reset_all_summary           Delete all cars, charge events, and custom locations.
 settings_reset_all_confirm           Delete everything? This cannot be undone.
+settings_reset_all_confirm_drive_on  Delete everything? This cannot be undone, and your Google Drive backup will be overwritten with empty data. To preserve the remote copy, turn Drive backup off first.
 settings_export_csv                  Export CSV
 settings_export_csv_summary          Share charge events as a CSV file.
 settings_export_csv_failed           CSV export failed.
 settings_theme_system                System default
 settings_theme_light                 Light
 settings_theme_dark                  Dark
-settings_unit_flipped_to_km          Distance unit also changed to km.
-settings_unit_flipped_to_miles       Distance unit also changed to miles.
-settings_metric_flipped              Primary metric also changed to %1$s.   <!-- %1$s = the localized metric label, not the raw token (e.g. "kWh per 100 km", not "kwh_per_100km"). The VM passes the localized string from R.string.metric_label_* -->
-metric_label_km_per_kwh              km / kWh
-metric_label_kwh_per_100km           kWh / 100 km
-metric_label_mi_per_kwh              mi / kWh
+settings_unit_flipped_to_km                 Distance unit also changed to km.
+settings_unit_flipped_to_miles              Distance unit also changed to miles.
+settings_metric_flipped_km_per_kwh          Primary metric also changed to km / kWh.
+settings_metric_flipped_kwh_per_100km       Primary metric also changed to kWh / 100 km.
+settings_metric_flipped_mi_per_kwh          Primary metric also changed to mi / kWh.
 manage_locations_title               Manage custom locations
 manage_locations_empty               Locations you save on charge events will appear here.
 manage_locations_row_count           Used %1$d time(s) · last %2$s
@@ -443,9 +527,10 @@ common_confirm                       Confirm
 
 #### `SettingsViewModelTest` — extends existing E tests with F1 coverage:
 - `primaryMetric_select_compatibleUnit_writesOnlyMetric`
-- `primaryMetric_select_incompatibleUnit_writesBoth_emitsAutoFlipUnit`
+- `primaryMetric_select_incompatibleUnit_writesBoth_emitsAutoFlipped_unitToMiles` (asserts `AutoFlipped(R.string.settings_unit_flipped_to_miles)`)
+- `primaryMetric_select_incompatibleUnit_writesBoth_emitsAutoFlipped_unitToKm`
 - `distanceUnit_select_compatibleMetric_writesOnlyUnit`
-- `distanceUnit_select_incompatibleMetric_writesBoth_emitsAutoFlipMetric`
+- `distanceUnit_select_incompatibleMetric_writesBoth_emitsAutoFlipped_metric` (asserts `AutoFlipped(R.string.settings_metric_flipped_mi_per_kwh)` or `_km_per_kwh` depending on direction)
 - `currency_select_writesValue`
 - `theme_select_writesValue`
 - `resetActiveCar_disabled_whenNoActiveCar` (asserts row state via uiState; VM rejects the call)
@@ -463,12 +548,13 @@ common_confirm                       Confirm
 - `invoke_enqueuesBackup`
 - `invoke_throwsForCarIdMinusOne`
 
-#### `ResetAllDataUseCaseTest`:
-- `invoke_clearsAllFourCollections` (events, locations, cars, settings flags)
-- `invoke_setsActiveCarIdToMinusOne`
-- `invoke_setsSetupCompleteFalse`
+#### `ResetAllDataUseCaseTest` (uses Room in-memory `AppDatabase` so the `withTransaction` boundary is real):
+- `invoke_clearsAllThreeTables`
+- `invoke_setsActiveCarIdToMinusOne_andSetupCompleteFalse` (post-state outcome)
 - `invoke_enqueuesBackup`
-- `invoke_callsWritersInOrder` (events → locations → cars → settings)
+- `invoke_marksResetInProgress_BEFORE_destructiveDeletes` (asserts `markGlobalResetInProgress()` is observed before any `delete*` call — the §6.3 failure-semantics guarantee)
+- `invoke_throwingMidTransaction_rollsBackAllThreeDeletes` (forces an exception inside `withTransaction` via a fake DAO that throws on `cars.deleteAll`; asserts events + locations are still present after; setupComplete is already false because Step 1 ran)
+- `markGlobalResetInProgress_writesBothKeysInSingleDataStoreEdit` (separate test on `SettingsRepository`; verifies the atomic guarantee)
 
 #### `ManageLocationsViewModelTest`:
 - `observe_emitsSortedList` (uses Fakes; sort order = useCount DESC, lastUsed DESC)
@@ -477,7 +563,8 @@ common_confirm                       Confirm
 - `swipe_then_5sElapses_callsLocationWriterDelete_andEnqueueBackup`
 - `swipe_multipleLabels_each_has_independent_job`
 - `swipe_then_clearVm_cancelsAllJobs_doesNotCallDelete`
-- `emptyList_uiState_isEmpty`
+- `emptyList_uiState_visibleLocationsIsEmpty`
+- `swipe_lastRow_visibleLocationsIsEmpty_during_undo_window` (the §7.5 guarantee — empty-state must be reachable while the only row is in pendingDeletions; swipe → assert `visibleLocations.isEmpty()` true; undo → assert false)
 
 All swipe tests use `StandardTestDispatcher` + `advanceTimeBy(5_001)`, matching D's History tests.
 
@@ -487,6 +574,7 @@ All swipe tests use `StandardTestDispatcher` + `advanceTimeBy(5_001)`, matching 
 - `themeRow_tap_opensDialog_select_dark_updatesSummary`
 - `exportCsv_disabled_whenNoActiveCar`
 - `resetAll_confirm_navigatesToWizard`
+- `resetAll_dialogText_includesDriveWarning_whenDriveEnabled` (Drive on ⇒ dialog message is `R.string.settings_reset_all_confirm_drive_on`; Drive off ⇒ `R.string.settings_reset_all_confirm`)
 
 #### `ManageLocationsFragmentTest`:
 - `swipe_showsSnackbar_undo_restoresRow`
@@ -496,8 +584,8 @@ These follow D's existing Espresso patterns (Hilt test runner, `IntentsTestRule`
 
 ### 11.3 Coverage targets
 
-- F1 raises the JVM test count from ~152 to ~182 (~30 new JVM tests: 14 in `SettingsViewModelTest`, 4 in `ResetActiveCarDataUseCaseTest`, 5 in `ResetAllDataUseCaseTest`, 7 in `ManageLocationsViewModelTest`).
-- F1 adds 5 instrumented tests (3 + 2); the instrumented suite still compiles via `:app:assembleDebugAndroidTest`. Running them needs an emulator (sandbox-incompatible).
+- F1 raises the JVM test count from ~152 to ~185 (~33 new JVM tests: 15 in `SettingsViewModelTest`, 4 in `ResetActiveCarDataUseCaseTest`, 6 in `ResetAllDataUseCaseTest`, 8 in `ManageLocationsViewModelTest`).
+- F1 adds 6 instrumented tests (4 + 2); the instrumented suite still compiles via `:app:assembleDebugAndroidTest`. Running them needs an emulator (sandbox-incompatible).
 
 ## 12. Edge cases
 
@@ -554,7 +642,7 @@ These follow D's existing Espresso patterns (Hilt test runner, `IntentsTestRule`
 
 ## 14. Acceptance gates
 
-JVM tests: `:app:testDebugUnitTest` ⇒ all green, count ≈ 182.
+JVM tests: `:app:testDebugUnitTest` ⇒ all green, count ≈ 185.
 Instrumented compile: `:app:assembleDebugAndroidTest` ⇒ green.
 Manual smoke (on device): theme picker flips theme without restart; CSV row triggers the system share sheet; reset-all routes through wizard back to an empty Dashboard.
 
