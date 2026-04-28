@@ -31,7 +31,7 @@ class SettingsRepository @Inject constructor(
         dataStore.data.map { it[PreferenceKeys.DRIVE_ENABLED] ?: false }
 
     override val lastBackupAt: Flow<Long?> =
-        dataStore.data.map { it[androidx.datastore.preferences.core.longPreferencesKey("lastBackupAt")] }
+        dataStore.data.map { it[PreferenceKeys.LAST_BACKUP_AT] }
 
     val theme: Flow<String> =
         dataStore.data.map { it[PreferenceKeys.THEME] ?: "system" }
@@ -61,9 +61,7 @@ class SettingsRepository @Inject constructor(
     }
 
     override suspend fun setLastBackupAt(epochMs: Long) {
-        dataStore.edit {
-            it[androidx.datastore.preferences.core.longPreferencesKey("lastBackupAt")] = epochMs
-        }
+        dataStore.edit { it[PreferenceKeys.LAST_BACKUP_AT] = epochMs }
     }
 
     /** Used by the future Settings → Reset preferences action (Sub-project F). */

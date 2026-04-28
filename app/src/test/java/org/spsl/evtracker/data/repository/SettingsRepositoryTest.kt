@@ -75,4 +75,27 @@ class SettingsRepositoryTest {
         repo.setActiveCarId(42)
         assertEquals(42, repo.activeCarId.first())
     }
+
+    @Test
+    fun driveEnabled_defaultsFalse_andRoundTrips() = runTest {
+        assertFalse(repo.driveEnabled.first())
+        repo.setDriveEnabled(true)
+        assertTrue(repo.driveEnabled.first())
+        repo.setDriveEnabled(false)
+        assertFalse(repo.driveEnabled.first())
+    }
+
+    @Test
+    fun lastBackupAt_defaultsNull_andRoundTrips() = runTest {
+        assertEquals(null, repo.lastBackupAt.first())
+        repo.setLastBackupAt(1_700_000_000_000L)
+        assertEquals(1_700_000_000_000L, repo.lastBackupAt.first())
+    }
+
+    @Test
+    fun setLastBackupAt_doesNotAffectDriveEnabled() = runTest {
+        repo.setLastBackupAt(42L)
+        assertFalse(repo.driveEnabled.first())
+        assertEquals(42L, repo.lastBackupAt.first())
+    }
 }
