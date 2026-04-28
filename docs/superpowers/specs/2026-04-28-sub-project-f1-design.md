@@ -167,7 +167,7 @@ After every successful write, the relevant row's summary updates because the VM'
 
   The Drive-on copy is intentionally informational rather than blocking — a user who genuinely wants to nuke local + remote together can do it in one action; the warning makes the consequence visible before they confirm.
 
-  If the use case is interrupted by process death, the recovery banner in §5.11 surfaces on next Settings open so the user is not silently left with old data.
+  If the use case is interrupted by process death, MainActivity's startup auto-recovery (§9.2) finishes the reset before any UI mounts on next launch — the user never sees inconsistent state.
 
 ### 5.10 Export CSV
 
@@ -180,18 +180,10 @@ After every successful write, the relevant row's summary updates because the VM'
   3. Fragment builds `Intent.ACTION_SEND` with `type="text/csv"`, `EXTRA_STREAM = uri`, `FLAG_GRANT_READ_URI_PERMISSION`, wraps in `Intent.createChooser`, starts.
   4. On `IOException` or `IllegalArgumentException` (unknown carId), VM emits `SettingsEvent.ShowError(R.string.settings_export_csv_failed)`.
 
-### 5.11 Reset-interrupted recovery banner
-
-A `MaterialAlertView`-styled banner is added at the very top of `fragment_settings.xml` (above the Drive section). Visibility is bound to `uiState.showResetInterruptedBanner`.
-
-- **When shown:** `SettingsReader.resetInProgress` Flow emits `true` (i.e. a previous global-reset run was interrupted between Step 1 and Step 4 of §6.3).
-- **Banner copy:** `R.string.settings_reset_interrupted_banner` ("Your previous reset didn't finish. Some data from before the reset may still be visible.")
-- **Action button:** "Finish reset" → calls `vm.onFinishInterruptedReset()`.
-  - VM re-runs `ResetAllDataUseCase()`. The use case is idempotent (deletes are no-ops on empty tables; settings writes overwrite identical values; the final `setResetInProgress(false)` clears the flag).
-  - On completion VM emits `SettingsEvent.NavigateToWizard` (same exit as the original confirm path) so the user lands in the wizard.
-- **Dismiss:** the banner is purely state-driven — there is no manual dismiss. Tapping "Finish reset" or running "Reset all data" again clears `resetInProgress=false` and the banner disappears.
-
-This is the surfaced recovery cue called out in the §6.3 failure semantics. Without it, a process death between Steps 1 and 4 would silently leave the user with stale data and no explanation.
+<!-- §5.11 removed in review rev 3. The Settings-banner recovery left a window in which
+     the user could finish the wizard, land on Dashboard, and create cars/charge events
+     before noticing the banner — those new rows would then be wiped by "Finish reset."
+     The recovery now runs at startup BEFORE any UI mounts: see §9.2. -->
 
 ## 6. Domain layer — new code
 
@@ -262,18 +254,17 @@ class ResetAllDataUseCase @Inject constructor(
     suspend operator fun invoke() {
         // Step 1 — flip the gate FIRST, atomically with clearing the active car id
         // AND raising the durable resetInProgress flag. All three keys land in a
-        // single dataStore.edit { ... } call. If we crash between here and Step 2,
-        // the next launch routes into the wizard, AND the flag is observable so
-        // Settings can surface a recovery banner (§5.11). The user is never left
-        // wondering why old data is still visible after a "Delete everything" confirm.
+        // single dataStore.edit { ... } call. If we crash between here and Step 4,
+        // the next launch's MainActivity auto-recovery (§9.2) finishes the reset
+        // before any UI mounts. The user never reaches Dashboard or the wizard with
+        // resetInProgress=true.
         settingsWriter.markGlobalResetInProgress()
 
         // Step 2 — destructive deletes inside a single Room transaction so the three
         // tables clear atomically. Crashing inside the transaction rolls all three
-        // deletes back; the tables stay populated. Combined with Step 1, the user
-        // re-enters the wizard with the OLD data still in place AND the resetInProgress
-        // flag still true — Settings shows the banner, user taps "Finish reset," the
-        // use case re-runs idempotently and completes.
+        // deletes back; the tables stay populated. resetInProgress is still true,
+        // so the next launch's auto-recovery (§9.2) re-runs this use case to
+        // completion before showing UI.
         resetRunner.clearAllTables()
 
         // Step 3 — backup. Reflects the post-reset (empty) snapshot. If Drive is
@@ -289,7 +280,7 @@ class ResetAllDataUseCase @Inject constructor(
 }
 ```
 
-The use case is **idempotent under re-entry**: if Step 2 or 3 was interrupted last time, calling `invoke()` again re-runs the (now empty-table) deletes safely, re-enqueues the backup, and clears the flag. This is what makes the recovery banner in §5.11 a one-tap fix.
+The use case is **idempotent under re-entry**: if Step 2 or 3 was interrupted last time, calling `invoke()` again re-runs the (now empty-table) deletes safely, re-enqueues the backup, and clears the flag. This is what makes startup auto-recovery (§9.2) a safe blanket retry on every launch where the flag is set.
 
 The use case no longer touches `AppDatabase` directly. Instead it depends on the new domain interface `DataResetTransactionRunner` (see §6.5) — same architectural pattern as `RestoreTransactionRunner` from E (`domain/backup/RestoreTransactionRunner.kt:12` ⇄ `data/backup/RoomRestoreTransactionRunner.kt:13`). The 4-layer boundary stays intact: domain code never sees Room.
 
@@ -297,16 +288,18 @@ The use case no longer touches `AppDatabase` directly. Instead it depends on the
 
 **Failure semantics (explicit):**
 
-| Process death point | Observable state on next launch | Recovery cue surfaced |
+| Process death point | Observable state on next launch | Recovery |
 |---|---|---|
 | Before Step 1 commits | No change. setupComplete=true, all data intact, resetInProgress=false. | None needed. |
-| After Step 1, before Step 2 commits | setupComplete=false ⇒ wizard runs. After wizard finishes, Dashboard loads with `activeCarId=-1`; Cars/History show the old data. **resetInProgress=true** ⇒ Settings shows the recovery banner (§5.11). | User opens Settings, taps "Finish reset" → use case re-runs idempotently → flag cleared, tables wiped, Drive backup re-enqueued. |
-| Inside the Room transaction | Room rolls all three deletes back. setupComplete=false. resetInProgress=true. Equivalent to row above. | Same. |
-| After Step 2 commits, before Step 3 | Tables empty, setupComplete=false, **resetInProgress=true**, no Drive overwrite. Wizard runs. Drive still holds the pre-reset backup. | Settings shows banner. Tapping "Finish reset" re-runs the use case (Step 2 is a no-op on empty tables, Step 3 enqueues empty backup, Step 4 clears flag). |
-| After Step 3 commits, before Step 4 | Tables empty, setupComplete=false, **resetInProgress=true**, Drive backup overwritten with empty snapshot. Wizard runs. | Settings shows banner; tapping "Finish reset" re-runs idempotently and clears flag. |
+| After Step 1, before Step 2 commits | resetInProgress=true. **MainActivity startup auto-recovery (§9.2) runs the use case to completion before mounting any UI.** Splash stays on screen during the Room transaction (sub-second). | Automatic; user only sees a slightly longer splash. After completion: tables empty, setupComplete=false, flag cleared, wizard runs, Dashboard shows empty state. |
+| Inside the Room transaction | Room rolls all three deletes back. resetInProgress=true. Same as row above. | Same — auto-recovery re-runs the (now empty) deletes idempotently. |
+| After Step 2 commits, before Step 3 | Tables empty, resetInProgress=true, no Drive overwrite. | Auto-recovery re-runs: Step 2 no-ops on empty tables, Step 3 enqueues empty backup, Step 4 clears flag. |
+| After Step 3 commits, before Step 4 | Tables empty, resetInProgress=true, Drive overwritten. | Auto-recovery re-runs: clears flag. |
 | After Step 4 commits | Clean reset. resetInProgress=false. | None needed. |
 
-The durable `resetInProgress` flag eliminates the silent false-success path: every interruption past Step 1 leaves a flag observable on next launch, and Settings (§5.11) surfaces it with a one-tap recovery action.
+The durable `resetInProgress` flag combined with §9.2's startup auto-recovery eliminates the silent false-success path AND the data-loss window: the user can never reach Dashboard or even the wizard with the flag still set, so they can't create new data that would later be wiped.
+
+**Auto-recovery failure (very rare):** if the use case itself throws inside `MainActivity.onCreate`'s `runCatching` block (e.g., underlying Room corruption), MainActivity logs and proceeds with normal startup. The flag stays true; the next launch retries. There is no fallback banner because a DB corruption that defeats auto-recovery won't be fixed by another tap — at that point the user needs to clear app data manually. F1 considers this an acceptable terminal failure mode.
 
 The post-Step-3 `enqueueBackup()` causes WorkManager to upload an effectively-empty snapshot (no cars ⇒ no events) to Drive. **This overwrites the user's only cloud copy of their data.** The Reset-all confirm dialog (§5.9) MUST surface this when Drive is enabled — see the dialog-text fix below.
 
@@ -467,9 +460,7 @@ data class SettingsUiState(
     val theme: String = "system",
     val activeCarId: Int = -1,
     val activeCarName: String? = null,
-    val customLocationCount: Int = 0,
-    /** True iff `SettingsReader.resetInProgress` is currently true ⇒ Settings shows the §5.11 banner. */
-    val showResetInterruptedBanner: Boolean = false
+    val customLocationCount: Int = 0
 )
 
 sealed class SettingsEvent {
@@ -504,9 +495,9 @@ R.string.settings_metric_flipped_mi_per_kwh     // "Primary metric also changed 
 
 No format-string placeholders, no resource lookup in the VM. The `@StringRes` constants are plain `Int`s — importable in the ViewModel module without dragging in framework deps.
 
-The `init { ... }` block in the ViewModel adds new flow collectors for `primaryMetric`, `distanceUnit`, `currency`, `theme`, `activeCarId` (then derives `activeCarName` via `CarReader.getById`), the count from `LocationReader.observeAll().map { it.size }`, and `resetInProgress` (which maps to `showResetInterruptedBanner` on the uiState). Each `update` mutates the corresponding `uiState` field.
+The `init { ... }` block in the ViewModel adds new flow collectors for `primaryMetric`, `distanceUnit`, `currency`, `theme`, `activeCarId` (then derives `activeCarName` via `CarReader.getById`), and the count from `LocationReader.observeAll().map { it.size }`. Each `update` mutates the corresponding `uiState` field.
 
-`onFinishInterruptedReset()` simply re-runs `resetAllDataUseCase()` and emits `SettingsEvent.NavigateToWizard` on completion — same path as the §5.9 confirm flow. The use case's idempotency guarantees the second run finishes cleanly even if the tables were already empty from the original interrupted attempt.
+The ViewModel does NOT observe `resetInProgress` — recovery is handled at startup by `MainActivity` (§9.2), so by the time `SettingsViewModel` is alive the flag is always `false`.
 
 ### 8.1 Auto-flip helper (in ViewModel)
 
@@ -548,7 +539,9 @@ private fun metricFlipMsgRes(newMetric: String): Int = when (newMetric) {
 - if `newMetric != current primaryMetric` → `setPrimaryMetricAndDistanceUnit(newMetric, unit)` + emit `AutoFlipped(metricFlipMsgRes(newMetric))`
 - else → `setDistanceUnit(unit)`
 
-## 9. Navigation graph
+## 9. Navigation & startup
+
+### 9.1 Navigation graph
 
 Add to `nav_graph.xml`:
 
@@ -564,6 +557,45 @@ Add to `nav_graph.xml`:
 ```
 
 `manageLocationsFragment` destination already exists. `MainActivity.kt:39-46` already lists it in the BottomNav-hide set.
+
+### 9.2 Startup auto-recovery for interrupted resets
+
+`MainActivity.onCreate` already has a splash-screen-aware coroutine that reads `setupComplete` before mounting the nav graph (`MainActivity.kt:49-54`). F1 extends this block with an auto-recovery step that runs **before** the wizard gate is consulted:
+
+```kotlin
+@Inject lateinit var settingsRepository: SettingsRepository
+@Inject lateinit var resetAllDataUseCase: ResetAllDataUseCase
+
+// Inside lifecycleScope.launch { ... }:
+// Step 1 — finish any previously-interrupted global reset BEFORE the wizard gate
+//          is consulted. The splash screen stays up because isLoading is still true.
+if (settingsRepository.resetInProgress.first()) {
+    runCatching { resetAllDataUseCase() }
+        // Idempotent re-run; on success, resetInProgress=false. On failure (rare —
+        // would imply a Room corruption that the user can't recover from anyway),
+        // log and proceed; the flag stays true and we'll retry on next launch.
+        .onFailure { android.util.Log.e("MainActivity", "Reset auto-recovery failed", it) }
+}
+
+// Step 2 — existing wizard gate (unchanged).
+val complete = settingsRepository.setupComplete.first()
+if (!complete) graph.setStartDestination(R.id.wizardFragment)
+navController.graph = graph
+isLoading.value = false
+```
+
+**Why this design:**
+
+| Property | Why it matters |
+|---|---|
+| Auto-recovery runs **before** the wizard gate is consulted | Eliminates the data-loss window: the user can't reach Dashboard or the wizard with `resetInProgress=true`, so they can't create cars/events that would later be wiped. |
+| Splash screen stays up via `isLoading=true` | The auto-recovery is a Room transaction (sub-second on any modern device); the user sees a slightly longer splash, never an inconsistent UI. |
+| `runCatching` swallows failures and logs | A Room exception during auto-recovery is rare and indicates a corrupted DB the app can't fix automatically anyway. We proceed with normal startup; the flag stays true; the next launch retries. We do **not** add a fallback banner because the only realistic failure mode (DB corruption) won't be fixed by another tap. |
+| Use case is idempotent (§6.3) | Auto-recovery on already-clean state is a no-op except for clearing the flag. Safe to call on every launch where the flag is true. |
+
+**The `MainActivity` is the only place that depends on `ResetAllDataUseCase`** outside `SettingsViewModel`. No new use case wiring is needed in any other Fragment or service.
+
+**Failure-table update (cross-reference with §6.3):** every "Process death after Step 1" row's recovery action is now **"MainActivity auto-runs the use case before mounting any UI."** The user never sees the inconsistent state.
 
 ## 10. Strings (`res/values/strings.xml`)
 
@@ -590,8 +622,6 @@ settings_reset_all_confirm_drive_on  Delete everything? This cannot be undone, a
 settings_export_csv                  Export CSV
 settings_export_csv_summary          Share charge events as a CSV file.
 settings_export_csv_failed           CSV export failed.
-settings_reset_interrupted_banner    Your previous reset didn't finish. Some data from before the reset may still be visible.
-settings_reset_interrupted_action    Finish reset
 settings_theme_system                System default
 settings_theme_light                 Light
 settings_theme_dark                  Dark
@@ -632,8 +662,6 @@ common_confirm                       Confirm
 - `exportCsv_success_emitsLaunchIntent`
 - `exportCsv_ioException_emitsShowError`
 - `customLocationCount_reflectsLocationReaderEmission`
-- `resetInProgress_true_setsShowBannerTrue` (asserts `uiState.showResetInterruptedBanner` mirrors the SettingsReader flow)
-- `onFinishInterruptedReset_callsResetAllDataUseCase_emitsNavigateToWizard`
 
 #### `ResetActiveCarDataUseCaseTest`:
 - `invoke_deletesEventsForGivenCarOnly`
@@ -670,7 +698,10 @@ All swipe tests use `StandardTestDispatcher` + `advanceTimeBy(5_001)`, matching 
 - `exportCsv_disabled_whenNoActiveCar`
 - `resetAll_confirm_navigatesToWizard`
 - `resetAll_dialogText_includesDriveWarning_whenDriveEnabled` (Drive on ⇒ dialog message is `R.string.settings_reset_all_confirm_drive_on`; Drive off ⇒ `R.string.settings_reset_all_confirm`)
-- `resetInterruptedBanner_visible_whenResetInProgressTrue` (seed DataStore with `resetInProgress=true`, open Settings, assert banner visible; tap "Finish reset", assert banner gone after navigation back)
+
+#### `MainActivityResetRecoveryTest` (Hilt + Espresso; verifies §9.2):
+- `startup_resetInProgressTrue_runsUseCase_clearsFlag_beforeUiVisible` (seed DataStore with `resetInProgress=true` AND populate cars/events/locations tables; launch MainActivity; assert tables are empty AND `resetInProgress=false` AND splash dismissed AND nav graph routed to wizard)
+- `startup_resetInProgressFalse_doesNotRunUseCase` (seed DataStore with `resetInProgress=false` AND populate tables; launch MainActivity; assert tables UNCHANGED — auto-recovery must not run)
 
 #### `RoomDataResetTransactionRunnerTest` (Hilt + Room in-memory; instrumented because it exercises the real `withTransaction` boundary):
 - `clearAllTables_emptiesAllThreeTables`
@@ -684,8 +715,8 @@ These follow D's existing Espresso patterns (Hilt test runner, `IntentsTestRule`
 
 ### 11.3 Coverage targets
 
-- F1 raises the JVM test count from ~152 to ~189 (~37 new JVM tests: 17 in `SettingsViewModelTest`, 4 in `ResetActiveCarDataUseCaseTest`, 8 in `ResetAllDataUseCaseTest`, 8 in `ManageLocationsViewModelTest`).
-- F1 adds 9 instrumented tests (5 in `SettingsFragmentTest` + 2 in `ManageLocationsFragmentTest` + 2 in `RoomDataResetTransactionRunnerTest`); the instrumented suite still compiles via `:app:assembleDebugAndroidTest`. Running them needs an emulator (sandbox-incompatible).
+- F1 raises the JVM test count from ~152 to ~187 (~35 new JVM tests: 15 in `SettingsViewModelTest`, 4 in `ResetActiveCarDataUseCaseTest`, 8 in `ResetAllDataUseCaseTest`, 8 in `ManageLocationsViewModelTest`).
+- F1 adds 10 instrumented tests (4 in `SettingsFragmentTest` + 2 in `ManageLocationsFragmentTest` + 2 in `MainActivityResetRecoveryTest` + 2 in `RoomDataResetTransactionRunnerTest`); the instrumented suite still compiles via `:app:assembleDebugAndroidTest`. Running them needs an emulator (sandbox-incompatible).
 
 ## 12. Edge cases
 
@@ -729,6 +760,7 @@ These follow D's existing Espresso patterns (Hilt test runner, `IntentsTestRule`
 - `app/src/main/java/org/spsl/evtracker/data/preferences/PreferenceKeys.kt` (+ `RESET_IN_PROGRESS = booleanPreferencesKey("resetInProgress")`)
 - `app/src/main/java/org/spsl/evtracker/data/local/dao/ChargeEventDao.kt` (+ `deleteForCar`)
 - `app/src/main/java/org/spsl/evtracker/di/DomainModule.kt` (+ `@Binds` for `DataResetTransactionRunner`)
+- `app/src/main/java/org/spsl/evtracker/MainActivity.kt` (+ `@Inject ResetAllDataUseCase`; +`if (settingsRepository.resetInProgress.first()) runCatching { resetAllDataUseCase() }` block in the splash-aware coroutine BEFORE the existing `setupComplete` read — see §9.2)
 - `app/src/main/java/org/spsl/evtracker/ui/settings/SettingsFragment.kt` (wire all rows)
 - `app/src/main/java/org/spsl/evtracker/ui/settings/SettingsViewModel.kt` (extend init + add F1 actions)
 - `app/src/main/java/org/spsl/evtracker/ui/locations/ManageLocationsFragment.kt`
@@ -746,7 +778,7 @@ These follow D's existing Espresso patterns (Hilt test runner, `IntentsTestRule`
 
 ## 14. Acceptance gates
 
-JVM tests: `:app:testDebugUnitTest` ⇒ all green, count ≈ 189.
+JVM tests: `:app:testDebugUnitTest` ⇒ all green, count ≈ 187.
 Instrumented compile: `:app:assembleDebugAndroidTest` ⇒ green.
 Manual smoke (on device): theme picker flips theme without restart; CSV row triggers the system share sheet; reset-all routes through wizard back to an empty Dashboard.
 
