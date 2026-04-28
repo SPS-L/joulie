@@ -941,107 +941,117 @@ git commit -m "feat(E): DriveBackupRepository with auth-error translation"
 
 ---
 
-## Task 8: `WorkManagerBackupScheduler` — TDD
+## Task 8: `WorkManagerBackupScheduler` — TDD (JVM)
 
-**Goal:** Implement the scheduler that gates on `driveEnabled` and enqueues a unique `OneTimeWorkRequest<DriveBackupWorker>` (spec §4.4). Four JVM tests via `WorkManagerTestInitHelper`.
+**Goal:** Implement the scheduler that gates on `driveEnabled` and enqueues a unique `OneTimeWorkRequest<DriveBackupWorker>` (spec §4.4). Four JVM tests counting toward the JVM gate (spec §2.3, §7.1) — implemented by mocking `WorkManager` with `mockito-kotlin` and capturing the constructed `OneTimeWorkRequest`. No Robolectric, no instrumented runtime.
+
+**Why mock `WorkManager`?** Spec §7.1 lists this test under "JVM tests (~20 new)" and §2.3 budgets it against the JVM count growing from ~123 to ~143. `WorkManagerTestInitHelper` requires the Android runtime; using it would force the test off the JVM and shrink the JVM count. A mocked `WorkManager` keeps the test on the JVM, exercises the scheduler's actual logic (gate read, request shape, REPLACE policy), and matches the file-map path `app/src/test/java/...` declared at the top of this plan.
 
 **Files:**
 - Create: `app/src/main/java/org/spsl/evtracker/data/backup/WorkManagerBackupScheduler.kt`
 - Create: `app/src/test/java/org/spsl/evtracker/data/backup/WorkManagerBackupSchedulerTest.kt`
 
-> Note: tests reference `DriveBackupWorker` only by class literal. The class itself is created in Task 9; we add a temporary typed reference now and let the test compile by referencing the worker class directly. If the test fails to compile in Step 2, briefly stub out `DriveBackupWorker` as a placeholder `CoroutineWorker` (no body) — Task 9 fills it in.
-
-- [ ] **Step 1: Create the test directory and file (instrumented)**
-
-The existing test classpath has no Robolectric, and `WorkManagerTestInitHelper` needs an Android runtime, so this test goes under `app/src/androidTest/`. It is compile-only on the sandbox; runs on the same emulator the existing instrumented suite uses.
+- [ ] **Step 1: Write the failing JVM test**
 
 ```bash
-mkdir -p /home/apetros/OneDriveCUT/Code/EV-android-app/app/src/androidTest/java/org/spsl/evtracker/data/backup
+mkdir -p /home/apetros/OneDriveCUT/Code/EV-android-app/app/src/test/java/org/spsl/evtracker/data/backup
 ```
 
-Create `app/src/androidTest/java/org/spsl/evtracker/data/backup/WorkManagerBackupSchedulerTest.kt`:
+Create `app/src/test/java/org/spsl/evtracker/data/backup/WorkManagerBackupSchedulerTest.kt`:
 
 ```kotlin
+@file:Suppress("RestrictedApi")  // accessing WorkRequest.workSpec is the standard way to unit-test request shape
+
 package org.spsl.evtracker.data.backup
 
-import android.content.Context
-import androidx.test.core.app.ApplicationProvider
-import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.work.Configuration
+import androidx.work.BackoffPolicy
+import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
-import androidx.work.WorkInfo
+import androidx.work.OneTimeWorkRequest
 import androidx.work.WorkManager
-import androidx.work.testing.SynchronousExecutor
-import androidx.work.testing.WorkManagerTestInitHelper
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
-import org.junit.Before
 import org.junit.Test
-import org.junit.runner.RunWith
+import org.mockito.kotlin.any
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
 import org.spsl.evtracker.testing.FakeSettingsReader
 
-@RunWith(AndroidJUnit4::class)
 class WorkManagerBackupSchedulerTest {
-
-    private lateinit var workManager: WorkManager
-
-    @Before
-    fun setUp() {
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        val config = Configuration.Builder()
-            .setMinimumLoggingLevel(android.util.Log.DEBUG)
-            .setExecutor(SynchronousExecutor())
-            .build()
-        WorkManagerTestInitHelper.initializeTestWorkManager(context, config)
-        workManager = WorkManager.getInstance(context)
-    }
 
     @Test
     fun driveDisabled_doesNotEnqueue() = runTest {
+        val workManager = mock<WorkManager>()
         val reader = FakeSettingsReader(driveEnabledInit = false)
         val sched = WorkManagerBackupScheduler(workManager, reader)
         sched.enqueueBackup()
-        val infos = workManager.getWorkInfosForUniqueWork(WorkManagerBackupScheduler.UNIQUE_NAME).get()
-        assertTrue("expected no work, was $infos", infos.isEmpty())
+        verify(workManager, never()).enqueueUniqueWork(any<String>(), any(), any<OneTimeWorkRequest>())
     }
 
     @Test
-    fun driveEnabled_enqueuesUniqueWork() = runTest {
+    fun driveEnabled_enqueuesUniqueWorkWithReplacePolicy() = runTest {
+        val workManager = mock<WorkManager>()
         val reader = FakeSettingsReader(driveEnabledInit = true)
         val sched = WorkManagerBackupScheduler(workManager, reader)
         sched.enqueueBackup()
-        val infos = workManager.getWorkInfosForUniqueWork(WorkManagerBackupScheduler.UNIQUE_NAME).get()
-        assertEquals(1, infos.size)
-        assertEquals(WorkInfo.State.ENQUEUED, infos[0].state)
+        verify(workManager).enqueueUniqueWork(
+            eq(WorkManagerBackupScheduler.UNIQUE_NAME),
+            eq(ExistingWorkPolicy.REPLACE),
+            any<OneTimeWorkRequest>()
+        )
     }
 
     @Test
-    fun rapidCalls_collapseToOneViaReplace() = runTest {
+    fun rapidCalls_eachUseReplacePolicy_soWorkManagerCollapses() = runTest {
+        // The scheduler's contribution to debouncing is using ExistingWorkPolicy.REPLACE on every
+        // call. WorkManager itself does the collapsing at runtime; here we assert the scheduler
+        // hands REPLACE every time, which is the precondition that makes collapsing possible.
+        val workManager = mock<WorkManager>()
         val reader = FakeSettingsReader(driveEnabledInit = true)
         val sched = WorkManagerBackupScheduler(workManager, reader)
         repeat(5) { sched.enqueueBackup() }
-        val infos = workManager.getWorkInfosForUniqueWork(WorkManagerBackupScheduler.UNIQUE_NAME).get()
-        // ExistingWorkPolicy.REPLACE: at most one ENQUEUED/RUNNING; earlier states cancelled.
-        val active = infos.count { it.state == WorkInfo.State.ENQUEUED || it.state == WorkInfo.State.RUNNING }
-        assertEquals(1, active)
+        verify(workManager, times(5)).enqueueUniqueWork(
+            eq(WorkManagerBackupScheduler.UNIQUE_NAME),
+            eq(ExistingWorkPolicy.REPLACE),
+            any<OneTimeWorkRequest>()
+        )
     }
 
     @Test
-    fun enqueuedWork_requiresConnectedNetwork() = runTest {
+    fun enqueuedRequest_hasExpectedShape() = runTest {
+        // One assertion per request property: CONNECTED constraint, exponential 30 s backoff,
+        // 5 s initial delay. Captured via mockito's argumentCaptor + WorkRequest.workSpec.
+        val workManager = mock<WorkManager>()
         val reader = FakeSettingsReader(driveEnabledInit = true)
         val sched = WorkManagerBackupScheduler(workManager, reader)
         sched.enqueueBackup()
-        val info = workManager.getWorkInfosForUniqueWork(WorkManagerBackupScheduler.UNIQUE_NAME).get().first()
-        assertEquals(NetworkType.CONNECTED, info.constraints.requiredNetworkType)
+
+        val captor = argumentCaptor<OneTimeWorkRequest>()
+        verify(workManager).enqueueUniqueWork(
+            eq(WorkManagerBackupScheduler.UNIQUE_NAME),
+            eq(ExistingWorkPolicy.REPLACE),
+            captor.capture()
+        )
+        val spec = captor.firstValue.workSpec
+        assertEquals(NetworkType.CONNECTED, spec.constraints.requiredNetworkType)
+        assertEquals(BackoffPolicy.EXPONENTIAL, spec.backoffPolicy)
+        assertEquals(TimeUnit.SECONDS.toMillis(WorkManagerBackupScheduler.BACKOFF_SECONDS), spec.backoffDelayDuration)
+        assertEquals(TimeUnit.SECONDS.toMillis(WorkManagerBackupScheduler.INITIAL_DELAY_SECONDS), spec.initialDelay)
     }
 }
 ```
 
-- [ ] **Step 2: Compile — should fail (`WorkManagerBackupScheduler` does not exist)**
+> **About `@file:Suppress("RestrictedApi")`:** `OneTimeWorkRequest` extends `WorkRequest`, and `WorkRequest.workSpec` is the canonical way to unit-test request shape. AndroidX annotates it `@RestrictTo(LIBRARY_GROUP)` for source-level discipline, but it remains accessible from app code at runtime; the suppression silences Lint without changing semantics. This is the same pattern Google's WorkManager-samples use in their unit tests.
+
+- [ ] **Step 2: Run — should fail (`WorkManagerBackupScheduler` does not exist)**
 
 ```bash
-GRADLE_USER_HOME=/tmp/gradle-home ./gradlew :app:assembleDebugAndroidTest
+GRADLE_USER_HOME=/tmp/gradle-home ./gradlew :app:testDebugUnitTest --tests "org.spsl.evtracker.data.backup.WorkManagerBackupSchedulerTest"
 ```
 
 Expected: compile error referencing `WorkManagerBackupScheduler`.
@@ -1117,21 +1127,22 @@ class DriveBackupWorker @AssistedInject constructor(
 }
 ```
 
-- [ ] **Step 5: Compile instrumented sources**
+- [ ] **Step 5: Re-run the failing test — should now pass**
 
 ```bash
-GRADLE_USER_HOME=/tmp/gradle-home ./gradlew :app:assembleDebugAndroidTest
+GRADLE_USER_HOME=/tmp/gradle-home ./gradlew :app:testDebugUnitTest --tests "org.spsl.evtracker.data.backup.WorkManagerBackupSchedulerTest"
 ```
 
-Expected: BUILD SUCCESSFUL.
+Expected: 4 tests pass.
 
-- [ ] **Step 6: Run JVM suite to confirm nothing else broke**
+- [ ] **Step 6: Run the full JVM suite + compile instrumented to confirm nothing else broke**
 
 ```bash
 GRADLE_USER_HOME=/tmp/gradle-home ./gradlew :app:testDebugUnitTest
+GRADLE_USER_HOME=/tmp/gradle-home ./gradlew :app:assembleDebugAndroidTest
 ```
 
-Expected: BUILD SUCCESSFUL.
+Expected: BUILD SUCCESSFUL on both.
 
 - [ ] **Step 7: Commit**
 
@@ -1139,7 +1150,7 @@ Expected: BUILD SUCCESSFUL.
 cd /home/apetros/OneDriveCUT/Code/EV-android-app
 git add app/src/main/java/org/spsl/evtracker/data/backup/WorkManagerBackupScheduler.kt \
         app/src/main/java/org/spsl/evtracker/data/backup/DriveBackupWorker.kt \
-        app/src/androidTest/java/org/spsl/evtracker/data/backup/WorkManagerBackupSchedulerTest.kt
+        app/src/test/java/org/spsl/evtracker/data/backup/WorkManagerBackupSchedulerTest.kt
 git commit -m "feat(E): WorkManagerBackupScheduler + DriveBackupWorker stub"
 ```
 
@@ -2572,7 +2583,7 @@ Expected: 9 tests pass (6 original + 3 new).
 GRADLE_USER_HOME=/tmp/gradle-home ./gradlew :app:testDebugUnitTest
 ```
 
-Expected: BUILD SUCCESSFUL with the JVM count near ~143 (6 RestoreBackup new + 3 SettingsRepository new + 8 DriveBackupRepository + 9 SettingsViewModel = 26 new on top of the ~123 baseline ≈ 149; spec's "≈20" was an estimate).
+Expected: BUILD SUCCESSFUL with the JVM count at ~153 (3 RestoreBackup-extension + 3 SettingsRepository + 8 DriveBackupRepository + 4 WorkManagerBackupScheduler + 9 SettingsViewModel = 27 new on top of the ~123 baseline ≈ 150). Spec §2.3 budgets ~143 (≈20 new); we land slightly above because of the two extra `DriveBackupRepository` boundary cases (401 + 403-quota), which still satisfy the JVM-count gate.
 
 - [ ] **Step 4: Commit**
 
@@ -2715,7 +2726,7 @@ git commit -m "test(E): instrumented DriveBackupWorker happy/retry/failure"
 GRADLE_USER_HOME=/tmp/gradle-home ./gradlew :app:testDebugUnitTest
 ```
 
-Expected: BUILD SUCCESSFUL. JVM count ~149 (6 RestoreBackup-extension + 3 SettingsRepository + 8 DriveBackupRepository + 9 SettingsViewModel = 26 new on top of the ~123 baseline). Spec §2.3 budgets ~143 (≈20 new); we're slightly above due to the two extra `DriveBackupRepository` boundary cases. Both numbers satisfy the acceptance criterion that the JVM count grew commensurately.
+Expected: BUILD SUCCESSFUL. JVM count ~150 (3 RestoreBackup-extension + 3 SettingsRepository + 8 DriveBackupRepository + 4 WorkManagerBackupScheduler + 9 SettingsViewModel = 27 new on top of the ~123 baseline). Spec §2.3 budgets ~143 (≈20 new); we're slightly above due to the two extra `DriveBackupRepository` boundary cases (401 + 403-quota). Both numbers satisfy the acceptance criterion: the JVM count grew commensurately, and `WorkManagerBackupSchedulerTest` runs in the JVM suite (not in `androidTest/`) so it counts toward the gate as the spec assumed.
 
 - [ ] **Step 2: Build debug APK**
 
@@ -2737,7 +2748,7 @@ Expected: BUILD SUCCESSFUL.
 
 Edit the "Status" paragraph (currently: *"Sub-projects A, B, C, and D … Sub-project E (real Drive auth + WorkManager-backed `BackupScheduler`/`BackupRepository`) lives behind no-op interfaces."*) to:
 
-> **Status:** Sub-projects A (foundation/DI/Room v3), B (repositories), C (domain services + use cases), D (Core UI: Dashboard/ChargeEdit/Cars/History), and E (Drive backup: real Authorization API + Drive REST + WorkManager scheduler + Settings UI Drive section) are all merged. Wizard, Dashboard, ChargeEdit, Cars, History, and the Drive-section Settings are fully wired; Charts, the rest of Settings (theme/units/currency/reset/CSV/manage locations), and ManageLocations remain placeholder fragments until F. Sub-project F covers everything else. JVM unit-test count: ~149.
+> **Status:** Sub-projects A (foundation/DI/Room v3), B (repositories), C (domain services + use cases), D (Core UI: Dashboard/ChargeEdit/Cars/History), and E (Drive backup: real Authorization API + Drive REST + WorkManager scheduler + Settings UI Drive section) are all merged. Wizard, Dashboard, ChargeEdit, Cars, History, and the Drive-section Settings are fully wired; Charts, the rest of Settings (theme/units/currency/reset/CSV/manage locations), and ManageLocations remain placeholder fragments until F. Sub-project F covers everything else. JVM unit-test count: ~150.
 
 Update the architecture table line for the Data layer to show real bindings:
 
@@ -2790,7 +2801,7 @@ git commit -m "docs(E): update CLAUDE.md status banner — Sub-project E landed"
 | §5.1–5.5 Sequences | Implicitly covered by SettingsViewModelTest (Task 15) and the worker test (Task 19) |
 | §6.1 Worker error matrix | Task 7 (boundary translation), Task 9 (worker mapping), Task 19 (instrumented happy/retry/auth) |
 | §6.2 Strings | Task 14 |
-| §7.1 JVM tests (≈20) | Tasks 5, 7, 15, 18 (3 + 8 + 9 + 3 = 23, exceeds ≈20 floor) |
+| §7.1 JVM tests (≈20) | Tasks 5, 7, 8, 15, 18 (3 + 8 + 4 + 9 + 3 = 27, exceeds ≈20 floor) |
 | §7.2 Instrumented worker test | Task 19 |
 | §7.3 Test infrastructure additions to Fakes.kt | Tasks 4 and 6 |
 | §7.4 Compatibility test sweep | Task 2 (suspend cascade verified by full-suite run) |
