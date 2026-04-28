@@ -6,11 +6,34 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import java.io.IOException
+import org.spsl.evtracker.core.model.BackupVersionMismatch
+import org.spsl.evtracker.domain.backup.BackupRepository
+import org.spsl.evtracker.domain.backup.DriveAuthRequiredException
+import org.spsl.evtracker.domain.repository.SettingsWriter
 
 @HiltWorker
 class DriveBackupWorker @AssistedInject constructor(
     @Assisted appContext: Context,
-    @Assisted params: WorkerParameters
+    @Assisted params: WorkerParameters,
+    private val backupRepository: BackupRepository,
+    private val settingsWriter: SettingsWriter,
+    private val clock: () -> Long
 ) : CoroutineWorker(appContext, params) {
-    override suspend fun doWork(): Result = Result.success()
+
+    override suspend fun doWork(): Result = try {
+        backupRepository.backupCurrentData()
+        settingsWriter.setLastBackupAt(clock())
+        Result.success()
+    } catch (e: DriveAuthRequiredException) {
+        Result.failure()
+    } catch (e: BackupVersionMismatch) {
+        Result.failure()
+    } catch (e: IOException) {
+        if (runAttemptCount < MAX_ATTEMPTS) Result.retry() else Result.failure()
+    }
+
+    companion object {
+        const val MAX_ATTEMPTS = 5
+    }
 }
