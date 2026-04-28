@@ -522,9 +522,10 @@ sealed class SettingsEvent {
 1. `onToggleDriveOff()`: `settingsWriter.setDriveEnabled(false)`; `workManager.cancelUniqueWork("drive_backup")`. Done.
 2. `onDriveAuthGranted()` — called by the Fragment after `DriveAuthManager` returned Success (silent or post-consent):
    - `uiState.value = uiState.value.copy(isAuthInFlight = true)`.
-   - Call `backupRepository.readRemoteBackup()` inside a try/catch (it is documented to throw — see §4.3):
+   - Call `backupRepository.readRemoteBackup()` inside a try/catch (it is documented to throw — see §4.3).
+   - **`isAuthInFlight` is cleared at the end of the call** in *every* branch — by the time control returns from this method (or the prompt is emitted), auth and the probe are both finished and any waiting indicator on the toggle should drop:
      - **returns `null`** (no remote snapshot): set `driveEnabled = true`, `enqueueBackup()`, clear `isAuthInFlight`.
-     - **returns non-null JSON**: parse `exportedAt` into a label; set `pendingRestoreLabel = label`; emit `ShowRestorePrompt(label)`. **Do NOT set `driveEnabled = true` yet.** Local mutations during this window stay silent because `driveEnabled` is still false.
+     - **returns non-null JSON**: parse `exportedAt` into a label; set `pendingRestoreLabel = label`; clear `isAuthInFlight`; emit `ShowRestorePrompt(label)`. **Do NOT set `driveEnabled = true` yet.** Local mutations during this window stay silent because `driveEnabled` is still false. The Fragment dropping `isAuthInFlight` re-enables the switch underneath the dialog so the user can also dismiss by toggling off.
      - **throws `DriveAuthRequiredException`** (consent revoked between authorize and the probe): emit `ShowError(R.string.drive_auth_failed)`; clear `isAuthInFlight`; leave `driveEnabled = false`. The toggle returns to OFF on the next `uiState` collect.
      - **throws any other `IOException`** (network / Drive 5xx / quota): emit `ShowError(R.string.drive_network_error)`; clear `isAuthInFlight`; leave `driveEnabled = false`. The user can retry by toggling again.
 3. `onDriveAuthFailed(@StringRes msgRes: Int)` — Fragment translates `Failed` / consent-cancelled into a string resource and calls this. Emits `ShowError`; clears isAuthInFlight.
@@ -765,16 +766,16 @@ The `RestoreBackupUseCase` already imports the data verbatim. Multi-currency ren
   - silent token failure throws DriveAuthRequiredException
   - readRemoteBackup returns null when no fileId
   - readRemoteBackup returns body when fileId exists
-- **`SettingsViewModelTest` (9)** with all fakes (the VM no longer touches `DriveAuthManager`, so all auth-side cases are simulated by calling `onDriveAuthGranted` / `onDriveAuthFailed` directly):
-  - `onDriveAuthGranted` with no remote backup → sets driveEnabled=true and enqueues backup
-  - `onDriveAuthGranted` with remote backup → emits `ShowRestorePrompt`; driveEnabled stays false
-  - `onDriveAuthGranted` when `readRemoteBackup` throws `DriveAuthRequiredException` → emits `ShowError(drive_auth_failed)`; driveEnabled stays false; isAuthInFlight cleared
-  - `onDriveAuthGranted` when `readRemoteBackup` throws `IOException` → emits `ShowError(drive_network_error)`; driveEnabled stays false; isAuthInFlight cleared
-  - `onDriveAuthFailed` → emits `ShowError`; driveEnabled stays false; isAuthInFlight cleared
-  - `onConfirmRestore` → invokes `RestoreBackupUseCase` → emits `RestoreSucceeded` (RestoreBackupUseCase sets driveEnabled=true)
-  - `onSkipRestore` → sets driveEnabled=true and enqueues backup
-  - `onRestorePromptDismissed` → leaves driveEnabled=false; clears `pendingRestoreLabel`
-  - `onToggleDriveOff` → cancels work and sets driveEnabled=false
+- **`SettingsViewModelTest` (9)** with all fakes (the VM no longer touches `DriveAuthManager`, so all auth-side cases are simulated by calling `onDriveAuthGranted` / `onDriveAuthFailed` directly). Every branch of `onDriveAuthGranted` and `onDriveAuthFailed` asserts `isAuthInFlight == false` after the call, since the rule "by the time control returns, auth and probe are done" is the single most important loading-state invariant for the UI:
+  - `onDriveAuthGranted` with no remote backup → sets driveEnabled=true, enqueues backup, **isAuthInFlight cleared**
+  - `onDriveAuthGranted` with remote backup → emits `ShowRestorePrompt`, driveEnabled stays false, **isAuthInFlight cleared**, `pendingRestoreLabel` set
+  - `onDriveAuthGranted` when `readRemoteBackup` throws `DriveAuthRequiredException` → emits `ShowError(drive_auth_failed)`, driveEnabled stays false, **isAuthInFlight cleared**
+  - `onDriveAuthGranted` when `readRemoteBackup` throws `IOException` → emits `ShowError(drive_network_error)`, driveEnabled stays false, **isAuthInFlight cleared**
+  - `onDriveAuthFailed` → emits `ShowError`, driveEnabled stays false, **isAuthInFlight cleared**
+  - `onConfirmRestore` → invokes `RestoreBackupUseCase`, emits `RestoreSucceeded` (RestoreBackupUseCase sets driveEnabled=true), `pendingRestoreLabel` cleared
+  - `onSkipRestore` → sets driveEnabled=true, enqueues backup, `pendingRestoreLabel` cleared
+  - `onRestorePromptDismissed` → leaves driveEnabled=false, `pendingRestoreLabel` cleared
+  - `onToggleDriveOff` → cancels work, sets driveEnabled=false
 - **Extended `RestoreBackupUseCaseTest` (3 new)**:
   - end-to-end with a real `BackupSerializer` + `FakeDriveRemoteSource` seeded with the JSON from a captured `BackupData.fromEntities(...)`
   - replays an old `backup_version=2` payload and asserts `VersionMismatch(2)` (verifies the version guard from C still works through the Drive path)
@@ -894,3 +895,7 @@ None at draft time. The five Q&A in brainstorming locked architecture. If new qu
 - 403 narrowing: §4.3 and §6.1 now distinguish auth-class 403 (`appNotAuthorized`, `insufficientFilePermissions`, `insufficientPermissions`, `forbidden`) from quota/rate-limit 403 (`rateLimitExceeded`, `userRateLimitExceeded`, `quotaExceeded`). Only the former translates to `DriveAuthRequiredException`; the latter passes through as `IOException` so the Worker retries with exponential backoff. Unknown reasons fall back to auth-class for safety. Resolves the prior over-classification that would have turned transient quota errors into permanent worker failures with the wrong remediation path.
 - Post-auth probe failure paths: §4.7 now explicitly enumerates what `onDriveAuthGranted` does when `readRemoteBackup` throws — `DriveAuthRequiredException` → `ShowError(drive_auth_failed)`, generic `IOException` → `ShowError(drive_network_error)`, both leaving `driveEnabled = false` and clearing `isAuthInFlight`. §7.1 covers each branch with a dedicated test.
 - Stale references purged: §5.3 no longer says "ViewModel re-runs auth.authorize" — the Fragment owns the post-consent re-auth call. §7.1 `SettingsViewModelTest` cases are rewritten in terms of the rev-2 VM API (`onDriveAuthGranted` / `onDriveAuthFailed` / `onRestorePromptDismissed`); the obsolete `LaunchConsent` event no longer appears in any test.
+
+### 10.3 Review-cycle changes (2026-04-28 spec rev 4)
+
+- `isAuthInFlight` clearing: §4.7 now states explicitly that `onDriveAuthGranted` clears `isAuthInFlight` on **every** branch — including the remote-backup-found branch that previously left it stuck true while the prompt was on screen. Rule: by the time control returns from `onDriveAuthGranted` (or the prompt is emitted), auth and the probe are both finished; any toggle/progress indicator gated on `isAuthInFlight` should drop. §7.1 `SettingsViewModelTest` cases now assert `isAuthInFlight == false` on every branch of `onDriveAuthGranted` and `onDriveAuthFailed`.
