@@ -149,5 +149,5 @@ When compacting, always preserve:
 - Architecture (MVVM/MVI/Clean), module graph, DI setup
 - Full list of modified/created files and current test/lint status
 - Gradle version catalog and dependency deltas
-- Open bugs, failing tests, and follow-ups
+- Open bugs, failing tests, and follow-ups that haven't been resolved yet.
 Discard: file-exploration transcripts, resolved threads, verbose tool output.
