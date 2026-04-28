@@ -11,6 +11,7 @@ import org.spsl.evtracker.domain.backup.BackupScheduler
 import org.spsl.evtracker.domain.backup.RestoreSnapshotWriter
 import org.spsl.evtracker.domain.backup.RestoreTransactionRunner
 import org.spsl.evtracker.domain.repository.CarReader
+import org.spsl.evtracker.domain.repository.CarWriter
 import org.spsl.evtracker.domain.repository.ChargeEventQueries
 import org.spsl.evtracker.domain.repository.ChargeEventWriter
 import org.spsl.evtracker.domain.repository.LocationReader
@@ -151,4 +152,50 @@ class FakeRestoreSnapshotWriter(
         callRecorder?.add("snapshot")
         capturedJson = json
     }
+}
+
+class FakeSaveChargeEventGateway {
+    private val store = MutableStateFlow<List<ChargeEventEntity>>(emptyList())
+    val queries = FakeChargeEventQueries(store)
+    val writer = FakeChargeEventWriter(store)
+    val locationWriter = FakeLocationWriter()
+    val locationReader = FakeLocationReader()
+    val backupScheduler = FakeBackupScheduler()
+    val costParser = org.spsl.evtracker.domain.service.CostParser()
+
+    val useCase: org.spsl.evtracker.domain.usecase.SaveChargeEventUseCase =
+        org.spsl.evtracker.domain.usecase.SaveChargeEventUseCase(
+            chargeEventQueries = queries,
+            chargeEventWriter = writer,
+            locationWriter = locationWriter,
+            backupScheduler = backupScheduler,
+            costParser = costParser
+        )
+
+    fun seedEvents(events: List<ChargeEventEntity>) { store.value = events }
+}
+
+class FakeCarRepository(initial: List<CarEntity> = emptyList()) : CarReader, CarWriter {
+    private val state = MutableStateFlow(initial)
+    private var nextId = (initial.maxOfOrNull { it.id } ?: 0) + 1
+
+    override fun observeAll(): Flow<List<CarEntity>> = state
+    override suspend fun getById(id: Int): CarEntity? = state.value.firstOrNull { it.id == id }
+
+    override suspend fun insert(car: CarEntity): Long {
+        val id = nextId++
+        state.value = state.value + car.copy(id = id)
+        return id.toLong()
+    }
+
+    override suspend fun rename(carId: Int, newName: String) {
+        state.value = state.value.map { if (it.id == carId) it.copy(name = newName) else it }
+    }
+
+    override suspend fun deleteById(carId: Int) {
+        state.value = state.value.filter { it.id != carId }
+    }
+
+    fun seed(cars: List<CarEntity>) { state.value = cars }
+    fun current(): List<CarEntity> = state.value
 }

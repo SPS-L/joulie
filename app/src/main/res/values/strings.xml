@@ -43,8 +43,8 @@
 
     <!-- Dashboard -->
     <string name="period_last_charge">Last charge</string>
-    <string name="period_7d">7 days</string>
-    <string name="period_30d">30 days</string>
+    <string name="period_7d">7d</string>
+    <string name="period_30d">30d</string>
     <string name="period_year">Year</string>
     <string name="period_custom">Custom</string>
     <string name="filter_all">All</string>
@@ -87,4 +87,87 @@
     <string name="placeholder_charts">Charts \u2014 coming soon</string>
     <string name="placeholder_history">History \u2014 coming soon</string>
     <string name="placeholder_manage_locations">Manage Locations \u2014 coming soon</string>
+
+    <!-- History -->
+    <string name="history_title">History</string>
+    <string name="history_empty">No charges yet — tap + on Dashboard to log one</string>
+    <string name="snackbar_charge_deleted">Charge deleted</string>
+    <string name="undo">Undo</string>
+
+    <!-- Bottom nav -->
+    <string name="nav_dashboard">Dashboard</string>
+    <string name="nav_history">History</string>
+    <string name="nav_charts">Charts</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Period tabs -->
+    <string name="period_since_previous">Since previous</string>
+
+    <!-- Dashboard -->
+    <string name="dashboard_title">EV Tracker</string>
+    <string name="empty_no_car_headline">Add a car to get started</string>
+    <string name="empty_no_car_cta">Add car</string>
+    <string name="empty_no_events_headline">Log your first charge to see stats here</string>
+    <string name="empty_no_events_cta">Log charge</string>
+    <string name="multi_currency_banner">Multi-currency period — cost stats hidden</string>
+    <string name="manage_cars">Manage cars…</string>
+    <string name="metric_km_per_kwh">km/kWh</string>
+    <string name="metric_kwh_per_100km">kWh/100km</string>
+    <string name="metric_mi_per_kwh">mi/kWh</string>
+    <string name="metric_unavailable">—</string>
+    <string name="metric_need_two_charges">Need 2+ charges</string>
+    <string name="cost_card_total">Total cost</string>
+    <string name="cost_card_per_km">Cost per km</string>
+    <string name="cost_card_per_100km">Cost per 100km</string>
+    <string name="fab_log_charge">Log charge</string>
+
+    <!-- Charge edit error messages (full ChargeEdit string set lands in Task 12) -->
+    <string name="error_odometer_required">Enter a valid odometer reading</string>
+    <string name="error_odometer_must_be_higher">Odometer must be greater than the previous entry</string>
+    <string name="error_kwh_required">Enter a valid kWh value</string>
+
+    <!-- Charge edit -->
+    <string name="charge_edit_create_title">Add charge</string>
+    <string name="charge_edit_edit_title">Edit charge</string>
+    <string name="hint_odometer_km">Odometer (km)</string>
+    <string name="hint_odometer_mi">Odometer (mi)</string>
+    <string name="hint_kwh">kWh added</string>
+    <string name="hint_location">Location</string>
+    <string name="hint_cost">Cost</string>
+    <string name="hint_note">Note (optional)</string>
+    <string name="hint_date_time">Date &amp; time</string>
+    <string name="cost_section_header">Cost (optional)</string>
+    <string name="cost_mode_total">Total</string>
+    <string name="cost_mode_per_kwh">Per kWh</string>
+    <string name="charge_type_ac">AC</string>
+    <string name="charge_type_dc">DC</string>
+    <string name="charge_save">Save</string>
+
+    <!-- Location chips -->
+    <string name="location_home">Home</string>
+    <string name="location_work">Work</string>
+    <string name="location_public">Public</string>
+    <string name="chip_add_location">+ Add</string>
+
+    <!-- Cars error messages -->
+    <string name="error_car_name_required">Name is required</string>
+
+    <!-- Cars -->
+    <string name="cars_title">Cars</string>
+    <string name="car_active">Active</string>
+    <string name="car_action_set_active">Set active</string>
+    <string name="car_action_edit">Edit</string>
+    <string name="car_action_delete">Delete</string>
+    <string name="car_delete_title">Delete car?</string>
+    <string name="car_delete_message">All charge events for this car will also be deleted.</string>
+    <string name="car_delete_confirm">Delete</string>
+    <string name="car_dialog_add_title">Add car</string>
+    <string name="car_dialog_edit_title">Edit car</string>
+    <string name="car_dialog_save">Save</string>
+    <string name="car_dialog_cancel">Cancel</string>
+    <string name="car_form_name">Name</string>
+    <string name="car_form_make">Make</string>
+    <string name="car_form_model">Model</string>
+    <string name="car_form_year">Year</string>
+    <string name="car_form_battery_kwh">Battery (kWh)</string>
 </resources>

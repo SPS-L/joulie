@@ -28,6 +28,12 @@ interface CarDao {
     @Update
     suspend fun update(car: CarEntity)
 
+    @Query("UPDATE cars SET name = :name WHERE id = :id")
+    suspend fun rename(id: Int, name: String)
+
+    @Query("DELETE FROM cars WHERE id = :id")
+    suspend fun deleteById(id: Int)
+
     @Delete
     suspend fun delete(car: CarEntity)
 

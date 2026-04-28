@@ -519,7 +519,6 @@ CoordinatorLayout
 ```kotlin
 class AddCarUseCase @Inject constructor(
     private val carWriter: CarWriter,
-    private val carReader: CarReader,
     private val settingsReader: SettingsReader,
     private val settingsWriter: SettingsWriter,
     private val backupScheduler: BackupScheduler

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/car_overflow_set_active"
+        android:title="@string/car_action_set_active"/>
+    <item
+        android:id="@+id/car_overflow_edit"
+        android:title="@string/car_action_edit"/>
+    <item
+        android:id="@+id/car_overflow_delete"
+        android:title="@string/car_action_delete"/>
+</menu>
