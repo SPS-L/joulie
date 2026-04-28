@@ -56,17 +56,24 @@ UI:       SettingsFragment + SettingsViewModel              (extended, retains a
                        ManageLocationsUiState · ManageLocationsEvent (new)
 Domain:   Use cases    ResetActiveCarDataUseCase · ResetAllDataUseCase   (new)
                        ExportCsvUseCase                                  (existing, unchanged)
-          Narrow IFs   SettingsReader (+ theme) · SettingsWriter (+ setTheme/setPrimaryMetric/
-                       setDistanceUnit/setCurrency/setSetupComplete/setPrimaryMetricAndDistanceUnit)
+          Narrow IFs   SettingsReader (+ theme + resetInProgress)
+                       SettingsWriter (+ setTheme/setPrimaryMetric/setDistanceUnit/setCurrency/
+                                        setSetupComplete/setResetInProgress/
+                                        setPrimaryMetricAndDistanceUnit/markGlobalResetInProgress)
                        ChargeEventWriter (+ deleteForCar / deleteAll)
                        LocationWriter (+ deleteAll)
                        CarWriter (+ deleteAll)
+                       DataResetTransactionRunner   (new — Room-transaction boundary, mirrors
+                                                     the RestoreTransactionRunner pattern)
 Repo:     SettingsRepository · ChargeEventRepository · LocationRepository · CarRepository
           (each implements the new methods on its narrow interface)
+          RoomDataResetTransactionRunner (new — implements DataResetTransactionRunner via
+          AppDatabase.withTransaction { ... } across the three DAOs)
 Data:     Room DAOs    ChargeEventDao (+ deleteForCar)        — only new DAO method
                        CarDao.deleteAll · CustomLocationDao.deleteAll · ChargeEventDao.deleteAll
                        (already exist; spec verified by reading the files)
           DataStore    PreferenceKeys.THEME (already exists)
+                       PreferenceKeys.RESET_IN_PROGRESS (new — durable interrupted-reset flag)
 ```
 
 Single-Activity + Navigation Component is unchanged. ManageLocations destination already exists in `nav_graph.xml` and is already in MainActivity's BottomNav-hide set.
@@ -160,6 +167,8 @@ After every successful write, the relevant row's summary updates because the VM'
 
   The Drive-on copy is intentionally informational rather than blocking — a user who genuinely wants to nuke local + remote together can do it in one action; the warning makes the consequence visible before they confirm.
 
+  If the use case is interrupted by process death, the recovery banner in §5.11 surfaces on next Settings open so the user is not silently left with old data.
+
 ### 5.10 Export CSV
 
 - **Title:** `R.string.settings_export_csv` ("Export CSV").
@@ -170,6 +179,19 @@ After every successful write, the relevant row's summary updates because the VM'
   2. On success, emits `SettingsEvent.LaunchCsvShareIntent(uri)`.
   3. Fragment builds `Intent.ACTION_SEND` with `type="text/csv"`, `EXTRA_STREAM = uri`, `FLAG_GRANT_READ_URI_PERMISSION`, wraps in `Intent.createChooser`, starts.
   4. On `IOException` or `IllegalArgumentException` (unknown carId), VM emits `SettingsEvent.ShowError(R.string.settings_export_csv_failed)`.
+
+### 5.11 Reset-interrupted recovery banner
+
+A `MaterialAlertView`-styled banner is added at the very top of `fragment_settings.xml` (above the Drive section). Visibility is bound to `uiState.showResetInterruptedBanner`.
+
+- **When shown:** `SettingsReader.resetInProgress` Flow emits `true` (i.e. a previous global-reset run was interrupted between Step 1 and Step 4 of §6.3).
+- **Banner copy:** `R.string.settings_reset_interrupted_banner` ("Your previous reset didn't finish. Some data from before the reset may still be visible.")
+- **Action button:** "Finish reset" → calls `vm.onFinishInterruptedReset()`.
+  - VM re-runs `ResetAllDataUseCase()`. The use case is idempotent (deletes are no-ops on empty tables; settings writes overwrite identical values; the final `setResetInProgress(false)` clears the flag).
+  - On completion VM emits `SettingsEvent.NavigateToWizard` (same exit as the original confirm path) so the user lands in the wizard.
+- **Dismiss:** the banner is purely state-driven — there is no manual dismiss. Tapping "Finish reset" or running "Reset all data" again clears `resetInProgress=false` and the banner disappears.
+
+This is the surfaced recovery cue called out in the §6.3 failure semantics. Without it, a process death between Steps 1 and 4 would silently leave the user with stale data and no explanation.
 
 ## 6. Domain layer — new code
 
@@ -188,23 +210,27 @@ interface SettingsWriter {
     suspend fun setDistanceUnit(unit: String)
     suspend fun setCurrency(code: String)
     suspend fun setSetupComplete(value: Boolean)
+    suspend fun setResetInProgress(value: Boolean)
 
     /** Writes both keys in a single dataStore.edit { ... } block. */
     suspend fun setPrimaryMetricAndDistanceUnit(metric: String, unit: String)
 
     /**
-     * Atomic Step 1 of ResetAllDataUseCase: writes setupComplete=false AND activeCarId=-1
-     * inside a single dataStore.edit { ... } block. Process death between the two
-     * individual writes would leave a stale activeCarId pointing into the not-yet-wiped
-     * cars table; the combined write closes that window.
+     * Atomic Step 1 of ResetAllDataUseCase: writes setupComplete=false, activeCarId=-1,
+     * AND resetInProgress=true inside a single dataStore.edit { ... } block. Process
+     * death between any two individual writes would leave a stale activeCarId pointing
+     * into the not-yet-wiped cars table OR a flipped gate without a recovery flag;
+     * the combined write closes both windows.
      */
     suspend fun markGlobalResetInProgress()
 }
 ```
 
-`SettingsRepository` already has `setTheme(theme)` and a private equivalent of `setSetupComplete(false)` named `resetSetupComplete()`; F1 lifts both onto the interface and renames `resetSetupComplete` to `setSetupComplete(false)` for symmetry. The atomic combined writer is the only one with new logic — it's a single `edit { prefs -> prefs[METRIC] = ...; prefs[UNIT] = ... }` block.
+`SettingsRepository` already has `setTheme(theme)` and a private equivalent of `setSetupComplete(false)` named `resetSetupComplete()`; F1 lifts both onto the interface and renames `resetSetupComplete` to `setSetupComplete(false)` for symmetry. The atomic combined writers are the only ones with new logic — each is a single `edit { ... }` block.
 
-`SettingsReader` gains `val theme: Flow<String>` (already implemented as a `val` on the repo, just lifted to the interface).
+`SettingsReader` gains:
+- `val theme: Flow<String>` (already implemented as a `val` on the repo, just lifted to the interface).
+- `val resetInProgress: Flow<Boolean>` — backed by `PreferenceKeys.RESET_IN_PROGRESS` (new key, default `false`).
 
 ### 6.2 ResetActiveCarDataUseCase
 
@@ -229,60 +255,119 @@ Custom locations are NOT cleared by this use case — a per-car reset shouldn't 
 
 ```kotlin
 class ResetAllDataUseCase @Inject constructor(
-    private val database: AppDatabase,
-    private val chargeEventWriter: ChargeEventWriter,
-    private val locationWriter: LocationWriter,
-    private val carWriter: CarWriter,
+    private val resetRunner: DataResetTransactionRunner,
     private val settingsWriter: SettingsWriter,
     private val backupScheduler: BackupScheduler
 ) {
     suspend operator fun invoke() {
-        // Step 1 — flip the gate FIRST, atomically with clearing the active car id.
-        // Setup-complete is the durable startup signal (MainActivity reads it on cold
-        // start). If we crash between here and Step 2, the next launch always routes
-        // into the wizard, and activeCarId can never point into the not-yet-wiped
-        // cars table because both keys are written in the same DataStore edit.
+        // Step 1 — flip the gate FIRST, atomically with clearing the active car id
+        // AND raising the durable resetInProgress flag. All three keys land in a
+        // single dataStore.edit { ... } call. If we crash between here and Step 2,
+        // the next launch routes into the wizard, AND the flag is observable so
+        // Settings can surface a recovery banner (§5.11). The user is never left
+        // wondering why old data is still visible after a "Delete everything" confirm.
         settingsWriter.markGlobalResetInProgress()
 
         // Step 2 — destructive deletes inside a single Room transaction so the three
         // tables clear atomically. Crashing inside the transaction rolls all three
         // deletes back; the tables stay populated. Combined with Step 1, the user
-        // re-enters the wizard with the OLD data still in place — they will need to
-        // run "Reset all data" a second time to finish the wipe. This trade-off is
-        // accepted: it is preferable to a half-wiped state that the wizard cannot
-        // detect or recover from.
-        database.withTransaction {
-            chargeEventWriter.deleteAll()
-            locationWriter.deleteAll()
-            carWriter.deleteAll()
-        }
+        // re-enters the wizard with the OLD data still in place AND the resetInProgress
+        // flag still true — Settings shows the banner, user taps "Finish reset," the
+        // use case re-runs idempotently and completes.
+        resetRunner.clearAllTables()
 
-        // Step 3 — backup last. Reflects the post-reset (empty) snapshot. If Drive
-        // is off, this is a no-op per BackupScheduler's gate contract.
+        // Step 3 — backup. Reflects the post-reset (empty) snapshot. If Drive is
+        // off, this is a no-op per BackupScheduler's gate contract.
         backupScheduler.enqueueBackup()
+
+        // Step 4 — clear the durable flag last so any earlier crash leaves the flag
+        // observable and the banner visible. After this write, the reset is fully
+        // committed. Re-runs of this use case on an already-clean state are no-ops
+        // for Steps 2-4 and just re-confirm the flag is false.
+        settingsWriter.setResetInProgress(false)
     }
 }
 ```
 
-`ChargeEventWriter`, `LocationWriter`, and `CarWriter` each gain a `suspend fun deleteAll()` that delegates to their existing DAO `deleteAll()`. The DAO methods are already in place (verified by reading `ChargeEventDao.kt:39-40`, `CarDao.kt:40-41`, `CustomLocationDao.kt:30-31`).
+The use case is **idempotent under re-entry**: if Step 2 or 3 was interrupted last time, calling `invoke()` again re-runs the (now empty-table) deletes safely, re-enqueues the backup, and clears the flag. This is what makes the recovery banner in §5.11 a one-tap fix.
 
-`AppDatabase` is already a Hilt singleton (provided by `DatabaseModule`); the use case takes a constructor dependency on it and uses `androidx.room.withTransaction` (a suspending coroutine-aware wrapper). All three writers' `deleteAll()` implementations call DAOs that share this same database, so they participate in the transaction.
+The use case no longer touches `AppDatabase` directly. Instead it depends on the new domain interface `DataResetTransactionRunner` (see §6.5) — same architectural pattern as `RestoreTransactionRunner` from E (`domain/backup/RestoreTransactionRunner.kt:12` ⇄ `data/backup/RoomRestoreTransactionRunner.kt:13`). The 4-layer boundary stays intact: domain code never sees Room.
+
+`ChargeEventWriter`, `LocationWriter`, and `CarWriter` each still gain a `suspend fun deleteAll()` (used by `ResetActiveCarDataUseCase` and by the new runner's impl). The DAO `deleteAll()` queries are already in place (`ChargeEventDao.kt:39-40`, `CarDao.kt:40-41`, `CustomLocationDao.kt:30-31`).
 
 **Failure semantics (explicit):**
 
-| Process death point | Observable state on next launch | Recovery |
+| Process death point | Observable state on next launch | Recovery cue surfaced |
 |---|---|---|
-| Before Step 1 commits | No change. setupComplete=true, all data intact. | None needed. |
-| After Step 1, before Step 2 commits | setupComplete=false ⇒ wizard runs. After wizard finishes (writes setupComplete=true), Dashboard loads with `activeCarId=-1`; Cars/History show the old data. | User runs "Reset all data" a second time. |
-| Inside the Room transaction | Room rolls all three deletes back. setupComplete=false (gate flipped). Equivalent to the row above. | Same. |
-| After Step 2 commits, before Step 3 | Tables empty, setupComplete=false. Wizard runs. After wizard, Dashboard shows empty state. Drive still holds the previous (pre-reset) backup. | None needed; no Drive overwrite occurred. |
-| After Step 3 commits | Clean reset. Tables empty, setupComplete=false, Drive holds an empty snapshot. | None needed. |
+| Before Step 1 commits | No change. setupComplete=true, all data intact, resetInProgress=false. | None needed. |
+| After Step 1, before Step 2 commits | setupComplete=false ⇒ wizard runs. After wizard finishes, Dashboard loads with `activeCarId=-1`; Cars/History show the old data. **resetInProgress=true** ⇒ Settings shows the recovery banner (§5.11). | User opens Settings, taps "Finish reset" → use case re-runs idempotently → flag cleared, tables wiped, Drive backup re-enqueued. |
+| Inside the Room transaction | Room rolls all three deletes back. setupComplete=false. resetInProgress=true. Equivalent to row above. | Same. |
+| After Step 2 commits, before Step 3 | Tables empty, setupComplete=false, **resetInProgress=true**, no Drive overwrite. Wizard runs. Drive still holds the pre-reset backup. | Settings shows banner. Tapping "Finish reset" re-runs the use case (Step 2 is a no-op on empty tables, Step 3 enqueues empty backup, Step 4 clears flag). |
+| After Step 3 commits, before Step 4 | Tables empty, setupComplete=false, **resetInProgress=true**, Drive backup overwritten with empty snapshot. Wizard runs. | Settings shows banner; tapping "Finish reset" re-runs idempotently and clears flag. |
+| After Step 4 commits | Clean reset. resetInProgress=false. | None needed. |
+
+The durable `resetInProgress` flag eliminates the silent false-success path: every interruption past Step 1 leaves a flag observable on next launch, and Settings (§5.11) surfaces it with a one-tap recovery action.
 
 The post-Step-3 `enqueueBackup()` causes WorkManager to upload an effectively-empty snapshot (no cars ⇒ no events) to Drive. **This overwrites the user's only cloud copy of their data.** The Reset-all confirm dialog (§5.9) MUST surface this when Drive is enabled — see the dialog-text fix below.
 
 ### 6.4 What about Drive backup pre-reset?
 
 A user might want a "save current state to Drive" prompt before destroying everything. The existing pattern (E shipped) doesn't offer pre-action snapshots; the Drive flow only re-uploads after committed changes. F1 keeps the same model — no pre-reset upload — but the confirm dialog text spells out "Cannot be undone" so the user knows.
+
+### 6.5 DataResetTransactionRunner — domain interface
+
+`ResetAllDataUseCase` MUST NOT depend on Room. The 4-layer architecture (CLAUDE.md) routes data-layer infrastructure (DAOs, `AppDatabase`, `withTransaction`) only through narrow domain interfaces. F1 follows the existing `RestoreTransactionRunner` precedent (`domain/backup/RestoreTransactionRunner.kt:12` ⇄ `data/backup/RoomRestoreTransactionRunner.kt:13`, bound in `DomainModule.kt:47`).
+
+```kotlin
+// File: app/src/main/java/org/spsl/evtracker/domain/repository/DataResetTransactionRunner.kt
+package org.spsl.evtracker.domain.repository
+
+/**
+ * Atomically clears every row from cars, charge_events, and custom_locations.
+ *
+ * Production: [org.spsl.evtracker.data.repository.RoomDataResetTransactionRunner]
+ * wraps `database.withTransaction { … }` and calls each DAO's `deleteAll()` inside
+ * the transaction.
+ * Tests: in-memory fake that records the call and clears in-memory backing maps.
+ */
+interface DataResetTransactionRunner {
+    suspend fun clearAllTables()
+}
+```
+
+```kotlin
+// File: app/src/main/java/org/spsl/evtracker/data/repository/RoomDataResetTransactionRunner.kt
+package org.spsl.evtracker.data.repository
+
+import androidx.room.withTransaction
+import javax.inject.Inject
+import javax.inject.Singleton
+import org.spsl.evtracker.data.local.db.AppDatabase
+import org.spsl.evtracker.domain.repository.DataResetTransactionRunner
+
+@Singleton
+class RoomDataResetTransactionRunner @Inject constructor(
+    private val database: AppDatabase
+) : DataResetTransactionRunner {
+    override suspend fun clearAllTables() {
+        database.withTransaction {
+            database.chargeEventDao().deleteAll()
+            database.customLocationDao().deleteAll()
+            database.carDao().deleteAll()
+        }
+    }
+}
+```
+
+Bound in `DomainModule`:
+
+```kotlin
+@Binds abstract fun bindDataResetTransactionRunner(
+    impl: RoomDataResetTransactionRunner
+): DataResetTransactionRunner
+```
+
+JVM tests use a `FakeDataResetTransactionRunner` (in `Fakes.kt`) that simply clears its in-memory backing collections and records the call count — no Room required. The instrumented suite gets the real Room-backed impl through the production Hilt graph; one new test (`RoomDataResetTransactionRunnerTest`, instrumented) exercises the actual transaction boundary by populating all three tables, calling `clearAllTables()`, and asserting all three are empty.
 
 ## 7. ManageLocations screen
 
@@ -382,7 +467,9 @@ data class SettingsUiState(
     val theme: String = "system",
     val activeCarId: Int = -1,
     val activeCarName: String? = null,
-    val customLocationCount: Int = 0
+    val customLocationCount: Int = 0,
+    /** True iff `SettingsReader.resetInProgress` is currently true ⇒ Settings shows the §5.11 banner. */
+    val showResetInterruptedBanner: Boolean = false
 )
 
 sealed class SettingsEvent {
@@ -417,7 +504,9 @@ R.string.settings_metric_flipped_mi_per_kwh     // "Primary metric also changed 
 
 No format-string placeholders, no resource lookup in the VM. The `@StringRes` constants are plain `Int`s — importable in the ViewModel module without dragging in framework deps.
 
-The `init { ... }` block in the ViewModel adds new flow collectors for `primaryMetric`, `distanceUnit`, `currency`, `theme`, `activeCarId` (then derives `activeCarName` via `CarReader.getById`), and the count from `LocationReader.observeAll().map { it.size }`. Each `update` mutates the corresponding `uiState` field.
+The `init { ... }` block in the ViewModel adds new flow collectors for `primaryMetric`, `distanceUnit`, `currency`, `theme`, `activeCarId` (then derives `activeCarName` via `CarReader.getById`), the count from `LocationReader.observeAll().map { it.size }`, and `resetInProgress` (which maps to `showResetInterruptedBanner` on the uiState). Each `update` mutates the corresponding `uiState` field.
+
+`onFinishInterruptedReset()` simply re-runs `resetAllDataUseCase()` and emits `SettingsEvent.NavigateToWizard` on completion — same path as the §5.9 confirm flow. The use case's idempotency guarantees the second run finishes cleanly even if the tables were already empty from the original interrupted attempt.
 
 ### 8.1 Auto-flip helper (in ViewModel)
 
@@ -501,6 +590,8 @@ settings_reset_all_confirm_drive_on  Delete everything? This cannot be undone, a
 settings_export_csv                  Export CSV
 settings_export_csv_summary          Share charge events as a CSV file.
 settings_export_csv_failed           CSV export failed.
+settings_reset_interrupted_banner    Your previous reset didn't finish. Some data from before the reset may still be visible.
+settings_reset_interrupted_action    Finish reset
 settings_theme_system                System default
 settings_theme_light                 Light
 settings_theme_dark                  Dark
@@ -541,6 +632,8 @@ common_confirm                       Confirm
 - `exportCsv_success_emitsLaunchIntent`
 - `exportCsv_ioException_emitsShowError`
 - `customLocationCount_reflectsLocationReaderEmission`
+- `resetInProgress_true_setsShowBannerTrue` (asserts `uiState.showResetInterruptedBanner` mirrors the SettingsReader flow)
+- `onFinishInterruptedReset_callsResetAllDataUseCase_emitsNavigateToWizard`
 
 #### `ResetActiveCarDataUseCaseTest`:
 - `invoke_deletesEventsForGivenCarOnly`
@@ -548,13 +641,15 @@ common_confirm                       Confirm
 - `invoke_enqueuesBackup`
 - `invoke_throwsForCarIdMinusOne`
 
-#### `ResetAllDataUseCaseTest` (uses Room in-memory `AppDatabase` so the `withTransaction` boundary is real):
-- `invoke_clearsAllThreeTables`
-- `invoke_setsActiveCarIdToMinusOne_andSetupCompleteFalse` (post-state outcome)
+#### `ResetAllDataUseCaseTest` (depends on `FakeDataResetTransactionRunner`; pure JVM, no Room needed):
+- `invoke_callsResetRunner_clearAllTables`
+- `invoke_setsActiveCarIdToMinusOne_andSetupCompleteFalse_andResetInProgressTrue_atStart` (post-Step-1 outcome via FakeSettingsWriter)
+- `invoke_setsResetInProgressFalse_atEnd`
 - `invoke_enqueuesBackup`
-- `invoke_marksResetInProgress_BEFORE_destructiveDeletes` (asserts `markGlobalResetInProgress()` is observed before any `delete*` call — the §6.3 failure-semantics guarantee)
-- `invoke_throwingMidTransaction_rollsBackAllThreeDeletes` (forces an exception inside `withTransaction` via a fake DAO that throws on `cars.deleteAll`; asserts events + locations are still present after; setupComplete is already false because Step 1 ran)
-- `markGlobalResetInProgress_writesBothKeysInSingleDataStoreEdit` (separate test on `SettingsRepository`; verifies the atomic guarantee)
+- `invoke_marksResetInProgress_BEFORE_resetRunnerCall_BEFORE_enqueueBackup_BEFORE_clearFlag` (asserts the four-step ordering by recording call sequence on the fakes — the §6.3 failure-semantics guarantee)
+- `invoke_idempotent_secondCallOnEmptyState_completesAndClearsFlag` (set up FakeDataResetTransactionRunner that's already been called once; second invoke succeeds, ends with resetInProgress=false)
+- `invoke_throwingFromResetRunner_doesNotClearFlag` (FakeDataResetTransactionRunner.clearAllTables throws; assert the use case re-throws and resetInProgress remains true — banner will surface on next launch)
+- `markGlobalResetInProgress_writesAllThreeKeysInSingleDataStoreEdit` (separate test on `SettingsRepository`; uses real `androidx.datastore.preferences.core.PreferenceDataStoreFactory` with a temp file; verifies atomicity)
 
 #### `ManageLocationsViewModelTest`:
 - `observe_emitsSortedList` (uses Fakes; sort order = useCount DESC, lastUsed DESC)
@@ -575,6 +670,11 @@ All swipe tests use `StandardTestDispatcher` + `advanceTimeBy(5_001)`, matching 
 - `exportCsv_disabled_whenNoActiveCar`
 - `resetAll_confirm_navigatesToWizard`
 - `resetAll_dialogText_includesDriveWarning_whenDriveEnabled` (Drive on ⇒ dialog message is `R.string.settings_reset_all_confirm_drive_on`; Drive off ⇒ `R.string.settings_reset_all_confirm`)
+- `resetInterruptedBanner_visible_whenResetInProgressTrue` (seed DataStore with `resetInProgress=true`, open Settings, assert banner visible; tap "Finish reset", assert banner gone after navigation back)
+
+#### `RoomDataResetTransactionRunnerTest` (Hilt + Room in-memory; instrumented because it exercises the real `withTransaction` boundary):
+- `clearAllTables_emptiesAllThreeTables`
+- `clearAllTables_isAtomic_throwingFromOneDeleteRollsBackOthers` (uses a Room callback / abort hook to throw inside the transaction; asserts pre-transaction state is preserved)
 
 #### `ManageLocationsFragmentTest`:
 - `swipe_showsSnackbar_undo_restoresRow`
@@ -584,8 +684,8 @@ These follow D's existing Espresso patterns (Hilt test runner, `IntentsTestRule`
 
 ### 11.3 Coverage targets
 
-- F1 raises the JVM test count from ~152 to ~185 (~33 new JVM tests: 15 in `SettingsViewModelTest`, 4 in `ResetActiveCarDataUseCaseTest`, 6 in `ResetAllDataUseCaseTest`, 8 in `ManageLocationsViewModelTest`).
-- F1 adds 6 instrumented tests (4 + 2); the instrumented suite still compiles via `:app:assembleDebugAndroidTest`. Running them needs an emulator (sandbox-incompatible).
+- F1 raises the JVM test count from ~152 to ~189 (~37 new JVM tests: 17 in `SettingsViewModelTest`, 4 in `ResetActiveCarDataUseCaseTest`, 8 in `ResetAllDataUseCaseTest`, 8 in `ManageLocationsViewModelTest`).
+- F1 adds 9 instrumented tests (5 in `SettingsFragmentTest` + 2 in `ManageLocationsFragmentTest` + 2 in `RoomDataResetTransactionRunnerTest`); the instrumented suite still compiles via `:app:assembleDebugAndroidTest`. Running them needs an emulator (sandbox-incompatible).
 
 ## 12. Edge cases
 
@@ -607,10 +707,12 @@ These follow D's existing Espresso patterns (Hilt test runner, `IntentsTestRule`
 
 - `app/src/main/java/org/spsl/evtracker/domain/usecase/ResetActiveCarDataUseCase.kt`
 - `app/src/main/java/org/spsl/evtracker/domain/usecase/ResetAllDataUseCase.kt`
+- `app/src/main/java/org/spsl/evtracker/domain/repository/DataResetTransactionRunner.kt` (new domain interface, mirrors `RestoreTransactionRunner`)
+- `app/src/main/java/org/spsl/evtracker/data/repository/RoomDataResetTransactionRunner.kt` (Room-backed impl, bound in `DomainModule`)
 - `app/src/main/java/org/spsl/evtracker/core/model/ManageLocationsUiState.kt`
 - `app/src/main/java/org/spsl/evtracker/ui/locations/ManageLocationsAdapter.kt`
 - `app/src/main/res/layout/item_custom_location.xml`
-- Tests: `ResetActiveCarDataUseCaseTest`, `ResetAllDataUseCaseTest`, `ManageLocationsViewModelTest`, `ManageLocationsFragmentTest`
+- Tests: `ResetActiveCarDataUseCaseTest`, `ResetAllDataUseCaseTest`, `ManageLocationsViewModelTest`, `ManageLocationsFragmentTest`, `RoomDataResetTransactionRunnerTest` (instrumented)
 
 **Modify:**
 
@@ -620,11 +722,13 @@ These follow D's existing Espresso patterns (Hilt test runner, `IntentsTestRule`
 - `app/src/main/java/org/spsl/evtracker/domain/repository/ChargeEventWriter.kt` (+ `deleteForCar`, `deleteAll`)
 - `app/src/main/java/org/spsl/evtracker/domain/repository/LocationWriter.kt` (+ `deleteAll`)
 - `app/src/main/java/org/spsl/evtracker/domain/repository/CarWriter.kt` (+ `deleteAll`)
-- `app/src/main/java/org/spsl/evtracker/data/repository/SettingsRepository.kt` (interface impls + atomic combined writer)
+- `app/src/main/java/org/spsl/evtracker/data/repository/SettingsRepository.kt` (new keys + interface impls + the two atomic combined writers + `resetInProgress` flow)
 - `app/src/main/java/org/spsl/evtracker/data/repository/ChargeEventRepository.kt` (+ `deleteForCar`, `deleteAll`)
 - `app/src/main/java/org/spsl/evtracker/data/repository/LocationRepository.kt` (+ `deleteAll`)
 - `app/src/main/java/org/spsl/evtracker/data/repository/CarRepository.kt` (+ `deleteAll`)
+- `app/src/main/java/org/spsl/evtracker/data/preferences/PreferenceKeys.kt` (+ `RESET_IN_PROGRESS = booleanPreferencesKey("resetInProgress")`)
 - `app/src/main/java/org/spsl/evtracker/data/local/dao/ChargeEventDao.kt` (+ `deleteForCar`)
+- `app/src/main/java/org/spsl/evtracker/di/DomainModule.kt` (+ `@Binds` for `DataResetTransactionRunner`)
 - `app/src/main/java/org/spsl/evtracker/ui/settings/SettingsFragment.kt` (wire all rows)
 - `app/src/main/java/org/spsl/evtracker/ui/settings/SettingsViewModel.kt` (extend init + add F1 actions)
 - `app/src/main/java/org/spsl/evtracker/ui/locations/ManageLocationsFragment.kt`
@@ -633,7 +737,7 @@ These follow D's existing Espresso patterns (Hilt test runner, `IntentsTestRule`
 - `app/src/main/res/layout/fragment_manage_locations.xml` (real RecyclerView + empty state)
 - `app/src/main/res/navigation/nav_graph.xml` (+ 2 actions on settingsFragment)
 - `app/src/main/res/values/strings.xml` (~30 new keys)
-- `app/src/test/java/org/spsl/evtracker/testing/Fakes.kt` (new methods on `FakeChargeEventWriter`, `FakeLocationWriter`, `FakeCarWriter`, `FakeSettingsReader`/`Writer`)
+- `app/src/test/java/org/spsl/evtracker/testing/Fakes.kt` (new methods on `FakeChargeEventWriter`, `FakeLocationWriter`, `FakeCarWriter`, `FakeSettingsReader`/`Writer`; new `FakeDataResetTransactionRunner` that records calls and clears in-memory backing collections)
 - `app/src/test/java/org/spsl/evtracker/ui/settings/SettingsViewModelTest.kt` (extended)
 
 **Delete:** none.
@@ -642,7 +746,7 @@ These follow D's existing Espresso patterns (Hilt test runner, `IntentsTestRule`
 
 ## 14. Acceptance gates
 
-JVM tests: `:app:testDebugUnitTest` ⇒ all green, count ≈ 185.
+JVM tests: `:app:testDebugUnitTest` ⇒ all green, count ≈ 189.
 Instrumented compile: `:app:assembleDebugAndroidTest` ⇒ green.
 Manual smoke (on device): theme picker flips theme without restart; CSV row triggers the system share sheet; reset-all routes through wizard back to an empty Dashboard.
 
