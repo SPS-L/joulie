@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Android app (`org.spsl.evtracker`) for logging EV charge events and analyzing efficiency/cost. Kotlin, MVVM with a domain/use-case layer plus narrow repositories, Gradle Kotlin DSL, and Hilt-based dependency injection. Min SDK 26, target/compile SDK 34, JDK 17. Room compiler runs via **KSP** (not kapt).
 
-> **Status:** Sub-projects A (foundation/DI/Room v3), B (repositories), C (domain services + use cases) are merged. Sub-project D (UI ViewModels) is partially landed: Wizard is wired; Dashboard/Charts/History/Cars/Settings/ChargeEdit/ManageLocations VMs are stubs. Sub-project E (Drive backup) lives behind no-op interfaces.
+> **Status:** Sub-projects A (foundation/DI/Room v3), B (repositories), C (domain services + use cases), and D (Core UI: Dashboard/ChargeEdit/Cars/History) are all merged. Wizard, Dashboard, ChargeEdit, Cars, and History are fully wired; Charts, Settings, and ManageLocations remain placeholder fragments until F. Sub-project E (real Drive auth + WorkManager-backed `BackupScheduler`/`BackupRepository`) lives behind no-op interfaces. JVM unit-test count: ~123. Instrumented suite compiles via `:app:assembleDebugAndroidTest` (running requires an emulator).
 
 Root docs:
 - `DESIGN.md` — canonical product + technical spec (v3). Source of truth when in conflict with anything else.
@@ -29,14 +29,24 @@ Requires `ANDROID_HOME` set and Build Tools 34.
 ## Architecture (4-layer)
 
 ```
-UI:       Fragments + ViewModels (Wizard, Dashboard, ChargeEdit, Cars, Settings, Charts, History, ManageLocations)
-Domain:   SaveChargeEvent · DeleteChargeEvent · ObserveDashboardStats · RestoreBackup · ExportCsv
-Services: StatsCalculator · CostParser · UnitConverter · BackupSerializer
-Repo:     CarRepository · ChargeEventRepository · LocationRepository · SettingsRepository · BackupRepository
-Data:     Room (CarDao, ChargeEventDao, CustomLocationDao) · Preferences DataStore · Drive AppData client · WorkManager backup scheduler
+UI:       Fragments + ViewModels (Wizard ✓, Dashboard ✓, ChargeEdit ✓, Cars ✓, History ✓, Charts ⊘, Settings ⊘, ManageLocations ⊘)
+          BottomNavigationView in MainActivity hides on Wizard / ChargeEdit / Cars / ManageLocations
+          ui/common/        MoneyFormat · DateFormat · PeriodLabels (pure helpers)
+          core/model/ states DashboardScreenState · ChargeEditUiState · CarsUiState · CarFormState · HistoryUiState
+Domain:   Use cases  SaveChargeEvent · DeleteChargeEvent · ObserveDashboardStats · RestoreBackup · ExportCsv
+                     AddCar · RenameCar · DeleteCar (D)
+          Services   StatsCalculator · CostParser · UnitConverter · DateRangeResolver · BackupSerializer
+          Narrow IFs CarReader · CarWriter (D) · ChargeEventQueries · ChargeEventWriter · LocationReader · LocationWriter · SettingsReader · SettingsWriter
+          Backup IFs BackupScheduler · BackupRepository · RestoreTransactionRunner · RestoreSnapshotWriter · CsvFileSink
+Repo:     CarRepository (CarReader + CarWriter) · ChargeEventRepository · LocationRepository · SettingsRepository · BackupRepository
+Data:     Room (CarDao, ChargeEventDao, CustomLocationDao) · Preferences DataStore · Drive AppData client (E) · WorkManager backup scheduler (E)
 ```
 
+Legend: ✓ = wired in D · ⊘ = placeholder fragment until F.
+
 Single-Activity + Navigation Component. ViewBinding enabled. MPAndroidChart for charts. WorkManager is used for backup scheduling only, not as a substitute for domain logic.
+
+`activity_main.xml` is a vertical `LinearLayout` with `FragmentContainerView` at `0dp`/`weight=1` and `BottomNavigationView` at `wrap_content` so the host always fills exactly the space above the actual measured nav-bar height across font scales and Material 3 theme variations. Each Fragment's own root layout is a `CoordinatorLayout` for Snackbar/FAB anchoring.
 
 ## Invariants — read before changing data, math, or storage
 
@@ -90,6 +100,42 @@ Declared in a single `PreferenceKeys` object: `setupComplete`, `primaryMetric` (
 - Add new screens by creating a Fragment + ViewModel pair and wiring into the Nav graph; do not introduce a second Activity.
 - New efficiency or cost metrics: extend `Stats` / `EfficiencyStats` and the dashboard card layout; keep the formulas table in `DESIGN.md §7` in sync.
 - When changing the wizard, update `WizardViewModelTest` and `WizardFlowTest` (TEST_PLAN §3.2, §4.1) — the gate behavior is covered by tests.
+
+### ViewModel + event pattern (D-era)
+
+ViewModels expose:
+- `val uiState: StateFlow<XxxUiState>` built via `combine`/`flatMapLatest` over the narrow domain interfaces. Default values on every state field so VMs can use `MutableStateFlow(XxxUiState())` cheaply.
+- `val events: SharedFlow<XxxEvent>` for one-shot effects (Snackbar, navigate, dialog). **Always `replay = 0`** with `extraBufferCapacity = 1, onBufferOverflow = DROP_OLDEST` — fragments collect inside `repeatOnLifecycle(STARTED)` and a non-zero replay would re-fire navigation events on rotation/back-stack pop.
+
+Tests that need to observe an emitted event must subscribe BEFORE `tryEmit`:
+
+```kotlin
+val received = mutableListOf<XxxEvent>()
+val job = launch(start = CoroutineStart.UNDISPATCHED) { vm.events.collect { received += it } }
+vm.someTrigger()
+advanceUntilIdle()  // or runCurrent() — required to flush the launched collection
+job.cancel()
+assertTrue(received.first() is ExpectedEvent)
+```
+
+History's swipe-delete uses a 5s cancellable `Job` per event id; tests use `StandardTestDispatcher` + `advanceTimeBy(5_001)` for time control. Don't use `UnconfinedTestDispatcher` for time-sensitive tests — it runs `delay` synchronously.
+
+### Test infrastructure
+
+JVM tests construct real domain use cases (`ObserveDashboardStatsUseCase`, `SaveChargeEventUseCase`, `DeleteChargeEventUseCase`) wired through fakes in `app/src/test/java/org/spsl/evtracker/testing/Fakes.kt`. Existing fakes:
+`FakeCarReader`, `FakeCarRepository` (impl `CarReader, CarWriter` with shared `MutableStateFlow`), `FakeChargeEventQueries`, `FakeChargeEventWriter`, `FakeLocationReader`, `FakeLocationWriter`, `FakeSettingsReader`, `FakeSettingsWriter`, `FakeBackupScheduler`, `FakeBackupRepository`, `FakeRestoreTransactionRunner`, `FakeRestoreSnapshotWriter`, `FakeSaveChargeEventGateway` (real `SaveChargeEventUseCase` wired through the chargeevent/location/backup fakes).
+
+Build commands (sandbox quirk: gradle's default `~/.gradle` is read-only here, always `GRADLE_USER_HOME=/tmp/gradle-home`):
+
+```bash
+GRADLE_USER_HOME=/tmp/gradle-home ./gradlew :app:assembleDebug
+GRADLE_USER_HOME=/tmp/gradle-home ./gradlew :app:testDebugUnitTest
+GRADLE_USER_HOME=/tmp/gradle-home ./gradlew :app:assembleDebugAndroidTest   # compile-only; running needs an emulator
+```
+
+### Sub-project workflow
+
+A/B/C/D used `superpowers:brainstorming` → `superpowers:writing-plans` → `superpowers:subagent-driven-development` with feat/ branches and per-task spec+code reviews. Specs live at `docs/superpowers/specs/`; plans live at `docs/superpowers/plans/`. Branches merge to `main` via `--no-ff`, then push, then `git branch -d`. Never compound git commands — CLAUDE.md global rule.
 
 
 ## gitflow
