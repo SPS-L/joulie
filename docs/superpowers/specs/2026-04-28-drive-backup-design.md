@@ -300,23 +300,61 @@ class DriveBackupRepository @Inject constructor(
             ?: throw DriveAuthRequiredException()
 
     /**
-     * Drive's HTTP 401/403 responses indicate auth-state problems (token revoked,
-     * scope removed, consent withdrawn) — they are NOT transient network errors.
-     * Translating them at this boundary keeps the Worker's error matrix two-branch:
-     * DriveAuthRequiredException → Result.failure(); other IOException → Result.retry().
+     * Translate Drive HTTP errors at the boundary:
+     * - 401: always auth (token expired/invalid).
+     * - 403: ONLY auth when the error reason is auth-related (`appNotAuthorized`,
+     *   `insufficientFilePermissions`, `insufficientPermissions`, `forbidden`).
+     *   Drive also uses 403 for retryable conditions: `rateLimitExceeded`,
+     *   `userRateLimitExceeded`, `quotaExceeded` — those propagate as IOException
+     *   so the Worker retries with exponential backoff.
+     * - Anything else (5xx, transport IOException) propagates unchanged.
+     *
+     * Keeps the Worker's error rule two-branch: DriveAuthRequiredException →
+     * Result.failure(); other IOException → Result.retry().
      */
     private inline fun <T> translatingAuthErrors(block: () -> T): T = try {
         block()
     } catch (e: HttpResponseException) {
-        if (e.statusCode == 401 || e.statusCode == 403) throw DriveAuthRequiredException()
-        else throw e
+        when {
+            e.statusCode == 401 -> throw DriveAuthRequiredException()
+            e.statusCode == 403 && isAuthReason(e) -> throw DriveAuthRequiredException()
+            else -> throw e   // 403/quota, 5xx, etc. — let Worker retry
+        }
+    }
+
+    private fun isAuthReason(e: HttpResponseException): Boolean {
+        val reason = parseFirstErrorReason(e.content) ?: return true   // unknown reason → conservative: treat as auth
+        return reason in AUTH_REASONS
+    }
+
+    /** Drive error bodies: `{"error":{"errors":[{"reason":"…"}], …}}`. Returns the first reason string. */
+    private fun parseFirstErrorReason(body: String?): String? {
+        if (body.isNullOrBlank()) return null
+        return try {
+            val root = com.google.gson.JsonParser.parseString(body).asJsonObject
+            root.getAsJsonObject("error")
+                ?.getAsJsonArray("errors")
+                ?.firstOrNull()?.asJsonObject
+                ?.get("reason")?.asString
+        } catch (_: Throwable) {
+            null
+        }
+    }
+
+    companion object {
+        private val AUTH_REASONS = setOf(
+            "appNotAuthorized",
+            "insufficientFilePermissions",
+            "insufficientPermissions",
+            "forbidden"
+        )
     }
 }
 
 class DriveAuthRequiredException : IOException("Drive consent required or revoked")
 ```
 
-`HttpResponseException` is `com.google.api.client.http.HttpResponseException` — a subclass of `IOException` thrown by the Drive client for HTTP-level errors. Translation happens once, here, so the Worker never has to inspect HTTP status codes.
+`HttpResponseException` is `com.google.api.client.http.HttpResponseException` — a subclass of `IOException` thrown by the Drive client for HTTP-level errors. Translation happens once, here, so the Worker never has to inspect HTTP status codes. The `403 + reason` discrimination is the *only* place that knows Drive's error vocabulary; everywhere else (Worker, repository callers, tests) deals with the two-class hierarchy `DriveAuthRequiredException` (auth) vs plain `IOException` (transient).
 
 ### 4.4 `WorkManagerBackupScheduler` (replaces `NoOpBackupScheduler`)
 
@@ -484,9 +522,11 @@ sealed class SettingsEvent {
 1. `onToggleDriveOff()`: `settingsWriter.setDriveEnabled(false)`; `workManager.cancelUniqueWork("drive_backup")`. Done.
 2. `onDriveAuthGranted()` — called by the Fragment after `DriveAuthManager` returned Success (silent or post-consent):
    - `uiState.value = uiState.value.copy(isAuthInFlight = true)`.
-   - Call `backupRepository.readRemoteBackup()`.
-     - **`null`** (no remote snapshot): set `driveEnabled = true`, `enqueueBackup()`, clear isAuthInFlight.
-     - **non-null**: parse `exportedAt` into a label; set `pendingRestoreLabel = label`; emit `ShowRestorePrompt(label)`. **Do NOT set `driveEnabled = true` yet.** Local mutations during this window stay silent because `driveEnabled` is still false.
+   - Call `backupRepository.readRemoteBackup()` inside a try/catch (it is documented to throw — see §4.3):
+     - **returns `null`** (no remote snapshot): set `driveEnabled = true`, `enqueueBackup()`, clear `isAuthInFlight`.
+     - **returns non-null JSON**: parse `exportedAt` into a label; set `pendingRestoreLabel = label`; emit `ShowRestorePrompt(label)`. **Do NOT set `driveEnabled = true` yet.** Local mutations during this window stay silent because `driveEnabled` is still false.
+     - **throws `DriveAuthRequiredException`** (consent revoked between authorize and the probe): emit `ShowError(R.string.drive_auth_failed)`; clear `isAuthInFlight`; leave `driveEnabled = false`. The toggle returns to OFF on the next `uiState` collect.
+     - **throws any other `IOException`** (network / Drive 5xx / quota): emit `ShowError(R.string.drive_network_error)`; clear `isAuthInFlight`; leave `driveEnabled = false`. The user can retry by toggling again.
 3. `onDriveAuthFailed(@StringRes msgRes: Int)` — Fragment translates `Failed` / consent-cancelled into a string resource and calls this. Emits `ShowError`; clears isAuthInFlight.
 4. `onConfirmRestore()` — only valid while `pendingRestoreLabel != null`. Invokes `RestoreBackupUseCase` (which sets `driveEnabled = true` itself on Success). On `Success` emit `RestoreSucceeded`; on `VersionMismatch` emit `ShowError`. Clears `pendingRestoreLabel`.
 5. `onSkipRestore()` — only valid while `pendingRestoreLabel != null`. *Now* set `driveEnabled = true` and `enqueueBackup()` (uploads the local snapshot, intentionally overwriting remote per user's explicit choice). Clears `pendingRestoreLabel`.
@@ -631,12 +671,14 @@ Fragment: consentLauncher.launch(IntentSenderRequest.Builder(intentSender).build
   ↓
 System consent sheet — user grants
   ↓
-ActivityResult callback (RESULT_OK) → Fragment re-runs auth.authorize() → Success(token)
+ActivityResult callback (RESULT_OK) → Fragment re-runs auth.authorize()
   ↓
-Fragment: viewModel.onDriveAuthGranted()
+auth.authorize() → AuthResult.Success(token)   (silent — consent now cached)
   ↓
-ViewModel re-runs the auth.authorize() → now Success silently → continues §5.1 or §5.2 flow
+Fragment: viewModel.onDriveAuthGranted()  ← continues §5.1 or §5.2 flow
 ```
+
+ActivityResult callback with anything other than `RESULT_OK` (user backed out of consent, system cancelled, etc.) → Fragment calls `viewModel.onDriveAuthFailed(R.string.drive_consent_cancelled)` directly, without re-invoking the auth manager.
 
 ### 5.4 Auto-backup after charge save
 
@@ -679,19 +721,19 @@ The remote backup file is intentionally NOT deleted on toggle-off. The user can 
 
 ### 6.1 Worker error matrix
 
-`DriveBackupRepository` translates Drive HTTP 401/403 to `DriveAuthRequiredException` at the boundary (see §4.3 `translatingAuthErrors`), so the Worker only branches on two exception types:
+`DriveBackupRepository` translates *only auth-class* Drive HTTP errors to `DriveAuthRequiredException` at the boundary (see §4.3 `translatingAuthErrors`). Quota and rate-limit responses are *not* auth — they pass through as `IOException` so the Worker retries with exponential backoff. The Worker's rule is two-branch: `DriveAuthRequiredException` → `failure`; every other `IOException` → `retry` (capped at 5 attempts, then `failure`).
 
 | Trigger | At repository boundary | Reaches worker as | Worker `Result` |
 |---|---|---|---|
 | Happy path | `Success(token)` + 2xx | (no exception) | `success`, `setLastBackupAt(now)` |
 | Consent revoked / never granted | `silentToken()` returns Failed | `DriveAuthRequiredException` | `failure` (no retry — user must re-toggle in Settings) |
 | GMS unavailable on device | `silentToken()` returns Failed | `DriveAuthRequiredException` | `failure` |
-| Drive 401 (token revoked) | translated by repository | `DriveAuthRequiredException` | `failure` |
-| Drive 403 (scope removed / quota) | translated by repository | `DriveAuthRequiredException` | `failure` |
+| Drive 401 (token expired/invalid) | translated by repository | `DriveAuthRequiredException` | `failure` |
+| Drive 403 with auth reason (`appNotAuthorized`, `insufficientFilePermissions`, `insufficientPermissions`, `forbidden`) | translated by repository | `DriveAuthRequiredException` | `failure` |
+| Drive 403 with quota/rate reason (`rateLimitExceeded`, `userRateLimitExceeded`, `quotaExceeded`) | propagated as-is | `IOException` | `retry` while `runAttemptCount < 5`; else `failure` |
+| Drive 403 with unknown reason / unparseable body | translated by repository (conservative) | `DriveAuthRequiredException` | `failure` |
 | Network down (transport `IOException`) | propagated as-is | `IOException` (not `HttpResponseException`) | `retry` while `runAttemptCount < 5`; else `failure` |
 | Drive 5xx | `HttpResponseException(5xx)` propagated as-is (subclass of IOException) | `IOException` | `retry` while `runAttemptCount < 5`; else `failure` |
-
-The single rule the worker enforces: `DriveAuthRequiredException` → `failure`, every other `IOException` → `retry` (capped at 5 attempts).
 
 ### 6.2 Settings UI error messages
 
@@ -723,14 +765,16 @@ The `RestoreBackupUseCase` already imports the data verbatim. Multi-currency ren
   - silent token failure throws DriveAuthRequiredException
   - readRemoteBackup returns null when no fileId
   - readRemoteBackup returns body when fileId exists
-- **`SettingsViewModelTest` (7)** with all fakes:
-  - toggle ON when no auth → emits LaunchConsent
-  - toggle ON when auth succeeds and no remote → enqueues backup, sets driveEnabled
-  - toggle ON when remote backup exists → emits ShowRestorePrompt
-  - confirmRestore → calls RestoreBackupUseCase → emits RestoreSucceeded
-  - skipRestore → enqueues backup, no restore call
-  - toggle OFF → cancels work + sets driveEnabled=false
-  - lastBackupAt flow propagates into uiState
+- **`SettingsViewModelTest` (9)** with all fakes (the VM no longer touches `DriveAuthManager`, so all auth-side cases are simulated by calling `onDriveAuthGranted` / `onDriveAuthFailed` directly):
+  - `onDriveAuthGranted` with no remote backup → sets driveEnabled=true and enqueues backup
+  - `onDriveAuthGranted` with remote backup → emits `ShowRestorePrompt`; driveEnabled stays false
+  - `onDriveAuthGranted` when `readRemoteBackup` throws `DriveAuthRequiredException` → emits `ShowError(drive_auth_failed)`; driveEnabled stays false; isAuthInFlight cleared
+  - `onDriveAuthGranted` when `readRemoteBackup` throws `IOException` → emits `ShowError(drive_network_error)`; driveEnabled stays false; isAuthInFlight cleared
+  - `onDriveAuthFailed` → emits `ShowError`; driveEnabled stays false; isAuthInFlight cleared
+  - `onConfirmRestore` → invokes `RestoreBackupUseCase` → emits `RestoreSucceeded` (RestoreBackupUseCase sets driveEnabled=true)
+  - `onSkipRestore` → sets driveEnabled=true and enqueues backup
+  - `onRestorePromptDismissed` → leaves driveEnabled=false; clears `pendingRestoreLabel`
+  - `onToggleDriveOff` → cancels work and sets driveEnabled=false
 - **Extended `RestoreBackupUseCaseTest` (3 new)**:
   - end-to-end with a real `BackupSerializer` + `FakeDriveRemoteSource` seeded with the JSON from a captured `BackupData.fromEntities(...)`
   - replays an old `backup_version=2` payload and asserts `VersionMismatch(2)` (verifies the version guard from C still works through the Drive path)
@@ -834,7 +878,7 @@ None at draft time. The five Q&A in brainstorming locked architecture. If new qu
 ## 10. Spec self-review checklist
 
 - ✅ Placeholder scan — no TBD/TODO; every component has a code-level interface or method list.
-- ✅ Internal consistency — `BackupScheduler` suspend conversion reflected in §1.3, §3, §4.4, §4.5, §7.4. Auth seam is a single `@Singleton` binding consistent across §1.3, §3, §4.1, §4.9, §4.10. Worker error model is consistent between §4.3 (translation) and §6.1 (matrix).
+- ✅ Internal consistency — `BackupScheduler` suspend conversion reflected in §1.3, §3, §4.4, §4.5, §7.4. Auth seam is a single `@Singleton` binding consistent across §1.3, §3, §4.1, §4.7, §4.9, §4.10. Sequence §5.3 lets the Fragment own the post-consent re-auth call (consistent with §4.7). The post-auth probe failure paths in §4.7 are mirrored by tests in §7.1. Worker error model is consistent between §4.3 (translation) and §6.1 (matrix), including the 403-quota carve-out.
 - ✅ Scope check — single sub-project, single feature branch. Out-of-scope table is precise.
 - ✅ Ambiguity check — `setInitialDelay(5 s)` is included in §4.4 with the rationale that it provides debounce for enqueue bursts (not running-worker overlap). `driveEnabled` is set only after Replace or Skip is finalized, never speculatively, per §4.7 and §5.2.
 
@@ -844,3 +888,9 @@ None at draft time. The five Q&A in brainstorming locked architecture. If new qu
 - Restore gate: the toggle-on flow no longer sets `driveEnabled = true` immediately after auth Success when a remote snapshot exists. `driveEnabled` is now set strictly inside `RestoreBackupUseCase` (Confirm branch) or `onSkipRestore` (Skip branch). This eliminates the overwrite race where local mutations during the prompt could enqueue an upload and clobber the remote snapshot the user is still deciding to restore from.
 - Debounce: restored `setInitialDelay(5 s)` to match `AGENT_INSTRUCTIONS.md §7.2`. The earlier "network constraint debounces" rationale was incorrect — `NetworkType.CONNECTED` does not debounce on an already-online device.
 - Worker error policy: `DriveBackupRepository` now translates Drive HTTP 401/403 to `DriveAuthRequiredException` at the boundary, so the Worker's two-branch error rule (auth-required → fail; everything else `IOException` → retry) is consistent across §4.3, §4.5, and §6.1.
+
+### 10.2 Review-cycle changes (2026-04-28 spec rev 3)
+
+- 403 narrowing: §4.3 and §6.1 now distinguish auth-class 403 (`appNotAuthorized`, `insufficientFilePermissions`, `insufficientPermissions`, `forbidden`) from quota/rate-limit 403 (`rateLimitExceeded`, `userRateLimitExceeded`, `quotaExceeded`). Only the former translates to `DriveAuthRequiredException`; the latter passes through as `IOException` so the Worker retries with exponential backoff. Unknown reasons fall back to auth-class for safety. Resolves the prior over-classification that would have turned transient quota errors into permanent worker failures with the wrong remediation path.
+- Post-auth probe failure paths: §4.7 now explicitly enumerates what `onDriveAuthGranted` does when `readRemoteBackup` throws — `DriveAuthRequiredException` → `ShowError(drive_auth_failed)`, generic `IOException` → `ShowError(drive_network_error)`, both leaving `driveEnabled = false` and clearing `isAuthInFlight`. §7.1 covers each branch with a dedicated test.
+- Stale references purged: §5.3 no longer says "ViewModel re-runs auth.authorize" — the Fragment owns the post-consent re-auth call. §7.1 `SettingsViewModelTest` cases are rewritten in terms of the rev-2 VM API (`onDriveAuthGranted` / `onDriveAuthFailed` / `onRestorePromptDismissed`); the obsolete `LaunchConsent` event no longer appears in any test.
