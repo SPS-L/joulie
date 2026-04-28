@@ -1,5 +1,6 @@
 package org.spsl.evtracker.testing
 
+import java.io.IOException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
@@ -8,6 +9,8 @@ import org.spsl.evtracker.data.local.entity.ChargeEventEntity
 import org.spsl.evtracker.data.local.entity.CustomLocationEntity
 import org.spsl.evtracker.domain.backup.BackupRepository
 import org.spsl.evtracker.domain.backup.BackupScheduler
+import org.spsl.evtracker.domain.backup.DriveAuthManager
+import org.spsl.evtracker.domain.backup.DriveRemoteSource
 import org.spsl.evtracker.domain.backup.RestoreSnapshotWriter
 import org.spsl.evtracker.domain.backup.RestoreTransactionRunner
 import org.spsl.evtracker.domain.repository.CarReader
@@ -209,4 +212,64 @@ class FakeCarRepository(initial: List<CarEntity> = emptyList()) : CarReader, Car
 
     fun seed(cars: List<CarEntity>) { state.value = cars }
     fun current(): List<CarEntity> = state.value
+}
+
+class FakeDriveAuthManager(
+    var nextResult: DriveAuthManager.AuthResult = DriveAuthManager.AuthResult.Success("fake-token")
+) : DriveAuthManager {
+    var authorizeCallCount = 0
+        private set
+    var silentCallCount = 0
+        private set
+    override suspend fun authorize(): DriveAuthManager.AuthResult {
+        authorizeCallCount++
+        return nextResult
+    }
+    override suspend fun silentToken(): DriveAuthManager.AuthResult {
+        silentCallCount++
+        return when (val r = nextResult) {
+            is DriveAuthManager.AuthResult.NeedsResolution ->
+                DriveAuthManager.AuthResult.Failed("consent required")
+            else -> r
+        }
+    }
+}
+
+class FakeDriveRemoteSource : DriveRemoteSource {
+    private var fileId: String? = null
+    private var body: ByteArray? = null
+    var failNext: Throwable? = null
+
+    override suspend fun findBackupFileId(accessToken: String): String? {
+        consumeFailure()
+        return fileId
+    }
+
+    override suspend fun createBackup(accessToken: String, jsonBytes: ByteArray): String {
+        consumeFailure()
+        fileId = "fake-file-id"
+        body = jsonBytes
+        return fileId!!
+    }
+
+    override suspend fun updateBackup(accessToken: String, fileId: String, jsonBytes: ByteArray) {
+        consumeFailure()
+        check(this.fileId == fileId) { "fileId mismatch: had=${this.fileId} got=$fileId" }
+        body = jsonBytes
+    }
+
+    override suspend fun downloadBackup(accessToken: String, fileId: String): ByteArray {
+        consumeFailure()
+        return body ?: throw IOException("no body for $fileId")
+    }
+
+    fun seed(jsonBytes: ByteArray) { fileId = "fake-file-id"; body = jsonBytes }
+    fun lastUploadedBytes(): ByteArray? = body
+    fun seededFileId(): String? = fileId
+
+    private fun consumeFailure() {
+        val e = failNext ?: return
+        failNext = null
+        throw e
+    }
 }
