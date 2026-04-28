@@ -44,7 +44,7 @@ If the workspace is at any state earlier than `4ecc5b3`, this design cannot be a
 
 Sub-project E ships the real Drive-backup back-end plus the smallest UI needed to drive it:
 
-- **Auth seam.** `domain/backup/DriveAuthManager.kt` (interface) plus `data/backup/AndroidDriveAuthManager.kt` (Authorization API implementation). Activity-scoped because consent intents must launch from an Activity; silent re-auth from app context for the Worker.
+- **Auth seam.** `domain/backup/DriveAuthManager.kt` (interface) plus `data/backup/AndroidDriveAuthManager.kt` (Authorization API implementation). Single `@Singleton` binding with `@ApplicationContext`; the Authorization API client itself doesn't need an Activity to construct or call. The Activity-bound piece is launching the *consent resolution intent*, and that's owned by `SettingsFragment` via `ActivityResultLauncher<IntentSenderRequest>` — not by the auth manager. The Worker uses the same singleton instance via `silentToken()`.
 - **Drive REST seam.** `domain/backup/DriveRemoteSource.kt` (interface) plus `data/backup/GoogleDriveRemoteSource.kt` (uses `google-api-services-drive` with bearer-token request initializer).
 - **Real `BackupRepository`.** `data/backup/DriveBackupRepository.kt` — composes `BackupSerializer`, the four entity readers, and `DriveRemoteSource`; replaces `NoOpBackupRepository` in the Hilt binding.
 - **Real `BackupScheduler`.** `data/backup/WorkManagerBackupScheduler.kt` — gates on `settingsReader.driveEnabled.first()`, enqueues `OneTimeWorkRequest<DriveBackupWorker>` with `enqueueUniqueWork("drive_backup", REPLACE, ...)`. Replaces `NoOpBackupScheduler` in the Hilt binding.
@@ -110,7 +110,7 @@ Sub-projects D (already merged) and F (Charts/CSV/Settings polish/ManageLocation
 app/src/main/java/org/spsl/evtracker/
   data/
     backup/
-      AndroidDriveAuthManager.kt         (new — @ActivityScoped wraps Identity.getAuthorizationClient)
+      AndroidDriveAuthManager.kt         (new — @Singleton, @ApplicationContext, wraps Identity.getAuthorizationClient)
       GoogleDriveRemoteSource.kt         (new — @Singleton, Drive REST via google-api-services-drive)
       DriveBackupRepository.kt           (new — replaces NoOpBackupRepository)
       WorkManagerBackupScheduler.kt      (new — replaces NoOpBackupScheduler)
@@ -137,13 +137,13 @@ app/src/main/java/org/spsl/evtracker/
       SaveChargeEventUseCase.kt          (no signature change — already suspend)
       DeleteChargeEventUseCase.kt        (no signature change — already suspend)
   di/
-    DataModule.kt                        (modified — add bindings for DriveAuthManager + DriveRemoteSource)
+    BackupModule.kt                      (new — @Binds for DriveAuthManager and DriveRemoteSource; @InstallIn(SingletonComponent::class))
     DomainModule.kt                      (modified — rebind BackupScheduler + BackupRepository)
-    WorkerModule.kt                      (new — provides WorkManager + Configuration)
+    WorkerModule.kt                      (new — provides WorkManager + Clock)
   ui/
     settings/
-      SettingsFragment.kt                (rewritten — Drive toggle + last-backup + ActivityResultLauncher)
-      SettingsViewModel.kt               (rewritten — uiState + events flow)
+      SettingsFragment.kt                (rewritten — owns DriveAuthManager interaction + ActivityResultLauncher; feeds plain results to VM)
+      SettingsViewModel.kt               (rewritten — pure state machine; no DriveAuthManager dependency, no IntentSender exposure)
   EVTrackerApp.kt                        (modified — implements Configuration.Provider)
 
 app/src/main/AndroidManifest.xml         (modified — remove WorkManager auto-initializer via tools:node="remove")
@@ -183,16 +183,22 @@ interface DriveAuthManager {
      *
      * Returns:
      * - [AuthResult.Success] when consent has already been granted (silent path)
-     * - [AuthResult.NeedsResolution] when the user must launch a consent intent;
-     *   only the Activity-scoped instance produces this. The Worker calls
-     *   [silentToken] which collapses NeedsResolution into Failed.
+     * - [AuthResult.NeedsResolution] when the user must launch a consent intent.
+     *   The caller (SettingsFragment) launches the [IntentSender] via
+     *   `ActivityResultLauncher<IntentSenderRequest>` and re-invokes auth on result.
      * - [AuthResult.Failed] for transient errors (network, GMS unavailable) or revoked consent.
+     *
+     * Both interactive and silent callers (SettingsFragment for the toggle-on flow,
+     * DriveBackupRepository for backup/read) hit the same singleton instance.
+     * `silentToken()` is a thin wrapper that collapses NeedsResolution into Failed
+     * for the Worker path that has no Activity to run resolution from.
      */
     suspend fun authorize(): AuthResult
 
     /**
-     * Like [authorize] but never returns NeedsResolution. Worker code uses this:
-     * if consent is required the result is Failed and the worker returns Result.failure().
+     * Like [authorize] but never returns NeedsResolution. Used by DriveBackupRepository
+     * when called from the Worker: if consent is required, returns Failed and the
+     * worker returns Result.failure().
      */
     suspend fun silentToken(): AuthResult
 
@@ -204,24 +210,27 @@ interface DriveAuthManager {
 }
 ```
 
-**Implementation** (`AndroidDriveAuthManager`, `@ActivityScoped`):
+**Implementation** (`AndroidDriveAuthManager`, `@Singleton`, `@ApplicationContext`):
 
 ```kotlin
-@ActivityScoped
+@Singleton
 class AndroidDriveAuthManager @Inject constructor(
-    @ActivityContext private val context: Context
+    @ApplicationContext context: Context
 ) : DriveAuthManager {
 
     private val client = Identity.getAuthorizationClient(context)
 
-    override suspend fun authorize(): AuthResult = await { interactive = true }
-    override suspend fun silentToken(): AuthResult = await { interactive = false }
+    override suspend fun authorize(): AuthResult = awaitAuthorize()
+    override suspend fun silentToken(): AuthResult = when (val r = awaitAuthorize()) {
+        is AuthResult.NeedsResolution -> AuthResult.Failed("consent required")
+        else -> r
+    }
 
-    private suspend fun await(block: AwaitOpts.() -> Unit): AuthResult { /* … */ }
+    private suspend fun awaitAuthorize(): AuthResult = /* suspendCancellableCoroutine wrapping client.authorize(...) */
 }
 ```
 
-The Worker variant uses an `@Provides` that constructs a singleton-scoped `AndroidDriveAuthManager` with `@ApplicationContext` — Authorization API works with either context for silent calls.
+The Authorization API client is constructable from `@ApplicationContext`; the Activity is only needed at the *launch site* of the returned `IntentSender`, which is `SettingsFragment`'s `ActivityResultLauncher<IntentSenderRequest>` — not the auth manager's responsibility.
 
 ### 4.2 `DriveRemoteSource` (domain interface)
 
@@ -260,7 +269,7 @@ The token is passed per-call rather than baked into the singleton because tokens
 ```kotlin
 @Singleton
 class DriveBackupRepository @Inject constructor(
-    private val auth: DriveAuthManager,           // singleton-scoped variant
+    private val auth: DriveAuthManager,
     private val remote: DriveRemoteSource,
     private val serializer: BackupSerializer,
     private val carReader: CarReader,
@@ -268,9 +277,8 @@ class DriveBackupRepository @Inject constructor(
     private val locationReader: LocationReader,
 ) : BackupRepository {
 
-    override suspend fun backupCurrentData() {
-        val token = (auth.silentToken() as? AuthResult.Success)?.accessToken
-            ?: throw DriveAuthRequiredException()
+    override suspend fun backupCurrentData() = translatingAuthErrors {
+        val token = requireToken()
         val cars = carReader.observeAll().first()
         val events = cars.flatMap { chargeEventQueries.getAllForCarSorted(it.id) }
         val locations = locationReader.observeAll().first()
@@ -281,18 +289,34 @@ class DriveBackupRepository @Inject constructor(
         else remote.updateBackup(token, existing, bytes)
     }
 
-    override suspend fun readRemoteBackup(): String? {
-        val token = (auth.silentToken() as? AuthResult.Success)?.accessToken
+    override suspend fun readRemoteBackup(): String? = translatingAuthErrors {
+        val token = requireToken()
+        val fileId = remote.findBackupFileId(token) ?: return@translatingAuthErrors null
+        remote.downloadBackup(token, fileId).toString(Charsets.UTF_8)
+    }
+
+    private suspend fun requireToken(): String =
+        (auth.silentToken() as? DriveAuthManager.AuthResult.Success)?.accessToken
             ?: throw DriveAuthRequiredException()
-        val fileId = remote.findBackupFileId(token) ?: return null
-        return remote.downloadBackup(token, fileId).toString(Charsets.UTF_8)
+
+    /**
+     * Drive's HTTP 401/403 responses indicate auth-state problems (token revoked,
+     * scope removed, consent withdrawn) — they are NOT transient network errors.
+     * Translating them at this boundary keeps the Worker's error matrix two-branch:
+     * DriveAuthRequiredException → Result.failure(); other IOException → Result.retry().
+     */
+    private inline fun <T> translatingAuthErrors(block: () -> T): T = try {
+        block()
+    } catch (e: HttpResponseException) {
+        if (e.statusCode == 401 || e.statusCode == 403) throw DriveAuthRequiredException()
+        else throw e
     }
 }
 
 class DriveAuthRequiredException : IOException("Drive consent required or revoked")
 ```
 
-`DriveAuthRequiredException` is the sentinel the Worker maps to `Result.failure()`. All other `IOException`s map to `Result.retry()`.
+`HttpResponseException` is `com.google.api.client.http.HttpResponseException` — a subclass of `IOException` thrown by the Drive client for HTTP-level errors. Translation happens once, here, so the Worker never has to inspect HTTP status codes.
 
 ### 4.4 `WorkManagerBackupScheduler` (replaces `NoOpBackupScheduler`)
 
@@ -330,18 +354,21 @@ class WorkManagerBackupScheduler @Inject constructor(
                     .setRequiredNetworkType(NetworkType.CONNECTED)
                     .build()
             )
-            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+            .setInitialDelay(INITIAL_DELAY_SECONDS, TimeUnit.SECONDS)
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, BACKOFF_SECONDS, TimeUnit.SECONDS)
             .build()
         workManager.enqueueUniqueWork(UNIQUE_NAME, ExistingWorkPolicy.REPLACE, request)
     }
 
     companion object {
         const val UNIQUE_NAME = "drive_backup"
+        const val INITIAL_DELAY_SECONDS = 5L
+        const val BACKOFF_SECONDS = 30L
     }
 }
 ```
 
-`DESIGN.md §8`'s `setInitialDelay(5s)` from `AGENT_INSTRUCTIONS.md §7.2` is intentionally dropped — the network constraint already debounces in practice and the 5 s delay is awkward in tests; if this turns out to be too aggressive in the field, F can add it back.
+The 5-second `setInitialDelay` (matching `AGENT_INSTRUCTIONS.md §7.2`) gives `REPLACE` a debounce window: a burst of saves within 5 s collapses to a single upload because the previously enqueued work is replaced before it starts running. Note this only collapses *enqueue bursts* — if a worker is already executing when a new save arrives, REPLACE cancels the running worker and enqueues a fresh one, so there's still a chance of two uploads on long-running tasks. The CONNECTED network constraint does *not* contribute debouncing; on an online device, work begins as soon as the initial delay elapses.
 
 ### 4.5 `DriveBackupWorker`
 
@@ -429,6 +456,8 @@ object WorkerModule {
 
 ### 4.7 `SettingsFragment` + `SettingsViewModel` (Drive section only)
 
+The auth-side split: **the Fragment owns the `DriveAuthManager` interaction** (and the `ActivityResultLauncher`); the ViewModel is a pure state machine that consumes plain results. This avoids the Hilt scoping mismatch (a `@HiltViewModel` lives in `ViewModelComponent`, which is *not* a child of `ActivityComponent`, so Activity-scoped bindings can't be injected) and keeps `IntentSender` out of the ViewModel layer entirely.
+
 `SettingsUiState`:
 
 ```kotlin
@@ -436,33 +465,54 @@ data class SettingsUiState(
     val driveEnabled: Boolean = false,
     val lastBackupAt: Long? = null,
     val isAuthInFlight: Boolean = false,
+    val pendingRestoreLabel: String? = null   // non-null while restore prompt is on screen
 )
 
 sealed class SettingsEvent {
-    data class LaunchConsent(val intentSender: IntentSender) : SettingsEvent()
     data class ShowRestorePrompt(val backupDateLabel: String) : SettingsEvent()
     object RestoreSucceeded : SettingsEvent()
     data class ShowError(@StringRes val msgRes: Int) : SettingsEvent()
 }
 ```
 
-`SettingsViewModel` orchestrates:
+`SettingsEvent.LaunchConsent` is **deliberately absent** — the Fragment receives `IntentSender` directly from `auth.authorize()` without round-tripping through the ViewModel.
 
-1. `onToggleDrive(checked)`:
-   - If `checked == false`: `settingsWriter.setDriveEnabled(false)`; `WorkManager.cancelUniqueWork("drive_backup")`. Done.
-   - If `checked == true`:
-     - `auth.authorize()` →
-       - `Success(token)` → `setDriveEnabled(true)`; call `readRemoteBackup()` (`null` → `enqueueBackup()`; non-null → emit `ShowRestorePrompt`)
-       - `NeedsResolution(intentSender)` → emit `LaunchConsent(intentSender)`; `Fragment.ActivityResultLauncher` launches; on result success, the fragment calls `viewModel.onConsentResult(success = true)`, which restarts the toggle-on flow
-       - `Failed(reason)` → emit `ShowError`
-2. `onConfirmRestore()`: invoke `RestoreBackupUseCase`. On `Success` emit `RestoreSucceeded`; on `VersionMismatch` emit `ShowError(R.string.backup_version_mismatch)`.
-3. `onSkipRestore()`: just `enqueueBackup()` (initial backup of local state).
+**Critical invariant: `driveEnabled = true` is set ONLY after the user has finalized Replace or Skip.** Setting it earlier (e.g. immediately after auth success when a remote snapshot exists) creates a race where any local mutation while the restore prompt is on screen could enqueue an upload that overwrites the remote snapshot the user is still deciding to restore from.
 
-Fragment renders:
-- A `MaterialSwitchPreference`-equivalent row (or plain `MaterialSwitch` inside a `LinearLayout`) bound to `uiState.driveEnabled`.
-- Below it: "Last backup: <relative time>" via `DateFormat.formatRelative(uiState.lastBackupAt)`. When null, shows "Never".
-- The remaining settings rows (theme, units, currency, reset, CSV, manage locations) are rendered as inert disabled rows with text "Coming in next update" — F replaces them.
-- `repeatOnLifecycle(STARTED)` collector on `events`, dispatching to `MaterialAlertDialogBuilder` (restore prompt) or `IntentSenderRequest.Builder` (consent) or `Snackbar` (error).
+`SettingsViewModel` API:
+
+1. `onToggleDriveOff()`: `settingsWriter.setDriveEnabled(false)`; `workManager.cancelUniqueWork("drive_backup")`. Done.
+2. `onDriveAuthGranted()` — called by the Fragment after `DriveAuthManager` returned Success (silent or post-consent):
+   - `uiState.value = uiState.value.copy(isAuthInFlight = true)`.
+   - Call `backupRepository.readRemoteBackup()`.
+     - **`null`** (no remote snapshot): set `driveEnabled = true`, `enqueueBackup()`, clear isAuthInFlight.
+     - **non-null**: parse `exportedAt` into a label; set `pendingRestoreLabel = label`; emit `ShowRestorePrompt(label)`. **Do NOT set `driveEnabled = true` yet.** Local mutations during this window stay silent because `driveEnabled` is still false.
+3. `onDriveAuthFailed(@StringRes msgRes: Int)` — Fragment translates `Failed` / consent-cancelled into a string resource and calls this. Emits `ShowError`; clears isAuthInFlight.
+4. `onConfirmRestore()` — only valid while `pendingRestoreLabel != null`. Invokes `RestoreBackupUseCase` (which sets `driveEnabled = true` itself on Success). On `Success` emit `RestoreSucceeded`; on `VersionMismatch` emit `ShowError`. Clears `pendingRestoreLabel`.
+5. `onSkipRestore()` — only valid while `pendingRestoreLabel != null`. *Now* set `driveEnabled = true` and `enqueueBackup()` (uploads the local snapshot, intentionally overwriting remote per user's explicit choice). Clears `pendingRestoreLabel`.
+6. `onRestorePromptDismissed()` — back-pressed without choosing. Treat as Skip-equivalent? **No** — leave `driveEnabled = false` and clear `pendingRestoreLabel`. The user can re-toggle to retry. This prevents the "user dismissed the dialog by accident → unintended overwrite" footgun.
+
+`SettingsFragment` responsibilities:
+
+- Field-injects `DriveAuthManager` directly (`@Inject lateinit var auth: DriveAuthManager`). The auth manager is `@Singleton`; field injection on a `@AndroidEntryPoint` Fragment is supported.
+- Owns `ActivityResultLauncher<IntentSenderRequest>`.
+- On user toggle ON:
+  ```
+  viewLifecycleOwner.lifecycleScope.launch {
+      when (val result = auth.authorize()) {
+          is AuthResult.Success         -> viewModel.onDriveAuthGranted()
+          is AuthResult.NeedsResolution -> consentLauncher.launch(IntentSenderRequest.Builder(result.intentSender).build())
+          is AuthResult.Failed          -> viewModel.onDriveAuthFailed(R.string.drive_auth_failed)
+      }
+  }
+  ```
+- On `consentLauncher` callback: if `RESULT_OK`, re-run `auth.authorize()` (now silent Success); if anything else, call `viewModel.onDriveAuthFailed(R.string.drive_consent_cancelled)`.
+- On user toggle OFF: `viewModel.onToggleDriveOff()`.
+- Renders:
+  - `MaterialSwitch` bound to `uiState.driveEnabled`.
+  - "Last backup: <date | Never>" via `DateFormatter`.
+  - The remaining settings rows (theme, units, currency, reset, CSV, manage locations) as inert disabled rows.
+  - `repeatOnLifecycle(STARTED)` collector on `events`: `ShowRestorePrompt` → `MaterialAlertDialogBuilder` (with `setCancelable(true)` and `setOnDismissListener { viewModel.onRestorePromptDismissed() }`); `RestoreSucceeded` → `Snackbar`; `ShowError` → `Snackbar`.
 
 ### 4.8 `SettingsRepository` extensions
 
@@ -489,22 +539,16 @@ val LAST_BACKUP_AT = longPreferencesKey("lastBackupAt")
 - `bindBackupScheduler(impl: WorkManagerBackupScheduler): BackupScheduler` — replaces `NoOpBackupScheduler` binding.
 - `bindBackupRepository(impl: DriveBackupRepository): BackupRepository` — replaces `NoOpBackupRepository` binding.
 
-In a separate **`DataModule`** (or new `BackupModule`):
+In a new **`BackupModule`** (`@InstallIn(SingletonComponent::class)`, `abstract class`):
 
-- `@Binds bindDriveRemoteSource(impl: GoogleDriveRemoteSource): DriveRemoteSource`
-- `@Binds bindDriveAuthManager(impl: AndroidDriveAuthManager): DriveAuthManager` — note: requires an `@ActivityScoped` module installed in `ActivityComponent` (see §4.10) AND a singleton-scoped variant for the Worker.
+- `@Binds @Singleton abstract fun bindDriveRemoteSource(impl: GoogleDriveRemoteSource): DriveRemoteSource`
+- `@Binds @Singleton abstract fun bindDriveAuthManager(impl: AndroidDriveAuthManager): DriveAuthManager`
 
-### 4.10 The two `DriveAuthManager` instances
+Single binding, single component scope. The Authorization API client constructed with `@ApplicationContext` works for all callers; the Activity-bound part of the auth flow (launching the consent `IntentSender`) lives in `SettingsFragment` via `ActivityResultLauncher`, not in any Hilt-bound class.
 
-The Activity needs an Activity-scoped `DriveAuthManager` (so consent intents can resolve to the right Activity). The Worker needs a singleton-scoped one (no Activity context). Solution:
+### 4.10 (removed)
 
-- `data/backup/AndroidDriveAuthManager.kt` is the single class; it accepts a `Context` (no `@ActivityContext` qualifier).
-- Two Hilt modules:
-  - `ActivityBackupModule` (`@InstallIn(ActivityComponent::class)`): provides `DriveAuthManager` from `@ActivityContext Context`. Used by `SettingsViewModel`.
-  - `SingletonBackupModule` (`@InstallIn(SingletonComponent::class)`): provides `DriveAuthManager` from `@ApplicationContext Context`. Used by `DriveBackupRepository` (which is `@Singleton`).
-- Both produce `AuthResult` correctly; only the Activity-scoped one will ever return `NeedsResolution` because the user only triggers interactive consent from Settings.
-
-This avoids the "Activity-scoped binding leaks into Worker" trap.
+The earlier draft of this spec proposed two `DriveAuthManager` provider modules — one in `ActivityComponent`, one in `SingletonComponent` — to give `SettingsViewModel` an activity-scoped instance. That approach is **invalid**: a `@HiltViewModel` lives in `ViewModelComponent`, which is *not* a child of `ActivityComponent`, so an `ActivityComponent` binding cannot be injected into the ViewModel. The corrected design (above) keeps a single `@Singleton` binding and moves interactive auth into `SettingsFragment`, which can both inject the singleton instance and own the `ActivityResultLauncher` needed to launch consent.
 
 ---
 
@@ -515,17 +559,17 @@ This avoids the "Activity-scoped binding leaks into Worker" trap.
 ```
 User flips switch ON
   ↓
-SettingsFragment.onCheckedChange → viewModel.onToggleDrive(true)
-  ↓
-ViewModel: auth.authorize()
+SettingsFragment: launches coroutine → auth.authorize()
   ↓
 AuthorizationResult silent success → AuthResult.Success(token)
   ↓
-ViewModel: settingsWriter.setDriveEnabled(true)
+Fragment: viewModel.onDriveAuthGranted()
+  ↓
 ViewModel: backupRepository.readRemoteBackup() → null
+ViewModel: settingsWriter.setDriveEnabled(true)   ← only NOW, after no-remote confirmed
 ViewModel: backupScheduler.enqueueBackup()
   ↓
-WorkManagerBackupScheduler reads driveEnabled=true → enqueues drive_backup
+WorkManagerBackupScheduler reads driveEnabled=true → enqueues drive_backup (5 s initial delay)
   ↓
 DriveBackupWorker.doWork
   → backupRepository.backupCurrentData() → uploads via Drive REST
@@ -540,42 +584,56 @@ SettingsFragment recomposes: "Drive backup ON · Last backup: just now"
 ```
 User flips switch ON
   ↓
-ViewModel: auth.authorize() → Success(token)
+SettingsFragment: auth.authorize() → Success(token)
   ↓
-ViewModel: setDriveEnabled(true); readRemoteBackup() → JSON
+Fragment: viewModel.onDriveAuthGranted()
   ↓
-ViewModel: parse exportedAt; emit ShowRestorePrompt("April 25, 2026 at 10:00 AM")
+ViewModel: backupRepository.readRemoteBackup() → JSON  (driveEnabled STILL false; auto-backup gated)
+ViewModel: parse exportedAt; pendingRestoreLabel = "April 25, 2026 at 10:00 AM"
+ViewModel: emit ShowRestorePrompt(label)
   ↓
 Fragment: MaterialAlertDialog "Found backup from April 25, 2026 at 10:00 AM. This will replace any data already on this device. Restore?"
+
+  ── Branch A: user taps Restore ──
   ↓
-User taps Restore → viewModel.onConfirmRestore()
-  ↓
-ViewModel: RestoreBackupUseCase()
-  → readRemoteBackup() (cached on parsed result? No — re-fetches; safe and small)
+viewModel.onConfirmRestore() → RestoreBackupUseCase()
   → snapshotWriter.write(currentLocalJson) → cacheDir/last_overwritten_backup.json
   → transactionRunner.replaceAll(newCars, newEvents, newLocations)
-  → setDriveEnabled(true)  ← already true; no-op
+  → setDriveEnabled(true)   ← driveEnabled set HERE, by RestoreBackupUseCase, after replace committed
   → backupScheduler.enqueueBackup()
   ↓
-ViewModel: emit RestoreSucceeded → Snackbar "Restored 1 car · 14 events · 3 locations"
+ViewModel: emit RestoreSucceeded → Snackbar
+
+  ── Branch B: user taps Skip ──
+  ↓
+viewModel.onSkipRestore()
+  → settingsWriter.setDriveEnabled(true)   ← driveEnabled set HERE, after explicit skip
+  → backupScheduler.enqueueBackup()        (uploads local snapshot, deliberately overwriting remote)
+
+  ── Branch C: user dismisses dialog (back press) ──
+  ↓
+viewModel.onRestorePromptDismissed()
+  → driveEnabled stays false; pendingRestoreLabel cleared; toggle resets to OFF on next state collect
 ```
+
+The critical property: until the user finalizes Branch A, B, or C, `driveEnabled` remains `false`. The `WorkManagerBackupScheduler` therefore short-circuits any concurrent local mutation, and the remote snapshot stays intact while the prompt is on screen. This addresses the overwrite-race scenario flagged in `TEST_PLAN.md §5`.
 
 ### 5.3 Toggle Drive ON, consent required
 
 ```
 User flips switch ON
   ↓
-ViewModel: auth.authorize()
+SettingsFragment: auth.authorize()
   ↓
-AuthorizationResult.hasResolution() = true → AuthResult.NeedsResolution(intentSender)
+AuthorizationResult has pendingIntent → AuthResult.NeedsResolution(intentSender)
   ↓
-ViewModel: emit LaunchConsent(intentSender); uiState.isAuthInFlight = true
-  ↓
-Fragment: ActivityResultLauncher.launch(IntentSenderRequest.Builder(intentSender).build())
+Fragment: consentLauncher.launch(IntentSenderRequest.Builder(intentSender).build())
   ↓
 System consent sheet — user grants
   ↓
-ActivityResult callback → viewModel.onConsentResult(granted = true)
+ActivityResult callback (RESULT_OK) → Fragment re-runs auth.authorize() → Success(token)
+  ↓
+Fragment: viewModel.onDriveAuthGranted()
   ↓
 ViewModel re-runs the auth.authorize() → now Success silently → continues §5.1 or §5.2 flow
 ```
@@ -599,21 +657,21 @@ DriveBackupWorker.doWork (after network constraint met)
   → Result.success()
 ```
 
-If 5 charges save in quick succession, REPLACE collapses them: only one upload runs (with all 5 events present).
+If 5 charges save within the 5 s initial-delay window, `REPLACE` collapses the queue to a single upload that captures all 5 events at run time. If saves arrive *after* the worker has started executing, `REPLACE` cancels the in-flight worker and enqueues a fresh one — so a long-running upload concurrent with a save burst can produce two uploads. This is acceptable: at worst we double-write the same App Data file with the second write being authoritative.
 
 ### 5.5 Toggle Drive OFF
 
 ```
 User flips switch OFF
   ↓
-viewModel.onToggleDrive(false)
+viewModel.onToggleDriveOff()
   → settingsWriter.setDriveEnabled(false)
   → workManager.cancelUniqueWork("drive_backup")
   ↓
 Future use-case calls to enqueueBackup() see driveEnabled=false → no-op
 ```
 
-The remote backup file is intentionally NOT deleted on toggle-off. The user can re-enable Drive later and choose to restore.
+The remote backup file is intentionally NOT deleted on toggle-off. The user can re-enable Drive later and choose Replace or Skip against the existing remote snapshot.
 
 ---
 
@@ -621,15 +679,19 @@ The remote backup file is intentionally NOT deleted on toggle-off. The user can 
 
 ### 6.1 Worker error matrix
 
-| Trigger | `AuthResult.silentToken()` | `DriveRemoteSource` outcome | Worker `Result` |
+`DriveBackupRepository` translates Drive HTTP 401/403 to `DriveAuthRequiredException` at the boundary (see §4.3 `translatingAuthErrors`), so the Worker only branches on two exception types:
+
+| Trigger | At repository boundary | Reaches worker as | Worker `Result` |
 |---|---|---|---|
-| Happy path | `Success(token)` | success | `success`, `setLastBackupAt(now)` |
-| Consent revoked / never granted | `Failed` or `NeedsResolution` (latter is impossible from singleton-scoped manager but treat the same) | n/a | `failure` (no retry — needs UI) |
-| GMS unavailable | `Failed("GMS unavailable")` | n/a | `failure` |
-| Network down (HTTP transport throws) | `Success(token)` | `IOException` | `retry` while `runAttemptCount < 5`; else `failure` |
-| 401/403 from Drive | `Success(token)` | `HttpResponseException(401|403)` | `failure` (caught as IOException; reauth needed) |
-| 5xx from Drive | `Success(token)` | `IOException` | `retry` |
-| Backup version mismatch on read | n/a (write-only path) | n/a | n/a |
+| Happy path | `Success(token)` + 2xx | (no exception) | `success`, `setLastBackupAt(now)` |
+| Consent revoked / never granted | `silentToken()` returns Failed | `DriveAuthRequiredException` | `failure` (no retry — user must re-toggle in Settings) |
+| GMS unavailable on device | `silentToken()` returns Failed | `DriveAuthRequiredException` | `failure` |
+| Drive 401 (token revoked) | translated by repository | `DriveAuthRequiredException` | `failure` |
+| Drive 403 (scope removed / quota) | translated by repository | `DriveAuthRequiredException` | `failure` |
+| Network down (transport `IOException`) | propagated as-is | `IOException` (not `HttpResponseException`) | `retry` while `runAttemptCount < 5`; else `failure` |
+| Drive 5xx | `HttpResponseException(5xx)` propagated as-is (subclass of IOException) | `IOException` | `retry` while `runAttemptCount < 5`; else `failure` |
+
+The single rule the worker enforces: `DriveAuthRequiredException` → `failure`, every other `IOException` → `retry` (capped at 5 attempts).
 
 ### 6.2 Settings UI error messages
 
@@ -747,8 +809,8 @@ returns 7 production sites (all already in suspend functions) and ~6 test sites 
 
 ### 8.1 Known risks
 
-- **Silent token failure on legitimate users.** If Authorization API changes its behavior (Google has rev'd this surface twice in five years), `silentToken()` could spuriously return `NeedsResolution` even after consent. Mitigation: `Worker` returns `failure` in that case; user re-toggles Drive in Settings. No data loss.
-- **Drive REST quota.** App Data folder operations are charged against the per-user-per-app quota. Normal usage (one upload per change-burst, debounced via REPLACE) should stay well under limits. Worst case: a power user editing 100 charges in a session triggers 100 enqueues that collapse to ~1–10 actual uploads. We do not implement explicit rate limiting in E.
+- **Silent token failure on legitimate users.** If Authorization API changes its behavior (Google has rev'd this surface twice in five years), `silentToken()` could spuriously return `Failed` even after consent. Mitigation: Worker returns `failure` in that case; user re-toggles Drive in Settings. No data loss.
+- **Drive REST quota.** App Data folder operations are charged against the per-user-per-app quota. Normal usage (one upload per change-burst, debounced via the 5 s initial delay + `REPLACE`) should stay well under limits. Worst case: a power user editing 100 charges in a single session can produce up to ~20 uploads if the bursts span longer than the worker's run time. We do not implement explicit rate limiting in E.
 - **OAuth client SHA-1 mismatch.** Already covered by `GOOGLE_CLOUD_SETUP.md`. The first manual test on a new keystore fails fast with "Sign-in failed".
 - **Manifest auto-init removal break.** Removing the `WorkManagerInitializer` meta-data via `tools:node="remove"` is the canonical approach but requires `xmlns:tools` in the manifest root. Add it if missing. If other components register WorkManager workers in the future, all must use the Hilt factory or be added to the `Configuration`.
 
@@ -772,6 +834,13 @@ None at draft time. The five Q&A in brainstorming locked architecture. If new qu
 ## 10. Spec self-review checklist
 
 - ✅ Placeholder scan — no TBD/TODO; every component has a code-level interface or method list.
-- ✅ Internal consistency — `BackupScheduler` suspend conversion is reflected in §1.3, §3, §4.4, §4.5, §7.4.
+- ✅ Internal consistency — `BackupScheduler` suspend conversion reflected in §1.3, §3, §4.4, §4.5, §7.4. Auth seam is a single `@Singleton` binding consistent across §1.3, §3, §4.1, §4.9, §4.10. Worker error model is consistent between §4.3 (translation) and §6.1 (matrix).
 - ✅ Scope check — single sub-project, single feature branch. Out-of-scope table is precise.
-- ✅ Ambiguity check — the two `DriveAuthManager` instances (Activity-scoped vs Singleton-scoped) are explicitly addressed in §4.10. The `setInitialDelay(5s)` from `AGENT_INSTRUCTIONS.md §7.2` is explicitly dropped in §4.4.
+- ✅ Ambiguity check — `setInitialDelay(5 s)` is included in §4.4 with the rationale that it provides debounce for enqueue bursts (not running-worker overlap). `driveEnabled` is set only after Replace or Skip is finalized, never speculatively, per §4.7 and §5.2.
+
+### 10.1 Review-cycle changes (2026-04-28 spec rev 2)
+
+- DI: dropped the proposed `ActivityBackupModule` + `SingletonBackupModule` split. A `@HiltViewModel` lives in `ViewModelComponent`, which is *not* a child of `ActivityComponent`, so the original two-module design was uninjectable. Replaced with a single `@Singleton` `BackupModule` in `SingletonComponent` and moved the interactive auth call to `SettingsFragment` (which can field-inject the singleton manager and own the `ActivityResultLauncher`).
+- Restore gate: the toggle-on flow no longer sets `driveEnabled = true` immediately after auth Success when a remote snapshot exists. `driveEnabled` is now set strictly inside `RestoreBackupUseCase` (Confirm branch) or `onSkipRestore` (Skip branch). This eliminates the overwrite race where local mutations during the prompt could enqueue an upload and clobber the remote snapshot the user is still deciding to restore from.
+- Debounce: restored `setInitialDelay(5 s)` to match `AGENT_INSTRUCTIONS.md §7.2`. The earlier "network constraint debounces" rationale was incorrect — `NetworkType.CONNECTED` does not debounce on an already-online device.
+- Worker error policy: `DriveBackupRepository` now translates Drive HTTP 401/403 to `DriveAuthRequiredException` at the boundary, so the Worker's two-branch error rule (auth-required → fail; everything else `IOException` → retry) is consistent across §4.3, §4.5, and §6.1.
