@@ -254,7 +254,7 @@ class ResetAllDataUseCase @Inject constructor(
     suspend operator fun invoke() {
         // Step 1 — flip the gate FIRST, atomically with clearing the active car id
         // AND raising the durable resetInProgress flag. All three keys land in a
-        // single dataStore.edit { ... } call. If we crash between here and Step 4,
+        // single dataStore.edit { ... } call. If we crash between here and Step 3,
         // the next launch's MainActivity auto-recovery (§9.2) finishes the reset
         // before any UI mounts. The user never reaches Dashboard or the wizard with
         // resetInProgress=true.
@@ -263,24 +263,41 @@ class ResetAllDataUseCase @Inject constructor(
         // Step 2 — destructive deletes inside a single Room transaction so the three
         // tables clear atomically. Crashing inside the transaction rolls all three
         // deletes back; the tables stay populated. resetInProgress is still true,
-        // so the next launch's auto-recovery (§9.2) re-runs this use case to
-        // completion before showing UI.
+        // so the next launch's auto-recovery re-runs this use case to completion
+        // before showing UI.
         resetRunner.clearAllTables()
 
-        // Step 3 — backup. Reflects the post-reset (empty) snapshot. If Drive is
-        // off, this is a no-op per BackupScheduler's gate contract.
-        backupScheduler.enqueueBackup()
-
-        // Step 4 — clear the durable flag last so any earlier crash leaves the flag
-        // observable and the banner visible. After this write, the reset is fully
-        // committed. Re-runs of this use case on an already-clean state are no-ops
-        // for Steps 2-4 and just re-confirm the flag is false.
+        // Step 3 — clear the durable flag. AFTER this write, the reset is fully
+        // committed: tables are empty, flag is false, the wizard gate (setupComplete)
+        // is also false. Re-runs of this use case on an already-clean state are
+        // no-ops for Step 2 and just re-confirm the flag is false.
+        //
+        // Step 3 happens BEFORE Step 4 (backup enqueue) on purpose: the local-state
+        // half of the reset is the durable contract; the Drive enqueue is a
+        // best-effort downstream signal. Putting Step 3 before Step 4 means a
+        // failure in scheduler/DataStore/WorkManager during enqueue cannot leave the
+        // flag stuck true and re-open the data-loss window §9.2 is supposed to close.
         settingsWriter.setResetInProgress(false)
+
+        // Step 4 — best-effort post-reset Drive enqueue. Wrapped in runCatching so
+        // any failure (DataStore read of driveEnabled, WorkManager error,
+        // OS-level resource exhaustion) is logged and swallowed. The reset is
+        // already committed. The next snapshot-triggering action (a new charge
+        // event, car add, etc.) will enqueue a fresh backup that reflects the
+        // post-reset state, so the cloud copy converges to truth on its own.
+        runCatching { backupScheduler.enqueueBackup() }
+            .onFailure {
+                android.util.Log.w(
+                    "ResetAllDataUseCase",
+                    "Post-reset backup enqueue failed; next snapshot change will retry",
+                    it
+                )
+            }
     }
 }
 ```
 
-The use case is **idempotent under re-entry**: if Step 2 or 3 was interrupted last time, calling `invoke()` again re-runs the (now empty-table) deletes safely, re-enqueues the backup, and clears the flag. This is what makes startup auto-recovery (§9.2) a safe blanket retry on every launch where the flag is set.
+The use case is **idempotent under re-entry**: if Step 2 or Step 3 was interrupted last time, calling `invoke()` again re-runs Step 1 (writes are identical so the DataStore edit is effectively a no-op besides the flag staying true), re-runs Step 2 (deletes from empty tables = no-op), commits Step 3 (clears the flag), and best-effort runs Step 4. This is what makes startup auto-recovery (§9.2) a safe blanket retry on every launch where the flag is set.
 
 The use case no longer touches `AppDatabase` directly. Instead it depends on the new domain interface `DataResetTransactionRunner` (see §6.5) — same architectural pattern as `RestoreTransactionRunner` from E (`domain/backup/RestoreTransactionRunner.kt:12` ⇄ `data/backup/RoomRestoreTransactionRunner.kt:13`). The 4-layer boundary stays intact: domain code never sees Room.
 
@@ -288,20 +305,24 @@ The use case no longer touches `AppDatabase` directly. Instead it depends on the
 
 **Failure semantics (explicit):**
 
-| Process death point | Observable state on next launch | Recovery |
+The flow is **markFlag → clearTables → clearFlag → bestEffortEnqueue**. The reset is "committed" once Step 3 lands the cleared flag; Step 4 is a downstream signal that cannot stick the flag.
+
+| Process death / failure point | Observable state on next launch | Recovery |
 |---|---|---|
 | Before Step 1 commits | No change. setupComplete=true, all data intact, resetInProgress=false. | None needed. |
-| After Step 1, before Step 2 commits | resetInProgress=true. **MainActivity startup auto-recovery (§9.2) runs the use case to completion before mounting any UI.** Splash stays on screen during the Room transaction (sub-second). | Automatic; user only sees a slightly longer splash. After completion: tables empty, setupComplete=false, flag cleared, wizard runs, Dashboard shows empty state. |
-| Inside the Room transaction | Room rolls all three deletes back. resetInProgress=true. Same as row above. | Same — auto-recovery re-runs the (now empty) deletes idempotently. |
-| After Step 2 commits, before Step 3 | Tables empty, resetInProgress=true, no Drive overwrite. | Auto-recovery re-runs: Step 2 no-ops on empty tables, Step 3 enqueues empty backup, Step 4 clears flag. |
-| After Step 3 commits, before Step 4 | Tables empty, resetInProgress=true, Drive overwritten. | Auto-recovery re-runs: clears flag. |
-| After Step 4 commits | Clean reset. resetInProgress=false. | None needed. |
+| After Step 1, before Step 2 commits | resetInProgress=true, tables still populated. **MainActivity startup auto-recovery (§9.2) runs the use case to completion before mounting any UI.** Splash stays on screen during the Room transaction (sub-second). | Automatic; user only sees a slightly longer splash. After completion: tables empty, flag cleared, wizard runs, Dashboard shows empty state. |
+| Inside the Room transaction (Step 2 throws) | Room rolls all three deletes back. resetInProgress=true. Same as row above. | Same — auto-recovery re-runs the deletes idempotently. |
+| After Step 2 commits, before Step 3 commits | Tables empty, resetInProgress=true. | Auto-recovery re-runs: Step 2 no-ops on empty tables, Step 3 clears flag, Step 4 best-effort enqueue. |
+| After Step 3 commits (use case returns even if Step 4 throws) | Tables empty, resetInProgress=false. Drive may still hold the pre-reset snapshot. | None for the reset itself — it is fully committed. The next snapshot-triggering action (charge event create/edit/delete, car add/rename/delete, custom-location committed delete, restore success) re-enqueues a fresh empty backup. |
 
-The durable `resetInProgress` flag combined with §9.2's startup auto-recovery eliminates the silent false-success path AND the data-loss window: the user can never reach Dashboard or even the wizard with the flag still set, so they can't create new data that would later be wiped.
+The durable `resetInProgress` flag combined with §9.2's startup auto-recovery eliminates the silent false-success path AND the data-loss window. Because Step 4 (the only step touching DataStore-of-driveEnabled and WorkManager) runs **after** Step 3 commits the flag clear and is wrapped in `runCatching`, no failure mode of the backup scheduler can leave `resetInProgress=true` after `invoke()` returns normally.
 
-**Auto-recovery failure (very rare):** if the use case itself throws inside `MainActivity.onCreate`'s `runCatching` block (e.g., underlying Room corruption), MainActivity logs and proceeds with normal startup. The flag stays true; the next launch retries. There is no fallback banner because a DB corruption that defeats auto-recovery won't be fixed by another tap — at that point the user needs to clear app data manually. F1 considers this an acceptable terminal failure mode.
+**Terminal failure modes:**
 
-The post-Step-3 `enqueueBackup()` causes WorkManager to upload an effectively-empty snapshot (no cars ⇒ no events) to Drive. **This overwrites the user's only cloud copy of their data.** The Reset-all confirm dialog (§5.9) MUST surface this when Drive is enabled — see the dialog-text fix below.
+1. **Step 2 throws repeatedly across launches** (e.g. underlying Room corruption that defeats every retry of the transaction). `MainActivity`'s `runCatching` swallows, logs, and proceeds. The flag stays true; tables stay populated; on next launch we try again. Rare; not fixable by another tap; if persistent the user must clear app data manually. F1 considers this acceptable.
+2. **Step 4 throws once** (e.g. WorkManager misbehavior). The use case logs and swallows; flag is already cleared in Step 3; Drive is stale until the next change-driven enqueue catches up. The user is on a fully-reset local state and is not blocked.
+
+Step 4's `enqueueBackup()` causes WorkManager to upload an effectively-empty snapshot (no cars ⇒ no events) to Drive. **This overwrites the user's only cloud copy of their data.** The Reset-all confirm dialog (§5.9) MUST surface this when Drive is enabled — see the dialog-text fix below. (When Step 4 fails or is skipped due to a thrown exception, the user-visible local reset is still complete because Step 3 cleared the flag — Drive simply stays stale until the next change-driven enqueue.)
 
 ### 6.4 What about Drive backup pre-reset?
 
@@ -590,7 +611,8 @@ isLoading.value = false
 |---|---|
 | Auto-recovery runs **before** the wizard gate is consulted | Eliminates the data-loss window: the user can't reach Dashboard or the wizard with `resetInProgress=true`, so they can't create cars/events that would later be wiped. |
 | Splash screen stays up via `isLoading=true` | The auto-recovery is a Room transaction (sub-second on any modern device); the user sees a slightly longer splash, never an inconsistent UI. |
-| `runCatching` swallows failures and logs | A Room exception during auto-recovery is rare and indicates a corrupted DB the app can't fix automatically anyway. We proceed with normal startup; the flag stays true; the next launch retries. We do **not** add a fallback banner because the only realistic failure mode (DB corruption) won't be fixed by another tap. |
+| Use case clears the flag (Step 3) BEFORE enqueueing the backup (Step 4) | Step 4 internally swallows its own failures, but if it threw, Step 3 has already committed `resetInProgress=false`, so the flag cannot stick true and re-open the data-loss window. The only way the flag stays true post-`invoke()` is a Steps 1-3 failure. |
+| `runCatching` in MainActivity swallows Step 1-3 failures and logs | The realistic Step 1-3 failure modes are Room corruption or DataStore IO failure — both indicate a state the app cannot fix automatically. We proceed with normal startup; the flag stays true; the next launch retries. No fallback banner because the issue won't be fixed by another tap. |
 | Use case is idempotent (§6.3) | Auto-recovery on already-clean state is a no-op except for clearing the flag. Safe to call on every launch where the flag is true. |
 
 **The `MainActivity` is the only place that depends on `ResetAllDataUseCase`** outside `SettingsViewModel`. No new use case wiring is needed in any other Fragment or service.
@@ -674,9 +696,10 @@ common_confirm                       Confirm
 - `invoke_setsActiveCarIdToMinusOne_andSetupCompleteFalse_andResetInProgressTrue_atStart` (post-Step-1 outcome via FakeSettingsWriter)
 - `invoke_setsResetInProgressFalse_atEnd`
 - `invoke_enqueuesBackup`
-- `invoke_marksResetInProgress_BEFORE_resetRunnerCall_BEFORE_enqueueBackup_BEFORE_clearFlag` (asserts the four-step ordering by recording call sequence on the fakes — the §6.3 failure-semantics guarantee)
+- `invoke_orders_markResetInProgress_then_clearTables_then_clearFlag_then_enqueueBackup` (asserts the four-step ordering by recording call sequence on the fakes — the §6.3 failure-semantics guarantee that Step 3 commits before Step 4 runs)
 - `invoke_idempotent_secondCallOnEmptyState_completesAndClearsFlag` (set up FakeDataResetTransactionRunner that's already been called once; second invoke succeeds, ends with resetInProgress=false)
-- `invoke_throwingFromResetRunner_doesNotClearFlag` (FakeDataResetTransactionRunner.clearAllTables throws; assert the use case re-throws and resetInProgress remains true — banner will surface on next launch)
+- `invoke_throwingFromResetRunner_doesNotClearFlag` (FakeDataResetTransactionRunner.clearAllTables throws; assert the use case re-throws AND resetInProgress remains true ⇒ next launch's MainActivity auto-recovery (§9.2) re-runs the use case)
+- `invoke_enqueueBackupThrowing_doesNotPropagate_flagIsAlreadyFalse` (FakeBackupScheduler.enqueueBackup throws an IOException; assert the use case returns NORMALLY (no rethrow), `resetInProgress=false`, tables empty — proves Step 4 cannot stick the flag)
 - `markGlobalResetInProgress_writesAllThreeKeysInSingleDataStoreEdit` (separate test on `SettingsRepository`; uses real `androidx.datastore.preferences.core.PreferenceDataStoreFactory` with a temp file; verifies atomicity)
 
 #### `ManageLocationsViewModelTest`:
@@ -715,7 +738,7 @@ These follow D's existing Espresso patterns (Hilt test runner, `IntentsTestRule`
 
 ### 11.3 Coverage targets
 
-- F1 raises the JVM test count from ~152 to ~187 (~35 new JVM tests: 15 in `SettingsViewModelTest`, 4 in `ResetActiveCarDataUseCaseTest`, 8 in `ResetAllDataUseCaseTest`, 8 in `ManageLocationsViewModelTest`).
+- F1 raises the JVM test count from ~152 to ~188 (~36 new JVM tests: 15 in `SettingsViewModelTest`, 4 in `ResetActiveCarDataUseCaseTest`, 9 in `ResetAllDataUseCaseTest`, 8 in `ManageLocationsViewModelTest`).
 - F1 adds 10 instrumented tests (4 in `SettingsFragmentTest` + 2 in `ManageLocationsFragmentTest` + 2 in `MainActivityResetRecoveryTest` + 2 in `RoomDataResetTransactionRunnerTest`); the instrumented suite still compiles via `:app:assembleDebugAndroidTest`. Running them needs an emulator (sandbox-incompatible).
 
 ## 12. Edge cases
@@ -778,7 +801,7 @@ These follow D's existing Espresso patterns (Hilt test runner, `IntentsTestRule`
 
 ## 14. Acceptance gates
 
-JVM tests: `:app:testDebugUnitTest` ⇒ all green, count ≈ 187.
+JVM tests: `:app:testDebugUnitTest` ⇒ all green, count ≈ 188.
 Instrumented compile: `:app:assembleDebugAndroidTest` ⇒ green.
 Manual smoke (on device): theme picker flips theme without restart; CSV row triggers the system share sheet; reset-all routes through wizard back to an empty Dashboard.
 
