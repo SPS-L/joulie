@@ -1,15 +1,112 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout
+<androidx.coordinatorlayout.widget.CoordinatorLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <TextView
-        android:id="@+id/settings_placeholder_text"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:text="@string/placeholder_settings"
-        android:textAppearance="?attr/textAppearanceTitleMedium"/>
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
 
-</FrameLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:id="@+id/header_drive"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_section_drive"
+                android:textAppearance="?attr/textAppearanceTitleSmall"
+                android:paddingBottom="8dp"/>
+
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/switch_drive"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="56dp"
+                android:text="@string/settings_drive_label"/>
+
+            <TextView
+                android:id="@+id/text_last_backup"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textAppearance="?attr/textAppearanceBodyMedium"
+                android:paddingTop="4dp"
+                android:paddingBottom="16dp"
+                tools:text="Last backup: April 27, 2026 at 9:30 AM"/>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="?attr/colorOutlineVariant"/>
+
+            <!-- F placeholders. Disabled until F lands. -->
+            <TextView
+                android:id="@+id/placeholder_theme"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:gravity="center_vertical"
+                android:enabled="false"
+                android:alpha="0.5"
+                android:paddingTop="16dp"
+                android:text="@string/pref_theme"/>
+
+            <TextView
+                android:id="@+id/placeholder_units"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:gravity="center_vertical"
+                android:enabled="false"
+                android:alpha="0.5"
+                android:text="@string/pref_distance_unit"/>
+
+            <TextView
+                android:id="@+id/placeholder_currency"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:gravity="center_vertical"
+                android:enabled="false"
+                android:alpha="0.5"
+                android:text="@string/pref_currency"/>
+
+            <TextView
+                android:id="@+id/placeholder_reset"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:gravity="center_vertical"
+                android:enabled="false"
+                android:alpha="0.5"
+                android:text="@string/pref_reset_data"/>
+
+            <TextView
+                android:id="@+id/placeholder_export"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:gravity="center_vertical"
+                android:enabled="false"
+                android:alpha="0.5"
+                android:text="@string/pref_export_csv"/>
+
+            <TextView
+                android:id="@+id/placeholder_manage_locations"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:gravity="center_vertical"
+                android:enabled="false"
+                android:alpha="0.5"
+                android:text="@string/pref_manage_locations"/>
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

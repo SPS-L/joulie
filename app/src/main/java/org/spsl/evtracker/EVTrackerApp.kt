@@ -2,6 +2,8 @@ package org.spsl.evtracker
 
 import android.app.Application
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.hilt.work.HiltWorkerFactory
+import androidx.work.Configuration
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
@@ -11,9 +13,16 @@ import kotlinx.coroutines.launch
 import org.spsl.evtracker.data.repository.SettingsRepository
 
 @HiltAndroidApp
-class EVTrackerApp : Application() {
+class EVTrackerApp : Application(), Configuration.Provider {
 
+    @Inject lateinit var workerFactory: HiltWorkerFactory
     @Inject lateinit var settingsRepository: SettingsRepository
+
+    override val workManagerConfiguration: Configuration
+        get() = Configuration.Builder()
+            .setWorkerFactory(workerFactory)
+            .setMinimumLoggingLevel(android.util.Log.INFO)
+            .build()
 
     override fun onCreate() {
         super.onCreate()

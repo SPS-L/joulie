@@ -6,8 +6,6 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import org.spsl.evtracker.data.backup.AndroidCsvFileSink
 import org.spsl.evtracker.data.backup.CacheDirRestoreSnapshotWriter
-import org.spsl.evtracker.data.backup.NoOpBackupRepository
-import org.spsl.evtracker.data.backup.NoOpBackupScheduler
 import org.spsl.evtracker.data.backup.RoomRestoreTransactionRunner
 import org.spsl.evtracker.data.repository.CarRepository
 import org.spsl.evtracker.data.repository.ChargeEventRepository
@@ -41,9 +39,9 @@ abstract class DomainModule {
     @Binds abstract fun bindSettingsReader(impl: SettingsRepository): SettingsReader
     @Binds abstract fun bindSettingsWriter(impl: SettingsRepository): SettingsWriter
 
-    // Backup interfaces — no-op until E swaps these.
-    @Binds abstract fun bindBackupScheduler(impl: NoOpBackupScheduler): BackupScheduler
-    @Binds abstract fun bindBackupRepository(impl: NoOpBackupRepository): BackupRepository
+    // Backup interfaces — bound to E's real implementations.
+    @Binds abstract fun bindBackupScheduler(impl: org.spsl.evtracker.data.backup.WorkManagerBackupScheduler): BackupScheduler
+    @Binds abstract fun bindBackupRepository(impl: org.spsl.evtracker.data.backup.DriveBackupRepository): BackupRepository
 
     // Restore-flow infrastructure.
     @Binds abstract fun bindRestoreTransactionRunner(impl: RoomRestoreTransactionRunner): RestoreTransactionRunner

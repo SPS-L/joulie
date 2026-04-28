@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Android app (`org.spsl.evtracker`) for logging EV charge events and analyzing efficiency/cost. Kotlin, MVVM with a domain/use-case layer plus narrow repositories, Gradle Kotlin DSL, and Hilt-based dependency injection. Min SDK 26, target/compile SDK 34, JDK 17. Room compiler runs via **KSP** (not kapt).
 
-> **Status:** Sub-projects A (foundation/DI/Room v3), B (repositories), C (domain services + use cases), and D (Core UI: Dashboard/ChargeEdit/Cars/History) are all merged. Wizard, Dashboard, ChargeEdit, Cars, and History are fully wired; Charts, Settings, and ManageLocations remain placeholder fragments until F. Sub-project E (real Drive auth + WorkManager-backed `BackupScheduler`/`BackupRepository`) lives behind no-op interfaces. JVM unit-test count: ~123. Instrumented suite compiles via `:app:assembleDebugAndroidTest` (running requires an emulator).
+> **Status:** Sub-projects A (foundation/DI/Room v3), B (repositories), C (domain services + use cases), D (Core UI: Dashboard/ChargeEdit/Cars/History), and E (Drive backup: real Authorization API + Drive REST + WorkManager scheduler + Settings UI Drive section) are all merged. Wizard, Dashboard, ChargeEdit, Cars, History, and the Drive-section Settings are fully wired; Charts, the rest of Settings (theme/units/currency/reset/CSV/manage locations), and ManageLocations remain placeholder fragments until F. JVM unit-test count: ~152. Instrumented suite compiles via `:app:assembleDebugAndroidTest` (running requires an emulator); Drive backup smoke per `GOOGLE_CLOUD_SETUP.md` requires a Google account allow-listed in the OAuth consent screen.
 
 Root docs:
 - `DESIGN.md` — canonical product + technical spec (v3). Source of truth when in conflict with anything else.
@@ -39,7 +39,7 @@ Domain:   Use cases  SaveChargeEvent · DeleteChargeEvent · ObserveDashboardSta
           Narrow IFs CarReader · CarWriter (D) · ChargeEventQueries · ChargeEventWriter · LocationReader · LocationWriter · SettingsReader · SettingsWriter
           Backup IFs BackupScheduler · BackupRepository · RestoreTransactionRunner · RestoreSnapshotWriter · CsvFileSink
 Repo:     CarRepository (CarReader + CarWriter) · ChargeEventRepository · LocationRepository · SettingsRepository · BackupRepository
-Data:     Room (CarDao, ChargeEventDao, CustomLocationDao) · Preferences DataStore · Drive AppData client (E) · WorkManager backup scheduler (E)
+Data:     Room (CarDao, ChargeEventDao, CustomLocationDao) · Preferences DataStore · Drive AppData client (E ✓) · WorkManager backup scheduler (E ✓)
 ```
 
 Legend: ✓ = wired in D · ⊘ = placeholder fragment until F.

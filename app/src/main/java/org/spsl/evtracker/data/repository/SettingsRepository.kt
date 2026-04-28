@@ -27,6 +27,12 @@ class SettingsRepository @Inject constructor(
     override val currency: Flow<String> =
         dataStore.data.map { it[PreferenceKeys.CURRENCY] ?: "EUR" }
 
+    override val driveEnabled: Flow<Boolean> =
+        dataStore.data.map { it[PreferenceKeys.DRIVE_ENABLED] ?: false }
+
+    override val lastBackupAt: Flow<Long?> =
+        dataStore.data.map { it[PreferenceKeys.LAST_BACKUP_AT] }
+
     val theme: Flow<String> =
         dataStore.data.map { it[PreferenceKeys.THEME] ?: "system" }
 
@@ -52,6 +58,10 @@ class SettingsRepository @Inject constructor(
 
     override suspend fun setDriveEnabled(enabled: Boolean) {
         dataStore.edit { it[PreferenceKeys.DRIVE_ENABLED] = enabled }
+    }
+
+    override suspend fun setLastBackupAt(epochMs: Long) {
+        dataStore.edit { it[PreferenceKeys.LAST_BACKUP_AT] = epochMs }
     }
 
     /** Used by the future Settings → Reset preferences action (Sub-project F). */
