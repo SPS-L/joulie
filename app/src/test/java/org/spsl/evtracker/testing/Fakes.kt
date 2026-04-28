@@ -112,7 +112,7 @@ class FakeSettingsWriter : SettingsWriter {
 class FakeBackupScheduler : BackupScheduler {
     var enqueueCount: Int = 0
         private set
-    override fun enqueueBackup() { enqueueCount++ }
+    override suspend fun enqueueBackup() { enqueueCount++ }
 }
 
 class FakeBackupRepository(

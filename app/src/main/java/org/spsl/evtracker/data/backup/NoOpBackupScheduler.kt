@@ -6,7 +6,7 @@ import org.spsl.evtracker.domain.backup.BackupScheduler
 
 @Singleton
 class NoOpBackupScheduler @Inject constructor() : BackupScheduler {
-    override fun enqueueBackup() {
-        // No-op until E lands. See BackupScheduler KDoc for the contract.
+    override suspend fun enqueueBackup() {
+        // No-op until Task 13 swaps the binding to WorkManagerBackupScheduler.
     }
 }
