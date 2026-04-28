@@ -87,17 +87,25 @@ class FakeSettingsReader(
     activeCarIdInit: Int = -1,
     primaryMetricInit: String = "km_per_kwh",
     distanceUnitInit: String = "km",
-    currencyInit: String = "EUR"
+    currencyInit: String = "EUR",
+    driveEnabledInit: Boolean = false,
+    lastBackupAtInit: Long? = null
 ) : SettingsReader {
     private val activeCar = MutableStateFlow(activeCarIdInit)
     private val metric = MutableStateFlow(primaryMetricInit)
     private val unit = MutableStateFlow(distanceUnitInit)
     private val curr = MutableStateFlow(currencyInit)
+    private val drive = MutableStateFlow(driveEnabledInit)
+    private val backupAt = MutableStateFlow(lastBackupAtInit)
     override val activeCarId: Flow<Int> = activeCar
     override val primaryMetric: Flow<String> = metric
     override val distanceUnit: Flow<String> = unit
     override val currency: Flow<String> = curr
+    override val driveEnabled: Flow<Boolean> = drive
+    override val lastBackupAt: Flow<Long?> = backupAt
     fun setActiveCarId(id: Int) { activeCar.value = id }
+    fun setDriveEnabled(enabled: Boolean) { drive.value = enabled }
+    fun setLastBackupAt(value: Long?) { backupAt.value = value }
 }
 
 class FakeSettingsWriter : SettingsWriter {
@@ -105,8 +113,11 @@ class FakeSettingsWriter : SettingsWriter {
         private set
     var driveEnabled: Boolean = false
         private set
+    var lastBackupAt: Long? = null
+        private set
     override suspend fun setActiveCarId(id: Int) { activeCarId = id }
     override suspend fun setDriveEnabled(enabled: Boolean) { driveEnabled = enabled }
+    override suspend fun setLastBackupAt(epochMs: Long) { lastBackupAt = epochMs }
 }
 
 class FakeBackupScheduler : BackupScheduler {

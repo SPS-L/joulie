@@ -7,4 +7,7 @@ interface SettingsReader {
     val primaryMetric: Flow<String>
     val distanceUnit: Flow<String>
     val currency: Flow<String>
+    val driveEnabled: Flow<Boolean>
+    /** Null when no successful backup has been recorded yet. */
+    val lastBackupAt: Flow<Long?>
 }
