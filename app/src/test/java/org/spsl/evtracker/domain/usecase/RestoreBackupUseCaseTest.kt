@@ -123,4 +123,40 @@ class RestoreBackupUseCaseTest {
         assertTrue("snapshot must come before transaction", recorder.indexOf("snapshot") < recorder.indexOf("transaction"))
         assertTrue(s.settings.driveEnabled)
     }
+
+    @Test
+    fun success_roundTripPreservesAllEntities() = runTest {
+        val cars = listOf(CarEntity(id = 1, name = "T", createdAt = 1L))
+        val events = listOf(ChargeEventEntity(
+            id = 7, carId = 1, eventDate = 2L, odometerKm = 100.0, kwhAdded = 10.0,
+            chargeType = "DC", costTotal = 5.0, costPerKwh = 0.5, currency = "EUR",
+            location = "Home", note = "n"
+        ))
+        val locations = listOf(CustomLocationEntity(id = 1, label = "Home", useCount = 3, lastUsed = 9L))
+        val data = BackupData.fromEntities(cars, events, locations, now = 0L)
+        val s = build(remoteJson = serializer.toJson(data))
+        s.useCase()
+        // The transaction runner gets the entity lists derived from the JSON round-trip.
+        assertEquals(cars, s.txn.lastCars)
+        assertEquals(events, s.txn.lastEvents)
+        assertEquals(locations, s.txn.lastLocations)
+    }
+
+    @Test
+    fun versionTooNew_alsoSurfacesAsVersionMismatch() = runTest {
+        val v99 = """{"backup_version":99,"exported_at":"x","cars":[],"charge_events":[],"custom_locations":[]}"""
+        val s = build(remoteJson = v99)
+        val r = s.useCase()
+        assertTrue(r is RestoreResult.VersionMismatch)
+        assertEquals(99, (r as RestoreResult.VersionMismatch).actualVersion)
+    }
+
+    @Test
+    fun success_enqueuesBackupAfterRestore() = runTest {
+        val data = BackupData.fromEntities(emptyList(), emptyList(), emptyList(), now = 0L)
+        val s = build(remoteJson = serializer.toJson(data))
+        s.useCase()
+        // Suspend interface plumbed through — the fake's enqueueBackup ran.
+        assertEquals(1, s.scheduler.enqueueCount)
+    }
 }
