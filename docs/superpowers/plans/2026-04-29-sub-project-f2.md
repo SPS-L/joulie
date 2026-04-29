@@ -329,8 +329,15 @@ data class LocationSlice(
     companion object {
         /**
          * Sentinel label for the collapsed-tail slice in [computeLocationDistribution].
-         * The leading space makes accidental collision with a user-typed location
-         * impossible because production grouping trims user input first.
+         *
+         * Collision-proofness rests on a *paired invariant*, not on the sentinel
+         * alone: production grouping in `StatsCalculator.computeLocationDistribution`
+         * applies `trim()` to user input before grouping, so any user-typed label
+         * starts with a non-whitespace character. The sentinel here begins with
+         * a SPACE; therefore no trimmed user label can equal it. If a future
+         * refactor drops the trim() call, this assumption breaks — the
+         * `trim_caseSensitive` test in `StatsCalculatorLocationDistTest` pins
+         * the trim behaviour so that change shows up in CI.
          */
         const val OTHER_KEY = " __other__"
     }
@@ -1034,6 +1041,11 @@ sealed class ChartsUiState {
         val periodHasEvents: Boolean,
         val mixedCurrency: Boolean,
         val periodCurrency: String?,
+        /** Start of the resolved period window, used by the trend tab to express the
+         *  Line chart's x-axis as a day offset from this anchor. Storing raw
+         *  epoch millis as a Float would alias because Float only has ~7 decimal
+         *  digits of integer precision while modern timestamps need ~13. */
+        val periodStartMillis: Long,
         val trend: EfficiencySeries,
         val monthlyKwh: List<MonthBucket>,
         val monthlyCost: List<MonthBucket>,
@@ -1175,6 +1187,9 @@ class ObserveChartsModelsUseCaseTest {
         assertFalse(loaded.periodHasEvents)
         assertTrue(loaded.trend.acPoints.isEmpty())
         assertTrue(loaded.monthlyKwh.isEmpty())
+        // Pin periodStartMillis to the resolver's Last12Months lower bound
+        // (used by the trend tab's day-offset x-axis math).
+        assertEquals(nowMs - 365L * 24 * 60 * 60 * 1000, loaded.periodStartMillis)
     }
 
     @Test fun eventsInPeriod_singleCurrency_emitsAllSeriesAndPeriodCurrency() = runTest {
@@ -1315,6 +1330,7 @@ class ObserveChartsModelsUseCase @Inject constructor(
             periodHasEvents = periodEvents.isNotEmpty(),
             mixedCurrency = mixed,
             periodCurrency = resolvedCurrency,
+            periodStartMillis = range.startMillis,
             trend = statsCalculator.computeEfficiencyTrend(periodEvents),
             monthlyKwh = monthly,
             monthlyCost = costBuckets,
@@ -1360,16 +1376,12 @@ package org.spsl.evtracker.ui.charts
 
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlinx.coroutines.CoroutineStart
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
-import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertSame
@@ -1378,6 +1390,7 @@ import org.junit.Before
 import org.junit.Test
 import org.spsl.evtracker.core.model.ChartsEvent
 import org.spsl.evtracker.core.model.ChartsPeriod
+import org.spsl.evtracker.core.model.ChartsScreenState
 import org.spsl.evtracker.core.model.ChartsUiState
 import org.spsl.evtracker.data.local.entity.CarEntity
 import org.spsl.evtracker.data.local.entity.ChargeEventEntity
@@ -1389,10 +1402,24 @@ import org.spsl.evtracker.testing.FakeCarReader
 import org.spsl.evtracker.testing.FakeChargeEventQueries
 import org.spsl.evtracker.testing.FakeSettingsReader
 
+/**
+ * NOTE on test pattern (matches DashboardViewModelTest.kt:83/134):
+ * `ChartsViewModel.uiState` is built with `stateIn(WhileSubscribed(5_000))` so the
+ * upstream is only collected while a subscriber is active. Reading `uiState.value`
+ * with no subscriber returns the seeded placeholder, NOT what the use case emitted.
+ *
+ * Tests therefore use one of two patterns:
+ *  - `vm.uiState.first { predicate }` for one-shot "wait until state matches" — this
+ *    subscribes, waits, and unsubscribes itself.
+ *  - A long-running `launch(start = UNDISPATCHED) { vm.uiState.collect(...) }` for
+ *    tests that need the upstream to *stay* subscribed across multiple state
+ *    transitions (e.g. the no-resubscribe contract). Otherwise WhileSubscribed
+ *    can tear down between two `first { }` calls and the second call's resubscription
+ *    would inflate `observeForCarCallCount` for the wrong reason.
+ */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ChartsViewModelTest {
 
-    private val dispatcher = StandardTestDispatcher()
     private val nowMs = 1_714_032_000_000L
     private val now = NowProvider { nowMs }
 
@@ -1403,7 +1430,6 @@ class ChartsViewModelTest {
     private lateinit var vm: ChartsViewModel
 
     @Before fun setUp() {
-        Dispatchers.setMain(dispatcher)
         carReader = FakeCarReader(listOf(CarEntity(id = 1, name = "C")))
         queries = FakeChargeEventQueries().apply {
             seed(listOf(ev(nowMs - 100, 0.0)))
@@ -1416,66 +1442,92 @@ class ChartsViewModelTest {
         vm = ChartsViewModel(useCase, settings)
     }
 
-    @After fun tearDown() { Dispatchers.resetMain() }
-
     private fun ev(date: Long, odo: Double) = ChargeEventEntity(
         id = 0, carId = 1, eventDate = date, odometerKm = odo, kwhAdded = 10.0,
         chargeType = "AC", costTotal = null, costPerKwh = null,
         currency = null, location = null, note = "", createdAt = 0L
     )
 
-    @Test fun defaultPeriod_isLast12Months() = runTest(dispatcher) {
-        advanceUntilIdle()
-        assertEquals(ChartsPeriod.Last12Months, vm.uiState.value.period)
+    /** Helper: keep a permanent subscriber on uiState so WhileSubscribed stays active
+     *  across several state transitions in one test. Caller cancels via the returned Job. */
+    private suspend fun keepSubscribed(
+        scope: kotlinx.coroutines.CoroutineScope,
+        sink: MutableList<ChartsScreenState> = mutableListOf()
+    ): Pair<Job, MutableList<ChartsScreenState>> {
+        val job = scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            vm.uiState.collect { sink += it }
+        }
+        return job to sink
     }
 
-    @Test fun selectPeriod_emitsNewState() = runTest(dispatcher) {
-        advanceUntilIdle()
+    @Test fun defaultPeriod_isLast12Months() = runTest {
+        // first { it.charts !is Loading } forces the use case to run and emit.
+        val state = vm.uiState.first { it.charts !is ChartsUiState.Loading }
+        assertEquals(ChartsPeriod.Last12Months, state.period)
+    }
+
+    @Test fun selectPeriod_emitsNewState() = runTest {
+        // wait for the initial Loaded emission so the next first() definitely sees the
+        // post-selectPeriod state, not the seeded placeholder.
+        vm.uiState.first { it.charts !is ChartsUiState.Loading }
         vm.selectPeriod(ChartsPeriod.Last6Months)
-        advanceUntilIdle()
-        assertEquals(ChartsPeriod.Last6Months, vm.uiState.value.period)
+        val state = vm.uiState.first { it.period == ChartsPeriod.Last6Months }
+        assertEquals(ChartsPeriod.Last6Months, state.period)
     }
 
-    @Test fun selectCustomRange_wrapsInCustom() = runTest(dispatcher) {
-        advanceUntilIdle()
+    @Test fun selectCustomRange_wrapsInCustom() = runTest {
+        vm.uiState.first { it.charts !is ChartsUiState.Loading }
         vm.selectCustomRange(100L, 200L)
-        advanceUntilIdle()
-        val p = vm.uiState.value.period as ChartsPeriod.Custom
+        val state = vm.uiState.first { it.period is ChartsPeriod.Custom }
+        val p = state.period as ChartsPeriod.Custom
         assertEquals(100L, p.fromMillis)
         assertEquals(200L, p.toMillis)
     }
 
-    @Test fun periodChange_recomputesViaFlatMapLatest() = runTest(dispatcher) {
-        advanceUntilIdle()
+    @Test fun periodChange_recomputesViaFlatMapLatest() = runTest {
+        val (job, _) = keepSubscribed(this)
+        vm.uiState.first { it.charts !is ChartsUiState.Loading }
         val before = queries.observeForCarCallCount
+
         vm.selectPeriod(ChartsPeriod.Last6Months)
+        // Wait for the new state with the new period to arrive.
+        vm.uiState.first { it.period == ChartsPeriod.Last6Months }
         advanceUntilIdle()
+
         val after = queries.observeForCarCallCount
+        job.cancel()
         // Each period change re-runs the flatMapLatest which subscribes anew.
         assertTrue("Expected resubscribe; before=$before after=$after", after > before)
     }
 
-    @Test fun distanceUnitChange_propagatesToScreenState() = runTest(dispatcher) {
-        advanceUntilIdle()
-        assertEquals("km", vm.uiState.value.distanceUnit)
+    @Test fun distanceUnitChange_propagatesToScreenState() = runTest {
+        vm.uiState.first { it.charts !is ChartsUiState.Loading && it.distanceUnit == "km" }
         settings.setDistanceUnit("miles")
-        advanceUntilIdle()
-        assertEquals("miles", vm.uiState.value.distanceUnit)
+        val state = vm.uiState.first { it.distanceUnit == "miles" }
+        assertEquals("miles", state.distanceUnit)
     }
 
-    @Test fun distanceUnitChange_doesNotResubscribeEventStream() = runTest(dispatcher) {
-        advanceUntilIdle()
+    @Test fun distanceUnitChange_doesNotResubscribeEventStream() = runTest {
+        val (job, _) = keepSubscribed(this)
+        // Wait for the use case to settle into Loaded (one initial subscription).
+        vm.uiState.first { it.charts is ChartsUiState.Loaded }
         val before = queries.observeForCarCallCount
+
         settings.setDistanceUnit("miles")
+        // Wait for the propagation through the outer combine.
+        vm.uiState.first { it.distanceUnit == "miles" }
         advanceUntilIdle()
+
         val after = queries.observeForCarCallCount
+        job.cancel()
         // Render-input changes must not tear down the inner Room subscription.
         assertEquals(before, after)
     }
 
-    @Test fun costLabelDoesNotReadSettingsCurrency() = runTest(dispatcher) {
-        advanceUntilIdle()
-        val beforeCharts = vm.uiState.value.charts
+    @Test fun costLabelDoesNotReadSettingsCurrency() = runTest {
+        val (job, _) = keepSubscribed(this)
+        val firstLoaded = vm.uiState.first { it.charts is ChartsUiState.Loaded }
+        val beforeCharts = firstLoaded.charts
         val beforeCount = queries.observeForCarCallCount
 
         // Flip the preference currency. Because Charts derives its cost label
@@ -1490,9 +1542,10 @@ class ChartsViewModelTest {
         // combine never re-emitted ChartsUiState because settings.currency is
         // not in the chain.
         assertSame(beforeCharts, vm.uiState.value.charts)
+        job.cancel()
     }
 
-    @Test fun onCustomChipClicked_emitsOpenCustomRangePicker() = runTest(dispatcher) {
+    @Test fun onCustomChipClicked_emitsOpenCustomRangePicker() = runTest {
         val received = mutableListOf<ChartsEvent>()
         val job = launch(start = CoroutineStart.UNDISPATCHED) {
             vm.events.collect { received += it }
@@ -1503,7 +1556,7 @@ class ChartsViewModelTest {
         assertTrue(received.first() is ChartsEvent.OpenCustomRangePicker)
     }
 
-    @Test fun onAddCarCta_emitsNavigateToCars() = runTest(dispatcher) {
+    @Test fun onAddCarCta_emitsNavigateToCars() = runTest {
         val received = mutableListOf<ChartsEvent>()
         val job = launch(start = CoroutineStart.UNDISPATCHED) {
             vm.events.collect { received += it }
@@ -1514,7 +1567,7 @@ class ChartsViewModelTest {
         assertTrue(received.first() is ChartsEvent.NavigateToCars)
     }
 
-    @Test fun onLogChargeCta_emitsNavigateToChargeEdit() = runTest(dispatcher) {
+    @Test fun onLogChargeCta_emitsNavigateToChargeEdit() = runTest {
         val received = mutableListOf<ChartsEvent>()
         val job = launch(start = CoroutineStart.UNDISPATCHED) {
             vm.events.collect { received += it }
@@ -1525,7 +1578,7 @@ class ChartsViewModelTest {
         assertTrue(received.first() is ChartsEvent.NavigateToChargeEdit)
     }
 
-    @Test fun events_replayIsZero_noReplayOnLateCollector() = runTest(dispatcher) {
+    @Test fun events_replayIsZero_noReplayOnLateCollector() = runTest {
         // Emit before any collector is attached. With replay = 0, this event
         // must NOT be replayed to a later collector.
         vm.onAddCarCta()
@@ -1677,6 +1730,10 @@ Open `app/src/main/res/values/strings.xml` and append (before the closing `</res
     <string name="charts_no_locations_period">No location data for this period</string>
     <string name="charts_locations_other">Other</string>
     <string name="charts_acdc_kwh_subtitle">%1$.1f kWh AC · %2$.1f kWh DC</string>
+    <plurals name="charts_acdc_count_center">
+        <item quantity="one">%d charge</item>
+        <item quantity="other">%d charges</item>
+    </plurals>
 ```
 
 - [ ] **Step 2: Append F2 colors**
@@ -1806,29 +1863,22 @@ git commit -m "feat(F2): add Charts strings + chart series fallback colors"
             android:layout_marginTop="16dp"/>
     </LinearLayout>
 
-    <!-- Multi-currency banner: appears above the TabLayout, only when
-         the cost tab would otherwise render. -->
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/charts_multi_currency_banner"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="top"
-        android:layout_margin="8dp"
-        android:visibility="gone"
-        app:cardBackgroundColor="?attr/colorErrorContainer">
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:padding="12dp"
-            android:text="@string/multi_currency_banner"
-            android:textColor="?attr/colorOnErrorContainer"
-            android:textAppearance="?attr/textAppearanceBodyMedium"/>
-    </com.google.android.material.card.MaterialCardView>
+    <!-- NOTE: spec §6.3 says the multi-currency banner replaces the body of
+         the *Monthly cost* tab only — never globally. The cost tab's empty
+         TextView shows R.string.multi_currency_banner when mixedCurrency is
+         true; the other four tabs render normally. There is intentionally
+         no top-level banner View here. -->
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
 ```
 
 - [ ] **Step 2: Create `fragment_charts_tab.xml`**
+
+The tab host is a vertical stack: chart container takes the available height,
+optional subtitle TextView sits below (used by the AC/DC tab for the
+"X.X kWh AC · X.X kWh DC" sub-label per spec §6.4 — *centered hole text* is the
+total event count, *sub-label* is the kWh string). The empty TextView overlays
+on top, centered, when `ChartsUiState.Loaded.periodHasEvents` is false or per-tab
+data is empty.
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
@@ -1837,10 +1887,27 @@ git commit -m "feat(F2): add Charts strings + chart series fallback colors"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <FrameLayout
-        android:id="@+id/charts_tab_chart_container"
+    <LinearLayout
+        android:id="@+id/charts_tab_chart_root"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"/>
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <FrameLayout
+            android:id="@+id/charts_tab_chart_container"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"/>
+
+        <TextView
+            android:id="@+id/charts_tab_subtitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="8dp"
+            android:gravity="center"
+            android:textAppearance="?attr/textAppearanceBodyMedium"
+            android:visibility="gone"/>
+    </LinearLayout>
 
     <TextView
         android:id="@+id/charts_tab_empty_message"
@@ -1939,6 +2006,13 @@ import org.spsl.evtracker.core.model.ChartsPeriod
  */
 object ChartStyling {
 
+    /** Used by the trend tab to express the line chart's x-axis as a day offset
+     *  from the period start. Storing raw epoch millis as a Float in Entry.x
+     *  aliases because Float has only ~7 decimal digits of integer precision
+     *  while modern timestamps need ~13. Day offsets stay well within Float
+     *  precision (a 20-year window is ~7300 days). */
+    const val MILLIS_PER_DAY = 86_400_000L
+
     private val LOCATION_PALETTE = intArrayOf(
         0xFF1E88E5.toInt(),
         0xFFFB8C00.toInt(),
@@ -2005,12 +2079,15 @@ object ChartStyling {
         }
     }
 
-    fun dateLabelFormatter(window: ChartsPeriod): IAxisValueFormatter {
-        val pattern = if (window is ChartsPeriod.AllTime) "MMM yy" else "d MMM"
+    /** The x value passed in is a *day offset from windowStartMillis*, not an epoch
+     *  millis. The formatter reconstructs the absolute date for labelling. */
+    fun dateLabelFormatter(windowStartMillis: Long, period: ChartsPeriod): IAxisValueFormatter {
+        val pattern = if (period is ChartsPeriod.AllTime) "MMM yy" else "d MMM"
         val fmt = SimpleDateFormat(pattern, Locale.getDefault())
         return object : IAxisValueFormatter {
             override fun getFormattedValue(value: Float): String {
-                return fmt.format(Date(value.toLong()))
+                val millis = windowStartMillis + (value.toDouble() * MILLIS_PER_DAY).toLong()
+                return fmt.format(Date(millis))
             }
         }
     }
@@ -2180,8 +2257,10 @@ class ChartsTabFragment : Fragment() {
     private fun render(state: ChartsScreenState) {
         val container = binding.chartsTabChartContainer
         val empty = binding.chartsTabEmptyMessage
+        val subtitle = binding.chartsTabSubtitle
         container.removeAllViews()
         empty.isVisible = false
+        subtitle.isVisible = false        // reset; only AC/DC turns this on
 
         val charts = state.charts
         if (charts !is ChartsUiState.Loaded) {
@@ -2199,7 +2278,7 @@ class ChartsTabFragment : Fragment() {
             TabKind.TREND       -> renderTrend(state, charts, container, empty)
             TabKind.MONTHLY_KWH -> renderMonthlyKwh(charts, container, empty)
             TabKind.MONTHLY_COST -> renderMonthlyCost(charts, container, empty)
-            TabKind.AC_DC       -> renderAcDc(charts, container, empty)
+            TabKind.AC_DC       -> renderAcDc(charts, container, empty, subtitle)
             TabKind.LOCATIONS   -> renderLocations(charts, container, empty)
         }
     }
@@ -2221,10 +2300,14 @@ class ChartsTabFragment : Fragment() {
         ChartStyling.configureLineChart(chart, state.distanceUnit)
         val (acColor, dcColor) = ChartStyling.resolveSeriesColors(requireContext())
         val unitToMi = state.distanceUnit == "miles"
+        val windowStart = charts.periodStartMillis
+        // x = day offset from windowStart (Float-safe). Real millis stays in Entry.data
+        // so the marker view shows the exact date.
         fun toEntries(points: List<org.spsl.evtracker.core.model.EfficiencyPoint>): List<Entry> =
             points.map {
                 val y = if (unitToMi) UnitConverter.kmPerKwhToMiPerKwh(it.kmPerKwh) else it.kmPerKwh
-                Entry(it.eventTimeMillis.toFloat(), y.toFloat(), it.eventTimeMillis as Any)
+                val xDays = ((it.eventTimeMillis - windowStart).toDouble() / ChartStyling.MILLIS_PER_DAY).toFloat()
+                Entry(xDays, y.toFloat(), it.eventTimeMillis as Any)
             }
         val sets = mutableListOf<LineDataSet>()
         if (ac.isNotEmpty()) {
@@ -2238,7 +2321,7 @@ class ChartsTabFragment : Fragment() {
             }
         }
         chart.data = LineData(sets.toList())
-        chart.xAxis.valueFormatter = ChartStyling.dateLabelFormatter(state.period)
+        chart.xAxis.valueFormatter = ChartStyling.dateLabelFormatter(windowStart, state.period)
         val unitSuffix = if (unitToMi)
             getString(R.string.charts_trend_y_mi) else getString(R.string.charts_trend_y_kmh)
         chart.marker = ChartsMarkerView(requireContext(), unitSuffix)
@@ -2302,9 +2385,13 @@ class ChartsTabFragment : Fragment() {
     }
 
     private fun renderAcDc(
-        charts: ChartsUiState.Loaded, container: FrameLayout, empty: TextView
+        charts: ChartsUiState.Loaded,
+        container: FrameLayout,
+        empty: TextView,
+        subtitle: TextView
     ) {
-        if (charts.acDc.acCount + charts.acDc.dcCount == 0) {
+        val total = charts.acDc.acCount + charts.acDc.dcCount
+        if (total == 0) {
             empty.text = getString(R.string.charts_no_data_period)
             empty.isVisible = true
             return
@@ -2320,9 +2407,14 @@ class ChartsTabFragment : Fragment() {
             colors = listOf(acColor, dcColor); valueTextSize = 12f
         }
         chart.data = PieData(ds)
-        chart.centerText = getString(
+        // Spec §6.4: centered hole text = total event count; sub-label below = kWh.
+        chart.centerText = resources.getQuantityString(
+            R.plurals.charts_acdc_count_center, total, total
+        )
+        subtitle.text = getString(
             R.string.charts_acdc_kwh_subtitle, charts.acDc.acKwh, charts.acDc.dcKwh
         )
+        subtitle.isVisible = true
         if (!firstRenderConsumed) { chart.animateY(400); firstRenderConsumed = true }
         container.addView(chart, FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
@@ -2512,6 +2604,12 @@ class ChartsFragment : Fragment() {
     private lateinit var pagerAdapter: ChartsPagerAdapter
     private lateinit var tabMediator: TabLayoutMediator
 
+    /** Period to revert to when the user dismisses the Custom date-range picker
+     *  via the negative button or system back. Mirrors DashboardFragment's
+     *  selectedTabBeforePicker pattern. Updated only when a *concrete* (non-Custom)
+     *  chip is tapped, so cancelling the Custom picker restores the prior choice. */
+    private var lastConcretePeriod: ChartsPeriod = ChartsPeriod.Last12Months
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View {
@@ -2553,29 +2651,31 @@ class ChartsFragment : Fragment() {
 
     private fun setUpPeriodChips() {
         binding.chipLast6Months.setOnClickListener {
+            lastConcretePeriod = ChartsPeriod.Last6Months
             viewModel.selectPeriod(ChartsPeriod.Last6Months)
         }
         binding.chipLast12Months.setOnClickListener {
+            lastConcretePeriod = ChartsPeriod.Last12Months
             viewModel.selectPeriod(ChartsPeriod.Last12Months)
         }
         binding.chipAllTime.setOnClickListener {
+            lastConcretePeriod = ChartsPeriod.AllTime
             viewModel.selectPeriod(ChartsPeriod.AllTime)
         }
         binding.chipCustom.setOnClickListener {
+            // Do NOT update lastConcretePeriod — we may need it to restore on cancel.
             viewModel.onCustomChipClicked()
         }
     }
 
     private fun render(state: ChartsScreenState) {
-        when (val charts = state.charts) {
+        when (state.charts) {
             ChartsUiState.Loading -> {
                 binding.chartsContent.isVisible = false
                 binding.chartsEmptyContainer.isVisible = false
-                binding.chartsMultiCurrencyBanner.isVisible = false
             }
             ChartsUiState.NoCar -> {
                 binding.chartsContent.isVisible = false
-                binding.chartsMultiCurrencyBanner.isVisible = false
                 binding.chartsEmptyContainer.isVisible = true
                 binding.chartsEmptyHeadline.setText(R.string.empty_no_car_headline)
                 binding.chartsEmptyCta.setText(R.string.empty_no_car_cta)
@@ -2583,7 +2683,6 @@ class ChartsFragment : Fragment() {
             }
             ChartsUiState.NoEvents -> {
                 binding.chartsContent.isVisible = false
-                binding.chartsMultiCurrencyBanner.isVisible = false
                 binding.chartsEmptyContainer.isVisible = true
                 binding.chartsEmptyHeadline.setText(R.string.empty_no_events_headline)
                 binding.chartsEmptyCta.setText(R.string.empty_no_events_cta)
@@ -2592,7 +2691,8 @@ class ChartsFragment : Fragment() {
             is ChartsUiState.Loaded -> {
                 binding.chartsContent.isVisible = true
                 binding.chartsEmptyContainer.isVisible = false
-                binding.chartsMultiCurrencyBanner.isVisible = charts.mixedCurrency
+                // Multi-currency banner is rendered *inside the cost tab body*
+                // (see ChartsTabFragment.renderMonthlyCost), not screen-globally.
             }
         }
         // Reflect the current period selection on the chip group.
@@ -2621,9 +2721,20 @@ class ChartsFragment : Fragment() {
         picker.addOnPositiveButtonClickListener { range ->
             val from = range.first ?: return@addOnPositiveButtonClickListener
             val to = range.second ?: return@addOnPositiveButtonClickListener
+            // Custom *is* the new selection; record it so a future Cancel of a
+            // re-opened picker would still restore *some* concrete prior choice.
+            // We deliberately do NOT update lastConcretePeriod here.
             viewModel.selectCustomRange(from, to)
         }
+        picker.addOnNegativeButtonClickListener { restorePreviousPeriodSelection() }
+        picker.addOnCancelListener { restorePreviousPeriodSelection() }
         picker.show(parentFragmentManager, "chartsCustomRange")
+    }
+
+    private fun restorePreviousPeriodSelection() {
+        // Driving via the VM (not via chip.isChecked) preserves single-source-of-truth:
+        // the next uiState emission re-renders the chip group from state.period.
+        viewModel.selectPeriod(lastConcretePeriod)
     }
 
     override fun onDestroyView() {
@@ -2688,6 +2799,7 @@ import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
 import androidx.test.espresso.matcher.ViewMatchers.withId
+import androidx.test.espresso.matcher.ViewMatchers.withSubstring
 import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dagger.hilt.android.testing.HiltAndroidRule
@@ -2752,24 +2864,47 @@ class ChartsFragmentTest {
     }
 
     @Test fun tabSwitch_showsCorrectChart() = runBlocking {
+        // Seed a shape that produces a different visible signal per tab so the
+        // assertions can distinguish them via Espresso (MPAndroidChart legends and
+        // axis labels are canvas-drawn and are NOT visible to Espresso). We use:
+        //  - 2 AC events spanning two months, mono-currency EUR-costed → Trend &
+        //    Monthly kWh & Monthly cost have data (chart container populated;
+        //    per-tab empty message GONE)
+        //  - 1 DC event → AC/DC tab has data → subtitle visible with kWh substring
+        //  - All location fields null → Locations tab → empty message visible with
+        //    "No location data..."
         seedDataStore()
         val now = System.currentTimeMillis()
+        val d = 24L * 60 * 60 * 1000
         seedDb(listOf(
-            ev(now - 60L * 24 * 60 * 60 * 1000, 0.0,    "AC"),
-            ev(now - 30L * 24 * 60 * 60 * 1000, 100.0,  "AC")
+            ev(now - 60 * d, 0.0,   "AC", cost = 5.0, currency = "EUR"),
+            ev(now - 30 * d, 100.0, "AC", cost = 7.5, currency = "EUR"),
+            ev(now -  5 * d, 200.0, "DC", cost = 4.0, currency = "EUR")
         ))
         launchFragmentInContainer<ChartsFragment>(themeResId = R.style.Theme_EVTracker)
             .moveToState(Lifecycle.State.RESUMED).use {
-                // Default tab (Trend) shows the chart container, not the empty TextView.
-                onView(withId(R.id.charts_pager)).check(matches(isDisplayed()))
+                // Default tab is TREND. Empty message is GONE → chart populated.
+                onView(withId(R.id.charts_tab_empty_message)).check(matches(not(isDisplayed())))
 
-                // Tab to Monthly energy.
+                // MONTHLY_KWH: same — chart populated.
                 onView(withText(R.string.charts_tab_monthly_kwh)).perform(click())
-                onView(withId(R.id.charts_pager)).check(matches(isDisplayed()))
+                onView(withId(R.id.charts_tab_empty_message)).check(matches(not(isDisplayed())))
 
-                // Tab to AC vs DC.
+                // MONTHLY_COST: mono-currency EUR data → chart populated.
+                onView(withText(R.string.charts_tab_monthly_cost)).perform(click())
+                onView(withId(R.id.charts_tab_empty_message)).check(matches(not(isDisplayed())))
+
+                // AC_DC: subtitle is visible with a "kWh" substring.
                 onView(withText(R.string.charts_tab_ac_dc)).perform(click())
-                onView(withId(R.id.charts_pager)).check(matches(isDisplayed()))
+                onView(withId(R.id.charts_tab_subtitle))
+                    .check(matches(isDisplayed()))
+                    .check(matches(withSubstring("kWh")))
+
+                // LOCATIONS: no location data → empty message shows the locations string.
+                onView(withText(R.string.charts_tab_locations)).perform(click())
+                onView(withId(R.id.charts_tab_empty_message))
+                    .check(matches(isDisplayed()))
+                    .check(matches(withText(R.string.charts_no_locations_period)))
             }
     }
 
@@ -2821,20 +2956,27 @@ class ChartsFragmentTest {
         assertEquals(R.id.chargeEditFragment, nav.currentDestination?.id)
     }
 
-    @Test fun multiCurrencyPeriod_costTabShowsBanner() = runBlocking {
+    @Test fun multiCurrencyPeriod_costTabShowsBanner_locally() = runBlocking {
+        // Spec §6.3: when mixedCurrency is true, the *Monthly cost* tab body is
+        // replaced by the multi_currency_banner string. The four other tabs
+        // render normally — there is intentionally no screen-global banner.
         seedDataStore()
         val now = System.currentTimeMillis()
+        val d = 24L * 60 * 60 * 1000
         seedDb(listOf(
-            ev(now - 60L * 24 * 60 * 60 * 1000, 0.0,    "AC", cost = 5.0, currency = "EUR"),
-            ev(now - 30L * 24 * 60 * 60 * 1000, 100.0,  "AC", cost = 7.5, currency = "USD")
+            ev(now - 60 * d, 0.0,   "AC", cost = 5.0, currency = "EUR"),
+            ev(now - 30 * d, 100.0, "AC", cost = 7.5, currency = "USD")
         ))
         launchFragmentInContainer<ChartsFragment>(themeResId = R.style.Theme_EVTracker)
             .moveToState(Lifecycle.State.RESUMED).use {
-                // Banner visible
-                onView(withId(R.id.charts_multi_currency_banner)).check(matches(isDisplayed()))
-                // And the cost tab body shows the same banner string instead of a chart
+                // Default TREND tab does NOT show the multi-currency banner string.
+                onView(withId(R.id.charts_tab_empty_message)).check(matches(not(isDisplayed())))
+
+                // Click MONTHLY_COST tab → tab-body empty TextView shows the banner.
                 onView(withText(R.string.charts_tab_monthly_cost)).perform(click())
-                onView(withText(R.string.multi_currency_banner)).check(matches(isDisplayed()))
+                onView(withId(R.id.charts_tab_empty_message))
+                    .check(matches(isDisplayed()))
+                    .check(matches(withText(R.string.multi_currency_banner)))
             }
     }
 }
