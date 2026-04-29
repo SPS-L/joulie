@@ -9,7 +9,7 @@ import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.charts.PieChart
 import com.github.mikephil.charting.components.AxisBase
 import com.github.mikephil.charting.components.XAxis
-import com.github.mikephil.charting.formatter.IAxisValueFormatter
+import com.github.mikephil.charting.formatter.ValueFormatter
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -92,11 +92,11 @@ object ChartStyling {
      *  formatter looks up the bucket at that index and renders its calendar
      *  month/year. Calling code passes the bucket list once per chart build;
      *  the closure captures it. */
-    fun monthBucketFormatter(buckets: List<org.spsl.evtracker.core.model.MonthBucket>): IAxisValueFormatter {
+    fun monthBucketFormatter(buckets: List<org.spsl.evtracker.core.model.MonthBucket>): ValueFormatter {
         val fmt = SimpleDateFormat("MMM yy", Locale.getDefault())
         val cal = java.util.Calendar.getInstance()
-        return object : IAxisValueFormatter {
-            override fun getFormattedValue(value: Float, axis: AxisBase?): String {
+        return object : ValueFormatter() {
+            override fun getAxisLabel(value: Float, axis: AxisBase?): String {
                 if (buckets.isEmpty()) return ""
                 val i = value.toInt().coerceIn(0, buckets.lastIndex)
                 val b = buckets[i]
@@ -109,11 +109,11 @@ object ChartStyling {
 
     /** The x value passed in is a *day offset from windowStartMillis*, not an epoch
      *  millis. The formatter reconstructs the absolute date for labelling. */
-    fun dateLabelFormatter(windowStartMillis: Long, period: ChartsPeriod): IAxisValueFormatter {
+    fun dateLabelFormatter(windowStartMillis: Long, period: ChartsPeriod): ValueFormatter {
         val pattern = if (period is ChartsPeriod.AllTime) "MMM yy" else "d MMM"
         val fmt = SimpleDateFormat(pattern, Locale.getDefault())
-        return object : IAxisValueFormatter {
-            override fun getFormattedValue(value: Float, axis: AxisBase?): String {
+        return object : ValueFormatter() {
+            override fun getAxisLabel(value: Float, axis: AxisBase?): String {
                 val millis = windowStartMillis + (value.toDouble() * MILLIS_PER_DAY).toLong()
                 return fmt.format(Date(millis))
             }
