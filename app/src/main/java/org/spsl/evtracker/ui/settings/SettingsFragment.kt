@@ -90,6 +90,10 @@ class SettingsFragment : Fragment() {
                                 Snackbar.make(binding.root, R.string.drive_restore_succeeded, Snackbar.LENGTH_LONG).show()
                             is SettingsEvent.ShowError ->
                                 Snackbar.make(binding.root, ev.msgRes, Snackbar.LENGTH_LONG).show()
+                            // F1 events handled in Task 13's full Fragment rewrite.
+                            is SettingsEvent.AutoFlipped,
+                            is SettingsEvent.LaunchCsvShareIntent,
+                            SettingsEvent.NavigateToWizard -> Unit
                         }
                     }
                 }
