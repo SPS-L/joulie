@@ -45,7 +45,16 @@
     <fragment
         android:id="@+id/settingsFragment"
         android:name="org.spsl.evtracker.ui.settings.SettingsFragment"
-        android:label="Settings"/>
+        android:label="Settings">
+        <action
+            android:id="@+id/action_settings_to_manage_locations"
+            app:destination="@id/manageLocationsFragment"/>
+        <action
+            android:id="@+id/action_settings_to_wizard"
+            app:destination="@id/wizardFragment"
+            app:popUpTo="@id/nav_graph"
+            app:popUpToInclusive="true"/>
+    </fragment>
 
     <fragment
         android:id="@+id/chartsFragment"
