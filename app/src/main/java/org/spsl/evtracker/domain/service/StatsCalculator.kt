@@ -2,6 +2,7 @@ package org.spsl.evtracker.domain.service
 
 import java.util.Calendar
 import javax.inject.Inject
+import org.spsl.evtracker.core.model.AcDcSplit
 import org.spsl.evtracker.core.model.EfficiencyPoint
 import org.spsl.evtracker.core.model.EfficiencySeries
 import org.spsl.evtracker.core.model.MonthBucket
@@ -120,6 +121,17 @@ class StatsCalculator @Inject constructor() {
         return EfficiencySeries(
             acPoints = seriesFor("AC"),
             dcPoints = seriesFor("DC")
+        )
+    }
+
+    fun computeAcDcSplit(events: List<ChargeEventEntity>): AcDcSplit {
+        val ac = events.filter { it.chargeType == "AC" }
+        val dc = events.filter { it.chargeType == "DC" }
+        return AcDcSplit(
+            acCount = ac.size,
+            dcCount = dc.size,
+            acKwh   = ac.sumOf { it.kwhAdded },
+            dcKwh   = dc.sumOf { it.kwhAdded }
         )
     }
 }
