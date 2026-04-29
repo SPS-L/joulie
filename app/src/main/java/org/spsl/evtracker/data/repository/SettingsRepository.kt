@@ -33,8 +33,11 @@ class SettingsRepository @Inject constructor(
     override val lastBackupAt: Flow<Long?> =
         dataStore.data.map { it[PreferenceKeys.LAST_BACKUP_AT] }
 
-    val theme: Flow<String> =
+    override val theme: Flow<String> =
         dataStore.data.map { it[PreferenceKeys.THEME] ?: "system" }
+
+    override val resetInProgress: Flow<Boolean> =
+        dataStore.data.map { it[PreferenceKeys.RESET_IN_PROGRESS] ?: false }
 
     override val activeCarId: Flow<Int> =
         dataStore.data.map { it[PreferenceKeys.ACTIVE_CAR_ID] ?: -1 }
@@ -48,8 +51,43 @@ class SettingsRepository @Inject constructor(
         }
     }
 
-    suspend fun setTheme(theme: String) {
-        dataStore.edit { it[PreferenceKeys.THEME] = theme }
+    override suspend fun setTheme(value: String) {
+        dataStore.edit { it[PreferenceKeys.THEME] = value }
+    }
+
+    override suspend fun setPrimaryMetric(metric: String) {
+        dataStore.edit { it[PreferenceKeys.PRIMARY_METRIC] = metric }
+    }
+
+    override suspend fun setDistanceUnit(unit: String) {
+        dataStore.edit { it[PreferenceKeys.DISTANCE_UNIT] = unit }
+    }
+
+    override suspend fun setCurrency(code: String) {
+        dataStore.edit { it[PreferenceKeys.CURRENCY] = code }
+    }
+
+    override suspend fun setSetupComplete(value: Boolean) {
+        dataStore.edit { it[PreferenceKeys.SETUP_COMPLETE] = value }
+    }
+
+    override suspend fun setResetInProgress(value: Boolean) {
+        dataStore.edit { it[PreferenceKeys.RESET_IN_PROGRESS] = value }
+    }
+
+    override suspend fun setPrimaryMetricAndDistanceUnit(metric: String, unit: String) {
+        dataStore.edit { prefs ->
+            prefs[PreferenceKeys.PRIMARY_METRIC] = metric
+            prefs[PreferenceKeys.DISTANCE_UNIT]  = unit
+        }
+    }
+
+    override suspend fun markGlobalResetInProgress() {
+        dataStore.edit { prefs ->
+            prefs[PreferenceKeys.SETUP_COMPLETE]    = false
+            prefs[PreferenceKeys.ACTIVE_CAR_ID]     = -1
+            prefs[PreferenceKeys.RESET_IN_PROGRESS] = true
+        }
     }
 
     override suspend fun setActiveCarId(id: Int) {

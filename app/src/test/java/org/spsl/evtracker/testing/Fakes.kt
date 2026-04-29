@@ -92,7 +92,9 @@ class FakeSettingsReader(
     distanceUnitInit: String = "km",
     currencyInit: String = "EUR",
     driveEnabledInit: Boolean = false,
-    lastBackupAtInit: Long? = null
+    lastBackupAtInit: Long? = null,
+    themeInit: String = "system",
+    resetInProgressInit: Boolean = false
 ) : SettingsReader {
     private val activeCar = MutableStateFlow(activeCarIdInit)
     private val metric = MutableStateFlow(primaryMetricInit)
@@ -100,15 +102,21 @@ class FakeSettingsReader(
     private val curr = MutableStateFlow(currencyInit)
     private val drive = MutableStateFlow(driveEnabledInit)
     private val backupAt = MutableStateFlow(lastBackupAtInit)
+    private val themeFlow = MutableStateFlow(themeInit)
+    private val resetInProgressFlow = MutableStateFlow(resetInProgressInit)
     override val activeCarId: Flow<Int> = activeCar
     override val primaryMetric: Flow<String> = metric
     override val distanceUnit: Flow<String> = unit
     override val currency: Flow<String> = curr
     override val driveEnabled: Flow<Boolean> = drive
     override val lastBackupAt: Flow<Long?> = backupAt
+    override val theme: Flow<String> = themeFlow
+    override val resetInProgress: Flow<Boolean> = resetInProgressFlow
     fun setActiveCarId(id: Int) { activeCar.value = id }
     fun setDriveEnabled(enabled: Boolean) { drive.value = enabled }
     fun setLastBackupAt(value: Long?) { backupAt.value = value }
+    fun setTheme(value: String) { themeFlow.value = value }
+    fun setResetInProgress(value: Boolean) { resetInProgressFlow.value = value }
 }
 
 class FakeSettingsWriter : SettingsWriter {
@@ -118,9 +126,42 @@ class FakeSettingsWriter : SettingsWriter {
         private set
     var lastBackupAt: Long? = null
         private set
+    var theme: String = "system"
+        private set
+    var primaryMetric: String = "km_per_kwh"
+        private set
+    var distanceUnit: String = "km"
+        private set
+    var currency: String = "EUR"
+        private set
+    var setupComplete: Boolean = false
+        private set
+    var resetInProgress: Boolean = false
+        private set
+    var markGlobalResetInProgressCallCount: Int = 0
+        private set
+    var setPrimaryMetricAndDistanceUnitCallCount: Int = 0
+        private set
     override suspend fun setActiveCarId(id: Int) { activeCarId = id }
     override suspend fun setDriveEnabled(enabled: Boolean) { driveEnabled = enabled }
     override suspend fun setLastBackupAt(epochMs: Long) { lastBackupAt = epochMs }
+    override suspend fun setTheme(value: String) { theme = value }
+    override suspend fun setPrimaryMetric(metric: String) { primaryMetric = metric }
+    override suspend fun setDistanceUnit(unit: String) { distanceUnit = unit }
+    override suspend fun setCurrency(code: String) { currency = code }
+    override suspend fun setSetupComplete(value: Boolean) { setupComplete = value }
+    override suspend fun setResetInProgress(value: Boolean) { resetInProgress = value }
+    override suspend fun setPrimaryMetricAndDistanceUnit(metric: String, unit: String) {
+        primaryMetric = metric
+        distanceUnit = unit
+        setPrimaryMetricAndDistanceUnitCallCount++
+    }
+    override suspend fun markGlobalResetInProgress() {
+        setupComplete = false
+        activeCarId = -1
+        resetInProgress = true
+        markGlobalResetInProgressCallCount++
+    }
 }
 
 class FakeBackupScheduler : BackupScheduler {
