@@ -237,4 +237,30 @@
     <string name="car_form_model">Model</string>
     <string name="car_form_year">Year</string>
     <string name="car_form_battery_kwh">Battery (kWh)</string>
+
+    <!-- F2 — Charts -->
+    <string name="charts_title">Charts</string>
+    <string name="charts_period_last_6_months">Last 6 months</string>
+    <string name="charts_period_last_12_months">Last 12 months</string>
+    <string name="charts_period_all_time">All time</string>
+    <string name="charts_period_custom">Custom…</string>
+    <string name="charts_tab_trend">Trend</string>
+    <string name="charts_tab_monthly_kwh">Monthly energy</string>
+    <string name="charts_tab_monthly_cost">Monthly cost</string>
+    <string name="charts_tab_ac_dc">AC vs DC</string>
+    <string name="charts_tab_locations">Locations</string>
+    <string name="charts_trend_legend_ac">AC</string>
+    <string name="charts_trend_legend_dc">DC</string>
+    <string name="charts_trend_y_kmh">Efficiency (km/kWh)</string>
+    <string name="charts_trend_y_mi">Efficiency (mi/kWh)</string>
+    <string name="charts_trend_need_two">Need at least 2 charges to plot a trend</string>
+    <string name="charts_no_data_period">No data for this period</string>
+    <string name="charts_no_cost_period">No cost data for this period</string>
+    <string name="charts_no_locations_period">No location data for this period</string>
+    <string name="charts_locations_other">Other</string>
+    <string name="charts_acdc_kwh_subtitle">%1$.1f kWh AC · %2$.1f kWh DC</string>
+    <plurals name="charts_acdc_count_center">
+        <item quantity="one">%d charge</item>
+        <item quantity="other">%d charges</item>
+    </plurals>
 </resources>

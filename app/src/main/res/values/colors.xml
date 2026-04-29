@@ -16,4 +16,9 @@
     <color name="chart_3">#F57F17</color>
     <color name="chart_4">#AD1457</color>
     <color name="chart_5">#6A1B9A</color>
+
+    <!-- F2 — Chart series fallback colors. Used only when theme attrs (?attr/colorPrimary,
+         ?attr/colorTertiary) cannot be resolved. Matches DESIGN §6 "AC blue, DC orange". -->
+    <color name="chart_ac_fallback">#1E88E5</color>
+    <color name="chart_dc_fallback">#FB8C00</color>
 </resources>
