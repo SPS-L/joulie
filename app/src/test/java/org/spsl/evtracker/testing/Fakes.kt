@@ -344,3 +344,19 @@ class FakeDriveRemoteSource : DriveRemoteSource {
         throw e
     }
 }
+
+class FakeDataResetTransactionRunner(
+    val callRecorder: MutableList<String>? = null,
+    private val onClearStores: () -> Unit = {}
+) : org.spsl.evtracker.domain.repository.DataResetTransactionRunner {
+    var clearCallCount: Int = 0
+        private set
+    var failNext: Throwable? = null
+
+    override suspend fun clearAllTables() {
+        callRecorder?.add("clearAllTables")
+        failNext?.let { failNext = null; throw it }
+        clearCallCount++
+        onClearStores()
+    }
+}
