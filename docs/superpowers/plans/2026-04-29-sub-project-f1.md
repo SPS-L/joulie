@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Wire every still-placeholder Settings row, ship the ManageLocations screen, and add two new "reset data" use cases (per-active-car and global) — with a durable `resetInProgress` flag and `MainActivity` startup auto-recovery so an interrupted global reset cannot leave the user in an inconsistent state.
+**Goal:** Wire every still-placeholder Settings row, ship the ManageLocations screen, and add two new "reset data" use cases (per-active-car and global) — with a durable `resetInProgress` flag plus `MainActivity` startup auto-recovery, including a blocking retry dialog if recovery itself fails, so the user cannot reach normal UI with `resetInProgress=true`.
 
 **Architecture:** Extend the narrow domain interfaces (`SettingsReader/Writer`, `ChargeEventWriter`, `LocationWriter`, `CarWriter`) with the methods F1 needs; introduce one new domain interface `DataResetTransactionRunner` (mirrors the existing `RestoreTransactionRunner`) so the use cases never see Room directly; wire two new use cases (`ResetActiveCarDataUseCase`, `ResetAllDataUseCase`) and one new screen (`ManageLocationsFragment`). All atomic preference writes use a single `dataStore.edit { ... }` block; cross-table deletes go through `database.withTransaction { ... }` via the runner. Recovery from an interrupted reset runs at `MainActivity` startup before any UI mounts.
 
@@ -1881,6 +1881,11 @@ Add these inside the existing `<resources>` element, in a new `<!-- F1 Settings 
     <string name="common_undo">Undo</string>
     <string name="common_cancel">Cancel</string>
     <string name="common_confirm">Confirm</string>
+
+    <!-- F1 startup recovery (blocking dialog when auto-recovery fails) -->
+    <string name="recovery_failure_title">Reset recovery failed</string>
+    <string name="recovery_failure_body">We couldn\'t finish your last reset.\n\n%1$s\n\nTry again, or clear the app\'s data from system Settings if it keeps failing.</string>
+    <string name="recovery_failure_retry">Try again</string>
 ```
 
 - [ ] **Step 2: Run gradle to verify resource compile**
@@ -3040,12 +3045,16 @@ git commit -m "feat(F1): ManageLocationsFragment — RecyclerView + ItemTouchHel
 package org.spsl.evtracker
 
 import android.os.Bundle
+import androidx.annotation.VisibleForTesting
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.NavController
+import androidx.navigation.NavGraph
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.setupWithNavController
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -3063,6 +3072,8 @@ class MainActivity : AppCompatActivity() {
 
     private val isLoading = MutableStateFlow(true)
     private lateinit var binding: ActivityMainBinding
+    private lateinit var navController: NavController
+    private lateinit var navGraph: NavGraph
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splash = installSplashScreen()
@@ -3073,8 +3084,8 @@ class MainActivity : AppCompatActivity() {
 
         val navHost = supportFragmentManager
             .findFragmentById(R.id.nav_host_fragment) as NavHostFragment
-        val navController = navHost.navController
-        val graph = navController.navInflater.inflate(R.navigation.nav_graph)
+        navController = navHost.navController
+        navGraph = navController.navInflater.inflate(R.navigation.nav_graph)
 
         binding.bottomNav.setupWithNavController(navController)
         val hideOn = setOf(
@@ -3087,23 +3098,59 @@ class MainActivity : AppCompatActivity() {
             binding.bottomNav.isVisible = dest.id !in hideOn
         }
 
+        startupSequence()
+    }
+
+    private fun startupSequence() {
         lifecycleScope.launch {
             // F1 — startup auto-recovery for an interrupted global reset (§9.2).
             // Splash stays on screen while this runs (isLoading is still true).
             if (settingsRepository.resetInProgress.first()) {
-                runCatching { resetAllDataUseCase() }
-                    .onFailure {
-                        android.util.Log.e("MainActivity", "Reset auto-recovery failed", it)
-                    }
+                val result = runCatching { resetAllDataUseCase() }
+                if (result.isFailure) {
+                    val cause = result.exceptionOrNull()
+                    android.util.Log.e("MainActivity", "Reset auto-recovery failed", cause)
+                    // BLOCKING dialog: user cannot reach normal UI with resetInProgress=true.
+                    // The dialog stays on top of an empty Activity surface; nav graph is NOT mounted.
+                    showRecoveryFailureDialog(cause)
+                    return@launch
+                }
             }
-
-            // Existing wizard gate.
-            val complete = settingsRepository.setupComplete.first()
-            if (!complete) graph.setStartDestination(R.id.wizardFragment)
-            navController.graph = graph
-            isLoading.value = false
+            mountNavGraph()
         }
     }
+
+    private fun showRecoveryFailureDialog(cause: Throwable?) {
+        // Dismiss the splash so the dialog appears on a blank Activity surface.
+        // The nav host stays unmounted (navController.graph is never set), so there
+        // is no Fragment to interact with.
+        isLoading.value = false
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.recovery_failure_title)
+            .setMessage(getString(R.string.recovery_failure_body, cause?.localizedMessage ?: ""))
+            .setCancelable(false)  // user MUST tap Retry
+            .setPositiveButton(R.string.recovery_failure_retry) { _, _ ->
+                // Re-arm splash and retry the auto-recovery sequence.
+                isLoading.value = true
+                startupSequence()
+            }
+            .show()
+    }
+
+    private suspend fun mountNavGraph() {
+        val complete = settingsRepository.setupComplete.first()
+        if (!complete) navGraph.setStartDestination(R.id.wizardFragment)
+        navController.graph = navGraph
+        isLoading.value = false
+    }
+
+    /**
+     * Test hook: instrumented tests use this to wait for "startup completed" without
+     * relying on `Thread.sleep`. True iff the nav graph has been mounted, which only
+     * happens after auto-recovery either ran successfully or was skipped (flag was false).
+     */
+    @VisibleForTesting
+    fun isNavGraphMounted(): Boolean = ::navController.isInitialized && navController.graph != null && navController.graph === navGraph && !isLoading.value
 }
 ```
 
@@ -3268,15 +3315,25 @@ class ManageLocationsFragmentTest {
 ```kotlin
 package org.spsl.evtracker
 
+import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
+import androidx.test.espresso.Espresso.onView
+import androidx.test.espresso.assertion.ViewAssertions.matches
+import androidx.test.espresso.matcher.RootMatchers.isDialog
+import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
+import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import dagger.hilt.android.testing.BindValue
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import javax.inject.Inject
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -3284,6 +3341,7 @@ import org.junit.runner.RunWith
 import org.spsl.evtracker.data.local.db.AppDatabase
 import org.spsl.evtracker.data.local.entity.CarEntity
 import org.spsl.evtracker.data.repository.SettingsRepository
+import org.spsl.evtracker.domain.repository.DataResetTransactionRunner
 
 @RunWith(AndroidJUnit4::class)
 @HiltAndroidTest
@@ -3294,38 +3352,111 @@ class MainActivityResetRecoveryTest {
     @Inject lateinit var settingsRepository: SettingsRepository
     @Inject lateinit var database: AppDatabase
 
+    /**
+     * @BindValue overrides the production DataResetTransactionRunner binding for the
+     * whole test class. The default impl forwards to the real Room runner; the failure
+     * test overrides `failNext` before launching the activity.
+     *
+     * Hilt's @BindValue replaces the @Binds in DomainModule.kt; no separate test module
+     * is needed.
+     */
+    @BindValue
+    @JvmField
+    val testRunner: TestableResetRunner = TestableResetRunner()
+
+    class TestableResetRunner : DataResetTransactionRunner {
+        @Volatile var failNext: Throwable? = null
+        @Volatile var realDelegate: DataResetTransactionRunner? = null
+        @Volatile var clearCalls: Int = 0
+        override suspend fun clearAllTables() {
+            clearCalls++
+            failNext?.let { failNext = null; throw it }
+            realDelegate?.clearAllTables()
+        }
+    }
+
     @Before fun setup() {
         hiltRule.inject()
+        // Wire the real Room delegate so the success path actually clears tables.
+        testRunner.realDelegate = org.spsl.evtracker.data.repository.RoomDataResetTransactionRunner(database)
+    }
+
+    /** Polls `MainActivity.isNavGraphMounted` until true; better than fixed Thread.sleep. */
+    private fun ActivityScenario<MainActivity>.awaitNavMounted(timeoutMs: Long = 10_000) = runBlocking {
+        withTimeout(timeoutMs) {
+            while (true) {
+                var mounted = false
+                onActivity { mounted = it.isNavGraphMounted() }
+                if (mounted) return@withTimeout
+                delay(100)
+            }
+        }
     }
 
     @Test fun startup_resetInProgressTrue_runsUseCase_clearsFlag_beforeUiVisible() = runBlocking {
-        // Seed: cars + events + locations populated; resetInProgress=true.
-        database.carDao().insert(CarEntity(name = "Test", make = "M", model = "X", year = 2024, batteryKwh = 75.0))
+        // Seed: cars populated; resetInProgress=true.
+        val carId = database.carDao().insert(
+            CarEntity(name = "Test", make = "M", model = "X", year = 2024, batteryKwh = 75.0)
+        ).toInt()
         settingsRepository.setResetInProgress(true)
 
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.moveToState(androidx.lifecycle.Lifecycle.State.RESUMED)
-            // Allow startup coroutine to run:
-            Thread.sleep(2_000)
+            scenario.moveToState(Lifecycle.State.RESUMED)
+            // Wait on the observable signal: the use case clears the flag in Step 3.
+            withTimeout(10_000) {
+                settingsRepository.resetInProgress.first { !it }
+            }
+            // Then confirm the activity's nav graph is mounted (success path).
+            scenario.awaitNavMounted()
         }
 
-        // Auto-recovery should have run: tables empty + flag cleared
-        assertEquals(null, database.carDao().getById(1))
+        // Auto-recovery ran: the seeded car was deleted by the runner.
+        assertEquals(null, database.carDao().getById(carId))
         assertFalse(settingsRepository.resetInProgress.first())
+        assertEquals(1, testRunner.clearCalls)
     }
 
     @Test fun startup_resetInProgressFalse_doesNotRunUseCase() = runBlocking {
-        database.carDao().insert(CarEntity(name = "Test", make = "M", model = "X", year = 2024, batteryKwh = 75.0))
+        val carId = database.carDao().insert(
+            CarEntity(name = "Test", make = "M", model = "X", year = 2024, batteryKwh = 75.0)
+        ).toInt()
         settingsRepository.setResetInProgress(false)
 
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.moveToState(androidx.lifecycle.Lifecycle.State.RESUMED)
-            Thread.sleep(2_000)
+            scenario.moveToState(Lifecycle.State.RESUMED)
+            scenario.awaitNavMounted()
         }
 
-        // Tables UNCHANGED — auto-recovery did not run
-        val car = database.carDao().getById(1)
-        assert(car != null && car.name == "Test")
+        // Auto-recovery did NOT run: the runner was never invoked, the seeded car is still there.
+        assertEquals(0, testRunner.clearCalls)
+        val car = database.carDao().getById(carId)
+        assertNotNull(car)
+        assertEquals("Test", car!!.name)
+    }
+
+    @Test fun startup_resetRecoveryThrows_showsRetryDialog_doesNotMountNavGraph() = runBlocking {
+        // Force the use case to throw inside Step 2 (clearAllTables) before Step 3 commits the flag.
+        testRunner.failNext = IllegalStateException("simulated room failure")
+        settingsRepository.setResetInProgress(true)
+
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.moveToState(Lifecycle.State.RESUMED)
+            // The dialog appears asynchronously after the failed runCatching.
+            // Espresso's `inRoot(isDialog())` matcher will block until a dialog window exists.
+            onView(withText(R.string.recovery_failure_title))
+                .inRoot(isDialog())
+                .check(matches(isDisplayed()))
+
+            // Confirm the nav graph was NOT mounted — user cannot reach Dashboard or Wizard.
+            scenario.onActivity { activity ->
+                assert(!activity.isNavGraphMounted())
+            }
+        }
+
+        // Flag is still true on the failure path:
+        kotlinx.coroutines.runBlocking {
+            assert(settingsRepository.resetInProgress.first())
+        }
     }
 }
 ```

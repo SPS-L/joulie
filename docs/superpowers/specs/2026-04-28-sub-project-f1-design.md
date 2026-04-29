@@ -167,7 +167,7 @@ After every successful write, the relevant row's summary updates because the VM'
 
   The Drive-on copy is intentionally informational rather than blocking — a user who genuinely wants to nuke local + remote together can do it in one action; the warning makes the consequence visible before they confirm.
 
-  If the use case is interrupted by process death, MainActivity's startup auto-recovery (§9.2) finishes the reset before any UI mounts on next launch — the user never sees inconsistent state.
+  If the use case is interrupted by process death, MainActivity's startup auto-recovery (§9.2) finishes the reset before any UI mounts on next launch — and if recovery itself fails, MainActivity shows a blocking retry dialog instead of mounting the nav graph, so the user can never reach normal UI in an inconsistent state.
 
 ### 5.10 Export CSV
 
@@ -319,7 +319,7 @@ The durable `resetInProgress` flag combined with §9.2's startup auto-recovery e
 
 **Terminal failure modes:**
 
-1. **Step 2 throws repeatedly across launches** (e.g. underlying Room corruption that defeats every retry of the transaction). `MainActivity`'s `runCatching` swallows, logs, and proceeds. The flag stays true; tables stay populated; on next launch we try again. Rare; not fixable by another tap; if persistent the user must clear app data manually. F1 considers this acceptable.
+1. **Steps 1-3 throw repeatedly across retries** (e.g. underlying Room corruption that defeats every transaction attempt). `MainActivity` shows the blocking "Reset recovery failed — Try again" dialog. The user cannot reach the nav graph. Each Retry tap re-runs the use case. If the failure is persistent, the user must clear app data from system Settings to recover; this is an acceptable terminal state because the alternative (DB corruption) is not fixable by the app on its own.
 2. **Step 4 throws once** (e.g. WorkManager misbehavior). The use case logs and swallows; flag is already cleared in Step 3; Drive is stale until the next change-driven enqueue catches up. The user is on a fully-reset local state and is not blocked.
 
 Step 4's `enqueueBackup()` causes WorkManager to upload an effectively-empty snapshot (no cars ⇒ no events) to Drive. **This overwrites the user's only cloud copy of their data.** The Reset-all confirm dialog (§5.9) MUST surface this when Drive is enabled — see the dialog-text fix below. (When Step 4 fails or is skipped due to a thrown exception, the user-visible local reset is still complete because Step 3 cleared the flag — Drive simply stays stale until the next change-driven enqueue.)
@@ -610,14 +610,14 @@ isLoading.value = false
 | Property | Why it matters |
 |---|---|
 | Auto-recovery runs **before** the wizard gate is consulted | Eliminates the data-loss window: the user can't reach Dashboard or the wizard with `resetInProgress=true`, so they can't create cars/events that would later be wiped. |
-| Splash screen stays up via `isLoading=true` | The auto-recovery is a Room transaction (sub-second on any modern device); the user sees a slightly longer splash, never an inconsistent UI. |
+| Splash screen stays up via `isLoading=true` during recovery | The auto-recovery is a Room transaction (sub-second on any modern device); the user sees a slightly longer splash, never an inconsistent UI. |
 | Use case clears the flag (Step 3) BEFORE enqueueing the backup (Step 4) | Step 4 internally swallows its own failures, but if it threw, Step 3 has already committed `resetInProgress=false`, so the flag cannot stick true and re-open the data-loss window. The only way the flag stays true post-`invoke()` is a Steps 1-3 failure. |
-| `runCatching` in MainActivity swallows Step 1-3 failures and logs | The realistic Step 1-3 failure modes are Room corruption or DataStore IO failure — both indicate a state the app cannot fix automatically. We proceed with normal startup; the flag stays true; the next launch retries. No fallback banner because the issue won't be fixed by another tap. |
-| Use case is idempotent (§6.3) | Auto-recovery on already-clean state is a no-op except for clearing the flag. Safe to call on every launch where the flag is true. |
+| **If recovery itself fails, MainActivity shows a BLOCKING `MaterialAlertDialog` ("Reset recovery failed — Try again") and does NOT mount the nav graph** | A `runCatching` failure inside the recovery doesn't silently fall through to normal startup. The dialog is non-cancellable; the user can only proceed by tapping Retry (re-runs the use case) or by clearing app data from system Settings. This closes the last residual window where Steps 1-3 throw and the user could otherwise still reach UI with `resetInProgress=true`. |
+| Use case is idempotent (§6.3) | Auto-recovery on already-clean state is a no-op except for clearing the flag. Safe to call on every launch (and on every Retry tap) where the flag is true. |
 
 **The `MainActivity` is the only place that depends on `ResetAllDataUseCase`** outside `SettingsViewModel`. No new use case wiring is needed in any other Fragment or service.
 
-**Failure-table update (cross-reference with §6.3):** every "Process death after Step 1" row's recovery action is now **"MainActivity auto-runs the use case before mounting any UI."** The user never sees the inconsistent state.
+**Failure-table update (cross-reference with §6.3):** every "Process death after Step 1" row's recovery action is now **"MainActivity auto-runs the use case before mounting any UI; if recovery itself throws, the blocking retry dialog appears and the nav graph is not mounted."** Either way the user cannot reach normal UI with `resetInProgress=true`.
 
 ## 10. Strings (`res/values/strings.xml`)
 
@@ -723,8 +723,9 @@ All swipe tests use `StandardTestDispatcher` + `advanceTimeBy(5_001)`, matching 
 - `resetAll_dialogText_includesDriveWarning_whenDriveEnabled` (Drive on ⇒ dialog message is `R.string.settings_reset_all_confirm_drive_on`; Drive off ⇒ `R.string.settings_reset_all_confirm`)
 
 #### `MainActivityResetRecoveryTest` (Hilt + Espresso; verifies §9.2):
-- `startup_resetInProgressTrue_runsUseCase_clearsFlag_beforeUiVisible` (seed DataStore with `resetInProgress=true` AND populate cars/events/locations tables; launch MainActivity; assert tables are empty AND `resetInProgress=false` AND splash dismissed AND nav graph routed to wizard)
-- `startup_resetInProgressFalse_doesNotRunUseCase` (seed DataStore with `resetInProgress=false` AND populate tables; launch MainActivity; assert tables UNCHANGED — auto-recovery must not run)
+- `startup_resetInProgressTrue_runsUseCase_clearsFlag_beforeUiVisible` (seed DataStore with `resetInProgress=true` AND populate cars/events/locations tables; launch MainActivity; await `resetInProgress` Flow flipping to false; assert tables are empty AND nav graph mounted)
+- `startup_resetInProgressFalse_doesNotRunUseCase` (seed DataStore with `resetInProgress=false` AND populate tables; launch MainActivity; await `MainActivity.isNavGraphMounted()` true; assert tables UNCHANGED AND the `@BindValue` test runner's `clearCalls == 0`)
+- `startup_resetRecoveryThrows_showsRetryDialog_doesNotMountNavGraph` (use a `@BindValue` testable `DataResetTransactionRunner` that throws on first `clearAllTables`; launch MainActivity with `resetInProgress=true`; assert the dialog `R.string.recovery_failure_title` is displayed AND `MainActivity.isNavGraphMounted()` returns false AND `resetInProgress` flag is still true — proves recovery failure is blocking, not silent)
 
 #### `RoomDataResetTransactionRunnerTest` (Hilt + Room in-memory; instrumented because it exercises the real `withTransaction` boundary):
 - `clearAllTables_emptiesAllThreeTables`
@@ -739,7 +740,7 @@ These follow D's existing Espresso patterns (Hilt test runner, `IntentsTestRule`
 ### 11.3 Coverage targets
 
 - F1 raises the JVM test count from ~152 to ~188 (~36 new JVM tests: 15 in `SettingsViewModelTest`, 4 in `ResetActiveCarDataUseCaseTest`, 9 in `ResetAllDataUseCaseTest`, 8 in `ManageLocationsViewModelTest`).
-- F1 adds 10 instrumented tests (4 in `SettingsFragmentTest` + 2 in `ManageLocationsFragmentTest` + 2 in `MainActivityResetRecoveryTest` + 2 in `RoomDataResetTransactionRunnerTest`); the instrumented suite still compiles via `:app:assembleDebugAndroidTest`. Running them needs an emulator (sandbox-incompatible).
+- F1 adds 11 instrumented tests (4 in `SettingsFragmentTest` + 2 in `ManageLocationsFragmentTest` + 3 in `MainActivityResetRecoveryTest` + 2 in `RoomDataResetTransactionRunnerTest`); the instrumented suite still compiles via `:app:assembleDebugAndroidTest`. Running them needs an emulator (sandbox-incompatible).
 
 ## 12. Edge cases
 
