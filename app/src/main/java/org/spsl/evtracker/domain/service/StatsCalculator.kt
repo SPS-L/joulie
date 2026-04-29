@@ -5,6 +5,7 @@ import javax.inject.Inject
 import org.spsl.evtracker.core.model.AcDcSplit
 import org.spsl.evtracker.core.model.EfficiencyPoint
 import org.spsl.evtracker.core.model.EfficiencySeries
+import org.spsl.evtracker.core.model.LocationSlice
 import org.spsl.evtracker.core.model.MonthBucket
 import org.spsl.evtracker.core.model.Stats
 import org.spsl.evtracker.data.local.entity.ChargeEventEntity
@@ -133,5 +134,25 @@ class StatsCalculator @Inject constructor() {
             acKwh   = ac.sumOf { it.kwhAdded },
             dcKwh   = dc.sumOf { it.kwhAdded }
         )
+    }
+
+    fun computeLocationDistribution(events: List<ChargeEventEntity>): List<LocationSlice> {
+        val counts = events
+            .mapNotNull { it.location?.trim()?.takeIf(String::isNotBlank) }
+            .groupingBy { it }
+            .eachCount()
+        if (counts.isEmpty()) return emptyList()
+        val ranked = counts.entries.sortedByDescending { it.value }
+        val top = ranked.take(MAX_LOCATION_SLICES)
+            .map { LocationSlice(it.key, it.value) }
+        val tail = ranked.drop(MAX_LOCATION_SLICES)
+        return if (tail.isEmpty()) top
+               else top + LocationSlice(LocationSlice.OTHER_KEY, tail.sumOf { it.value })
+    }
+
+    companion object {
+        // Cap chosen so the pie chart stays legible on phone widths
+        // (see spec §6.5 / §10). Tweaking is a code change, not a localization change.
+        const val MAX_LOCATION_SLICES = 8
     }
 }
