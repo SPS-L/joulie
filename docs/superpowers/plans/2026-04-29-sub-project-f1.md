@@ -3180,132 +3180,198 @@ These tests follow the existing pattern (Hilt + Espresso) used by `ChargeEditFra
 
 - [ ] **Step 1: Create SettingsFragmentTest.kt**
 
+This test uses the **same pattern as `ChargeEditFragmentTest`** (`launchFragmentInContainer` + DataStore seed in `@Before`). Navigation assertions use `TestNavHostController` from `androidx.navigation.testing`, not real bottom-nav clicks — the bottom-nav menu item id is `R.id.settingsFragment` (NOT `R.id.nav_settings`, which is the menu LABEL string).
+
 ```kotlin
 package org.spsl.evtracker.ui.settings
 
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.fragment.app.testing.launchFragmentInContainer
+import androidx.lifecycle.Lifecycle
+import androidx.navigation.Navigation
+import androidx.navigation.testing.TestNavHostController
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.assertion.ViewAssertions.matches
+import androidx.test.espresso.matcher.RootMatchers.isDialog
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
 import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
+import javax.inject.Inject
+import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.spsl.evtracker.R
+import org.spsl.evtracker.data.preferences.PreferenceKeys
 
-@RunWith(AndroidJUnit4::class)
 @HiltAndroidTest
+@RunWith(AndroidJUnit4::class)
 class SettingsFragmentTest {
 
     @get:Rule(order = 0) val hiltRule = HiltAndroidRule(this)
 
-    @Before fun setup() { hiltRule.inject() }
+    @Inject lateinit var dataStore: DataStore<Preferences>
+
+    private fun seedDataStore(activeCarId: Int = 5, driveEnabled: Boolean = false) = runBlocking {
+        dataStore.edit {
+            it.clear()
+            it[PreferenceKeys.SETUP_COMPLETE] = true
+            it[PreferenceKeys.ACTIVE_CAR_ID]  = activeCarId
+            it[PreferenceKeys.DISTANCE_UNIT]  = "km"
+            it[PreferenceKeys.CURRENCY]       = "EUR"
+            it[PreferenceKeys.PRIMARY_METRIC] = "km_per_kwh"
+            it[PreferenceKeys.THEME]          = "system"
+            it[PreferenceKeys.DRIVE_ENABLED]  = driveEnabled
+        }
+    }
+
+    @Before fun setUp() { hiltRule.inject() }
 
     @Test fun themeRow_tap_opensDialog_select_dark_updatesSummary() {
-        // Launch MainActivity; navigate to settings via bottom nav
-        // (Implementer: use ActivityScenario.launch<MainActivity> + bottom nav click pattern from existing tests.)
-        // 1. Navigate to settings.
-        onView(withId(R.id.nav_settings)).perform(click())
-        // 2. Click theme row.
-        onView(withId(R.id.row_theme)).perform(click())
-        // 3. In the dialog, click "Dark".
-        onView(withText(R.string.settings_theme_dark)).perform(click())
-        // 4. Summary should now read "Dark".
-        onView(withId(R.id.summary_theme)).check(matches(withText(R.string.settings_theme_dark)))
+        seedDataStore()
+        launchFragmentInContainer<SettingsFragment>(themeResId = R.style.Theme_EVTracker)
+            .moveToState(Lifecycle.State.RESUMED).use {
+                onView(withId(R.id.row_theme)).perform(click())
+                onView(withText(R.string.settings_theme_dark))
+                    .inRoot(isDialog())
+                    .perform(click())
+                onView(withId(R.id.summary_theme))
+                    .check(matches(withText(R.string.settings_theme_dark)))
+            }
     }
 
     @Test fun exportCsv_disabled_whenNoActiveCar() {
-        // Seed DataStore with activeCarId=-1 via a TestSettingsRepository hook.
-        // Click row should not trigger any share intent — assert by checking that no chooser appears.
-        onView(withId(R.id.nav_settings)).perform(click())
-        onView(withId(R.id.row_export_csv)).check(matches(isDisplayed()))
-        // Tap should be ignored — implementer asserts via no-Intent-launched.
-        onView(withId(R.id.row_export_csv)).perform(click())
-        // No chooser opens; this is a soft assertion via Espresso intent-not-fired pattern.
+        seedDataStore(activeCarId = -1)
+        launchFragmentInContainer<SettingsFragment>(themeResId = R.style.Theme_EVTracker)
+            .moveToState(Lifecycle.State.RESUMED).use {
+                // The row is rendered but its click listener should be inert because
+                // SettingsViewModel.onExportCsv() guards on activeCarId == -1.
+                // Tap; assert no chooser appears (no Intent fires).
+                onView(withId(R.id.row_export_csv)).perform(click())
+                // The row stays on-screen; nothing navigated away.
+                onView(withId(R.id.row_export_csv)).check(matches(isDisplayed()))
+            }
     }
 
     @Test fun resetAll_confirm_navigatesToWizard() {
-        onView(withId(R.id.nav_settings)).perform(click())
+        seedDataStore()
+        // TestNavHostController gives us a controllable nav graph in fragment-in-container.
+        val nav = TestNavHostController(ApplicationProvider.getApplicationContext()).apply {
+            setGraph(R.navigation.nav_graph)
+            setCurrentDestination(R.id.settingsFragment)
+        }
+        launchFragmentInContainer<SettingsFragment>(themeResId = R.style.Theme_EVTracker)
+            .moveToState(Lifecycle.State.RESUMED)
+            .onFragment { fragment ->
+                Navigation.setViewNavController(fragment.requireView(), nav)
+            }
+
         onView(withId(R.id.row_reset_all)).perform(click())
-        onView(withText(R.string.common_confirm)).perform(click())
-        // Wizard should be visible:
-        onView(withId(R.id.wizardFragment)).check(matches(isDisplayed()))
+        onView(withText(R.string.common_confirm)).inRoot(isDialog()).perform(click())
+
+        // Verify the navigation destination, not a view id.
+        assertEquals(R.id.wizardFragment, nav.currentDestination?.id)
     }
 
     @Test fun resetAll_dialogText_includesDriveWarning_whenDriveEnabled() {
-        // Seed driveEnabled=true via TestSettings hook.
-        onView(withId(R.id.nav_settings)).perform(click())
-        onView(withId(R.id.row_reset_all)).perform(click())
-        onView(withText(R.string.settings_reset_all_confirm_drive_on)).check(matches(isDisplayed()))
+        seedDataStore(driveEnabled = true)
+        launchFragmentInContainer<SettingsFragment>(themeResId = R.style.Theme_EVTracker)
+            .moveToState(Lifecycle.State.RESUMED).use {
+                onView(withId(R.id.row_reset_all)).perform(click())
+                onView(withText(R.string.settings_reset_all_confirm_drive_on))
+                    .inRoot(isDialog())
+                    .check(matches(isDisplayed()))
+            }
     }
 }
 ```
 
 - [ ] **Step 2: Create ManageLocationsFragmentTest.kt**
 
+This test uses `launchFragmentInContainer` (matches the existing project pattern) and seeds the Custom Locations table directly via the Hilt-bound DAO. After the 5s undo window elapses, the LocationReader Flow re-emits and the adapter updates in-place — there is no need to "reopen" the fragment. (The Settings row is on a different fragment and the bottom-nav is hidden on this screen anyway.)
+
 ```kotlin
 package org.spsl.evtracker.ui.locations
 
+import androidx.fragment.app.testing.launchFragmentInContainer
+import androidx.lifecycle.Lifecycle
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.action.GeneralLocation
 import androidx.test.espresso.action.GeneralSwipeAction
 import androidx.test.espresso.action.Press
 import androidx.test.espresso.action.Swipe
+import androidx.test.espresso.action.ViewActions.click
+import androidx.test.espresso.assertion.ViewAssertions.doesNotExist
 import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
-import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
+import javax.inject.Inject
+import kotlinx.coroutines.runBlocking
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.spsl.evtracker.R
+import org.spsl.evtracker.data.local.dao.CustomLocationDao
+import org.spsl.evtracker.data.local.entity.CustomLocationEntity
 
-@RunWith(AndroidJUnit4::class)
 @HiltAndroidTest
+@RunWith(AndroidJUnit4::class)
 class ManageLocationsFragmentTest {
 
     @get:Rule(order = 0) val hiltRule = HiltAndroidRule(this)
 
-    @Before fun setup() {
+    @Inject lateinit var customLocationDao: CustomLocationDao
+
+    @Before fun setUp() {
         hiltRule.inject()
-        // Implementer: seed CustomLocationDao via Hilt-bound test repo with two rows ("Office", "Home")
+        runBlocking {
+            customLocationDao.deleteAll()
+            customLocationDao.insertIfMissing(CustomLocationEntity(label = "Office", useCount = 5, lastUsed = 1_700_000_000_000L))
+            customLocationDao.insertIfMissing(CustomLocationEntity(label = "Home",   useCount = 3, lastUsed = 1_700_000_001_000L))
+        }
     }
 
     @Test fun swipe_showsSnackbar_undo_restoresRow() {
-        // Navigate to ManageLocations.
-        onView(withId(R.id.nav_settings)).perform(click())
-        onView(withId(R.id.row_manage_locations)).perform(click())
-
-        onView(withText("Office")).check(matches(isDisplayed()))
-        // Swipe Office row left.
-        onView(withText("Office")).perform(GeneralSwipeAction(Swipe.FAST, GeneralLocation.CENTER_RIGHT, GeneralLocation.CENTER_LEFT, Press.FINGER))
-
-        // Snackbar with Undo:
-        onView(withText(R.string.common_undo)).perform(click())
-        // Row is back:
-        onView(withText("Office")).check(matches(isDisplayed()))
+        launchFragmentInContainer<ManageLocationsFragment>(themeResId = R.style.Theme_EVTracker)
+            .moveToState(Lifecycle.State.RESUMED).use {
+                onView(withText("Office")).check(matches(isDisplayed()))
+                onView(withText("Office")).perform(GeneralSwipeAction(
+                    Swipe.FAST, GeneralLocation.CENTER_RIGHT, GeneralLocation.CENTER_LEFT, Press.FINGER
+                ))
+                // Snackbar's Undo button (the action label).
+                onView(withText(R.string.common_undo)).perform(click())
+                // Row is restored — it never left the DB; the in-memory pendingDeletions filter
+                // dropped it from the visible list, and Undo cleared the filter.
+                onView(withText("Office")).check(matches(isDisplayed()))
+            }
     }
 
-    @Test fun swipe_no_undo_after_5s_rowIsGoneAfterReopen() {
-        onView(withId(R.id.nav_settings)).perform(click())
-        onView(withId(R.id.row_manage_locations)).perform(click())
-        onView(withText("Office")).perform(GeneralSwipeAction(Swipe.FAST, GeneralLocation.CENTER_RIGHT, GeneralLocation.CENTER_LEFT, Press.FINGER))
-        // Wait 5.5 seconds for the commit.
-        Thread.sleep(5_500)
-        // Reopen the fragment to force a re-read from DB.
-        onView(withId(R.id.row_manage_locations)).perform(click())
-        // Row is gone — only "Home" remains.
-        onView(withText("Office")).check(androidx.test.espresso.assertion.ViewAssertions.doesNotExist())
-        onView(withText("Home")).check(matches(isDisplayed()))
+    @Test fun swipe_no_undo_after_5s_rowIsGone() {
+        launchFragmentInContainer<ManageLocationsFragment>(themeResId = R.style.Theme_EVTracker)
+            .moveToState(Lifecycle.State.RESUMED).use {
+                onView(withText("Office")).perform(GeneralSwipeAction(
+                    Swipe.FAST, GeneralLocation.CENTER_RIGHT, GeneralLocation.CENTER_LEFT, Press.FINGER
+                ))
+                // Wait past the 5-second undo window. The job calls LocationWriter.delete,
+                // which mutates the DB; the LocationReader.observeAll() Flow re-emits,
+                // ListAdapter updates in-place — no reopen required.
+                Thread.sleep(5_500)
+                onView(withText("Office")).check(doesNotExist())
+                onView(withText("Home")).check(matches(isDisplayed()))
+            }
     }
 }
 ```
@@ -3539,6 +3605,10 @@ The branch `feat/sub-project-f1` is ready for merge into `main` via `--no-ff`. M
 - **Build commands:** always prefix with `GRADLE_USER_HOME=/tmp/gradle-home` per CLAUDE.md's sandbox quirk.
 - **Test event collection:** every `events.collect` test must `launch(start = CoroutineStart.UNDISPATCHED) { vm.events.collect { ... } }` BEFORE the action, then `advanceUntilIdle()` (or `runCurrent()`) after. CLAUDE.md spells this out under "ViewModel + event pattern (D-era)."
 - **Time-controlled tests:** use `StandardTestDispatcher` + `advanceTimeBy(5_001L)` for the 5s undo window, NEVER `UnconfinedTestDispatcher` (it runs `delay` synchronously and breaks the assertion).
-- **Hilt + Espresso:** the existing `ChargeEditFragmentTest` and `DashboardFragmentTest` show the working test setup pattern (`@HiltAndroidTest`, `HiltAndroidRule`, `ActivityScenario.launch<MainActivity>()`).
+- **Hilt + Espresso, two distinct patterns in this plan:**
+  - **Fragment-level tests** (`SettingsFragmentTest`, `ManageLocationsFragmentTest`) follow the existing project pattern: `@HiltAndroidTest` + `launchFragmentInContainer<XxxFragment>` + DataStore (or DAO) seed in `@Before`. This matches `ChargeEditFragmentTest`. For navigation assertions, use `TestNavHostController` from `androidx.navigation.testing` (set the graph, install via `Navigation.setViewNavController` on the fragment view, then assert `currentDestination?.id`). DO NOT click the bottom navigation menu — `launchFragmentInContainer` doesn't host the Activity that owns it. The bottom-nav menu item id is `R.id.settingsFragment` (not `R.id.nav_settings`, which is a string label).
+  - **Activity-level test** (`MainActivityResetRecoveryTest`) uses `ActivityScenario.launch<MainActivity>()` because it tests `MainActivity.onCreate`'s startup hook. It also uses Hilt's `@BindValue` to override the production `DataResetTransactionRunner` binding with a `TestableResetRunner` that can be made to throw on demand. This is **new test infrastructure** for this project — none of A-E used `@BindValue` or `ActivityScenario`.
+  - The `androidx.navigation:navigation-testing` dependency is already wired (`gradle/libs.versions.toml:38`, `app/build.gradle.kts:101` — `androidTestImplementation(libs.androidx.navigation.testing)`). No build-script changes required.
+  - **DB-level test** (`RoomDataResetTransactionRunnerTest`) uses `Room.inMemoryDatabaseBuilder` directly without Hilt, matching the Room test patterns from B/C/E.
 - **Currency array:** the spec calls it `R.array.currencies` but the actual resource is named `R.array.supported_currencies` (verified by `grep` against `app/src/main/res/values/currencies.xml`). Use the actual name.
 - **Module placement of `DataResetTransactionRunner`:** F1 places the interface in `domain/repository/` (not `domain/backup/` like `RestoreTransactionRunner`) because the reset is data-mutation infrastructure rather than backup-flow infrastructure. The DI binding goes in `DomainModule` next to the existing repository bindings.
