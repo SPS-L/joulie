@@ -96,4 +96,7 @@ class StatsCalculator @Inject constructor() {
             )
         }.sortedWith(compareBy({ it.year }, { it.month }))
     }
+
+    fun detectMixedCurrency(events: List<ChargeEventEntity>): Boolean =
+        events.mapNotNull { e -> e.costTotal?.let { e.currency } }.distinct().size > 1
 }
