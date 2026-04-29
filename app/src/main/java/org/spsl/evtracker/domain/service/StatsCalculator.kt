@@ -2,6 +2,8 @@ package org.spsl.evtracker.domain.service
 
 import java.util.Calendar
 import javax.inject.Inject
+import org.spsl.evtracker.core.model.EfficiencyPoint
+import org.spsl.evtracker.core.model.EfficiencySeries
 import org.spsl.evtracker.core.model.MonthBucket
 import org.spsl.evtracker.core.model.Stats
 import org.spsl.evtracker.data.local.entity.ChargeEventEntity
@@ -99,4 +101,25 @@ class StatsCalculator @Inject constructor() {
 
     fun detectMixedCurrency(events: List<ChargeEventEntity>): Boolean =
         events.mapNotNull { e -> e.costTotal?.let { e.currency } }.distinct().size > 1
+
+    fun computeEfficiencyTrend(events: List<ChargeEventEntity>): EfficiencySeries {
+        fun seriesFor(type: String): List<EfficiencyPoint> {
+            val sorted = events.filter { it.chargeType == type }.sortedBy { it.eventDate }
+            val out = ArrayList<EfficiencyPoint>(sorted.size)
+            for (i in 1 until sorted.size) {
+                val dist = sorted[i].odometerKm - sorted[i - 1].odometerKm
+                if (dist > 0 && sorted[i].kwhAdded > 0.0) {
+                    out += EfficiencyPoint(
+                        eventTimeMillis = sorted[i].eventDate,
+                        kmPerKwh = dist / sorted[i].kwhAdded
+                    )
+                }
+            }
+            return out
+        }
+        return EfficiencySeries(
+            acPoints = seriesFor("AC"),
+            dcPoints = seriesFor("DC")
+        )
+    }
 }
