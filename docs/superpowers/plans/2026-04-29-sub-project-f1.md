@@ -3253,12 +3253,18 @@ class SettingsFragmentTest {
         seedDataStore(activeCarId = -1)
         launchFragmentInContainer<SettingsFragment>(themeResId = R.style.Theme_EVTracker)
             .moveToState(Lifecycle.State.RESUMED).use {
-                // The row is rendered but its click listener should be inert because
-                // SettingsViewModel.onExportCsv() guards on activeCarId == -1.
-                // Tap; assert no chooser appears (no Intent fires).
-                onView(withId(R.id.row_export_csv)).perform(click())
-                // The row stays on-screen; nothing navigated away.
-                onView(withId(R.id.row_export_csv)).check(matches(isDisplayed()))
+                // SettingsFragment.renderF1Rows sets isClickable=false AND alpha=0.5 when
+                // activeCarId == -1. Assert BOTH conditions on the actual View so a
+                // regression that flips only one of them still fails. (The behavioral
+                // guarantee — that no chooser fires when the row is tapped — is covered
+                // by the JVM unit test `exportCsv_disabled_whenNoActiveCar` in
+                // SettingsViewModelTest, which runs on every build.)
+                onView(withId(R.id.row_export_csv)).check(matches(
+                    org.hamcrest.Matchers.allOf(
+                        org.hamcrest.Matchers.not(androidx.test.espresso.matcher.ViewMatchers.isClickable()),
+                        androidx.test.espresso.matcher.ViewMatchers.withAlpha(0.5f)
+                    )
+                ))
             }
     }
 
@@ -3365,10 +3371,19 @@ class ManageLocationsFragmentTest {
                 onView(withText("Office")).perform(GeneralSwipeAction(
                     Swipe.FAST, GeneralLocation.CENTER_RIGHT, GeneralLocation.CENTER_LEFT, Press.FINGER
                 ))
-                // Wait past the 5-second undo window. The job calls LocationWriter.delete,
-                // which mutates the DB; the LocationReader.observeAll() Flow re-emits,
-                // ListAdapter updates in-place — no reopen required.
-                Thread.sleep(5_500)
+                // The VM's commit job calls LocationWriter.delete after a real 5s delay
+                // (instrumented tests run real coroutines on real threads — TestDispatcher
+                // would only work in JVM unit tests). Wait on the DAO observable instead
+                // of a fixed Thread.sleep: this returns as soon as the row leaves the DB,
+                // so on a fast device the test is faster than 5.5s and on a slow device
+                // it's still bounded by withTimeout. The 5s VM delay still gates the
+                // earliest possible exit.
+                kotlinx.coroutines.runBlocking {
+                    kotlinx.coroutines.withTimeout(10_000) {
+                        customLocationDao.observeAll()
+                            .first { list -> list.none { it.label == "Office" } }
+                    }
+                }
                 onView(withText("Office")).check(doesNotExist())
                 onView(withText("Home")).check(matches(isDisplayed()))
             }
@@ -3514,15 +3529,21 @@ class MainActivityResetRecoveryTest {
                 .check(matches(isDisplayed()))
 
             // Confirm the nav graph was NOT mounted — user cannot reach Dashboard or Wizard.
+            // Use JUnit's assertFalse rather than Kotlin's stdlib assert(), which compiles
+            // to a JVM assertion that is disabled at runtime by default.
             scenario.onActivity { activity ->
-                assert(!activity.isNavGraphMounted())
+                org.junit.Assert.assertFalse(
+                    "nav graph must not be mounted while recovery dialog is showing",
+                    activity.isNavGraphMounted()
+                )
             }
         }
 
         // Flag is still true on the failure path:
-        kotlinx.coroutines.runBlocking {
-            assert(settingsRepository.resetInProgress.first())
-        }
+        org.junit.Assert.assertTrue(
+            "resetInProgress must remain true when recovery throws",
+            settingsRepository.resetInProgress.first()
+        )
     }
 }
 ```
