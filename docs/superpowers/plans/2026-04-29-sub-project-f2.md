@@ -261,11 +261,11 @@ class LocationSliceTest {
         assertFalse(slice.isOther)
     }
 
-    @Test fun otherKey_startsWithSpace_collisionProofAgainstTrimmedUserInput() {
-        // Production code trims user-typed labels before grouping (see
-        // StatsCalculator.computeLocationDistribution). A trimmed label can
-        // never start with whitespace, so the sentinel cannot collide.
-        assertTrue(LocationSlice.OTHER_KEY.startsWith(" "))
+    @Test fun otherKey_startsWithNul_collisionProofAgainstAnyAndroidInput() {
+        // Android EditText strips the NUL char from IME input, so no
+        // user-typed location label can ever start with it. The sentinel
+        // is therefore collision-proof regardless of any trim() invariant.
+        assertEquals(Char(0), LocationSlice.OTHER_KEY[0])
     }
 }
 ```
@@ -327,19 +327,14 @@ data class LocationSlice(
     val isOther: Boolean get() = label == OTHER_KEY
 
     companion object {
-        /**
-         * Sentinel label for the collapsed-tail slice in [computeLocationDistribution].
-         *
-         * Collision-proofness rests on a *paired invariant*, not on the sentinel
-         * alone: production grouping in `StatsCalculator.computeLocationDistribution`
-         * applies `trim()` to user input before grouping, so any user-typed label
-         * starts with a non-whitespace character. The sentinel here begins with
-         * a SPACE; therefore no trimmed user label can equal it. If a future
-         * refactor drops the trim() call, this assumption breaks — the
-         * `trim_caseSensitive` test in `StatsCalculatorLocationDistTest` pins
-         * the trim behaviour so that change shows up in CI.
-         */
-        const val OTHER_KEY = " __other__"
+        // Construct via Char(0) so the source file is unambiguous in markdown.
+        // Embedding a literal NUL char in a Kotlin string literal would render
+        // as a blank space in viewers and silently turn into a real space
+        // under copy/paste — breaking the collision-proof contract documented
+        // below. `@JvmField val` instead of `const val` because Char(0) is
+        // not a compile-time constant expression; cost is one allocation
+        // per process.
+        @JvmField val OTHER_KEY: String = "${Char(0)}__other__"
     }
 }
 ```
@@ -2070,11 +2065,22 @@ object ChartStyling {
         chart.setHoleColor(Color.TRANSPARENT)
     }
 
-    fun monthLabelFormatter(): IAxisValueFormatter {
+    /** Formatter for monthly bar charts. Bars store the bucket *index* in
+     *  Entry.x (values are 0f, 1f, 2f, ... — no Float aliasing). The
+     *  formatter looks up the bucket at that index and renders its calendar
+     *  month/year. Calling code passes the bucket list once per chart build;
+     *  the closure captures it. */
+    fun monthBucketFormatter(buckets: List<org.spsl.evtracker.core.model.MonthBucket>): IAxisValueFormatter {
         val fmt = SimpleDateFormat("MMM yy", Locale.getDefault())
+        val cal = java.util.Calendar.getInstance()
         return object : IAxisValueFormatter {
             override fun getFormattedValue(value: Float): String {
-                return fmt.format(Date(value.toLong()))
+                if (buckets.isEmpty()) return ""
+                val i = value.toInt().coerceIn(0, buckets.lastIndex)
+                val b = buckets[i]
+                cal.clear()
+                cal.set(b.year, b.month - 1, 1, 0, 0, 0)
+                return fmt.format(Date(cal.timeInMillis))
             }
         }
     }
@@ -2346,7 +2352,7 @@ class ChartsTabFragment : Fragment() {
         }
         val ds = BarDataSet(entries, "kWh").apply { color = primary; valueTextSize = 0f }
         chart.data = BarData(ds)
-        chart.xAxis.valueFormatter = monthIndexFormatter(charts.monthlyKwh)
+        chart.xAxis.valueFormatter = ChartStyling.monthBucketFormatter(charts.monthlyKwh)
         chart.marker = ChartsMarkerView(requireContext(), "kWh")
         if (!firstRenderConsumed) { chart.animateY(400); firstRenderConsumed = true }
         container.addView(chart, FrameLayout.LayoutParams(
@@ -2377,7 +2383,7 @@ class ChartsTabFragment : Fragment() {
         val currency = charts.periodCurrency ?: ""
         val ds = BarDataSet(entries, currency).apply { color = tertiary; valueTextSize = 0f }
         chart.data = BarData(ds)
-        chart.xAxis.valueFormatter = monthIndexFormatter(charts.monthlyCost)
+        chart.xAxis.valueFormatter = ChartStyling.monthBucketFormatter(charts.monthlyCost)
         chart.marker = ChartsMarkerView(requireContext(), currency)
         if (!firstRenderConsumed) { chart.animateY(400); firstRenderConsumed = true }
         container.addView(chart, FrameLayout.LayoutParams(
@@ -2451,15 +2457,7 @@ class ChartsTabFragment : Fragment() {
         return cal.timeInMillis
     }
 
-    private fun monthIndexFormatter(buckets: List<MonthBucket>) =
-        object : com.github.mikephil.charting.formatter.IAxisValueFormatter {
-            override fun getFormattedValue(value: Float): String {
-                val i = value.toInt().coerceIn(0, buckets.lastIndex)
-                val b = buckets[i]
-                return java.text.SimpleDateFormat("MMM yy", java.util.Locale.getDefault())
-                    .format(java.util.Date(bucketMillis(b)))
-            }
-        }
+    // (Monthly x-axis formatting now lives in ChartStyling.monthBucketFormatter.)
 
     override fun onDestroyView() {
         super.onDestroyView()
@@ -2696,11 +2694,32 @@ class ChartsFragment : Fragment() {
             }
         }
         // Reflect the current period selection on the chip group.
-        when (state.period) {
+        when (val p = state.period) {
             ChartsPeriod.Last6Months  -> binding.chipLast6Months.isChecked = true
             ChartsPeriod.Last12Months -> binding.chipLast12Months.isChecked = true
             ChartsPeriod.AllTime      -> binding.chipAllTime.isChecked = true
-            is ChartsPeriod.Custom    -> binding.chipCustom.isChecked = true
+            is ChartsPeriod.Custom    -> {
+                binding.chipCustom.isChecked = true
+                // Spec §4: Custom chip exposes the selected range as its
+                // contentDescription so screen readers announce the actual
+                // window. DateUtils.formatDateRange chooses a locale-aware
+                // representation; we include FORMAT_SHOW_YEAR to disambiguate
+                // ranges that span calendar boundaries.
+                binding.chipCustom.contentDescription = android.text.format.DateUtils
+                    .formatDateRange(
+                        requireContext(),
+                        p.fromMillis,
+                        p.toMillis,
+                        android.text.format.DateUtils.FORMAT_SHOW_DATE
+                            or android.text.format.DateUtils.FORMAT_SHOW_YEAR
+                    )
+            }
+        }
+        // Reset the Custom chip's contentDescription back to its label when the
+        // user picks a non-Custom period, so screen readers don't read stale
+        // range text.
+        if (state.period !is ChartsPeriod.Custom) {
+            binding.chipCustom.contentDescription = getString(R.string.charts_period_custom)
         }
     }
 
@@ -2799,6 +2818,7 @@ import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
 import androidx.test.espresso.matcher.ViewMatchers.withId
+import android.view.View
 import androidx.test.espresso.matcher.ViewMatchers.withSubstring
 import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -2858,6 +2878,31 @@ class ChartsFragmentTest {
         currency = currency, location = null, note = "", createdAt = 0L
     )
 
+    /**
+     * Espresso scoping helper for ViewPager2 tab tests.
+     *
+     * `ViewPager2` keeps neighbouring page Fragments attached for prefetch, so
+     * IDs from the shared `fragment_charts_tab.xml` (`charts_tab_empty_message`,
+     * `charts_tab_subtitle`, `charts_tab_chart_root`) are NOT unique in the view
+     * hierarchy when tests run. A bare `withId(...)` matches every page's copy
+     * and Espresso throws AmbiguousViewMatcherException.
+     *
+     * The active page is the only one whose `charts_tab_chart_root` is
+     * `isDisplayed()` (offscreen pages have isDisplayed = false because their
+     * fragment view is detached or off-screen). We scope every per-tab assertion
+     * to the descendant chain of that displayed root.
+     */
+    private fun inActivePage(matcher: org.hamcrest.Matcher<View>): org.hamcrest.Matcher<View> =
+        org.hamcrest.Matchers.allOf(
+            matcher,
+            androidx.test.espresso.matcher.ViewMatchers.isDescendantOfA(
+                org.hamcrest.Matchers.allOf(
+                    androidx.test.espresso.matcher.ViewMatchers.withId(R.id.charts_tab_chart_root),
+                    androidx.test.espresso.matcher.ViewMatchers.isDisplayed()
+                )
+            )
+        )
+
     @Before fun setUp() {
         hiltRule.inject()
         runBlocking { chargeEventDao.deleteAll(); carDao.deleteAll() }
@@ -2884,25 +2929,25 @@ class ChartsFragmentTest {
         launchFragmentInContainer<ChartsFragment>(themeResId = R.style.Theme_EVTracker)
             .moveToState(Lifecycle.State.RESUMED).use {
                 // Default tab is TREND. Empty message is GONE → chart populated.
-                onView(withId(R.id.charts_tab_empty_message)).check(matches(not(isDisplayed())))
+                onView(inActivePage(withId(R.id.charts_tab_empty_message))).check(matches(not(isDisplayed())))
 
                 // MONTHLY_KWH: same — chart populated.
                 onView(withText(R.string.charts_tab_monthly_kwh)).perform(click())
-                onView(withId(R.id.charts_tab_empty_message)).check(matches(not(isDisplayed())))
+                onView(inActivePage(withId(R.id.charts_tab_empty_message))).check(matches(not(isDisplayed())))
 
                 // MONTHLY_COST: mono-currency EUR data → chart populated.
                 onView(withText(R.string.charts_tab_monthly_cost)).perform(click())
-                onView(withId(R.id.charts_tab_empty_message)).check(matches(not(isDisplayed())))
+                onView(inActivePage(withId(R.id.charts_tab_empty_message))).check(matches(not(isDisplayed())))
 
                 // AC_DC: subtitle is visible with a "kWh" substring.
                 onView(withText(R.string.charts_tab_ac_dc)).perform(click())
-                onView(withId(R.id.charts_tab_subtitle))
+                onView(inActivePage(withId(R.id.charts_tab_subtitle)))
                     .check(matches(isDisplayed()))
                     .check(matches(withSubstring("kWh")))
 
                 // LOCATIONS: no location data → empty message shows the locations string.
                 onView(withText(R.string.charts_tab_locations)).perform(click())
-                onView(withId(R.id.charts_tab_empty_message))
+                onView(inActivePage(withId(R.id.charts_tab_empty_message)))
                     .check(matches(isDisplayed()))
                     .check(matches(withText(R.string.charts_no_locations_period)))
             }
@@ -2917,8 +2962,12 @@ class ChartsFragmentTest {
                 // Period chips and tab layout still visible
                 onView(withId(R.id.charts_period_chips)).check(matches(isDisplayed()))
                 onView(withId(R.id.charts_tab_layout)).check(matches(isDisplayed()))
-                // Tab body shows the per-period empty message
-                onView(withText(R.string.charts_no_data_period)).check(matches(isDisplayed()))
+                // Tab body shows the per-period empty message. Scope to the
+                // active page — every offscreen page also shows this string,
+                // so a bare withText would be ambiguous.
+                onView(inActivePage(withId(R.id.charts_tab_empty_message)))
+                    .check(matches(isDisplayed()))
+                    .check(matches(withText(R.string.charts_no_data_period)))
             }
     }
 
@@ -2970,11 +3019,11 @@ class ChartsFragmentTest {
         launchFragmentInContainer<ChartsFragment>(themeResId = R.style.Theme_EVTracker)
             .moveToState(Lifecycle.State.RESUMED).use {
                 // Default TREND tab does NOT show the multi-currency banner string.
-                onView(withId(R.id.charts_tab_empty_message)).check(matches(not(isDisplayed())))
+                onView(inActivePage(withId(R.id.charts_tab_empty_message))).check(matches(not(isDisplayed())))
 
                 // Click MONTHLY_COST tab → tab-body empty TextView shows the banner.
                 onView(withText(R.string.charts_tab_monthly_cost)).perform(click())
-                onView(withId(R.id.charts_tab_empty_message))
+                onView(inActivePage(withId(R.id.charts_tab_empty_message)))
                     .check(matches(isDisplayed()))
                     .check(matches(withText(R.string.multi_currency_banner)))
             }

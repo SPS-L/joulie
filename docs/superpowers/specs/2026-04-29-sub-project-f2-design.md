@@ -522,11 +522,18 @@ The collapsed-tail slice uses a sentinel key, not a hard-coded English string. `
 ```kotlin
 data class LocationSlice(val label: String, val count: Int) {
     val isOther: Boolean get() = label == OTHER_KEY
-    companion object { const val OTHER_KEY = " __other__" }
+    companion object {
+        // Constructed via Char(0) so the source is unambiguous in markdown
+        // (a literal NUL char would render as a blank space and could be
+        //  silently turned into a real space under copy/paste, breaking the
+        //  collision-proof contract). `@JvmField val` rather than `const val`
+        //  because Char(0) is not a compile-time constant expression.
+        @JvmField val OTHER_KEY: String = "${Char(0)}__other__"
+    }
 }
 ```
 
-The leading ` ` makes accidental collision with a user-typed location label impossible (no Android text input can contain a NUL). The Fragment's `LocationsTab` translates the sentinel at render time via `if (slice.isOther) getString(R.string.charts_locations_other) else slice.label`. JVM tests assert the sentinel directly without depending on Android resources. The cap stays as a code constant (tweaking it is a code change, not a localization change).
+The U+0000 (NUL) prefix makes accidental collision with a user-typed location label structurally impossible: Android `EditText` filters NUL out of soft-keyboard / IME input, so the character cannot appear in any label persisted via `ChargeEditFragment`. Collision-proof on its own merits — does not depend on the trim() call in `StatsCalculator.computeLocationDistribution`. The Fragment's `LocationsTab` translates the sentinel at render time via `if (slice.isOther) getString(R.string.charts_locations_other) else slice.label`. JVM tests assert the sentinel directly without depending on Android resources. The cap stays as a code constant (tweaking it is a code change, not a localization change).
 
 ---
 
