@@ -105,6 +105,7 @@ core/model/
 
 domain/usecase/
   ObserveChartsModelsUseCase.kt
+  NowProvider.kt            — fun interface { fun nowMillis(): Long } — clock seam (see §9, §11.2)
 
 domain/service/
   StatsCalculator.kt        — extended (3 new functions)
@@ -128,7 +129,9 @@ res/values/
   colors.xml                — `chart_ac_fallback`, `chart_dc_fallback` (literal blue/orange used only when theme attrs are missing — safety net)
 
 di/
-  (no changes)
+  AggregationDispatcher.kt  — qualifier annotation (§9)
+  DispatcherModule.kt       — Hilt @Provides for @AggregationDispatcher CoroutineContext + NowProvider (§9)
+  (AppModule.kt, DomainModule.kt, etc. — unchanged)
 ```
 
 `ChartsTabFragment` is a single class with a `TabKind` arg; the five tabs differ only in which sub-state they bind to and which chart view they inflate. A single class avoids five near-identical files. Each tab still owns its own MPAndroidChart instance to make state restoration on rotation behave correctly.
@@ -176,6 +179,8 @@ Default on first entry: **`Last12Months`**.
 
 UI: a `ChipGroup` (single-select) with four chips. Tapping *Custom* opens a `MaterialDatePicker.Builder.dateRangePicker()`; the previously-selected chip is restored on cancel/dismiss (matches `DashboardFragment.showCustomDatePicker()`).
 
+When the current period is `ChartsPeriod.Custom(from, to)`, the Fragment formats the chip's content description directly from those millis via `DateUtils.formatDateRange(context, from, to, FORMAT_SHOW_DATE)` — no extra UI-state field is needed because both the source millis and the formatter are deterministic given the period.
+
 `DateRangeResolver.resolveCharts`:
 
 ```kotlin
@@ -199,7 +204,6 @@ The 6-month / 12-month windows use rolling-day math (182 / 365 days) rather than
 ```kotlin
 data class ChartsScreenState(
     val period: ChartsPeriod = ChartsPeriod.Last12Months,
-    val customRangeLabel: String? = null,  // "Mar 1 — Apr 28" etc., for the Custom chip's content description
     val distanceUnit: String = "km",       // "km" | "miles"; drives trend Y-axis label + value conversion
     val charts: ChartsUiState = ChartsUiState.Loading
 )
@@ -366,6 +370,14 @@ The use case reads `activeCarId` and the events stream (it owns the empty-state 
 
 ## 9. `ObserveChartsModelsUseCase` contract
 
+`NowProvider` is a one-method `fun interface` declared in its own file `domain/usecase/NowProvider.kt`:
+
+```kotlin
+fun interface NowProvider { fun nowMillis(): Long }
+```
+
+The use case takes it as a constructor dependency:
+
 ```kotlin
 class ObserveChartsModelsUseCase @Inject constructor(
     private val carReader: CarReader,
@@ -373,6 +385,7 @@ class ObserveChartsModelsUseCase @Inject constructor(
     private val settingsReader: SettingsReader,
     private val statsCalculator: StatsCalculator,
     private val dateRangeResolver: DateRangeResolver,
+    private val now: NowProvider,
     @AggregationDispatcher private val aggregationContext: CoroutineContext
 ) {
     fun observe(period: ChartsPeriod): Flow<ChartsUiState> {
@@ -390,7 +403,7 @@ class ObserveChartsModelsUseCase @Inject constructor(
     }
 
     private fun build(allEvents: List<ChargeEventEntity>, period: ChartsPeriod): ChartsUiState.Loaded {
-        val range = dateRangeResolver.resolveCharts(period)
+        val range = dateRangeResolver.resolveCharts(period, now.nowMillis())
         val periodEvents = allEvents.filter { it.eventDate in range.startMillis..range.endMillis }
         val mixed = statsCalculator.detectMixedCurrency(periodEvents)
         val monthly = statsCalculator.computeMonthlyBuckets(periodEvents)
@@ -417,21 +430,33 @@ class ObserveChartsModelsUseCase @Inject constructor(
 
 **Off-main aggregation.** `flowOn(aggregationContext)` is applied at the use-case boundary, not in the ViewModel. This shifts both the upstream Room observer's emissions and the per-emission `build(...)` aggregation to whichever dispatcher the qualifier supplies. Room flows are dispatcher-agnostic on the producer side, so this is safe. The ViewModel's `combine(...).flatMapLatest { ... }.stateIn(...)` chain consumes already-aggregated values, leaving the main thread responsible only for state delivery and rendering.
 
-**Dispatcher injection.** A new qualifier annotation `@AggregationDispatcher` is provided once in `AppModule`:
+**Dispatcher injection.** Two new files under `di/`:
 
-```kotlin
-@Qualifier
-@Retention(AnnotationRetention.BINARY)
-annotation class AggregationDispatcher
+- `di/AggregationDispatcher.kt` — qualifier annotation only:
 
-@Module @InstallIn(SingletonComponent::class)
-object DispatcherModule {
-    @Provides @AggregationDispatcher
-    fun provideAggregationContext(): CoroutineContext = Dispatchers.Default
-}
-```
+  ```kotlin
+  @Qualifier
+  @Retention(AnnotationRetention.BINARY)
+  annotation class AggregationDispatcher
+  ```
 
-JVM tests that exercise the use case directly construct it with `aggregationContext = EmptyCoroutineContext`, which keeps the flow on the test scheduler and avoids the well-known `runTest` + real `Dispatchers.Default` race. The annotation can be reused for any other future use case that needs the same off-main treatment, so it lives in a top-level file `di/AggregationDispatcher.kt` rather than inside `AppModule`.
+- `di/DispatcherModule.kt` — Hilt module that supplies the qualified context and the production `NowProvider`:
+
+  ```kotlin
+  @Module
+  @InstallIn(SingletonComponent::class)
+  object DispatcherModule {
+      @Provides @AggregationDispatcher
+      fun provideAggregationContext(): CoroutineContext = Dispatchers.Default
+
+      @Provides
+      fun provideNowProvider(): NowProvider = NowProvider { System.currentTimeMillis() }
+  }
+  ```
+
+The existing `AppModule.kt` and `DomainModule.kt` are unchanged — adding dispatcher/clock concerns to either would mix unrelated bindings. The qualifier lives in its own file so other future use cases can reuse it without forcing a dependency on `DispatcherModule`'s contents.
+
+JVM tests that exercise the use case directly construct it with `aggregationContext = EmptyCoroutineContext` and a fixed `NowProvider`, keeping the flow on the test scheduler and avoiding the well-known `runTest` + real `Dispatchers.Default` race.
 
 ---
 
@@ -515,7 +540,21 @@ The `events_replayIsZero_noReplayOnLateCollector` test is essential because it w
 
 ### 11.2 New `Fakes.kt` additions
 
-A Charts-specific fake is not needed; the existing `FakeChargeEventQueries`, `FakeCarReader`, `FakeSettingsReader` cover the use case. Tests construct a real `StatsCalculator()` and `DateRangeResolver()` directly. `ObserveChartsModelsUseCaseTest` will need a deterministic clock; we pass `nowMillis` explicitly into the resolver in tests by constructing `DateRangeResolver` and calling `.resolveCharts(period, nowMillis = ...)`.
+A Charts-specific fake is not needed; the existing `FakeChargeEventQueries`, `FakeCarReader`, `FakeSettingsReader` cover the use case. Tests construct a real `StatsCalculator()` and `DateRangeResolver()` directly.
+
+**Deterministic clock.** `ObserveChartsModelsUseCaseTest` and `ChartsViewModelTest` construct the use case with a fixed `NowProvider`:
+
+```kotlin
+val now = NowProvider { 1_714_032_000_000L }   // 2026-04-25T08:00Z, anchor for the period math
+val useCase = ObserveChartsModelsUseCase(
+    carReader, chargeEventQueries, settingsReader,
+    StatsCalculator(), DateRangeResolver(),
+    now = now,
+    aggregationContext = EmptyCoroutineContext
+)
+```
+
+The use case threads `now.nowMillis()` into `dateRangeResolver.resolveCharts(...)` on every emission, so rolling-window tests are time-stable. Production-code Hilt binding is provided once via the same `DispatcherModule` (see §9): `@Provides fun provideNowProvider(): NowProvider = NowProvider { System.currentTimeMillis() }`.
 
 ### 11.3 New instrumented tests
 
