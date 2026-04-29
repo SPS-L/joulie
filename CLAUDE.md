@@ -151,3 +151,4 @@ When compacting, always preserve:
 - Gradle version catalog and dependency deltas
 - Open bugs, failing tests, and follow-ups that haven't been resolved yet.
 Discard: file-exploration transcripts, resolved threads, verbose tool output.
+Update: the "Status" section with the new progress, and ensure all instructions are still accurate for the current state of the codebase.
