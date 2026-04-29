@@ -82,6 +82,55 @@
     <string name="drive_remote_backup_too_new">This backup was created by a newer version. Update the app to restore.</string>
     <string name="drive_restore_failed">Couldn’t restore backup. Local data is unchanged.</string>
 
+    <!-- Settings (F1) -->
+    <string name="settings_unit_flipped_to_km">Distance unit also changed to km.</string>
+    <string name="settings_unit_flipped_to_miles">Distance unit also changed to miles.</string>
+    <string name="settings_metric_flipped_km_per_kwh">Primary metric also changed to km / kWh.</string>
+    <string name="settings_metric_flipped_kwh_per_100km">Primary metric also changed to kWh / 100 km.</string>
+    <string name="settings_metric_flipped_mi_per_kwh">Primary metric also changed to mi / kWh.</string>
+    <string name="settings_export_csv_failed">CSV export failed.</string>
+
+    <!-- Settings (F1) — row labels and summaries -->
+    <string name="settings_primary_metric">Primary metric</string>
+    <string name="settings_distance_unit">Distance unit</string>
+    <string name="settings_currency">Currency</string>
+    <string name="settings_theme">Theme</string>
+    <string name="settings_manage_locations">Manage custom locations</string>
+    <string name="settings_manage_locations_summary">%d saved</string>
+    <string name="settings_reset_preferences">Reset preferences</string>
+    <string name="settings_reset_preferences_summary">You\'ll go through setup again.</string>
+    <string name="settings_reset_active_car">Reset data for %1$s</string>
+    <string name="settings_reset_active_car_default">Reset data for active car</string>
+    <string name="settings_reset_active_car_summary">Delete all charge events for this car. Cars and locations are kept.</string>
+    <string name="settings_reset_active_car_confirm">Delete all charge events for %1$s? This cannot be undone.</string>
+    <string name="settings_reset_active_car_done">Charge events deleted.</string>
+    <string name="settings_reset_all">Reset all data</string>
+    <string name="settings_reset_all_summary">Delete all cars, charge events, and custom locations.</string>
+    <string name="settings_reset_all_confirm">Delete everything? This cannot be undone.</string>
+    <string name="settings_reset_all_confirm_drive_on">Delete everything? This cannot be undone, and your Google Drive backup will be overwritten with empty data. To preserve the remote copy, turn Drive backup off first.</string>
+    <string name="settings_export_csv">Export CSV</string>
+    <string name="settings_export_csv_summary">Share charge events as a CSV file.</string>
+    <string name="settings_theme_system">System default</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
+
+    <!-- ManageLocations (F1) -->
+    <string name="manage_locations_title">Manage custom locations</string>
+    <string name="manage_locations_empty">Locations you save on charge events will appear here.</string>
+    <string name="manage_locations_row_count">Used %1$d time(s) · last %2$s</string>
+    <string name="manage_locations_row_count_zero">Last %1$s</string>
+    <string name="manage_locations_undo_snackbar">Deleted \"%1$s\"</string>
+
+    <!-- F1 common -->
+    <string name="common_undo">Undo</string>
+    <string name="common_cancel">Cancel</string>
+    <string name="common_confirm">Confirm</string>
+
+    <!-- F1 startup recovery (blocking dialog when auto-recovery fails) -->
+    <string name="recovery_failure_title">Reset recovery failed</string>
+    <string name="recovery_failure_body">We couldn\'t finish your last reset.\n\n%1$s\n\nTry again, or clear the app\'s data from system Settings if it keeps failing.</string>
+    <string name="recovery_failure_retry">Try again</string>
+
     <!-- Misc -->
     <string name="confirm_reset">This will permanently delete all data. Continue?</string>
     <string name="reset_per_car">Reset this car</string>

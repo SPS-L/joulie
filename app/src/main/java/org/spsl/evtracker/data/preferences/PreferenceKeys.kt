@@ -15,4 +15,6 @@ object PreferenceKeys {
     val DRIVE_ENABLED  = booleanPreferencesKey("driveEnabled") // consumed by Sub-project E
     val THEME          = stringPreferencesKey("theme")
     val LAST_BACKUP_AT = longPreferencesKey("lastBackupAt") // consumed by Sub-project E
+    /** F1: durable interrupted-reset flag. See ResetAllDataUseCase + MainActivity. */
+    val RESET_IN_PROGRESS = booleanPreferencesKey("resetInProgress")
 }

@@ -36,6 +36,9 @@ interface ChargeEventDao {
     @Delete
     suspend fun delete(event: ChargeEventEntity)
 
+    @Query("DELETE FROM charge_events WHERE carId = :carId")
+    suspend fun deleteForCar(carId: Int)
+
     @Query("DELETE FROM charge_events")
     suspend fun deleteAll()
 }

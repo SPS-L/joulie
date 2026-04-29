@@ -25,4 +25,6 @@ class ChargeEventRepository @Inject constructor(
     override suspend fun insert(event: ChargeEventEntity): Long = chargeEventDao.insert(event)
     override suspend fun update(event: ChargeEventEntity) = chargeEventDao.update(event)
     override suspend fun delete(event: ChargeEventEntity) = chargeEventDao.delete(event)
+    override suspend fun deleteForCar(carId: Int) = chargeEventDao.deleteForCar(carId)
+    override suspend fun deleteAll() = chargeEventDao.deleteAll()
 }

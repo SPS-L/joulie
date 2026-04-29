@@ -59,6 +59,12 @@ class FakeChargeEventWriter(
     override suspend fun delete(event: ChargeEventEntity) {
         store.value = store.value.filter { it.id != event.id }
     }
+    override suspend fun deleteForCar(carId: Int) {
+        store.value = store.value.filter { it.carId != carId }
+    }
+    override suspend fun deleteAll() {
+        store.value = emptyList()
+    }
 }
 
 class FakeLocationReader(initial: List<CustomLocationEntity> = emptyList()) : LocationReader {
@@ -83,6 +89,9 @@ class FakeLocationWriter(
     override suspend fun delete(location: CustomLocationEntity) {
         state.value = state.value.filter { it.id != location.id }
     }
+    override suspend fun deleteAll() {
+        state.value = emptyList()
+    }
     fun current(): List<CustomLocationEntity> = state.value
 }
 
@@ -92,7 +101,9 @@ class FakeSettingsReader(
     distanceUnitInit: String = "km",
     currencyInit: String = "EUR",
     driveEnabledInit: Boolean = false,
-    lastBackupAtInit: Long? = null
+    lastBackupAtInit: Long? = null,
+    themeInit: String = "system",
+    resetInProgressInit: Boolean = false
 ) : SettingsReader {
     private val activeCar = MutableStateFlow(activeCarIdInit)
     private val metric = MutableStateFlow(primaryMetricInit)
@@ -100,27 +111,85 @@ class FakeSettingsReader(
     private val curr = MutableStateFlow(currencyInit)
     private val drive = MutableStateFlow(driveEnabledInit)
     private val backupAt = MutableStateFlow(lastBackupAtInit)
+    private val themeFlow = MutableStateFlow(themeInit)
+    private val resetInProgressFlow = MutableStateFlow(resetInProgressInit)
     override val activeCarId: Flow<Int> = activeCar
     override val primaryMetric: Flow<String> = metric
     override val distanceUnit: Flow<String> = unit
     override val currency: Flow<String> = curr
     override val driveEnabled: Flow<Boolean> = drive
     override val lastBackupAt: Flow<Long?> = backupAt
+    override val theme: Flow<String> = themeFlow
+    override val resetInProgress: Flow<Boolean> = resetInProgressFlow
     fun setActiveCarId(id: Int) { activeCar.value = id }
     fun setDriveEnabled(enabled: Boolean) { drive.value = enabled }
     fun setLastBackupAt(value: Long?) { backupAt.value = value }
+    fun setTheme(value: String) { themeFlow.value = value }
+    fun setResetInProgress(value: Boolean) { resetInProgressFlow.value = value }
+    fun setPrimaryMetric(value: String) { metric.value = value }
+    fun setDistanceUnit(value: String) { unit.value = value }
 }
 
-class FakeSettingsWriter : SettingsWriter {
+class FakeSettingsWriter(
+    val callRecorder: MutableList<String>? = null
+) : SettingsWriter {
     var activeCarId: Int = -1
         private set
     var driveEnabled: Boolean = false
         private set
     var lastBackupAt: Long? = null
         private set
-    override suspend fun setActiveCarId(id: Int) { activeCarId = id }
-    override suspend fun setDriveEnabled(enabled: Boolean) { driveEnabled = enabled }
-    override suspend fun setLastBackupAt(epochMs: Long) { lastBackupAt = epochMs }
+    var theme: String = "system"
+        private set
+    var primaryMetric: String = "km_per_kwh"
+        private set
+    var distanceUnit: String = "km"
+        private set
+    var currency: String = "EUR"
+        private set
+    var setupComplete: Boolean = true
+        private set
+    var resetInProgress: Boolean = false
+        private set
+
+    override suspend fun setActiveCarId(id: Int) {
+        callRecorder?.add("setActiveCarId($id)"); activeCarId = id
+    }
+    override suspend fun setDriveEnabled(enabled: Boolean) {
+        callRecorder?.add("setDriveEnabled($enabled)"); driveEnabled = enabled
+    }
+    override suspend fun setLastBackupAt(epochMs: Long) {
+        callRecorder?.add("setLastBackupAt($epochMs)"); lastBackupAt = epochMs
+    }
+    override suspend fun setTheme(value: String) {
+        callRecorder?.add("setTheme($value)"); theme = value
+    }
+    override suspend fun setPrimaryMetric(metric: String) {
+        callRecorder?.add("setPrimaryMetric($metric)"); primaryMetric = metric
+    }
+    override suspend fun setDistanceUnit(unit: String) {
+        callRecorder?.add("setDistanceUnit($unit)"); distanceUnit = unit
+    }
+    override suspend fun setCurrency(code: String) {
+        callRecorder?.add("setCurrency($code)"); currency = code
+    }
+    override suspend fun setSetupComplete(value: Boolean) {
+        callRecorder?.add("setSetupComplete($value)"); setupComplete = value
+    }
+    override suspend fun setResetInProgress(value: Boolean) {
+        callRecorder?.add("setResetInProgress($value)"); resetInProgress = value
+    }
+    override suspend fun setPrimaryMetricAndDistanceUnit(metric: String, unit: String) {
+        callRecorder?.add("setPrimaryMetricAndDistanceUnit($metric,$unit)")
+        this.primaryMetric = metric
+        this.distanceUnit = unit
+    }
+    override suspend fun markGlobalResetInProgress() {
+        callRecorder?.add("markGlobalResetInProgress")
+        setupComplete = false
+        activeCarId = -1
+        resetInProgress = true
+    }
 }
 
 class FakeBackupScheduler : BackupScheduler {
@@ -210,6 +279,10 @@ class FakeCarRepository(initial: List<CarEntity> = emptyList()) : CarReader, Car
         state.value = state.value.filter { it.id != carId }
     }
 
+    override suspend fun deleteAll() {
+        state.value = emptyList()
+    }
+
     fun seed(cars: List<CarEntity>) { state.value = cars }
     fun current(): List<CarEntity> = state.value
 }
@@ -271,5 +344,33 @@ class FakeDriveRemoteSource : DriveRemoteSource {
         val e = failNext ?: return
         failNext = null
         throw e
+    }
+}
+
+class FakeDataResetTransactionRunner(
+    val callRecorder: MutableList<String>? = null,
+    private val onClearStores: () -> Unit = {}
+) : org.spsl.evtracker.domain.repository.DataResetTransactionRunner {
+    var clearCallCount: Int = 0
+        private set
+    var failNext: Throwable? = null
+
+    override suspend fun clearAllTables() {
+        callRecorder?.add("clearAllTables")
+        failNext?.let { failNext = null; throw it }
+        clearCallCount++
+        onClearStores()
+    }
+}
+
+class FakeCsvFileSink : org.spsl.evtracker.domain.backup.CsvFileSink {
+    var failNext: Throwable? = null
+    var lastCarName: String? = null
+    override suspend fun write(carName: String, body: (java.io.Writer) -> Unit): android.net.Uri {
+        failNext?.let { failNext = null; throw it }
+        lastCarName = carName
+        body(java.io.StringWriter())
+        // android.net.Uri.parse() stubs throw RuntimeException in JVM unit tests; use a mock instead.
+        return org.mockito.kotlin.mock()
     }
 }

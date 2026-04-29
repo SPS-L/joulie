@@ -19,4 +19,5 @@ class LocationRepository @Inject constructor(
         customLocationDao.recordUsage(label, now)
 
     override suspend fun delete(location: CustomLocationEntity) = customLocationDao.delete(location)
+    override suspend fun deleteAll() = customLocationDao.deleteAll()
 }

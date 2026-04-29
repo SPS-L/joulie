@@ -21,4 +21,5 @@ class CarRepository @Inject constructor(
     override suspend fun deleteById(carId: Int) {
         carDao.deleteById(carId)
     }
+    override suspend fun deleteAll() = carDao.deleteAll()
 }
