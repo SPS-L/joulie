@@ -143,12 +143,15 @@ di/
 
 ```
 SettingsReader.activeCarId ─┐
-SettingsReader.currency ────┤  (currency only used by cost tab label)
+SettingsReader.distanceUnit ┤  (for trend Y-axis label + km↔mi rendering)
 ChargeEventQueries          ├─►  ObserveChartsModelsUseCase  ─►  ChartsScreenState
-  .observeForCar(activeId)  │       (filters by period, then
-period: MutableStateFlow ───┘        delegates aggregation to
-  <ChartsPeriod>                     StatsCalculator helpers)
+  .observeForCar(activeId)  │       (filters by period, derives
+period: MutableStateFlow ───┘        periodCurrency from event data,
+  <ChartsPeriod>                     delegates aggregation to
+                                     StatsCalculator helpers)
 ```
+
+**Currency source for the cost tab.** The cost-tab currency label is derived from the *event data* in the selected period (via `MonthBucket.currency`), not from `SettingsReader.currency`. This matches the existing dashboard rule (`Stats.currency` is the resolved single currency of costed events in `StatsCalculator.computeStats` — see `StatsCalculator.kt:56` and `DashboardFragment.kt:206`/`:211`). If a user logged events in EUR last year and switched the preference to USD this morning, the cost bars must keep saying EUR — that is what actually happened — and the new USD setting only affects newly-entered events going forward. Reading `SettingsReader.currency` for chart labelling would silently relabel historical data.
 
 Period changes are driven by the Fragment calling `viewModel.selectPeriod(...)`. The use case re-runs because `period` is one of the inputs into `combine(...).flatMapLatest`, exactly like Dashboard does today.
 
@@ -197,7 +200,7 @@ The 6-month / 12-month windows use rolling-day math (182 / 365 days) rather than
 data class ChartsScreenState(
     val period: ChartsPeriod = ChartsPeriod.Last12Months,
     val customRangeLabel: String? = null,  // "Mar 1 — Apr 28" etc., for the Custom chip's content description
-    val currency: String = "EUR",
+    val distanceUnit: String = "km",       // "km" | "miles"; drives trend Y-axis label + value conversion
     val charts: ChartsUiState = ChartsUiState.Loading
 )
 
@@ -208,6 +211,7 @@ sealed class ChartsUiState {
     data class Loaded(
         val periodHasEvents: Boolean,             // false → all five tabs show "No data for this period"
         val mixedCurrency: Boolean,               // true → Monthly cost tab replaced with banner
+        val periodCurrency: String?,              // single currency of costed events in the period; null when no costed events or mixedCurrency
         val trend: EfficiencySeries,              // possibly empty lists when not enough data
         val monthlyKwh: List<MonthBucket>,
         val monthlyCost: List<MonthBucket>,       // empty when mixedCurrency or no costed events
@@ -233,13 +237,13 @@ sealed class ChartsEvent {
 
 **Data source.** All events in the period, sorted ascending by `eventDate`, partitioned by `chargeType`. Each event after the first contributes a point; the very first event of each series contributes none (no prior odometer to delta against).
 
-**Per-point math.** For event `i` (after sorting **per series**): `kmPerKwh = (events[i].odometerKm - events[i-1].odometerKm) / events[i].kwhAdded`. Skip the point if the delta is `<= 0` (matches `StatsCalculator.computeStats`). Y value is converted at render-time: when `distanceUnit == "miles"` we render `mi/kWh` via `UnitConverter.kmPerKwhToMiPerKwh`. The model in `EfficiencyPoint` always stores km/kWh — display conversion stays at the UI boundary, identical to the rule that "Odometer is always stored in km" (CLAUDE.md Invariants).
+**Per-point math.** For event `i` (after sorting **per series**): `kmPerKwh = (events[i].odometerKm - events[i-1].odometerKm) / events[i].kwhAdded`. Skip the point if the delta is `<= 0` (matches `StatsCalculator.computeStats`). Y value is converted at render-time: when `state.distanceUnit == "miles"` we render `mi/kWh` via `UnitConverter.kmPerKwhToMiPerKwh`. The model in `EfficiencyPoint` always stores km/kWh — display conversion stays at the UI boundary, identical to the rule that "Odometer is always stored in km" (CLAUDE.md Invariants).
 
 > **Design note — partition before delta.** Computing the delta against the *previous event of the same charge type* (not the previous event globally) is what lets the AC and DC series each tell a coherent efficiency story. If we delta'd against the most recent event of any type, an AC point following a DC charge would be measuring "km driven since the last DC charge" rather than "km since the last AC charge". The trend lines then either smear or show artificial jumps; the choice to partition is therefore part of the spec, not an implementation detail.
 
 **X axis.** Time, in epoch millis. Formatter renders `"d MMM"` for windows ≤ 12 months and `"MMM yy"` for `AllTime`.
 
-**Y axis.** Primary metric value. Label suffix follows `distanceUnit`: `km/kWh` or `mi/kWh`. (We do **not** plot `kWh/100km` here — that metric inverts and would visually confuse "higher = better"; trend always uses *distance per kWh*.)
+**Y axis.** Primary metric value. Label suffix follows `state.distanceUnit`: `km/kWh` or `mi/kWh`. (We do **not** plot `kWh/100km` here — that metric inverts and would visually confuse "higher = better"; trend always uses *distance per kWh*.)
 
 **Colors.** AC series = theme attr `?attr/colorPrimary`; DC series = `?attr/colorTertiary`. Resolved once via `ChartStyling.resolveSeriesColors(context)` and cached on the chart. Fallback constants `chart_ac_fallback = #1E88E5` (blue), `chart_dc_fallback = #FB8C00` (orange) — matches DESIGN §6 "AC blue, DC orange".
 
@@ -266,9 +270,9 @@ sealed class ChartsEvent {
 **Data source.** Same `MonthBucket` list filtered to entries with non-null `totalCost`. Already excluded from cost stats by `StatsCalculator.computeMonthlyBuckets` when `mixedCurrency` is true.
 
 **Visibility rules** (in priority order):
-1. `mixedCurrency == true` → entire tab body replaced with banner *"Multi-currency period — cost stats hidden"* (string already exists from F1; reuse `R.string.dashboard_multi_currency_banner`).
+1. `mixedCurrency == true` → entire tab body replaced with banner *"Multi-currency period — cost stats hidden"* (string already exists from F1; reuse `R.string.multi_currency_banner` from `strings.xml:179`).
 2. `monthlyCost.isEmpty()` (no costed events at all) → tab-internal *"No cost data for this period"* message.
-3. Otherwise render bars labeled in the period's single `currency` (e.g. *"€"*).
+3. Otherwise render bars labeled with the period's **event-derived** currency, taken from `state.charts.periodCurrency` (which the use case computed from `MonthBucket.currency`). Never read `SettingsReader.currency` here — see §3.5.
 
 **Bar color.** `?attr/colorTertiary` (visually distinct from kWh tab, no hard-coded green).
 
@@ -338,10 +342,10 @@ class ChartsViewModel @Inject constructor(
     val events: SharedFlow<ChartsEvent> = _events.asSharedFlow()
 
     val uiState: StateFlow<ChartsScreenState> =
-        combine(period, settingsReader.currency) { p, c -> p to c }
-            .flatMapLatest { (p, c) ->
+        combine(period, settingsReader.distanceUnit) { p, du -> p to du }
+            .flatMapLatest { (p, du) ->
                 observeChartsModels.observe(p).map { ui ->
-                    ChartsScreenState(period = p, currency = c, charts = ui)
+                    ChartsScreenState(period = p, distanceUnit = du, charts = ui)
                 }
             }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ChartsScreenState())
@@ -356,7 +360,7 @@ class ChartsViewModel @Inject constructor(
 }
 ```
 
-The use case alone reads `activeCarId` and the events stream (it owns the empty-state decisions). The ViewModel only needs `currency` for the cost-tab label; everything else is composed inside the use case.
+The use case reads `activeCarId` and the events stream (it owns the empty-state decisions and derives `periodCurrency` from event data). The ViewModel observes `distanceUnit` to drive the trend tab's km↔miles rendering — same threading pattern Dashboard uses today (`DashboardViewModel.kt:65–66`). `currency` is *not* a ViewModel input because chart cost labels must reflect the events, not the current user preference (see §3.5).
 
 ---
 
@@ -368,7 +372,8 @@ class ObserveChartsModelsUseCase @Inject constructor(
     private val chargeEventQueries: ChargeEventQueries,
     private val settingsReader: SettingsReader,
     private val statsCalculator: StatsCalculator,
-    private val dateRangeResolver: DateRangeResolver
+    private val dateRangeResolver: DateRangeResolver,
+    @AggregationDispatcher private val aggregationContext: CoroutineContext
 ) {
     fun observe(period: ChartsPeriod): Flow<ChartsUiState> {
         return combine(settingsReader.activeCarId, carReader.observeAll()) { active, cars ->
@@ -381,21 +386,26 @@ class ObserveChartsModelsUseCase @Inject constructor(
                     else build(all, period)
                 }
             }
-        }
+        }.flowOn(aggregationContext)   // §15: aggregation off main in production
     }
 
     private fun build(allEvents: List<ChargeEventEntity>, period: ChartsPeriod): ChartsUiState.Loaded {
         val range = dateRangeResolver.resolveCharts(period)
         val periodEvents = allEvents.filter { it.eventDate in range.startMillis..range.endMillis }
         val mixed = statsCalculator.detectMixedCurrency(periodEvents)
+        val monthly = statsCalculator.computeMonthlyBuckets(periodEvents)
+        val costBuckets = if (mixed) emptyList() else monthly.filter { it.totalCost != null }
+        // periodCurrency: the single non-null bucket currency when not mixed; null otherwise.
+        // computeMonthlyBuckets already nulls bucket.currency when mixedCurrency is true,
+        // so this also yields null in the mixed case.
+        val resolvedCurrency = if (mixed) null else costBuckets.firstNotNullOfOrNull { it.currency }
         return ChartsUiState.Loaded(
             periodHasEvents = periodEvents.isNotEmpty(),
             mixedCurrency = mixed,
+            periodCurrency = resolvedCurrency,
             trend = statsCalculator.computeEfficiencyTrend(periodEvents),
-            monthlyKwh = statsCalculator.computeMonthlyBuckets(periodEvents),
-            monthlyCost = if (mixed) emptyList()
-                          else statsCalculator.computeMonthlyBuckets(periodEvents)
-                                              .filter { it.totalCost != null },
+            monthlyKwh = monthly,
+            monthlyCost = costBuckets,
             acDc = statsCalculator.computeAcDcSplit(periodEvents),
             locations = statsCalculator.computeLocationDistribution(periodEvents)
         )
@@ -403,7 +413,25 @@ class ObserveChartsModelsUseCase @Inject constructor(
 }
 ```
 
-`detectMixedCurrency(events)` is extracted from the existing inline logic in `computeStats` so it can be shared by the use case without re-running the full stats computation.
+**Helper sharing.** `detectMixedCurrency(events)` is extracted from the existing inline logic in `StatsCalculator.computeStats` so it can be shared by the use case without re-running the full stats computation.
+
+**Off-main aggregation.** `flowOn(aggregationContext)` is applied at the use-case boundary, not in the ViewModel. This shifts both the upstream Room observer's emissions and the per-emission `build(...)` aggregation to whichever dispatcher the qualifier supplies. Room flows are dispatcher-agnostic on the producer side, so this is safe. The ViewModel's `combine(...).flatMapLatest { ... }.stateIn(...)` chain consumes already-aggregated values, leaving the main thread responsible only for state delivery and rendering.
+
+**Dispatcher injection.** A new qualifier annotation `@AggregationDispatcher` is provided once in `AppModule`:
+
+```kotlin
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class AggregationDispatcher
+
+@Module @InstallIn(SingletonComponent::class)
+object DispatcherModule {
+    @Provides @AggregationDispatcher
+    fun provideAggregationContext(): CoroutineContext = Dispatchers.Default
+}
+```
+
+JVM tests that exercise the use case directly construct it with `aggregationContext = EmptyCoroutineContext`, which keeps the flow on the test scheduler and avoids the well-known `runTest` + real `Dispatchers.Default` race. The annotation can be reused for any other future use case that needs the same off-main treatment, so it lives in a top-level file `di/AggregationDispatcher.kt` rather than inside `AppModule`.
 
 ---
 
@@ -480,8 +508,8 @@ The leading ` ` makes accidental collision with a user-typed location label impo
 | `StatsCalculatorAcDcSplitTest.kt` | `emptyEvents_zeroSplit`, `onlyAc_returnsZeroDc`, `mixed_correctTotals`, `kwhSumsCorrect` |
 | `StatsCalculatorLocationDistTest.kt` | `emptyEvents_returnsEmpty`, `nullAndBlankLocations_excluded`, `singleLocation_oneSlice`, `nineLocations_collapsesToTopEightPlusOther`, `tieBreaking_byInsertionOrder`, `trim_caseSensitive` |
 | `DateRangeResolverChartsTest.kt` | `last6Months_182Days`, `last12Months_365Days`, `allTime_lowerBoundZero`, `custom_passthrough` |
-| `ObserveChartsModelsUseCaseTest.kt` | `noCar_emitsNoCar`, `activeCarMinusOne_emitsNoCar`, `noEvents_emitsNoEvents`, `eventsOutsidePeriod_emitsLoadedWithPeriodHasEventsFalse`, `eventsInPeriod_singleCurrency_emitsAllSeries`, `eventsInPeriod_mixedCurrency_zeroesMonthlyCost`, `periodChange_recomputesViaFlatMapLatest`, `carSwitch_resetsState` |
-| `ChartsViewModelTest.kt` | `defaultPeriod_isLast12Months`, `selectPeriod_emitsNewState`, `selectCustomRange_wrapsInCustom`, `onCustomChipClicked_emitsOpenCustomRangePicker`, `onAddCarCta_emitsNavigateToCars`, `onLogChargeCta_emitsNavigateToChargeEdit`, `events_replayIsZero_noReplayOnLateCollector` |
+| `ObserveChartsModelsUseCaseTest.kt` | `noCar_emitsNoCar`, `activeCarMinusOne_emitsNoCar`, `noEvents_emitsNoEvents`, `eventsOutsidePeriod_emitsLoadedWithPeriodHasEventsFalse`, `eventsInPeriod_singleCurrency_emitsAllSeriesAndPeriodCurrency`, `eventsInPeriod_mixedCurrency_zeroesMonthlyCostAndPeriodCurrencyNull`, `differentPeriodArg_producesDifferentBuild`, `carSwitch_resetsState` |
+| `ChartsViewModelTest.kt` | `defaultPeriod_isLast12Months`, `selectPeriod_emitsNewState`, `selectCustomRange_wrapsInCustom`, `periodChange_recomputesViaFlatMapLatest`, `distanceUnitChange_propagatesToScreenState`, `costLabelDoesNotReadSettingsCurrency`, `onCustomChipClicked_emitsOpenCustomRangePicker`, `onAddCarCta_emitsNavigateToCars`, `onLogChargeCta_emitsNavigateToChargeEdit`, `events_replayIsZero_noReplayOnLateCollector` |
 
 The `events_replayIsZero_noReplayOnLateCollector` test is essential because it would catch a future "let me just use `replay = 1` here" mistake that has bitten the codebase before (CLAUDE.md "ViewModel + event pattern").
 
@@ -592,7 +620,7 @@ The `BottomNavigationView` is hidden when the user is in `wizardFragment`, `char
 Reused (no new keys):
 - `R.string.empty_no_car_headline`, `R.string.empty_no_car_cta`
 - `R.string.empty_no_events_headline`, `R.string.empty_no_events_cta`
-- `R.string.dashboard_multi_currency_banner`
+- `R.string.multi_currency_banner` (from `strings.xml:179` — note: `dashboard_multi_currency_banner` is the *view id* in `fragment_dashboard.xml`, not a string id)
 - `R.string.period_custom`
 
 ---
@@ -604,7 +632,7 @@ Reused (no new keys):
 | MPAndroidChart's `MarkerView` API is awkward and easy to mis-anchor | Medium | All anchor math goes through `ChartStyling.markerOffset`; tested in instrumented test by tapping a known data point. |
 | ViewPager2 + Fragment recycling causes chart state loss on rotation | Medium | Each tab is a Fragment; MPAndroidChart's own `setSavedState` is not used — instead we rebuild from `uiState.value` on `onViewCreated`, which is the StateFlow's most recent value (free thanks to `stateIn(WhileSubscribed)`). |
 | Theme attr resolution silently falls back to neutral colors when run inside `launchFragmentInContainer` without a Material 3 theme | Low | Test harness uses `R.style.Theme_EVTracker` exactly like `SettingsFragmentTest`; verified once in `tabSwitch_showsCorrectChart`. |
-| Large all-time datasets (e.g. 5 000 events) cause ANR during pie/bar aggregation | Low | All aggregators are O(n) over per-car events. The use case runs on the default `Dispatchers.Default` (no main-thread work). The use case already uses Flow operators that respect coroutine context propagation; tests verify no main-dispatcher-only assumptions. |
+| Large all-time datasets (e.g. 5 000 events) cause ANR during pie/bar aggregation | Low | All aggregators are O(n) over per-car events. The use case applies `.flowOn(aggregationContext)` (provided as `Dispatchers.Default` in production via the `@AggregationDispatcher` qualifier — see §9) so both the upstream Room observer and the per-emission `build(...)` call run off the main thread. The ViewModel's downstream `combine`/`flatMapLatest`/`stateIn` sees already-aggregated values and the main thread is responsible only for state delivery. Tests pass `EmptyCoroutineContext` to keep the flow on the test dispatcher. |
 | New `MAX_LOCATION_SLICES = 8` is a bare constant without rationale in the codebase | Low | Comment in code references this spec section. |
 | Future spec drift: someone adds a new chart and forgets to wire it into the empty-state ladder | Low | `ChartsUiState.Loaded` is a single data class; adding a field forces a compile error in the rendering Fragment. The empty-state ladder is at the use-case boundary and does not multiply per chart. |
 
@@ -618,7 +646,7 @@ Reused (no new keys):
 - [ ] Multi-currency periods render the banner exclusively on the cost tab; the other four tabs render normally.
 - [ ] Switching `activeCarId` from another screen (Dashboard) repaints Charts within one frame after returning to it.
 - [ ] Distance-unit preference change (km ↔ miles) updates the trend Y axis label and re-formats values *without* mutating any stored data.
-- [ ] All new JVM tests pass; `:app:testDebugUnitTest` is green; total JVM unit-test count rises by **≥ 30** (~6 trend + ~4 split + ~6 location + ~4 resolver + ~8 use case + ~7 VM = 35 expected).
+- [ ] All new JVM tests pass; `:app:testDebugUnitTest` is green; total JVM unit-test count rises by **≥ 35** (~6 trend + ~4 split + ~6 location + ~4 resolver + ~8 use case + ~10 VM = 38 expected).
 - [ ] All new instrumented tests pass; `:app:assembleDebugAndroidTest` compiles cleanly.
 - [ ] `./gradlew :app:assembleDebug` produces an APK that opens to the Charts tab without crashing on a fresh install (NoCar state visible).
 - [ ] CLAUDE.md *Status* section is updated in the merge commit to reflect F2 shipped and Charts is now wired (✓), and JVM test count bumped.
