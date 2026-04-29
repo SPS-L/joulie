@@ -82,6 +82,14 @@
     <string name="drive_remote_backup_too_new">This backup was created by a newer version. Update the app to restore.</string>
     <string name="drive_restore_failed">Couldn’t restore backup. Local data is unchanged.</string>
 
+    <!-- Settings (F1) -->
+    <string name="settings_unit_flipped_to_km">Distance unit also changed to km.</string>
+    <string name="settings_unit_flipped_to_miles">Distance unit also changed to miles.</string>
+    <string name="settings_metric_flipped_km_per_kwh">Primary metric also changed to km / kWh.</string>
+    <string name="settings_metric_flipped_kwh_per_100km">Primary metric also changed to kWh / 100 km.</string>
+    <string name="settings_metric_flipped_mi_per_kwh">Primary metric also changed to mi / kWh.</string>
+    <string name="settings_export_csv_failed">CSV export failed.</string>
+
     <!-- Misc -->
     <string name="confirm_reset">This will permanently delete all data. Continue?</string>
     <string name="reset_per_car">Reset this car</string>

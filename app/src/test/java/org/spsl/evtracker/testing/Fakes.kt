@@ -126,6 +126,8 @@ class FakeSettingsReader(
     fun setLastBackupAt(value: Long?) { backupAt.value = value }
     fun setTheme(value: String) { themeFlow.value = value }
     fun setResetInProgress(value: Boolean) { resetInProgressFlow.value = value }
+    fun setPrimaryMetric(value: String) { metric.value = value }
+    fun setDistanceUnit(value: String) { unit.value = value }
 }
 
 class FakeSettingsWriter(
@@ -358,5 +360,17 @@ class FakeDataResetTransactionRunner(
         failNext?.let { failNext = null; throw it }
         clearCallCount++
         onClearStores()
+    }
+}
+
+class FakeCsvFileSink : org.spsl.evtracker.domain.backup.CsvFileSink {
+    var failNext: Throwable? = null
+    var lastCarName: String? = null
+    override suspend fun write(carName: String, body: (java.io.Writer) -> Unit): android.net.Uri {
+        failNext?.let { failNext = null; throw it }
+        lastCarName = carName
+        body(java.io.StringWriter())
+        // android.net.Uri.parse() stubs throw RuntimeException in JVM unit tests; use a mock instead.
+        return org.mockito.kotlin.mock()
     }
 }
