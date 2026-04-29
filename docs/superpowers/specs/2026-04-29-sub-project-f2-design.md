@@ -83,7 +83,7 @@ Domain     ObserveChartsModelsUseCase
 Data       (none — read path only)
 ```
 
-No new repositories, no DI changes other than the new use case auto-injecting via constructor.
+No new repositories. F2 adds a small DI surface for cross-cutting concerns: a `@AggregationDispatcher` qualifier annotation, a `NowProvider` clock seam, and a new `DispatcherModule` that supplies both. These live in `di/` alongside the existing `AppModule.kt` and `DomainModule.kt`, which themselves are unchanged. Full details in §9; file list in §3.3.
 
 ### 3.2 Why not reuse `DashboardPeriod`?
 
@@ -345,14 +345,19 @@ class ChartsViewModel @Inject constructor(
     )
     val events: SharedFlow<ChartsEvent> = _events.asSharedFlow()
 
+    // Behavior-driving flow: only `period` triggers re-subscription to the
+    // event stream and re-aggregation. The use case output is unit-agnostic.
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val chartsFlow: Flow<ChartsUiState> =
+        period.flatMapLatest { p -> observeChartsModels.observe(p) }
+
+    // Rendering inputs (distance unit) combine *outside* the flatMapLatest,
+    // so flipping km/miles rebuilds the screen state from the most recent
+    // ChartsUiState without tearing down the Room subscription.
     val uiState: StateFlow<ChartsScreenState> =
-        combine(period, settingsReader.distanceUnit) { p, du -> p to du }
-            .flatMapLatest { (p, du) ->
-                observeChartsModels.observe(p).map { ui ->
-                    ChartsScreenState(period = p, distanceUnit = du, charts = ui)
-                }
-            }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ChartsScreenState())
+        combine(chartsFlow, period, settingsReader.distanceUnit) { ui, p, du ->
+            ChartsScreenState(period = p, distanceUnit = du, charts = ui)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ChartsScreenState())
 
     fun selectPeriod(p: ChartsPeriod) { period.value = p }
     fun selectCustomRange(from: Long, to: Long) {
@@ -364,7 +369,9 @@ class ChartsViewModel @Inject constructor(
 }
 ```
 
-The use case reads `activeCarId` and the events stream (it owns the empty-state decisions and derives `periodCurrency` from event data). The ViewModel observes `distanceUnit` to drive the trend tab's km↔miles rendering — same threading pattern Dashboard uses today (`DashboardViewModel.kt:65–66`). `currency` is *not* a ViewModel input because chart cost labels must reflect the events, not the current user preference (see §3.5).
+The use case reads `activeCarId` and the events stream (it owns the empty-state decisions and derives `periodCurrency` from event data). The ViewModel keeps **rendering inputs separate from the behaviour-driving flow**, mirroring `DashboardViewModel.kt:44–69` (which combines `inputsFlow` of `(cars, activeCarId, primaryMetric, distanceUnit, currency)` with `dashboardFlow` at the outer `combine`, never inside `flatMapLatest`). The Charts version makes the same split: `period` is the only thing that triggers re-subscription and re-aggregation; `distanceUnit` joins the chain only at the final `combine` that builds `ChartsScreenState`. Flipping km↔miles therefore re-emits the same `ChartsUiState` already cached in `chartsFlow`'s downstream and only re-runs the render-time conversion in the trend tab.
+
+`currency` is *not* a ViewModel input at all because chart cost labels must reflect the events, not the current user preference (see §3.5).
 
 ---
 
@@ -534,13 +541,15 @@ The leading ` ` makes accidental collision with a user-typed location label impo
 | `StatsCalculatorLocationDistTest.kt` | `emptyEvents_returnsEmpty`, `nullAndBlankLocations_excluded`, `singleLocation_oneSlice`, `nineLocations_collapsesToTopEightPlusOther`, `tieBreaking_byInsertionOrder`, `trim_caseSensitive` |
 | `DateRangeResolverChartsTest.kt` | `last6Months_182Days`, `last12Months_365Days`, `allTime_lowerBoundZero`, `custom_passthrough` |
 | `ObserveChartsModelsUseCaseTest.kt` | `noCar_emitsNoCar`, `activeCarMinusOne_emitsNoCar`, `noEvents_emitsNoEvents`, `eventsOutsidePeriod_emitsLoadedWithPeriodHasEventsFalse`, `eventsInPeriod_singleCurrency_emitsAllSeriesAndPeriodCurrency`, `eventsInPeriod_mixedCurrency_zeroesMonthlyCostAndPeriodCurrencyNull`, `differentPeriodArg_producesDifferentBuild`, `carSwitch_resetsState` |
-| `ChartsViewModelTest.kt` | `defaultPeriod_isLast12Months`, `selectPeriod_emitsNewState`, `selectCustomRange_wrapsInCustom`, `periodChange_recomputesViaFlatMapLatest`, `distanceUnitChange_propagatesToScreenState`, `costLabelDoesNotReadSettingsCurrency`, `onCustomChipClicked_emitsOpenCustomRangePicker`, `onAddCarCta_emitsNavigateToCars`, `onLogChargeCta_emitsNavigateToChargeEdit`, `events_replayIsZero_noReplayOnLateCollector` |
+| `ChartsViewModelTest.kt` | `defaultPeriod_isLast12Months`, `selectPeriod_emitsNewState`, `selectCustomRange_wrapsInCustom`, `periodChange_recomputesViaFlatMapLatest`, `distanceUnitChange_propagatesToScreenState`, `distanceUnitChange_doesNotResubscribeEventStream`, `costLabelDoesNotReadSettingsCurrency`, `onCustomChipClicked_emitsOpenCustomRangePicker`, `onAddCarCta_emitsNavigateToCars`, `onLogChargeCta_emitsNavigateToChargeEdit`, `events_replayIsZero_noReplayOnLateCollector` |
 
 The `events_replayIsZero_noReplayOnLateCollector` test is essential because it would catch a future "let me just use `replay = 1` here" mistake that has bitten the codebase before (CLAUDE.md "ViewModel + event pattern").
 
 ### 11.2 New `Fakes.kt` additions
 
-A Charts-specific fake is not needed; the existing `FakeChargeEventQueries`, `FakeCarReader`, `FakeSettingsReader` cover the use case. Tests construct a real `StatsCalculator()` and `DateRangeResolver()` directly.
+The existing `FakeChargeEventQueries`, `FakeCarReader`, and `FakeSettingsReader` cover the use case; tests construct a real `StatsCalculator()` and `DateRangeResolver()` directly.
+
+`FakeChargeEventQueries` gains one new field: `var observeForCarCallCount: Int = 0`, incremented each time `observeForCar(carId)` is invoked. `distanceUnitChange_doesNotResubscribeEventStream` snapshots that counter, flips `distanceUnit` on `FakeSettingsReader`, runs `advanceUntilIdle()`, and asserts the counter is unchanged. The same counter going *up* under `selectPeriod(...)` is asserted by `periodChange_recomputesViaFlatMapLatest` and prevents a future "let me just put `distanceUnit` back into the inner combine" regression.
 
 **Deterministic clock.** `ObserveChartsModelsUseCaseTest` and `ChartsViewModelTest` construct the use case with a fixed `NowProvider`:
 
@@ -685,7 +694,7 @@ Reused (no new keys):
 - [ ] Multi-currency periods render the banner exclusively on the cost tab; the other four tabs render normally.
 - [ ] Switching `activeCarId` from another screen (Dashboard) repaints Charts within one frame after returning to it.
 - [ ] Distance-unit preference change (km ↔ miles) updates the trend Y axis label and re-formats values *without* mutating any stored data.
-- [ ] All new JVM tests pass; `:app:testDebugUnitTest` is green; total JVM unit-test count rises by **≥ 35** (~6 trend + ~4 split + ~6 location + ~4 resolver + ~8 use case + ~10 VM = 38 expected).
+- [ ] All new JVM tests pass; `:app:testDebugUnitTest` is green; total JVM unit-test count rises by **≥ 35** (~6 trend + ~4 split + ~6 location + ~4 resolver + ~8 use case + ~11 VM = 39 expected).
 - [ ] All new instrumented tests pass; `:app:assembleDebugAndroidTest` compiles cleanly.
 - [ ] `./gradlew :app:assembleDebug` produces an APK that opens to the Charts tab without crashing on a fresh install (NoCar state visible).
 - [ ] CLAUDE.md *Status* section is updated in the merge commit to reflect F2 shipped and Charts is now wired (✓), and JVM test count bumped.
