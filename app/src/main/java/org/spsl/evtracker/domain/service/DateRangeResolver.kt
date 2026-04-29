@@ -2,6 +2,7 @@ package org.spsl.evtracker.domain.service
 
 import java.util.Calendar
 import javax.inject.Inject
+import org.spsl.evtracker.core.model.ChartsPeriod
 import org.spsl.evtracker.core.model.DashboardPeriod
 import org.spsl.evtracker.core.model.DateRange
 
@@ -14,6 +15,14 @@ class DateRangeResolver @Inject constructor() {
             DashboardPeriod.Last30Days -> DateRange(nowMillis - 30 * MILLIS_PER_DAY, nowMillis)
             DashboardPeriod.Year       -> DateRange(startOfYear(nowMillis), nowMillis)
             is DashboardPeriod.Custom  -> DateRange(period.fromMillis, period.toMillis)
+        }
+
+    fun resolveCharts(period: ChartsPeriod, nowMillis: Long = System.currentTimeMillis()): DateRange =
+        when (period) {
+            ChartsPeriod.Last6Months  -> DateRange(nowMillis - 182L * MILLIS_PER_DAY, nowMillis)
+            ChartsPeriod.Last12Months -> DateRange(nowMillis - 365L * MILLIS_PER_DAY, nowMillis)
+            ChartsPeriod.AllTime      -> DateRange(0L, nowMillis)
+            is ChartsPeriod.Custom    -> DateRange(period.fromMillis, period.toMillis)
         }
 
     private fun startOfYear(nowMillis: Long): Long {

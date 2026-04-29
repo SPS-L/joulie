@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Android app (`org.spsl.evtracker`) for logging EV charge events and analyzing efficiency/cost. Kotlin, MVVM with a domain/use-case layer plus narrow repositories, Gradle Kotlin DSL, and Hilt-based dependency injection. Min SDK 26, target/compile SDK 34, JDK 17. Room compiler runs via **KSP** (not kapt).
 
-> **Status:** Sub-projects A (foundation/DI/Room v3), B (repositories), C (domain services + use cases), D (Core UI: Dashboard/ChargeEdit/Cars/History), E (Drive backup), and F1 (Settings remainder + ManageLocations + reset use cases + startup auto-recovery) are all merged. Wizard, Dashboard, ChargeEdit, Cars, History, Settings, and ManageLocations are fully wired; Charts remains a placeholder fragment until F2. JVM unit-test count: ~188. Instrumented suite compiles via `:app:assembleDebugAndroidTest` (running requires an emulator); Drive backup smoke per `GOOGLE_CLOUD_SETUP.md` requires a Google account allow-listed in the OAuth consent screen.
+> **Status:** Sub-projects A (foundation/DI/Room v3), B (repositories), C (domain services + use cases), D (Core UI: Dashboard/ChargeEdit/Cars/History), E (Drive backup), F1 (Settings remainder + ManageLocations + reset use cases + startup auto-recovery), and F2 (Charts) are all merged. Wizard, Dashboard, ChargeEdit, Cars, History, Settings, ManageLocations, and Charts are fully wired. JVM unit-test count: ~236. Instrumented suite compiles via `:app:assembleDebugAndroidTest` (running requires an emulator); Drive backup smoke per `GOOGLE_CLOUD_SETUP.md` requires a Google account allow-listed in the OAuth consent screen.
 
 Root docs:
 - `DESIGN.md` — canonical product + technical spec (v3). Source of truth when in conflict with anything else.
@@ -29,7 +29,7 @@ Requires `ANDROID_HOME` set and Build Tools 34.
 ## Architecture (4-layer)
 
 ```
-UI:       Fragments + ViewModels (Wizard ✓, Dashboard ✓, ChargeEdit ✓, Cars ✓, History ✓, Charts ⊘, Settings ✓, ManageLocations ✓)
+UI:       Fragments + ViewModels (Wizard ✓, Dashboard ✓, ChargeEdit ✓, Cars ✓, History ✓, Charts ✓, Settings ✓, ManageLocations ✓)
           BottomNavigationView in MainActivity hides on Wizard / ChargeEdit / Cars / ManageLocations
           ui/common/        MoneyFormat · DateFormat · PeriodLabels (pure helpers)
           core/model/ states DashboardScreenState · ChargeEditUiState · CarsUiState · CarFormState · HistoryUiState
@@ -42,7 +42,7 @@ Repo:     CarRepository (CarReader + CarWriter) · ChargeEventRepository · Loca
 Data:     Room (CarDao, ChargeEventDao, CustomLocationDao) · Preferences DataStore · Drive AppData client (E ✓) · WorkManager backup scheduler (E ✓)
 ```
 
-Legend: ✓ = wired in D · ⊘ = placeholder fragment until F.
+Legend: ✓ = wired
 
 Single-Activity + Navigation Component. ViewBinding enabled. MPAndroidChart for charts. WorkManager is used for backup scheduling only, not as a substitute for domain logic.
 

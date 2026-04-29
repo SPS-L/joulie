@@ -32,8 +32,18 @@ class FakeCarReader(initial: List<CarEntity> = emptyList()) : CarReader {
 class FakeChargeEventQueries(
     private val store: MutableStateFlow<List<ChargeEventEntity>> = MutableStateFlow(emptyList())
 ) : ChargeEventQueries {
-    override fun observeForCar(carId: Int): Flow<List<ChargeEventEntity>> =
-        store.map { it.filter { e -> e.carId == carId }.sortedBy { e -> e.eventDate } }
+
+    /** Incremented every time observeForCar(...) is called, regardless of carId.
+     *  Used by ChartsViewModelTest.distanceUnitChange_doesNotResubscribeEventStream
+     *  to assert that flipping rendering inputs does not tear down the inner Room
+     *  subscription. */
+    @Volatile var observeForCarCallCount: Int = 0
+        private set
+
+    override fun observeForCar(carId: Int): Flow<List<ChargeEventEntity>> {
+        observeForCarCallCount++
+        return store.map { it.filter { e -> e.carId == carId }.sortedBy { e -> e.eventDate } }
+    }
     override suspend fun getInRange(carId: Int, from: Long, to: Long): List<ChargeEventEntity> =
         store.value.filter { it.carId == carId && it.eventDate in from..to }.sortedBy { it.eventDate }
     override suspend fun getAllForCarSorted(carId: Int): List<ChargeEventEntity> =
@@ -128,6 +138,7 @@ class FakeSettingsReader(
     fun setResetInProgress(value: Boolean) { resetInProgressFlow.value = value }
     fun setPrimaryMetric(value: String) { metric.value = value }
     fun setDistanceUnit(value: String) { unit.value = value }
+    fun setCurrency(value: String) { curr.value = value }
 }
 
 class FakeSettingsWriter(

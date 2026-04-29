@@ -59,7 +59,14 @@
     <fragment
         android:id="@+id/chartsFragment"
         android:name="org.spsl.evtracker.ui.charts.ChartsFragment"
-        android:label="Charts"/>
+        android:label="Charts">
+        <action
+            android:id="@+id/action_charts_to_cars"
+            app:destination="@id/carsFragment"/>
+        <action
+            android:id="@+id/action_charts_to_chargeEdit"
+            app:destination="@id/chargeEditFragment"/>
+    </fragment>
 
     <fragment
         android:id="@+id/historyFragment"

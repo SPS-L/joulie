@@ -2,6 +2,10 @@ package org.spsl.evtracker.domain.service
 
 import java.util.Calendar
 import javax.inject.Inject
+import org.spsl.evtracker.core.model.AcDcSplit
+import org.spsl.evtracker.core.model.EfficiencyPoint
+import org.spsl.evtracker.core.model.EfficiencySeries
+import org.spsl.evtracker.core.model.LocationSlice
 import org.spsl.evtracker.core.model.MonthBucket
 import org.spsl.evtracker.core.model.Stats
 import org.spsl.evtracker.data.local.entity.ChargeEventEntity
@@ -95,5 +99,60 @@ class StatsCalculator @Inject constructor() {
                 currency = if (totalCost != null) singleCurrency else null
             )
         }.sortedWith(compareBy({ it.year }, { it.month }))
+    }
+
+    fun detectMixedCurrency(events: List<ChargeEventEntity>): Boolean =
+        events.mapNotNull { e -> e.costTotal?.let { e.currency } }.distinct().size > 1
+
+    fun computeEfficiencyTrend(events: List<ChargeEventEntity>): EfficiencySeries {
+        fun seriesFor(type: String): List<EfficiencyPoint> {
+            val sorted = events.filter { it.chargeType == type }.sortedBy { it.eventDate }
+            val out = ArrayList<EfficiencyPoint>(sorted.size)
+            for (i in 1 until sorted.size) {
+                val dist = sorted[i].odometerKm - sorted[i - 1].odometerKm
+                if (dist > 0 && sorted[i].kwhAdded > 0.0) {
+                    out += EfficiencyPoint(
+                        eventTimeMillis = sorted[i].eventDate,
+                        kmPerKwh = dist / sorted[i].kwhAdded
+                    )
+                }
+            }
+            return out
+        }
+        return EfficiencySeries(
+            acPoints = seriesFor("AC"),
+            dcPoints = seriesFor("DC")
+        )
+    }
+
+    fun computeAcDcSplit(events: List<ChargeEventEntity>): AcDcSplit {
+        val ac = events.filter { it.chargeType == "AC" }
+        val dc = events.filter { it.chargeType == "DC" }
+        return AcDcSplit(
+            acCount = ac.size,
+            dcCount = dc.size,
+            acKwh   = ac.sumOf { it.kwhAdded },
+            dcKwh   = dc.sumOf { it.kwhAdded }
+        )
+    }
+
+    fun computeLocationDistribution(events: List<ChargeEventEntity>): List<LocationSlice> {
+        val counts = events
+            .mapNotNull { it.location?.trim()?.takeIf(String::isNotBlank) }
+            .groupingBy { it }
+            .eachCount()
+        if (counts.isEmpty()) return emptyList()
+        val ranked = counts.entries.sortedByDescending { it.value }
+        val top = ranked.take(MAX_LOCATION_SLICES)
+            .map { LocationSlice(it.key, it.value) }
+        val tail = ranked.drop(MAX_LOCATION_SLICES)
+        return if (tail.isEmpty()) top
+               else top + LocationSlice(LocationSlice.OTHER_KEY, tail.sumOf { it.value })
+    }
+
+    companion object {
+        // Cap chosen so the pie chart stays legible on phone widths
+        // (see spec §6.5 / §10). Tweaking is a code change, not a localization change.
+        const val MAX_LOCATION_SLICES = 8
     }
 }
