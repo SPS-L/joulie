@@ -143,6 +143,13 @@ class ChartsViewModelTest {
         assertEquals("miles", state.distanceUnit)
     }
 
+    @Test fun primaryMetricChange_propagatesToScreenState() = runTest {
+        vm.uiState.first { it.charts !is ChartsUiState.Loading && it.primaryMetric == "kwh_per_100km" }
+        settings.setPrimaryMetric("km_per_kwh")
+        val state = vm.uiState.first { it.primaryMetric == "km_per_kwh" }
+        assertEquals("km_per_kwh", state.primaryMetric)
+    }
+
     @Test fun distanceUnitChange_doesNotResubscribeEventStream() = runTest {
         val (job, _) = keepSubscribed(this)
         // Wait for the use case to settle into Loaded (one initial subscription).
