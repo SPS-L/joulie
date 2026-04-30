@@ -7,7 +7,7 @@ data class DashboardScreenState(
     val activeCarId: Int = -1,
     val period: DashboardPeriod = DashboardPeriod.Last30Days,
     val filter: ChargeTypeFilter = ChargeTypeFilter.ALL,
-    val primaryMetric: String = "km_per_kwh",
+    val primaryMetric: String = "kwh_per_100km",
     val distanceUnit: String = "km",
     val currency: String = "EUR",
     val dashboard: DashboardUiState = DashboardUiState(),

@@ -46,7 +46,7 @@ class DashboardViewModelTest {
         cars: List<CarEntity> = emptyList(),
         events: List<ChargeEventEntity> = emptyList(),
         activeCarId: Int = -1,
-        primaryMetric: String = "km_per_kwh",
+        primaryMetric: String = "kwh_per_100km",
         distanceUnit: String = "km",
         currency: String = "EUR",
     ): VmFixture {

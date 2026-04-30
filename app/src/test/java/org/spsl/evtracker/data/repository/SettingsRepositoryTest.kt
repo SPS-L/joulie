@@ -35,7 +35,7 @@ class SettingsRepositoryTest {
     @Test
     fun defaults_areExpected() = runTest {
         assertFalse(repo.setupComplete.first())
-        assertEquals("km_per_kwh", repo.primaryMetric.first())
+        assertEquals("kwh_per_100km", repo.primaryMetric.first())
         assertEquals("km", repo.distanceUnit.first())
         assertEquals("EUR", repo.currency.first())
         assertEquals("system", repo.theme.first())

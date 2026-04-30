@@ -111,7 +111,7 @@ class FakeLocationWriter(
 
 class FakeSettingsReader(
     activeCarIdInit: Int = -1,
-    primaryMetricInit: String = "km_per_kwh",
+    primaryMetricInit: String = "kwh_per_100km",
     distanceUnitInit: String = "km",
     currencyInit: String = "EUR",
     driveEnabledInit: Boolean = false,
@@ -178,7 +178,7 @@ class FakeSettingsWriter(
         private set
     var theme: String = "system"
         private set
-    var primaryMetric: String = "km_per_kwh"
+    var primaryMetric: String = "kwh_per_100km"
         private set
     var distanceUnit: String = "km"
         private set
