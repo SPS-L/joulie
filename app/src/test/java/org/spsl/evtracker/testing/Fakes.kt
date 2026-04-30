@@ -118,6 +118,7 @@ class FakeSettingsReader(
     lastBackupAtInit: Long? = null,
     themeInit: String = "system",
     resetInProgressInit: Boolean = false,
+    setupCompleteInit: Boolean = true,
 ) : SettingsReader {
     private val activeCar = MutableStateFlow(activeCarIdInit)
     private val metric = MutableStateFlow(primaryMetricInit)
@@ -127,6 +128,7 @@ class FakeSettingsReader(
     private val backupAt = MutableStateFlow(lastBackupAtInit)
     private val themeFlow = MutableStateFlow(themeInit)
     private val resetInProgressFlow = MutableStateFlow(resetInProgressInit)
+    private val setupCompleteFlow = MutableStateFlow(setupCompleteInit)
     override val activeCarId: Flow<Int> = activeCar
     override val primaryMetric: Flow<String> = metric
     override val distanceUnit: Flow<String> = unit
@@ -135,6 +137,7 @@ class FakeSettingsReader(
     override val lastBackupAt: Flow<Long?> = backupAt
     override val theme: Flow<String> = themeFlow
     override val resetInProgress: Flow<Boolean> = resetInProgressFlow
+    override val setupComplete: Flow<Boolean> = setupCompleteFlow
     fun setActiveCarId(id: Int) {
         activeCar.value = id
     }
@@ -149,6 +152,9 @@ class FakeSettingsReader(
     }
     fun setResetInProgress(value: Boolean) {
         resetInProgressFlow.value = value
+    }
+    fun setSetupComplete(value: Boolean) {
+        setupCompleteFlow.value = value
     }
     fun setPrimaryMetric(value: String) {
         metric.value = value
