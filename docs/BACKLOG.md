@@ -6,41 +6,42 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 
 ## Task Overview
 
-| Task | Priority | Description | Done |
-|------|----------|-------------|------|
-| TASK-01 | 🔴 | Relocate `AggregationDispatcher` out of `di/` | ☑ |
-| TASK-02 | 🔴 | Add safeguard KDoc to `RoomDataResetTransactionRunner` (structural rule already holds) | ☐ |
-| TASK-03 | — | ~~Unify `UiState` vs `ScreenState` naming in `core/model`~~ — **closed, premise wrong** | ☒ |
-| TASK-04 | 🟡 | JVM unit tests for `CostParser` | ☑ |
-| TASK-05 | — | ~~JVM unit tests for `EfficiencyPoint`~~ — **closed, premise wrong** | ☒ |
-| TASK-06 | 🟡 | JVM unit tests for use cases | ☑ |
-| TASK-07 | 🟡 | Drive backup error handling & retry logic | ☐ |
-| TASK-08 | 🟢 | Replace `CarEditDialog` with a Compose `AlertDialog` (requires adding Compose) | ☐ |
-| TASK-09 | 🟢 | CSV export of charge events with efficiency column, date-range picker | ☐ |
-| TASK-10 | 🟢 | In-app About / Info screen with SPS-Lab acknowledgment | ☐ |
-| TASK-11 | 🟡 | Odometer regression detection UX improvement | ☐ |
-| TASK-12 | 🟡 | Widget: last-charge summary on home screen | ☐ |
-| TASK-13 | 🟢 | Charging session timer / live session mode | ☐ |
-| TASK-14 | 🟡 | Battery capacity degradation tracker | ☐ |
-| TASK-15 | 🟢 | Localisation (i18n) foundation | ☐ |
-| TASK-16 | 🔴 | Static analysis & code style gate in CI (ktlint + Android Lint) | ☐ |
-| TASK-17 | 🟡 | R8/ProGuard follow-up audit: MPAndroidChart keep rule + release smoke test | ☐ |
-| TASK-18 | 🟡 | Accessibility (a11y) pass — TalkBack, contentDescription, contrast, touch targets | ☐ |
-| TASK-19 | 🟡 | Backup failure notification channel + Android 13+ `POST_NOTIFICATIONS` handling | ☐ |
-| TASK-20 | 🟢 | CO₂ savings tracker (ICE baseline, Cyprus grid intensity, methodology doc) | ☐ |
-| TASK-21 | 🟢 | Android Baseline Profile module for cold-start performance | ☐ |
-| TASK-22 | 🔴 | Upgrade `targetSdk` and `compileSdk` to API 35 | ☐ |
-| TASK-23 | 🔴 | Move startup `isLoading` state into `MainViewModel` | ☐ |
-| TASK-24 | 🔴 | Enforce ViewModel/Activity consumption of the existing narrow domain interfaces (no concrete `data.repository.*` imports outside `di/`) | ☐ |
-| TASK-25 | 🟡 | Replace `chargeType: String` with a sealed class / TypeConverter-backed enum | ☐ |
-| TASK-26 | 🟡 | Change all Room primary-key and foreign-key fields from `Int` to `Long` | ☐ |
-| TASK-27 | 🟡 | Decouple bottom-nav visibility from hardcoded `hideOn` set in `MainActivity` | ☐ |
-| TASK-28 | 🟡 | Consolidate time on existing `NowProvider`; remove direct `System.currentTimeMillis()` from entities and helpers; drop the parallel `() -> Long` clock in `WorkerModule` | ☐ |
-| TASK-29 | 🟢 | Add explicit `debug` build type with `applicationIdSuffix` and `BuildConfig` flags | ☐ |
-| TASK-30 | 🟢 | Migrate from MPAndroidChart to Vico (line/bar) + custom `Canvas` `PieChartView` (pie tabs) | ☐ |
+| Task | Priority | Description | Requires | Done |
+|------|----------|-------------|----------|------|
+| TASK-01 | 🔴 | Relocate `AggregationDispatcher` out of `di/` | — | ☑ |
+| TASK-02 | 🔴 | Add safeguard KDoc to `RoomDataResetTransactionRunner` (structural rule already holds) | — | ☐ |
+| TASK-03 | — | ~~Unify `UiState` vs `ScreenState` naming in `core/model`~~ — **closed, premise wrong** | — | ☒ |
+| TASK-04 | 🟡 | JVM unit tests for `CostParser` | — | ☑ |
+| TASK-05 | — | ~~JVM unit tests for `EfficiencyPoint`~~ — **closed, premise wrong** | — | ☒ |
+| TASK-06 | 🟡 | JVM unit tests for use cases | — | ☑ |
+| TASK-07 | 🟡 | Drive backup error handling & retry logic | — | ☐ |
+| TASK-08 | 🟢 | Replace `CarEditDialog` with a Compose `AlertDialog` (requires adding Compose) | — | ☐ |
+| TASK-09 | 🟢 | CSV export of charge events with efficiency column, date-range picker | — | ☐ |
+| TASK-10 | 🟢 | In-app About / Info screen with SPS-Lab acknowledgment | TASK-29 | ☐ |
+| TASK-11 | 🟡 | Odometer regression detection UX improvement | — | ☐ |
+| TASK-12 | 🟡 | Widget: last-charge summary on home screen | — | ☐ |
+| TASK-13 | 🟢 | Charging session timer / live session mode | — | ☐ |
+| TASK-14 | 🟡 | Battery capacity degradation tracker | — | ☐ |
+| TASK-15 | 🟢 | Localisation (i18n) foundation | TASK-16 | ☐ |
+| TASK-16 | 🔴 | Static analysis & code style gate in CI (ktlint + Android Lint) | — | ☐ |
+| TASK-17 | 🟡 | R8/ProGuard follow-up audit: MPAndroidChart keep rule + release smoke test | — | ☐ |
+| TASK-18 | 🟡 | Accessibility (a11y) pass — TalkBack, contentDescription, contrast, touch targets | — | ☐ |
+| TASK-19 | 🟡 | Backup failure notification channel + Android 13+ `POST_NOTIFICATIONS` handling | TASK-07 | ☐ |
+| TASK-20 | 🟢 | CO₂ savings tracker (ICE baseline, Cyprus grid intensity, methodology doc) | — | ☐ |
+| TASK-21 | 🟢 | Android Baseline Profile module for cold-start performance | — | ☐ |
+| TASK-22 | 🔴 | Upgrade `targetSdk` and `compileSdk` to API 35 | TASK-16 | ☐ |
+| TASK-23 | 🔴 | Move startup `isLoading` state into `MainViewModel` | — | ☐ |
+| TASK-24 | 🔴 | Enforce ViewModel/Activity consumption of the existing narrow domain interfaces (no concrete `data.repository.*` imports outside `di/`) | TASK-23 | ☐ |
+| TASK-25 | 🟡 | Replace `chargeType: String` with a sealed class / TypeConverter-backed enum | — | ☐ |
+| TASK-26 | 🟡 | Change all Room primary-key and foreign-key fields from `Int` to `Long` | — | ☐ |
+| TASK-27 | 🟡 | Decouple bottom-nav visibility from hardcoded `hideOn` set in `MainActivity` | — | ☐ |
+| TASK-28 | 🟡 | Consolidate time on existing `NowProvider`; remove direct `System.currentTimeMillis()` from entities and helpers; drop the parallel `() -> Long` clock in `WorkerModule` | — | ☐ |
+| TASK-29 | 🟢 | Add explicit `debug` build type with `applicationIdSuffix` and `BuildConfig` flags | — | ☐ |
+| TASK-30 | 🟢 | Migrate from MPAndroidChart to Vico (line/bar) + custom `Canvas` `PieChartView` (pie tabs) | — | ☐ |
 
 **Priority legend:** 🔴 High (architecture/data safety) · 🟡 Medium (robustness/UX) · 🟢 Low (new feature)  
 **Status legend:** ☐ open · ☑ done · ☒ closed (premise no longer holds)  
+**Requires column:** `TASK-NN` means the named task should land first. `—` means no hard prerequisite. Soft coordination notes (Room schema-version claiming, TASK-30 keep-rule cleanup) live in *Notes for Agents* below rather than the column.  
 Mark done by replacing `☐` with `☑` when a task is merged.
 
 ---
@@ -1374,6 +1375,11 @@ Once all five tabs render correctly with the new implementations:
 
 ## Notes for Agents (TASK-22 to TASK-30 addendum)
 
+- **TASK-16 → TASK-15 / TASK-22 (gate before invariants):** the CI lint
+  gate is a soft prerequisite for both. Land TASK-16 first so that
+  TASK-15's `HardcodedText` / `MissingTranslation` rules and TASK-22's
+  API-35 deprecation fixes are protected at PR time; otherwise
+  regressions can re-enter `main` undetected.
 - **TASK-22 ↔ TASK-16 (CI matrix):** when TASK-16's `ci.yml` lands, its
   `connectedAndroidTest` job (or any emulator matrix) must use the
   same API level as `targetSdk`/`compileSdk`. If TASK-22 has merged first,
