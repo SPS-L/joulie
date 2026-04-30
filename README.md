@@ -6,7 +6,7 @@
 
 An Android app for recording and analyzing electric vehicle charging efficiency and cost. Log mileage, kWh added, AC/DC charge type, location, and optional cost after each charge. View multi-metric statistics over any period with rich charts and an optional Google Drive backup.
 
-> **Status:** v1.0.0 released. All planned features are implemented and merged on `main`. Signed release APKs are produced automatically by [`.github/workflows/release.yml`](.github/workflows/release.yml) on every `v*` tag push and attached to the corresponding GitHub Release.
+> **Status:** v1.0.1 released. All planned features are implemented and merged on `main`. Signed release APKs are produced automatically by [`.github/workflows/release.yml`](.github/workflows/release.yml) on every `v*` tag push and attached to the corresponding GitHub Release. Every PR and push to `main` is gated by [`.github/workflows/ci.yml`](.github/workflows/ci.yml) (ktlint + Android Lint + JVM unit tests).
 
 ---
 
@@ -45,7 +45,7 @@ An Android app for recording and analyzing electric vehicle charging efficiency 
 Download the latest signed APK from the [GitHub Releases](https://github.com/SPS-L/EV-android-app/releases) page and install via `adb install` or by opening the APK on your device (you may need to enable "Install from unknown sources").
 
 ```bash
-adb install evtracker-v1.0.0.apk
+adb install evtracker-v1.0.1.apk
 ```
 
 > Drive backup will not work on a sideloaded APK unless its signing-cert SHA-1 is registered with an OAuth Android client in your own Google Cloud project. See [`docs/GOOGLE_CLOUD_SETUP.md`](docs/GOOGLE_CLOUD_SETUP.md).
@@ -66,6 +66,17 @@ cd EV-android-app
 ./gradlew test                      # JVM unit tests (~236)
 ./gradlew connectedAndroidTest      # Espresso / Room — needs API 26+ device or emulator
 ```
+
+### Static analysis gate
+
+PRs and pushes to `main` must pass `ktlintCheck` and `:app:lint` before merge. Run the same gate locally before opening a PR:
+
+```bash
+./gradlew ktlintCheck :app:lint :app:testDebugUnitTest
+./gradlew ktlintFormat              # auto-fix style violations
+```
+
+Style is anchored by [`.editorconfig`](.editorconfig) (Kotlin official / IntelliJ style, 4-space indent). Pre-existing lint offenses are absorbed by [`app/lint-baseline.xml`](app/lint-baseline.xml); only new violations break the build.
 
 ### Release builds
 
