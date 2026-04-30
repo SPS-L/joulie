@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPS-Lab pill badge for the About screen header.
+     240x60dp — pair with a TextView overlay for the 'SPS-Lab' wordmark
+     since Vector Drawables cannot render <text> nodes. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="240dp"
+    android:height="60dp"
+    android:viewportWidth="240"
+    android:viewportHeight="60">
+
+    <!-- pill background (primaryContainer) -->
+    <path
+        android:fillColor="#D1E4FF"
+        android:pathData="M30,0H210Q240,0 240,30Q240,60 210,60H30Q0,60 0,30Q0,0 30,0Z"/>
+
+    <!-- lightning bolt accent (DC-orange) -->
+    <path
+        android:fillColor="#FB8C00"
+        android:pathData="M28,12 L21,30 L26,30 L22,48 L33,26 L28,26 L33,12Z"/>
+
+</vector>
