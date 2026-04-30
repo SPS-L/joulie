@@ -424,6 +424,88 @@ made based on data recorded or displayed by this app.
    - The license card is visible and contains the word "MIT".
    - The disclaimer card is visible and contains the word "liability".
 
+### Branding & launcher icon drop-in (assets provided 2026-05-01)
+
+A complete launcher-icon asset pack is bundled at the repo root in
+`exported-assets.zip` (uncommitted, ~5 MB). The inner
+`ev_tracker_icons.zip` mirrors the exact `res/` directory structure to
+drop into `app/src/main/res/`:
+
+```
+mipmap-mdpi/        → 48×48
+mipmap-hdpi/        → 72×72
+mipmap-xhdpi/       → 96×96
+mipmap-xxhdpi/      → 144×144
+mipmap-xxxhdpi/     → 192×192
+play_store/         → 512×512
+```
+
+Each density folder contains **4 files**:
+
+| File | Purpose |
+|------|---------|
+| `ic_launcher.png` | Legacy square launcher icon |
+| `ic_launcher_round.png` | Circular variant (Android 7.1+) |
+| `ic_launcher_foreground.png` | Adaptive icon foreground layer (RGBA) |
+| `ic_launcher_background.png` | Adaptive icon background layer (solid navy `#0D2B5E`) |
+
+#### How to apply
+
+1. Unzip `exported-assets.zip` → extract the inner `ev_tracker_icons.zip` →
+   copy all `mipmap-*` folders into `app/src/main/res/`, replacing existing
+   ones. (Pre-flight check: a `find app/src/main/res -name "ic_launcher*"`
+   currently lists only the vector drawables and the
+   `mipmap-anydpi-v26/ic_launcher{,_round}.xml` files — there are no
+   density-bucket PNGs to overwrite yet.)
+2. `AndroidManifest.xml` already references `@mipmap/ic_launcher` and
+   `@mipmap/ic_launcher_round` — no changes needed.
+3. **Reconcile with the existing vector adaptive icon (commit `e1958d7`).**
+   `app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml` currently reads:
+
+   ```xml
+   <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+       <background android:drawable="@drawable/ic_launcher_background"/>
+       <foreground android:drawable="@drawable/ic_launcher_foreground"/>
+   </adaptive-icon>
+   ```
+
+   To use the new PNG mipmaps as the adaptive-icon source, rewrite both
+   `mipmap-anydpi-v26/ic_launcher.xml` and `ic_launcher_round.xml` to
+   reference `@mipmap/...` instead:
+
+   ```xml
+   <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+       <background android:drawable="@mipmap/ic_launcher_background"/>
+       <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
+   </adaptive-icon>
+   ```
+
+   The two vector drawables added by `e1958d7`
+   (`drawable/ic_launcher_foreground.xml`, `drawable/ic_launcher_background.xml`)
+   will become orphans after this rewrite. Delete them — Android Lint's
+   `UnusedResources` is in error mode and would otherwise fail the
+   build. **Keep `drawable/ic_spslab_badge.xml`** — it's the SPS-Lab pill
+   badge intended for the About screen header (not part of the launcher
+   icon pipeline) and is referenced from the About fragment layout you
+   write in this task.
+
+4. Use `play_store/ic_launcher_512.png` when uploading to the Google Play
+   Console (not committed to the repo — keep it under `dist/` locally or
+   attach to the GitHub Release).
+
+#### Acceptance for the icon work
+
+- `find app/src/main/res -name "ic_launcher*.png"` lists 20 files
+  (4 per density × 5 densities).
+- `mipmap-anydpi-v26/ic_launcher.xml` and `ic_launcher_round.xml` both
+  reference `@mipmap/ic_launcher_foreground` + `@mipmap/ic_launcher_background`.
+- `drawable/ic_launcher_foreground.xml` and
+  `drawable/ic_launcher_background.xml` are deleted; the build remains
+  green (`./gradlew :app:lint :app:assembleRelease`).
+- The launcher icon visually shows the EV silhouette + lightning bolt
+  on a navy `#0D2B5E` background after install — verify on a device
+  and on the Play Store listing's icon preview.
+
 ---
 
 ## 🟡 TASK-11 — Odometer Regression UX Improvement
