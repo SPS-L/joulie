@@ -34,7 +34,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-24 | 🔴 | Enforce ViewModel/Activity consumption of the existing narrow domain interfaces (no concrete `data.repository.*` imports outside `di/`) | TASK-23 | ☑ |
 | TASK-25 | 🟡 | Replace `chargeType: String` with a sealed class / TypeConverter-backed enum | — | ☐ |
 | TASK-26 | 🟡 | Change all Room primary-key and foreign-key fields from `Int` to `Long` | — | ☐ |
-| TASK-27 | 🟡 | Decouple bottom-nav visibility from hardcoded `hideOn` set in `MainActivity` | — | ☐ |
+| TASK-27 | 🟡 | Decouple bottom-nav visibility from hardcoded `hideOn` set in `MainActivity` | — | ☑ |
 | TASK-28 | 🟡 | Consolidate time on existing `NowProvider`; remove direct `System.currentTimeMillis()` from entities and helpers; drop the parallel `() -> Long` clock in `WorkerModule` | — | ☐ |
 | TASK-29 | 🟢 | Add explicit `debug` build type with `applicationIdSuffix` and `BuildConfig` flags | — | ☐ |
 | TASK-30 | 🟢 | Migrate from MPAndroidChart to Vico (line/bar) + custom `Canvas` `PieChartView` (pie tabs) | — | ☐ |
@@ -1199,7 +1199,27 @@ align with SQLite's 64-bit `ROWID` and eliminate any overflow risk.
 
 ---
 
-## 🟡 TASK-27 — Decouple bottom-nav visibility from the hardcoded `hideOn` set
+## 🟡 TASK-27 — Decouple bottom-nav visibility from the hardcoded `hideOn` set ☑ Done (2026-05-01)
+
+> **Outcome:** the four full-screen destinations (`wizardFragment`,
+> `chargeEditFragment`, `carsFragment`, `manageLocationsFragment`)
+> declare `hideBottomNav=true` as a destination argument in
+> `app/src/main/res/navigation/nav_graph.xml`. `MainActivity.onCreate`
+> now reads `args?.getBoolean("hideBottomNav") ?: false` from the
+> `addOnDestinationChangedListener` callback and no longer references
+> any specific destination ID for visibility decisions (acceptance grep
+> `grep -n "R\.id\." app/src/main/java/.../MainActivity.kt` returns
+> only `nav_host_fragment`, `wizardFragment` for the start-destination
+> override, and `R.navigation.nav_graph`). New instrumented test
+> `app/src/androidTest/java/org/spsl/evtracker/MainActivityBottomNavTest.kt`
+> exercises the dashboard → chargeEdit → back round-trip; it compiles
+> via `:app:assembleDebugAndroidTest` and is grouped with the rest of
+> the emulator-only suite. CLAUDE.md §Architecture documents the
+> convention so the next agent doesn't have to edit `MainActivity` to
+> add a new full-screen destination. Spec:
+> `superpowers/specs/2026-05-01-task27-bottom-nav-hide-arg-design.md`.
+> Plan: `superpowers/plans/2026-05-01-task27-bottom-nav-hide-arg.md`.
+> The original task text is preserved below for historical context.
 
 `MainActivity.kt:47` declares `val hideOn = setOf(R.id.wizardFragment, …)` to
 decide when to hide the `BottomNavigationView`. Every new full-screen

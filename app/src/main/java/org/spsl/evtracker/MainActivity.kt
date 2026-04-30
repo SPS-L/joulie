@@ -65,14 +65,9 @@ class MainActivity : AppCompatActivity() {
         navGraph = navController.navInflater.inflate(R.navigation.nav_graph)
 
         binding.bottomNav.setupWithNavController(navController)
-        val hideOn = setOf(
-            R.id.wizardFragment,
-            R.id.chargeEditFragment,
-            R.id.carsFragment,
-            R.id.manageLocationsFragment,
-        )
-        navController.addOnDestinationChangedListener { _, dest, _ ->
-            binding.bottomNav.isVisible = dest.id !in hideOn
+        navController.addOnDestinationChangedListener { _, _, args ->
+            val hide = args?.getBoolean("hideBottomNav") ?: false
+            binding.bottomNav.isVisible = !hide
         }
 
         lifecycleScope.launch {
