@@ -29,7 +29,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-19 | 🟡 | Backup failure notification channel + Android 13+ `POST_NOTIFICATIONS` handling | TASK-07 | ☐ |
 | TASK-20 | 🟢 | CO₂ savings tracker (ICE baseline, Cyprus grid intensity, methodology doc) | — | ☐ |
 | TASK-21 | 🟢 | Android Baseline Profile module for cold-start performance | — | ☐ |
-| TASK-22 | 🔴 | Upgrade `targetSdk` and `compileSdk` to API 35 | TASK-16 | ☐ |
+| TASK-22 | 🔴 | Upgrade `targetSdk` and `compileSdk` to API 35 | TASK-16 | ☑ |
 | TASK-23 | 🔴 | Move startup `isLoading` state into `MainViewModel` | — | ☑ |
 | TASK-24 | 🔴 | Enforce ViewModel/Activity consumption of the existing narrow domain interfaces (no concrete `data.repository.*` imports outside `di/`) | TASK-23 | ☑ |
 | TASK-25 | 🟡 | Replace `chargeType: String` with a sealed class / TypeConverter-backed enum | — | ☐ |
@@ -942,7 +942,23 @@ cold-start latency on user devices.
 
 ---
 
-## 🔴 TASK-22 — Upgrade `targetSdk` and `compileSdk` to API 35
+## 🔴 TASK-22 — Upgrade `targetSdk` and `compileSdk` to API 35 ☑ Done (2026-05-01)
+
+> **Outcome:** `compileSdk` and `targetSdk` bumped to 35 in
+> `app/build.gradle.kts`. AGP 8.2.0 + Gradle 8.4 accept the new SDK with
+> no toolchain bump and no warnings (verified with
+> `./gradlew :app:assembleDebug` — `android-35` is auto-downloaded under
+> `$ANDROID_HOME/platforms/`). `MainActivity.onCreate` now calls
+> `enableEdgeToEdge()` and applies `WindowInsetsCompat.Type.systemBars()
+> or displayCutout()` as padding to the root `LinearLayout`, so the
+> bottom nav and CoordinatorLayout Snackbars stay above the gesture-nav
+> indicator on Android 15+. Lint baseline is unchanged (no new API-35
+> issues surface). Step 6 in the original task body — bumping a CI
+> `api-level` matrix — was moot: `.github/workflows/ci.yml` is
+> static-analysis only and has no instrumented-test matrix to bump.
+> Spec: `superpowers/specs/2026-05-01-task22-sdk35-upgrade-design.md`.
+> Plan: `superpowers/plans/2026-05-01-task22-sdk35-upgrade.md`.
+> The original task text is preserved below for historical context.
 
 `app/build.gradle.kts:18,23` currently pin `compileSdk = 34` / `targetSdk = 34`
 (Android 14). As of early 2026, Google Play requires `targetSdk ≥ 35` for new
