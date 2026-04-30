@@ -253,6 +253,7 @@
     <string name="charts_trend_legend_dc">DC</string>
     <string name="charts_trend_y_kmh">Efficiency (km/kWh)</string>
     <string name="charts_trend_y_mi">Efficiency (mi/kWh)</string>
+    <string name="charts_trend_y_kwh100">Efficiency (kWh/100km)</string>
     <string name="charts_trend_need_two">Need at least 2 charges to plot a trend</string>
     <string name="charts_no_data_period">No data for this period</string>
     <string name="charts_no_cost_period">No cost data for this period</string>
