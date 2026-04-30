@@ -53,7 +53,11 @@ object ChartStyling {
         return ac to dc
     }
 
-    fun configureLineChart(chart: LineChart, distanceUnit: String) {
+    fun configureLineChart(chart: LineChart) {
+        // Distance unit is handled by the caller (km↔miles conversion happens
+        // when building Entry y-values in ChartsTabFragment.renderTrend, and the
+        // y-axis label suffix is passed to ChartsMarkerView). This helper is
+        // pure axis/legend/zoom configuration.
         chart.description.isEnabled = false
         chart.setNoDataText("")
         chart.axisRight.isEnabled = false
