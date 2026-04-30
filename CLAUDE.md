@@ -29,6 +29,21 @@ Repo root holds only `README.md`, `CLAUDE.md`, and build/config files. All proje
 
 Requires `ANDROID_HOME` set and Build Tools 34.
 
+### Static analysis gate (TASK-16, merged 2026-04-30)
+
+PRs and pushes to `main` are gated by `.github/workflows/ci.yml`. The same gate runs locally:
+
+```bash
+./gradlew ktlintCheck                          # ktlint 12.1.1 — Kotlin official style; auto-fix with ktlintFormat
+./gradlew :app:lint                            # Android Lint, error-mode for HardcodedText/MissingTranslation/TypographyDashes/UnusedResources
+./gradlew :app:testDebugUnitTest               # bundled into the same CI job
+```
+
+- Style is anchored by the repo-root `.editorconfig` (`ktlint_code_style = intellij_idea`, 4-space indent). The IDE's reformat output and ktlint's check agree.
+- Pre-existing lint offenses are absorbed by `app/lint-baseline.xml`. **Only new violations break the build.** Regenerate the baseline only when retiring a rule (`./gradlew :app:updateLintBaseline`); do not regenerate to "clean up" — the baseline is append-only-by-omission.
+- `MissingTranslation` is wired in error mode but cannot fire today (no `values-<lang>/` resources). It begins protecting coverage the moment TASK-15 lands its first translation.
+- The release workflow (`.github/workflows/release.yml`) is independent; tag pushes still go through it.
+
 ## Release & CI
 
 - **Signing:** `app/build.gradle.kts` reads a gitignored `keystore.properties` at repo root. Required keys: `storeFile`, `storePassword`, `keyAlias`, `keyPassword`. If the file is absent, `assembleRelease` still runs but produces an unsigned APK. The release keystore is **not** stored in the repo or in OneDrive; keep it under `~/keystores/` or a password manager.

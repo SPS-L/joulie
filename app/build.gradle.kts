@@ -1,11 +1,12 @@
-import java.util.Properties
 import java.io.FileInputStream
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt.android)
+    alias(libs.plugins.ktlint)
 }
 
 val keystorePropertiesFile = rootProject.file("keystore.properties")
@@ -51,6 +52,20 @@ android {
         viewBinding = true
     }
 
+    lint {
+        abortOnError = true
+        checkReleaseBuilds = true
+        warningsAsErrors = false
+        baseline = file("lint-baseline.xml")
+        error +=
+            listOf(
+                "HardcodedText",
+                "MissingTranslation",
+                "TypographyDashes",
+                "UnusedResources",
+            )
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -74,7 +89,7 @@ android {
                 "META-INF/NOTICE",
                 "META-INF/NOTICE.txt",
                 "META-INF/notice.txt",
-                "META-INF/INDEX.LIST"
+                "META-INF/INDEX.LIST",
             )
         }
     }

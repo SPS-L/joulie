@@ -23,7 +23,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-13 | 🟢 | Charging session timer / live session mode | — | ☐ |
 | TASK-14 | 🟡 | Battery capacity degradation tracker | — | ☐ |
 | TASK-15 | 🟢 | Localisation (i18n) foundation | TASK-16 | ☐ |
-| TASK-16 | 🔴 | Static analysis & code style gate in CI (ktlint + Android Lint) | — | ☐ |
+| TASK-16 | 🟢 | Static analysis & code style gate in CI (ktlint + Android Lint) | — | ☑ |
 | TASK-17 | 🟡 | R8/ProGuard follow-up audit: MPAndroidChart keep rule + release smoke test | — | ☐ |
 | TASK-18 | 🟡 | Accessibility (a11y) pass — TalkBack, contentDescription, contrast, touch targets | — | ☐ |
 | TASK-19 | 🟡 | Backup failure notification channel + Android 13+ `POST_NOTIFICATIONS` handling | TASK-07 | ☐ |
@@ -625,7 +625,15 @@ proper i18n support so the app can be translated in the future.
 
 ---
 
-## 🔴 TASK-16 — Static analysis & code-style gate in CI
+## 🟢 TASK-16 — Static analysis & code-style gate in CI
+
+> **Merged 2026-04-30 on `main`.** Implementation: `.github/workflows/ci.yml`
+> (PR + push-to-main triggers), ktlint 12.1.1 plugin in `app/build.gradle.kts`,
+> Android Lint error mode for `HardcodedText` / `MissingTranslation` /
+> `TypographyDashes` / `UnusedResources`, `app/lint-baseline.xml` absorbs 58
+> pre-existing offenses. `.editorconfig` pins Kotlin official / IntelliJ style.
+> Local one-liner: `./gradlew ktlintCheck :app:lint :app:testDebugUnitTest`.
+> Spec: `docs/superpowers/specs/2026-04-30-task16-ci-static-analysis-design.md`.
 
 > **Priority raised to 🔴 (2026-04-30):** without this gate, regressions on
 > hardcoded strings (TASK-15), API-35 deprecations (TASK-22), and
