@@ -32,9 +32,11 @@ An Android app for recording and analyzing electric vehicle charging efficiency 
 |------|---------|
 | [`DESIGN.md`](DESIGN.md) | Canonical product + technical design spec (v3) |
 | [`GOOGLE_CLOUD_SETUP.md`](GOOGLE_CLOUD_SETUP.md) | Drive API + OAuth 2.0 Android client setup |
-| [`AGENT_INSTRUCTIONS.md`](AGENT_INSTRUCTIONS.md) | Implementation walkthrough used to build the app (all phases) |
-| [`TEST_PLAN.md`](TEST_PLAN.md) | Test specification (all phases) |
+| [`BACKLOG.md`](BACKLOG.md) | Future-work tracker (post-v1 refactors and new features) |
 | [`CLAUDE.md`](CLAUDE.md) | Guide for AI agents (architecture summary, invariants, conventions) |
+| [`docs/AGENT_INSTRUCTIONS.md`](docs/AGENT_INSTRUCTIONS.md) | Original implementation walkthrough used to build the app — historical reference |
+| [`docs/TEST_PLAN.md`](docs/TEST_PLAN.md) | Test specification (all phases) |
+| [`docs/superpowers/specs/`](docs/superpowers/) · [`docs/superpowers/plans/`](docs/superpowers/) | Per-sub-project design specs and implementation plans (time-stamped, historical) |
 
 ---
 

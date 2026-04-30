@@ -682,7 +682,7 @@ reflection, and the backup DTOs (`BackupData`, `CarDto`, `ChargeEventDto`,
      f. CSV export from Settings; verify the share sheet opens.
    - File a follow-up issue for any crash or rendering bug discovered.
 
-4. Document the smoke test as a manual checklist in `TEST_PLAN.md` (new
+4. Document the smoke test as a manual checklist in `docs/TEST_PLAN.md` (new
    section "Release-APK smoke test") so future tag pushes can be verified
    against it before publishing the GitHub Release.
 
@@ -695,7 +695,7 @@ reflection, and the backup DTOs (`BackupData`, `CarDto`, `ChargeEventDto`,
 ## 🟡 TASK-18 — Accessibility (a11y) pass
 
 There is no mention of accessibility in `DESIGN.md`, `CLAUDE.md`, or
-`TEST_PLAN.md`. The app is intended for public use and must meet at least
+`docs/TEST_PLAN.md`. The app is intended for public use and must meet at least
 WCAG 2.1 AA.
 
 **Required changes:**

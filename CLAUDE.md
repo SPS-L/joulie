@@ -10,9 +10,13 @@ Android app (`org.spsl.evtracker`) for logging EV charge events and analyzing ef
 
 Root docs:
 - `DESIGN.md` — canonical product + technical spec (v3). Source of truth when in conflict with anything else.
-- `AGENT_INSTRUCTIONS.md` — full implementation walkthrough (all phases merged).
-- `TEST_PLAN.md` — full test specification (all phases merged).
 - `GOOGLE_CLOUD_SETUP.md` — Drive API + OAuth Android client setup.
+- `BACKLOG.md` — open backlog of post-v1 refactors and new features (live).
+
+Reference docs under `docs/`:
+- `docs/AGENT_INSTRUCTIONS.md` — original implementation walkthrough used to bring the app up from an empty repo. **Historical**: all phases are merged.
+- `docs/TEST_PLAN.md` — full test specification (all phases merged).
+- `docs/superpowers/specs/` and `docs/superpowers/plans/` — per-sub-project specs and plans (time-stamped, historical).
 
 ## Build & Test
 
@@ -57,7 +61,7 @@ Single-Activity + Navigation Component. ViewBinding enabled. MPAndroidChart for 
 
 ## Invariants — read before changing data, math, or storage
 
-These are easy to break by accident and are scattered across DESIGN.md / AGENT_INSTRUCTIONS.md:
+These are easy to break by accident and are scattered across DESIGN.md / docs/AGENT_INSTRUCTIONS.md:
 
 - **Odometer is always stored in km.** Unit toggle (km ↔ miles) is display-only; never rewrite stored values.
 - **Cost = 0 or blank ⇒ `costTotal` and `costPerKwh` are stored `NULL`.** Events with `costTotal IS NULL` are excluded from every cost stat, every cost chart series, and the dashboard cost row hides when no costed events exist in the period. Use `parseCost(value, kwh, mode)` (returns `Pair<Double?, Double?>`) before insert. When `parseCost` is called with both fields populated, the **total** wins (per DESIGN §4.1).
@@ -76,7 +80,7 @@ Migrations are mandatory and registered in `AppDatabase.getInstance`:
 - `MIGRATION_1_2`: adds `chargeType TEXT NOT NULL DEFAULT 'AC'` to `charge_events`.
 - `MIGRATION_2_3`: creates `custom_locations` (camelCase columns `useCount`, `lastUsed`; unique index on `label`) and adds `costTotal`, `costPerKwh`, `currency`, `location`, `note` to `charge_events`. Note `note` ALTER must include `NOT NULL DEFAULT ''` to match the entity's non-nullable `String = ""`.
 
-Indices on `charge_events`: composite `(carId, eventDate)` (matches dominant range query), `chargeType`, `location`. When adding a column, bump the version, add a migration that uses **camelCase** column names (Room's default for entity fields without `@ColumnInfo`), and add a `MigrationTest` case (see TEST_PLAN §2.4).
+Indices on `charge_events`: composite `(carId, eventDate)` (matches dominant range query), `chargeType`, `location`. When adding a column, bump the version, add a migration that uses **camelCase** column names (Room's default for entity fields without `@ColumnInfo`), and add a `MigrationTest` case (see docs/TEST_PLAN.md §2.4).
 
 ## Google Drive backup
 
@@ -106,7 +110,7 @@ Declared in a single `PreferenceKeys` object: `setupComplete`, `primaryMetric` (
 
 - Add new screens by creating a Fragment + ViewModel pair and wiring into the Nav graph; do not introduce a second Activity.
 - New efficiency or cost metrics: extend `Stats` / `EfficiencyStats` and the dashboard card layout; keep the formulas table in `DESIGN.md §7` in sync.
-- When changing the wizard, update `WizardViewModelTest` and `WizardFlowTest` (TEST_PLAN §3.2, §4.1) — the gate behavior is covered by tests.
+- When changing the wizard, update `WizardViewModelTest` and `WizardFlowTest` (docs/TEST_PLAN.md §3.2, §4.1) — the gate behavior is covered by tests.
 
 ### ViewModel + event pattern (D-era)
 
