@@ -6,16 +6,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Android app (`org.spsl.evtracker`) for logging EV charge events and analyzing efficiency/cost. Kotlin, MVVM with a domain/use-case layer plus narrow repositories, Gradle Kotlin DSL, and Hilt-based dependency injection. Min SDK 26, target/compile SDK 34, JDK 17. Room compiler runs via **KSP** (not kapt).
 
-> **Status:** v1.0.0 tagged. Sub-projects A (foundation/DI/Room v3), B (repositories), C (domain services + use cases), D (Core UI: Dashboard/ChargeEdit/Cars/History), E (Drive backup), F1 (Settings remainder + ManageLocations + reset use cases + startup auto-recovery), F2 (Charts), and the M3 theming refactor are all merged. Post-v1 backlog refactors landed: **TASK-01** (relocated the `@AggregationDispatcher` Hilt qualifier from `di/` to a new `core/coroutines/` package, removing the `domain → di` import; merged 2026-04-30). Wizard, Dashboard, ChargeEdit, Cars, History, Settings, ManageLocations, and Charts are fully wired with a complete Material 3 token system (light + dark palettes seeded from #1565C0; tertiary overridden to a #FB8C00 orange ramp for DESIGN §6 "DC orange"). JVM unit-test count: ~236. Instrumented suite compiles via `:app:assembleDebugAndroidTest` (running requires an emulator); Drive backup smoke per `GOOGLE_CLOUD_SETUP.md` requires a Google account allow-listed in the OAuth consent screen. Release signing is wired through a gitignored `keystore.properties`; the `.github/workflows/release.yml` workflow builds, signs, verifies, and publishes the APK to a GitHub Release on every `v*` tag push.
+> **Status:** v1.0.0 tagged. Sub-projects A (foundation/DI/Room v3), B (repositories), C (domain services + use cases), D (Core UI: Dashboard/ChargeEdit/Cars/History), E (Drive backup), F1 (Settings remainder + ManageLocations + reset use cases + startup auto-recovery), F2 (Charts), and the M3 theming refactor are all merged. Post-v1 backlog refactors landed: **TASK-01** (relocated the `@AggregationDispatcher` Hilt qualifier from `di/` to a new `core/coroutines/` package, removing the `domain → di` import; merged 2026-04-30). Wizard, Dashboard, ChargeEdit, Cars, History, Settings, ManageLocations, and Charts are fully wired with a complete Material 3 token system (light + dark palettes seeded from #1565C0; tertiary overridden to a #FB8C00 orange ramp for docs/DESIGN.md §6 "DC orange"). JVM unit-test count: ~236. Instrumented suite compiles via `:app:assembleDebugAndroidTest` (running requires an emulator); Drive backup smoke per `docs/GOOGLE_CLOUD_SETUP.md` requires a Google account allow-listed in the OAuth consent screen. Release signing is wired through a gitignored `keystore.properties`; the `.github/workflows/release.yml` workflow builds, signs, verifies, and publishes the APK to a GitHub Release on every `v*` tag push.
 
-Root docs:
-- `DESIGN.md` — canonical product + technical spec (v3). Source of truth when in conflict with anything else.
-- `GOOGLE_CLOUD_SETUP.md` — Drive API + OAuth Android client setup.
-- `BACKLOG.md` — open backlog of post-v1 refactors and new features (live).
+Repo root holds only `README.md`, `CLAUDE.md`, and build/config files. All project documentation lives under `docs/`:
 
-Reference docs under `docs/`:
-- `docs/AGENT_INSTRUCTIONS.md` — original implementation walkthrough used to bring the app up from an empty repo. **Historical**: all phases are merged.
+- `docs/DESIGN.md` — canonical product + technical spec (v3). Source of truth when in conflict with anything else.
+- `docs/GOOGLE_CLOUD_SETUP.md` — Drive API + OAuth Android client setup.
+- `docs/BACKLOG.md` — open backlog of post-v1 refactors and new features (live).
 - `docs/TEST_PLAN.md` — full test specification (all phases merged).
+- `docs/AGENT_INSTRUCTIONS.md` — original implementation walkthrough used to bring the app up from an empty repo. **Historical**: all phases are merged.
 - `docs/superpowers/specs/` and `docs/superpowers/plans/` — per-sub-project specs and plans (time-stamped, historical).
 
 ## Build & Test
@@ -34,7 +33,7 @@ Requires `ANDROID_HOME` set and Build Tools 34.
 
 - **Signing:** `app/build.gradle.kts` reads a gitignored `keystore.properties` at repo root. Required keys: `storeFile`, `storePassword`, `keyAlias`, `keyPassword`. If the file is absent, `assembleRelease` still runs but produces an unsigned APK. The release keystore is **not** stored in the repo or in OneDrive; keep it under `~/keystores/` or a password manager.
 - **CI workflow:** `.github/workflows/release.yml` triggers on `push: tags: 'v*'` and on `workflow_dispatch`. It decodes the keystore from a base64 secret, writes a transient `keystore.properties`, runs `:app:assembleRelease`, verifies the APK with `apksigner verify`, and uploads `evtracker-<tag>.apk` as both an Actions artifact and a GitHub Release asset (release auto-created with generated notes).
-- **Required GitHub Secrets:** `KEYSTORE_BASE64` (base64 of the release `.jks`), `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`. Each release keystore SHA-1 also needs its own Google Cloud OAuth Android client (see `GOOGLE_CLOUD_SETUP.md` Step 5) or Drive sign-in fails on release builds.
+- **Required GitHub Secrets:** `KEYSTORE_BASE64` (base64 of the release `.jks`), `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`. Each release keystore SHA-1 also needs its own Google Cloud OAuth Android client (see `docs/GOOGLE_CLOUD_SETUP.md` Step 5) or Drive sign-in fails on release builds.
 - **Cutting a release:** bump `versionCode` and `versionName` in `app/build.gradle.kts`, commit, then `git tag vX.Y.Z` and `git push origin vX.Y.Z`. Tag pushes are run separately from the commit push per the global no-compound-git rule.
 
 ## Architecture (4-layer)
@@ -61,7 +60,7 @@ Single-Activity + Navigation Component. ViewBinding enabled. MPAndroidChart for 
 
 ## Invariants — read before changing data, math, or storage
 
-These are easy to break by accident and are scattered across DESIGN.md / docs/AGENT_INSTRUCTIONS.md:
+These are easy to break by accident and are scattered across docs/DESIGN.md / docs/AGENT_INSTRUCTIONS.md:
 
 - **Odometer is always stored in km.** Unit toggle (km ↔ miles) is display-only; never rewrite stored values.
 - **Cost = 0 or blank ⇒ `costTotal` and `costPerKwh` are stored `NULL`.** Events with `costTotal IS NULL` are excluded from every cost stat, every cost chart series, and the dashboard cost row hides when no costed events exist in the period. Use `parseCost(value, kwh, mode)` (returns `Pair<Double?, Double?>`) before insert. When `parseCost` is called with both fields populated, the **total** wins (per DESIGN §4.1).
@@ -85,13 +84,13 @@ Indices on `charge_events`: composite `(carId, eventDate)` (matches dominant ran
 ## Google Drive backup
 
 - Scope: `https://www.googleapis.com/auth/drive.appdata` (non-sensitive). File lives in the **App Data folder** (hidden from Drive UI), filename `evtracker_backup.json`.
-- Backup JSON schema is versioned: current `backup_version = 3` and **must include `custom_locations`** with `label`, `useCount`, `lastUsed`. Bumping any entity requires bumping `backup_version` and updating the authoritative field list in `DESIGN.md §8`.
+- Backup JSON schema is versioned: current `backup_version = 3` and **must include `custom_locations`** with `label`, `useCount`, `lastUsed`. Bumping any entity requires bumping `backup_version` and updating the authoritative field list in `docs/DESIGN.md §8`.
 - Backup model: the Drive file is a full snapshot. On first Drive enable, an existing remote snapshot uses a **replace-or-skip** flow; merge is not supported.
 - Auto-backup: WorkManager `OneTimeWorkRequest` after every committed local change that affects the snapshot payload: charge event create/edit/committed delete, car create/edit/delete, custom-location committed delete, reset flows, successful restore, and first-time Drive enable when no remote backup exists. Required configuration: `NetworkType.CONNECTED`, `enqueueUniqueWork("drive_backup", REPLACE, ...)`, and exponential backoff starting at 30 s.
 - Restore flow: on first Drive enable, fetch the file → if present, prompt "Found backup from [date]. This will replace data already on this device. Restore?" → on confirm, **first** export current local DB to `cacheDir/last_overwritten_backup.json`, then clear and import in one transaction; on skip, keep local data unchanged and continue with backup enabled. The undo snapshot is best-effort because cache eviction can remove it before the 24 h target.
 - Multi-currency rule: `StatsCalculator` returns `null` cost stats whenever a period contains charge events with more than one distinct `currency`. Dashboard surfaces a "Multi-currency period — cost stats hidden" banner.
 
-OAuth setup (full walkthrough in `GOOGLE_CLOUD_SETUP.md`):
+OAuth setup (full walkthrough in `docs/GOOGLE_CLOUD_SETUP.md`):
 - Android OAuth client is bound to package name `org.spsl.evtracker` + keystore SHA-1. Don't change `applicationId` casually — it invalidates the OAuth client.
 - Debug and release builds need **separate** OAuth clients (one per keystore SHA-1). Consent screen can stay in "Testing" status; tester emails must be allow-listed.
 - **No `google-services.json`, no Firebase, no `com.google.gms.google-services` plugin.** The Authorization API (`Identity.getAuthorizationClient`) reads the OAuth client at runtime from your package + signing-cert SHA-1; nothing else is needed at build time. If you see references to placing `google-services.json` in `app/`, they are stale — the file is in `.gitignore` solely to defang accidental commits if a contributor adds Firebase later.
@@ -109,7 +108,7 @@ Declared in a single `PreferenceKeys` object: `setupComplete`, `primaryMetric` (
 ## Conventions
 
 - Add new screens by creating a Fragment + ViewModel pair and wiring into the Nav graph; do not introduce a second Activity.
-- New efficiency or cost metrics: extend `Stats` / `EfficiencyStats` and the dashboard card layout; keep the formulas table in `DESIGN.md §7` in sync.
+- New efficiency or cost metrics: extend `Stats` / `EfficiencyStats` and the dashboard card layout; keep the formulas table in `docs/DESIGN.md §7` in sync.
 - When changing the wizard, update `WizardViewModelTest` and `WizardFlowTest` (docs/TEST_PLAN.md §3.2, §4.1) — the gate behavior is covered by tests.
 
 ### ViewModel + event pattern (D-era)

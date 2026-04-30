@@ -30,12 +30,12 @@ An Android app for recording and analyzing electric vehicle charging efficiency 
 
 | File | Purpose |
 |------|---------|
-| [`DESIGN.md`](DESIGN.md) | Canonical product + technical design spec (v3) |
-| [`GOOGLE_CLOUD_SETUP.md`](GOOGLE_CLOUD_SETUP.md) | Drive API + OAuth 2.0 Android client setup |
-| [`BACKLOG.md`](BACKLOG.md) | Future-work tracker (post-v1 refactors and new features) |
 | [`CLAUDE.md`](CLAUDE.md) | Guide for AI agents (architecture summary, invariants, conventions) |
-| [`docs/AGENT_INSTRUCTIONS.md`](docs/AGENT_INSTRUCTIONS.md) | Original implementation walkthrough used to build the app — historical reference |
+| [`docs/DESIGN.md`](docs/DESIGN.md) | Canonical product + technical design spec (v3) |
+| [`docs/GOOGLE_CLOUD_SETUP.md`](docs/GOOGLE_CLOUD_SETUP.md) | Drive API + OAuth 2.0 Android client setup |
+| [`docs/BACKLOG.md`](docs/BACKLOG.md) | Future-work tracker (post-v1 refactors and new features) |
 | [`docs/TEST_PLAN.md`](docs/TEST_PLAN.md) | Test specification (all phases) |
+| [`docs/AGENT_INSTRUCTIONS.md`](docs/AGENT_INSTRUCTIONS.md) | Original implementation walkthrough used to build the app — historical reference |
 | [`docs/superpowers/specs/`](docs/superpowers/) · [`docs/superpowers/plans/`](docs/superpowers/) | Per-sub-project design specs and implementation plans (time-stamped, historical) |
 
 ---
@@ -48,7 +48,7 @@ Download the latest signed APK from the [GitHub Releases](https://github.com/SPS
 adb install evtracker-v1.0.0.apk
 ```
 
-> Drive backup will not work on a sideloaded APK unless its signing-cert SHA-1 is registered with an OAuth Android client in your own Google Cloud project. See [`GOOGLE_CLOUD_SETUP.md`](GOOGLE_CLOUD_SETUP.md).
+> Drive backup will not work on a sideloaded APK unless its signing-cert SHA-1 is registered with an OAuth Android client in your own Google Cloud project. See [`docs/GOOGLE_CLOUD_SETUP.md`](docs/GOOGLE_CLOUD_SETUP.md).
 
 ---
 
@@ -103,4 +103,4 @@ The workflow can also be re-run manually from the Actions tab via `workflow_disp
 
 ## Google Drive Setup
 
-See [`GOOGLE_CLOUD_SETUP.md`](GOOGLE_CLOUD_SETUP.md) for step-by-step instructions to enable the Drive API, create an OAuth 2.0 Android client, and register the SHA-1 fingerprints of your debug **and** release keystores. Each keystore SHA-1 needs its own OAuth client.
+See [`docs/GOOGLE_CLOUD_SETUP.md`](docs/GOOGLE_CLOUD_SETUP.md) for step-by-step instructions to enable the Drive API, create an OAuth 2.0 Android client, and register the SHA-1 fingerprints of your debug **and** release keystores. Each keystore SHA-1 needs its own OAuth client.

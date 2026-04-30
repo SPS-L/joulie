@@ -44,8 +44,8 @@ Mark done by replacing `☐` with `☑` when a task is merged.
 > `MainDispatcher`, etc.) and removes the previous `domain → di` import in
 > `ObserveChartsModelsUseCase`. Imports updated in `di/DispatcherModule.kt` and
 > `domain/usecase/ObserveChartsModelsUseCase.kt`. See spec
-> `docs/superpowers/specs/2026-04-30-task01-aggregation-dispatcher-relocation-design.md`
-> and plan `docs/superpowers/plans/2026-04-30-task01-aggregation-dispatcher-relocation.md`.
+> `superpowers/specs/2026-04-30-task01-aggregation-dispatcher-relocation-design.md`
+> and plan `superpowers/plans/2026-04-30-task01-aggregation-dispatcher-relocation.md`.
 > The original task text is preserved below for historical context.
 
 The file `app/src/main/java/org/spsl/evtracker/di/AggregationDispatcher.kt`
@@ -642,7 +642,7 @@ no static analysis ever runs against PRs or `main`. With ~176 Kotlin files in
    `./gradlew lint --baseline lint-baseline.xml` once locally; commit the
    baseline so only **new** violations break the build.
 
-6. Document the new gate in `CLAUDE.md` (Build & Test section): "PRs must
+6. Document the new gate in `../CLAUDE.md` (Build & Test section): "PRs must
    pass `:app:ktlintCheck :app:lint` before merge."
 
 ---
@@ -682,7 +682,7 @@ reflection, and the backup DTOs (`BackupData`, `CarDto`, `ChargeEventDto`,
      f. CSV export from Settings; verify the share sheet opens.
    - File a follow-up issue for any crash or rendering bug discovered.
 
-4. Document the smoke test as a manual checklist in `docs/TEST_PLAN.md` (new
+4. Document the smoke test as a manual checklist in `TEST_PLAN.md` (new
    section "Release-APK smoke test") so future tag pushes can be verified
    against it before publishing the GitHub Release.
 
@@ -694,8 +694,8 @@ reflection, and the backup DTOs (`BackupData`, `CarDto`, `ChargeEventDto`,
 
 ## 🟡 TASK-18 — Accessibility (a11y) pass
 
-There is no mention of accessibility in `DESIGN.md`, `CLAUDE.md`, or
-`docs/TEST_PLAN.md`. The app is intended for public use and must meet at least
+There is no mention of accessibility in `DESIGN.md`, `../CLAUDE.md`, or
+`TEST_PLAN.md`. The app is intended for public use and must meet at least
 WCAG 2.1 AA.
 
 **Required changes:**
@@ -892,7 +892,7 @@ cold-start latency on user devices.
    the job needs a managed AVD and is too slow). Refresh the committed
    profile manually before each tagged release.
 
-7. Document in `CLAUDE.md` the cadence: "Regenerate baseline profile when:
+7. Document in `../CLAUDE.md` the cadence: "Regenerate baseline profile when:
    adding/removing a major dependency, restructuring startup, or before
    each `v*` tag."
 
@@ -905,7 +905,7 @@ cold-start latency on user devices.
   local persistence (currently at schema version 3), and Kotlin Coroutines
   with Flow throughout.
 - All new classes must follow the existing naming and packaging conventions
-  documented in [`CLAUDE.md`](CLAUDE.md).
+  documented in [`../CLAUDE.md`](../CLAUDE.md).
 - Do not introduce new third-party dependencies without checking
   `app/build.gradle.kts` first. Prefer libraries already present.
 - After any structural change, run `./gradlew test` (JVM) and

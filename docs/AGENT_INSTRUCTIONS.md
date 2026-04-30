@@ -1,8 +1,8 @@
 # Agent Instructions — Build EV Efficiency Tracker APK
 
-> **⚠ Historical document.** This was the original step-by-step build walkthrough used to bring the app up from an empty repository. As of v1.0.1 (April 2026), every phase below is implemented and merged on `main`, including the post-v1 refactors tracked in [`../BACKLOG.md`](../BACKLOG.md). This file is preserved for architectural-intent reference and onboarding contributors who want to understand how the app was originally built; it is **not** the source of truth for live development. For current invariants and conventions see [`../CLAUDE.md`](../CLAUDE.md), and for live work items see [`../BACKLOG.md`](../BACKLOG.md). The canonical product + technical spec remains [`../DESIGN.md`](../DESIGN.md).
+> **⚠ Historical document.** This was the original step-by-step build walkthrough used to bring the app up from an empty repository. As of v1.0.1 (April 2026), every phase below is implemented and merged on `main`, including the post-v1 refactors tracked in [`BACKLOG.md`](BACKLOG.md). This file is preserved for architectural-intent reference and onboarding contributors who want to understand how the app was originally built; it is **not** the source of truth for live development. For current invariants and conventions see [`../CLAUDE.md`](../CLAUDE.md), and for live work items see [`BACKLOG.md`](BACKLOG.md). The canonical product + technical spec remains [`DESIGN.md`](DESIGN.md).
 
-This document gives a complete step-by-step guide for an AI coding agent (or developer) to implement the full application defined in [`../DESIGN.md`](../DESIGN.md) and produce a debug APK.
+This document gives a complete step-by-step guide for an AI coding agent (or developer) to implement the full application defined in [`DESIGN.md`](DESIGN.md) and produce a debug APK.
 
 > **Covers all phases:** project scaffold, DB, basic UI, charts, Drive backup, CSV, first-boot wizard, location chips, cost handling, multi-metric display.
 
@@ -26,15 +26,15 @@ Verify the working tree:
 git status
 ```
 
-The repo currently contains only docs and Gradle config — no Kotlin source. Start by creating `app/src/main/java/org/spsl/evtracker/MainActivity.kt`, then implement all other Kotlin source files and XML resources described in [`../DESIGN.md`](../DESIGN.md).
+The repo currently contains only docs and Gradle config — no Kotlin source. Start by creating `app/src/main/java/org/spsl/evtracker/MainActivity.kt`, then implement all other Kotlin source files and XML resources described in [`DESIGN.md`](DESIGN.md).
 
-> **Column-naming convention (critical):** Room generates **camelCase** column names from Kotlin field names by default. This guide uses camelCase consistently in `ALTER TABLE`, `CREATE TABLE`, and `@Query` SQL — do not switch to snake_case unless you also annotate every field with `@ColumnInfo(name = "...")`. The SQL shown in `../DESIGN.md §4.1` is illustrative; the actual column names match the entity field names.
+> **Column-naming convention (critical):** Room generates **camelCase** column names from Kotlin field names by default. This guide uses camelCase consistently in `ALTER TABLE`, `CREATE TABLE`, and `@Query` SQL — do not switch to snake_case unless you also annotate every field with `@ColumnInfo(name = "...")`. The SQL shown in `DESIGN.md §4.1` is illustrative; the actual column names match the entity field names.
 
 ---
 
 ## Step 2 — Establish App Structure And Dependency Injection
 
-Create the package layout described in `../DESIGN.md §5`.
+Create the package layout described in `DESIGN.md §5`.
 
 Recommended source tree:
 
@@ -98,7 +98,7 @@ Keep pure models separate from Room entities.
 - `core/model/MonthBucket.kt`
 - `core/model/BackupData.kt`
 
-The Room entities still mirror the schema from `../DESIGN.md §4`.
+The Room entities still mirror the schema from `DESIGN.md §4`.
 
 ```kotlin
 @Entity(tableName = "cars")
@@ -329,7 +329,7 @@ class DateRangeResolver {
 ```kotlin
 class BackupSerializer {
     fun toJson(data: BackupData): String {
-        // serialize using the authoritative v3 schema from ../DESIGN.md §8
+        // serialize using the authoritative v3 schema from DESIGN.md §8
     }
 
     fun fromJson(json: String): BackupData {
@@ -529,7 +529,7 @@ class DriveAuthManager @Inject constructor(
 
 `BackupRepository` owns raw upload/download work.
 
-- `backupCurrentData()` serializes all backed-up entities using the authoritative schema in `../DESIGN.md §8`
+- `backupCurrentData()` serializes all backed-up entities using the authoritative schema in `DESIGN.md §8`
 - `readRemoteBackup()` downloads and parses `evtracker_backup.json`
 
 `BackupScheduler` wraps WorkManager:
@@ -623,7 +623,7 @@ For release (requires keystore):
 
 ## Final Checklist
 
-- [ ] All Kotlin files implemented per ../DESIGN.md
+- [ ] All Kotlin files implemented per DESIGN.md
 - [ ] All XML layouts implemented
 - [ ] Hilt wiring in place: `@HiltAndroidApp`, `@AndroidEntryPoint`, and DI modules for Room, DataStore, repositories, use cases, and backup infrastructure
 - [ ] DB version = 3; migrations 1→2 and 2→3 registered
