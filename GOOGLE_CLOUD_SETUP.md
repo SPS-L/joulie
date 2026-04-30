@@ -81,7 +81,13 @@ You can leave the consent screen in "Testing" status indefinitely — Drive AppD
 6. **SHA-1 certificate fingerprint:** paste the value from Step 1
 7. **Create**
 
-Repeat this step for the **release** keystore SHA-1 when you're ready to publish — debug and release each need their own client.
+Repeat this step for the **release** keystore SHA-1 — debug and release each need their own client. To get the release keystore's SHA-1:
+
+```bash
+keytool -list -v -keystore /path/to/release.jks -alias <your-alias> | grep SHA1
+```
+
+Console expects it colon-separated and uppercase, e.g. `A3:9F:ED:12:1D:AE:...`. The same SHA-1 is used for both locally-built signed APKs and APKs produced by the `.github/workflows/release.yml` CI workflow, since CI signs with the same release keystore (uploaded as a base64 secret).
 
 That's the entire OAuth setup. There is no JSON file to download. The Authorization API client looks up the OAuth client at runtime by your app's package name + signing certificate — no `google-services.json`, no Gradle plugin needed.
 

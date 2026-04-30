@@ -1,12 +1,12 @@
 # EV Efficiency Tracker
 
-**Author:** [Sustainable Power Systems Lab (SPS-Lab)](https://sps-lab.org/)  
-**License:** MIT  
+**Author:** [Sustainable Power Systems Lab (SPS-Lab)](https://sps-lab.org/)
+**License:** MIT
 **Repository:** https://github.com/SPS-L/EV-android-app
 
 An Android app for recording and analyzing electric vehicle charging efficiency and cost. Log mileage, kWh added, AC/DC charge type, location, and optional cost after each charge. View multi-metric statistics over any period with rich charts and an optional Google Drive backup.
 
-> **Status: pre-implementation.** The repository currently contains the design specification, build configuration, and resource scaffolding only. Kotlin source has not been written yet, so `./gradlew assembleDebug` is expected to fail until the implementation in `AGENT_INSTRUCTIONS.md` is completed.
+> **Status:** v1.0.0 released. All planned features are implemented and merged on `main`. Signed release APKs are produced automatically by [`.github/workflows/release.yml`](.github/workflows/release.yml) on every `v*` tag push and attached to the corresponding GitHub Release.
 
 ---
 
@@ -16,13 +16,13 @@ An Android app for recording and analyzing electric vehicle charging efficiency 
 - **Per-charge logging** — mileage, kWh, AC/DC toggle, location quick-chips + free text, optional cost
 - **Smart cost handling** — cost left at 0 or blank is stored as NULL and excluded from all statistics
 - **Multi-metric dashboard** — km/kWh, mi/kWh, kWh/100km, cost/km, cost/100km
-- **Location quick-chips** — fixed: 🏠 Home · 💼 Work · ⚡ Public; plus top 5 learned custom labels
+- **Location quick-chips** — fixed: Home / Work / Public; plus top 5 learned custom labels
 - **AC vs DC tracking** — separate chart series and filter chips for AC and DC charges
 - **Multi-car support** — add any number of cars; switch via top spinner
 - **Custom period analysis** — date-range picker for any arbitrary period
 - **Google Drive backup** — optional; uses hidden App Data folder; replace-or-skip restore on first enable if a remote snapshot exists; auto-backup after committed local data changes
 - **CSV export** — share all data via Android share sheet
-- **Material You theming** — Light / Dark / System, electric blue + teal palette
+- **Material 3 theming** — Light / Dark / System, full M3 token system seeded from #1565C0 with a #FB8C00 "DC orange" tertiary ramp
 
 ---
 
@@ -30,28 +30,75 @@ An Android app for recording and analyzing electric vehicle charging efficiency 
 
 | File | Purpose |
 |------|---------|
-| [`DESIGN.md`](DESIGN.md) | Canonical product + technical design spec |
+| [`DESIGN.md`](DESIGN.md) | Canonical product + technical design spec (v3) |
 | [`GOOGLE_CLOUD_SETUP.md`](GOOGLE_CLOUD_SETUP.md) | Drive API + OAuth 2.0 Android client setup |
-| [`AGENT_INSTRUCTIONS.md`](AGENT_INSTRUCTIONS.md) | Complete AI agent implementation guide (all phases) |
-| [`TEST_PLAN.md`](TEST_PLAN.md) | Complete test specification (all phases) |
+| [`AGENT_INSTRUCTIONS.md`](AGENT_INSTRUCTIONS.md) | Implementation walkthrough used to build the app (all phases) |
+| [`TEST_PLAN.md`](TEST_PLAN.md) | Test specification (all phases) |
+| [`CLAUDE.md`](CLAUDE.md) | Guide for AI agents (architecture summary, invariants, conventions) |
 
 ---
 
-## Build
+## Install
 
-Current repo state: documentation and scaffolding only. The command below is the target build command once the implementation has been added.
+Download the latest signed APK from the [GitHub Releases](https://github.com/SPS-L/EV-android-app/releases) page and install via `adb install` or by opening the APK on your device (you may need to enable "Install from unknown sources").
+
+```bash
+adb install evtracker-v1.0.0.apk
+```
+
+> Drive backup will not work on a sideloaded APK unless its signing-cert SHA-1 is registered with an OAuth Android client in your own Google Cloud project. See [`GOOGLE_CLOUD_SETUP.md`](GOOGLE_CLOUD_SETUP.md).
+
+---
+
+## Build from source
+
+Requires JDK 17 and Android SDK with Build Tools 34. Set `ANDROID_HOME`.
 
 ```bash
 git clone https://github.com/SPS-L/EV-android-app.git
 cd EV-android-app
+
 ./gradlew assembleDebug
 # APK: app/build/outputs/apk/debug/app-debug.apk
+
+./gradlew test                      # JVM unit tests (~236)
+./gradlew connectedAndroidTest      # Espresso / Room — needs API 26+ device or emulator
 ```
 
-Requires JDK 17 and Android SDK with Build Tools 34.
+### Release builds
+
+Release builds are signed via a gitignored `keystore.properties` at the repo root. Create a release keystore and a `keystore.properties` populated like:
+
+```properties
+storeFile=/absolute/path/to/release.jks
+storePassword=...
+keyAlias=...
+keyPassword=...
+```
+
+Then:
+
+```bash
+./gradlew assembleRelease
+# APK: app/build/outputs/apk/release/app-release.apk
+```
+
+If `keystore.properties` is absent, `assembleRelease` produces an unsigned APK — useful for inspecting the build but not installable.
+
+### Cutting a release
+
+The `release.yml` GitHub Actions workflow builds, signs, verifies, and publishes the APK to a GitHub Release whenever a tag matching `v*` is pushed. Required repo secrets: `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`. To cut a release:
+
+```bash
+# bump versionCode and versionName in app/build.gradle.kts first
+git tag v1.2.3
+git push origin v1.2.3
+```
+
+The workflow can also be re-run manually from the Actions tab via `workflow_dispatch`.
 
 ---
 
 ## Google Drive Setup
 
-See [`GOOGLE_CLOUD_SETUP.md`](GOOGLE_CLOUD_SETUP.md) for step-by-step instructions to enable the Drive API, create an OAuth 2.0 Android client, and add the SHA-1 fingerprint of your debug keystore.
+See [`GOOGLE_CLOUD_SETUP.md`](GOOGLE_CLOUD_SETUP.md) for step-by-step instructions to enable the Drive API, create an OAuth 2.0 Android client, and register the SHA-1 fingerprints of your debug **and** release keystores. Each keystore SHA-1 needs its own OAuth client.

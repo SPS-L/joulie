@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Android app (`org.spsl.evtracker`) for logging EV charge events and analyzing efficiency/cost. Kotlin, MVVM with a domain/use-case layer plus narrow repositories, Gradle Kotlin DSL, and Hilt-based dependency injection. Min SDK 26, target/compile SDK 34, JDK 17. Room compiler runs via **KSP** (not kapt).
 
-> **Status:** Sub-projects A (foundation/DI/Room v3), B (repositories), C (domain services + use cases), D (Core UI: Dashboard/ChargeEdit/Cars/History), E (Drive backup), F1 (Settings remainder + ManageLocations + reset use cases + startup auto-recovery), F2 (Charts), and the M3 theming refactor are all merged. Wizard, Dashboard, ChargeEdit, Cars, History, Settings, ManageLocations, and Charts are fully wired with a complete Material 3 token system (light + dark palettes seeded from #1565C0; tertiary overridden to a #FB8C00 orange ramp for DESIGN §6 "DC orange"). JVM unit-test count: ~236. Instrumented suite compiles via `:app:assembleDebugAndroidTest` (running requires an emulator); Drive backup smoke per `GOOGLE_CLOUD_SETUP.md` requires a Google account allow-listed in the OAuth consent screen.
+> **Status:** v1.0.0 tagged. Sub-projects A (foundation/DI/Room v3), B (repositories), C (domain services + use cases), D (Core UI: Dashboard/ChargeEdit/Cars/History), E (Drive backup), F1 (Settings remainder + ManageLocations + reset use cases + startup auto-recovery), F2 (Charts), and the M3 theming refactor are all merged. Wizard, Dashboard, ChargeEdit, Cars, History, Settings, ManageLocations, and Charts are fully wired with a complete Material 3 token system (light + dark palettes seeded from #1565C0; tertiary overridden to a #FB8C00 orange ramp for DESIGN §6 "DC orange"). JVM unit-test count: ~236. Instrumented suite compiles via `:app:assembleDebugAndroidTest` (running requires an emulator); Drive backup smoke per `GOOGLE_CLOUD_SETUP.md` requires a Google account allow-listed in the OAuth consent screen. Release signing is wired through a gitignored `keystore.properties`; the `.github/workflows/release.yml` workflow builds, signs, verifies, and publishes the APK to a GitHub Release on every `v*` tag push.
 
 Root docs:
 - `DESIGN.md` — canonical product + technical spec (v3). Source of truth when in conflict with anything else.
@@ -18,13 +18,20 @@ Root docs:
 
 ```bash
 ./gradlew assembleDebug                        # target APK path: app/build/outputs/apk/debug/app-debug.apk
-./gradlew assembleRelease                      # needs keystore
-./gradlew test                                 # JVM unit tests
+./gradlew assembleRelease                      # signed if keystore.properties exists, unsigned otherwise
+./gradlew test                                 # JVM unit tests (~236)
 ./gradlew connectedAndroidTest                 # Espresso/Room — needs API 26+ device or emulator
 ./gradlew :app:testDebugUnitTest --tests "org.spsl.evtracker.UnitConverterTest.kmToMiles_positive"
 ```
 
 Requires `ANDROID_HOME` set and Build Tools 34.
+
+## Release & CI
+
+- **Signing:** `app/build.gradle.kts` reads a gitignored `keystore.properties` at repo root. Required keys: `storeFile`, `storePassword`, `keyAlias`, `keyPassword`. If the file is absent, `assembleRelease` still runs but produces an unsigned APK. The release keystore is **not** stored in the repo or in OneDrive; keep it under `~/keystores/` or a password manager.
+- **CI workflow:** `.github/workflows/release.yml` triggers on `push: tags: 'v*'` and on `workflow_dispatch`. It decodes the keystore from a base64 secret, writes a transient `keystore.properties`, runs `:app:assembleRelease`, verifies the APK with `apksigner verify`, and uploads `evtracker-<tag>.apk` as both an Actions artifact and a GitHub Release asset (release auto-created with generated notes).
+- **Required GitHub Secrets:** `KEYSTORE_BASE64` (base64 of the release `.jks`), `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`. Each release keystore SHA-1 also needs its own Google Cloud OAuth Android client (see `GOOGLE_CLOUD_SETUP.md` Step 5) or Drive sign-in fails on release builds.
+- **Cutting a release:** bump `versionCode` and `versionName` in `app/build.gradle.kts`, commit, then `git tag vX.Y.Z` and `git push origin vX.Y.Z`. Tag pushes are run separately from the commit push per the global no-compound-git rule.
 
 ## Architecture (4-layer)
 
@@ -137,11 +144,6 @@ GRADLE_USER_HOME=/tmp/gradle-home ./gradlew :app:assembleDebugAndroidTest   # co
 
 A/B/C/D used `superpowers:brainstorming` → `superpowers:writing-plans` → `superpowers:subagent-driven-development` with feat/ branches and per-task spec+code reviews. Specs live at `docs/superpowers/specs/`; plans live at `docs/superpowers/plans/`. Branches merge to `main` via `--no-ff`, then push, then `git branch -d`. Never compound git commands — CLAUDE.md global rule.
 
-
-## gitflow
-If needed to use gitflow, add 
-  - name: Write google-services.json
-    run: echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > app/google-services.json
 
 ## Compaction Policy
 When compacting, always preserve:
