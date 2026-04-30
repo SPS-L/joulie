@@ -109,7 +109,7 @@ class ChartsTabFragment : Fragment() {
             return
         }
         val chart = LineChart(requireContext())
-        ChartStyling.configureLineChart(chart, state.distanceUnit)
+        ChartStyling.configureLineChart(chart)
         val (acColor, dcColor) = ChartStyling.resolveSeriesColors(requireContext())
         val unitToMi = state.distanceUnit == "miles"
         val windowStart = charts.periodStartMillis
@@ -169,8 +169,9 @@ class ChartsTabFragment : Fragment() {
         charts: ChartsUiState.Loaded, container: FrameLayout, empty: TextView
     ) {
         if (charts.mixedCurrency) {
-            // Banner already shown by parent ChartsFragment; tab body itself shows
-            // a short stub so the tab doesn't appear blank when scrolled to.
+            // Spec §6.3: when mixedCurrency is true, the cost tab body is replaced
+            // by the multi_currency_banner string. The other four tabs render
+            // normally — there is intentionally no screen-global banner.
             empty.text = getString(R.string.multi_currency_banner)
             empty.isVisible = true
             return
