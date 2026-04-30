@@ -93,12 +93,32 @@ That's the entire OAuth setup. There is no JSON file to download. The Authorizat
 
 ---
 
+## Step 5b — Register a third client for the debug `applicationId` suffix
+
+After **TASK-29** (merged 2026-05-01) the **debug** build type uses
+`applicationId = org.spsl.evtracker.debug` (release stays at
+`org.spsl.evtracker` — Step 5 above still applies for release builds).
+The OAuth Android client created in Step 5 is bound to a fixed package
+name, so debug builds need their own client:
+
+1. **APIs & Services → Credentials → + Create Credentials → OAuth client ID**
+2. **Application type:** Android
+3. **Name:** EV Tracker (debug-suffix)
+4. **Package name:** `org.spsl.evtracker.debug`
+5. **SHA-1:** the same debug keystore SHA-1 from Step 1
+6. **Create**
+
+Without this client, Drive sign-in fails on debug builds. Release
+builds are unaffected.
+
+---
+
 ## Step 6 — Build and verify
 
 1. Build and install the debug APK:
    ```bash
    ./gradlew assembleDebug
-   adb install app/build/outputs/apk/debug/app-debug.apk
+   adb install app/build/outputs/apk/debug/app-debug.apk    # installs as org.spsl.evtracker.debug
    ```
 2. Open the app → **Settings → Google Drive backup** → toggle ON
 3. The system Authorization sheet appears asking for permission to manage EV Tracker files in its hidden folder
@@ -115,4 +135,5 @@ That's the entire OAuth setup. There is no JSON file to download. The Authorizat
 | "Access blocked: app not verified" | Your Google account is not in the test users list. Re-do Step 4.7. |
 | Authorization sheet never appears | Wrong package name on the OAuth client. Must be exactly `org.spsl.evtracker`. |
 | Switching keystore (debug ↔ release) breaks sign-in | Each keystore SHA-1 needs its own OAuth client. Repeat Step 5 for the release SHA-1. |
+| Sign-in fails on **debug** specifically (release works) | Missing the `org.spsl.evtracker.debug` OAuth client. Run Step 5b. |
 | Backup file not visible in Drive web UI | Expected — the App Data folder is hidden. Use the Drive API explorer with `spaces=appDataFolder`. |

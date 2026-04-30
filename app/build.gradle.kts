@@ -39,17 +39,29 @@ android {
     }
 
     buildTypes {
+        debug {
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+            isDebuggable = true
+            buildConfigField("boolean", "ENABLE_SEED_DATA", "true")
+            buildConfigField("boolean", "VERBOSE_LOGGING", "true")
+            buildConfigField("String", "DRIVE_FOLDER_SUFFIX", "\"_debug\"")
+        }
         release {
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             if (keystorePropertiesFile.exists()) {
                 signingConfig = signingConfigs.getByName("release")
             }
+            buildConfigField("boolean", "ENABLE_SEED_DATA", "false")
+            buildConfigField("boolean", "VERBOSE_LOGGING", "false")
+            buildConfigField("String", "DRIVE_FOLDER_SUFFIX", "\"\"")
         }
     }
 
     buildFeatures {
         viewBinding = true
+        buildConfig = true
     }
 
     lint {

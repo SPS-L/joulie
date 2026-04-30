@@ -36,6 +36,9 @@ jobs:
       - name: JVM unit tests
         run: ./gradlew :app:testDebugUnitTest --no-daemon --stacktrace
 
+      - name: Release smoke (unsigned APK — keystore absent in CI)
+        run: ./gradlew :app:assembleRelease --no-daemon --stacktrace
+
       - name: Upload lint report
         if: failure()
         uses: actions/upload-artifact@v4

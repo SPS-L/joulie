@@ -17,7 +17,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-07 | 🟡 | Drive backup error handling & retry logic | — | ☐ |
 | TASK-08 | 🟢 | Replace `CarEditDialog` with a Compose `AlertDialog` (requires adding Compose) | — | ☐ |
 | TASK-09 | 🟢 | CSV export of charge events with efficiency column, date-range picker | — | ☐ |
-| TASK-10 | 🟢 | In-app About / Info screen with SPS-Lab acknowledgment | TASK-29 | ☐ |
+| TASK-10 | 🟢 | In-app About / Info screen with SPS-Lab acknowledgment | — | ☐ |
 | TASK-11 | 🟡 | Odometer regression detection UX improvement | — | ☐ |
 | TASK-12 | 🟡 | Widget: last-charge summary on home screen | — | ☐ |
 | TASK-13 | 🟢 | Charging session timer / live session mode | — | ☐ |
@@ -36,7 +36,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-26 | 🟡 | Change all Room primary-key and foreign-key fields from `Int` to `Long` | — | ☐ |
 | TASK-27 | 🟡 | Decouple bottom-nav visibility from hardcoded `hideOn` set in `MainActivity` | — | ☑ |
 | TASK-28 | 🟡 | Consolidate time on existing `NowProvider`; remove direct `System.currentTimeMillis()` from entities and helpers; drop the parallel `() -> Long` clock in `WorkerModule` | — | ☐ |
-| TASK-29 | 🟢 | Add explicit `debug` build type with `applicationIdSuffix` and `BuildConfig` flags | — | ☐ |
+| TASK-29 | 🟢 | Add explicit `debug` build type with `applicationIdSuffix` and `BuildConfig` flags | — | ☑ |
 | TASK-30 | 🟢 | Migrate from MPAndroidChart to Vico (line/bar) + custom `Canvas` `PieChartView` (pie tabs) | — | ☐ |
 | TASK-31 | 🟡 | Manual Drive controls in Settings: "Back up now" (force overwrite) and "Wipe remote backup" (delete the App Data file) | — | ☐ |
 
@@ -311,12 +311,13 @@ release build still compiles (`./gradlew :app:assembleRelease`).
 
 ## 🟢 TASK-10 — Add In-App "About / Info" Screen
 
-> **Requires: TASK-29.** This screen reads `BuildConfig.VERSION_NAME` /
-> `BuildConfig.VERSION_CODE`. The project is on AGP 8.2.0, where
-> `buildConfig` generation is **off** by default and there are no current
-> `BuildConfig` consumers in `app/src/main/java`. Either land TASK-29 first
-> (which flips `buildFeatures.buildConfig = true`), or include that one-line
-> flag flip as part of TASK-10.
+> **Prerequisite resolved (2026-05-01):** TASK-29 has merged.
+> `buildFeatures.buildConfig = true` is enabled, so
+> `BuildConfig.VERSION_NAME` and `BuildConfig.VERSION_CODE` are available
+> under `org.spsl.evtracker.BuildConfig`. The About screen can read them
+> directly. Note that on debug builds `VERSION_NAME` resolves to e.g.
+> `"1.0.1-debug"` (from `versionNameSuffix = "-debug"`); decide whether
+> the About screen should display that suffix verbatim or strip it.
 
 Add a dedicated About screen accessible from the Settings or main navigation
 that displays app metadata, acknowledgments, license, and a disclaimer.
@@ -1306,7 +1307,30 @@ go through `NowProvider` instead:
 
 ---
 
-## 🟢 TASK-29 — Add an explicit `debug` build type with `applicationIdSuffix` and `BuildConfig` flags
+## 🟢 TASK-29 — Add an explicit `debug` build type with `applicationIdSuffix` and `BuildConfig` flags ☑ Done (2026-05-01)
+
+> **Outcome:** added a `debug { }` block to `app/build.gradle.kts`
+> with `applicationIdSuffix = ".debug"`, `versionNameSuffix = "-debug"`,
+> and `isDebuggable = true`. Both `debug` and `release` declare three
+> matched custom fields — `ENABLE_SEED_DATA`, `VERBOSE_LOGGING`,
+> `DRIVE_FOLDER_SUFFIX` — as scaffolding for future consumers (no
+> production-code consumer wired in this task; `BuildConfig.DEBUG`
+> still exists for the binary debug/release distinction). `buildFeatures`
+> flips `buildConfig = true`, which unblocks TASK-10's About screen
+> (`BuildConfig.VERSION_NAME` / `VERSION_CODE`). Debug and release
+> APKs can now coexist on a device — verified via
+> `aapt dump badging`: debug = `org.spsl.evtracker.debug` /
+> `1.0.1-debug`; release = `org.spsl.evtracker` / `1.0.1`.
+> `.github/workflows/ci.yml` gains `:app:assembleRelease` as a
+> release-smoke step (the keystore is absent in CI so the APK is
+> unsigned, but R8 + `lintVitalRelease` still run).
+> `docs/GOOGLE_CLOUD_SETUP.md` Step 5b documents the third OAuth
+> Android client required for `org.spsl.evtracker.debug`; until the
+> user registers it, Drive sign-in fails on debug builds (release is
+> unaffected). Spec:
+> `superpowers/specs/2026-05-01-task29-debug-build-type-design.md`.
+> Plan: `superpowers/plans/2026-05-01-task29-debug-build-type.md`.
+> The original task text is preserved below for historical context.
 
 `app/build.gradle.kts` defines only a `release` block; `debug` is left as
 Gradle's implicit default. Consequences: (1) debug and release share the same
@@ -1687,19 +1711,15 @@ The change is complete when **all** of the following hold:
 
 ## Notes for Agents (TASK-22 to TASK-30 addendum)
 
-> Sequencing notes for **TASK-16, TASK-22, TASK-23, TASK-24** are obsolete —
-> all four landed. The static-analysis CI gate (TASK-16) is in place; the
-> SDK bump to 35 (TASK-22) merged with no `connectedAndroidTest` matrix to
-> coordinate (the workflow is static-analysis only); and TASK-23 → TASK-24
-> ran in the prescribed order. Sequencing notes below cover the remaining
-> open work only.
+> Sequencing notes for **TASK-16, TASK-22, TASK-23, TASK-24, TASK-29** are
+> obsolete — all five landed. The static-analysis CI gate (TASK-16) is in
+> place; the SDK bump to 35 (TASK-22) merged with no `connectedAndroidTest`
+> matrix to coordinate (the workflow is static-analysis only); TASK-23 →
+> TASK-24 ran in the prescribed order; and TASK-29's debug build type +
+> `BuildConfig` enablement is merged with the OAuth-client implication
+> documented in `GOOGLE_CLOUD_SETUP.md` Step 5b. Sequencing notes below
+> cover the remaining open work only.
 
-- **TASK-29 prerequisite for TASK-10:** the About screen reads
-  `BuildConfig.VERSION_NAME` / `VERSION_CODE`. AGP 8.2.0 has `buildConfig`
-  generation **off** by default, and the project currently has zero
-  `BuildConfig` consumers, so TASK-29 (which flips
-  `buildFeatures.buildConfig = true`) must land first or be folded into
-  TASK-10.
 - **TASK-19 prerequisite for TASK-07:** TASK-19's auth-failure
   notification path consumes TASK-07's `BackupResult.AuthRequired` sealed
   variant. Land TASK-07 first so the error model is stable.
@@ -1716,9 +1736,6 @@ The change is complete when **all** of the following hold:
   `() -> Long` in `WorkerModule`.
 - **TASK-30 marker reuse:** complete the Vico marker wrapper once in Step 2
   and reuse in Step 3. Do not port `ChartsMarkerView` twice.
-- **TASK-29 OAuth implication:** if you add `applicationIdSuffix = ".debug"`,
-  register a second debug OAuth Android client in the Google Cloud project
-  (or document that Drive backup is unavailable on debug builds).
 
 ---
 
