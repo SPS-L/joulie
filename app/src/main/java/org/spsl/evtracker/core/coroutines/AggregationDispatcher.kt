@@ -1,4 +1,4 @@
-package org.spsl.evtracker.di
+package org.spsl.evtracker.core.coroutines
 
 import javax.inject.Qualifier
 
