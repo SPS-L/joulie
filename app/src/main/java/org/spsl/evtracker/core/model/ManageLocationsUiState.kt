@@ -5,7 +5,7 @@ import org.spsl.evtracker.data.local.entity.CustomLocationEntity
 data class ManageLocationsUiState(
     val locations: List<CustomLocationEntity> = emptyList(),
     /** Labels currently in their 5-second cancel window. Filtered out of the visible list. */
-    val pendingDeletions: Set<String> = emptySet()
+    val pendingDeletions: Set<String> = emptySet(),
 ) {
     /**
      * The list the Fragment renders, AND the source of truth for the empty-state.

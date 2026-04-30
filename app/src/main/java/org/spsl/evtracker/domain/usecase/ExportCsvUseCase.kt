@@ -1,19 +1,19 @@
 package org.spsl.evtracker.domain.usecase
 
 import android.net.Uri
-import java.io.Writer
-import java.time.Instant
-import javax.inject.Inject
 import org.spsl.evtracker.data.local.entity.ChargeEventEntity
 import org.spsl.evtracker.domain.backup.CsvFileSink
 import org.spsl.evtracker.domain.repository.CarReader
 import org.spsl.evtracker.domain.repository.ChargeEventQueries
 import org.spsl.evtracker.domain.service.UnitConverter
+import java.io.Writer
+import java.time.Instant
+import javax.inject.Inject
 
 class ExportCsvUseCase @Inject constructor(
     private val carReader: CarReader,
     private val chargeEventQueries: ChargeEventQueries,
-    private val csvFileSink: CsvFileSink
+    private val csvFileSink: CsvFileSink,
 ) {
     suspend fun export(carId: Int, useKm: Boolean): Uri {
         val car = carReader.getById(carId) ?: throw IllegalArgumentException("Unknown carId=$carId")
@@ -27,18 +27,20 @@ class ExportCsvUseCase @Inject constructor(
         for (e in events) {
             val odo = if (useKm) e.odometerKm else UnitConverter.kmToMiles(e.odometerKm)
             writer.append(Instant.ofEpochMilli(e.eventDate).toString()).append(',')
-                  .append(odo.toString()).append(',')
-                  .append(e.kwhAdded.toString()).append(',')
-                  .append(e.chargeType).append(',')
-                  .append(csvEscape(e.location ?: "")).append(',')
-                  .append(e.costTotal?.toString() ?: "").append(',')
-                  .append(e.currency ?: "").append(',')
-                  .append(csvEscape(e.note)).append('\n')
+                .append(odo.toString()).append(',')
+                .append(e.kwhAdded.toString()).append(',')
+                .append(e.chargeType).append(',')
+                .append(csvEscape(e.location ?: "")).append(',')
+                .append(e.costTotal?.toString() ?: "").append(',')
+                .append(e.currency ?: "").append(',')
+                .append(csvEscape(e.note)).append('\n')
         }
     }
 
     private fun csvEscape(s: String): String =
-        if (s.contains(',') || s.contains('"') || s.contains('\n'))
+        if (s.contains(',') || s.contains('"') || s.contains('\n')) {
             "\"${s.replace("\"", "\"\"")}\""
-        else s
+        } else {
+            s
+        }
 }

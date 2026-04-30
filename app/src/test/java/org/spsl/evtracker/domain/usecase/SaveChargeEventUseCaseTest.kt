@@ -32,16 +32,22 @@ class SaveChargeEventUseCaseTest {
         val useCase: SaveChargeEventUseCase,
         val queries: FakeChargeEventQueries,
         val locationWriter: FakeLocationWriter,
-        val scheduler: FakeBackupScheduler
+        val scheduler: FakeBackupScheduler,
     )
 
     @Test
     fun insert_success_recordsLocationAndEnqueuesBackup() = runTest {
         val s = build()
-        val result = s.useCase(SaveChargeEventInput(
-            carId = 1, eventDate = 1000L, odometerKm = 100.0, kwhAdded = 10.0,
-            chargeType = "AC", location = "Home"
-        ))
+        val result = s.useCase(
+            SaveChargeEventInput(
+                carId = 1,
+                eventDate = 1000L,
+                odometerKm = 100.0,
+                kwhAdded = 10.0,
+                chargeType = "AC",
+                location = "Home",
+            ),
+        )
         assertTrue(result is SaveChargeEventResult.Success)
         assertEquals(1, s.queries.current().size)
         assertEquals("Home", s.locationWriter.current().single().label)
@@ -52,10 +58,16 @@ class SaveChargeEventUseCaseTest {
     fun update_success_keepsId() = runTest {
         val existing = ChargeEventEntity(id = 5, carId = 1, eventDate = 1000L, odometerKm = 100.0, kwhAdded = 10.0)
         val s = build(initialEvents = listOf(existing))
-        val result = s.useCase(SaveChargeEventInput(
-            eventId = 5, carId = 1, eventDate = 1000L, odometerKm = 110.0, kwhAdded = 12.0,
-            chargeType = "AC"
-        ))
+        val result = s.useCase(
+            SaveChargeEventInput(
+                eventId = 5,
+                carId = 1,
+                eventDate = 1000L,
+                odometerKm = 110.0,
+                kwhAdded = 12.0,
+                chargeType = "AC",
+            ),
+        )
         assertEquals(SaveChargeEventResult.Success(eventId = 5L), result)
         assertEquals(110.0, s.queries.current().single().odometerKm, 0.0)
     }
@@ -64,10 +76,15 @@ class SaveChargeEventUseCaseTest {
     fun insertOdometerNotIncreasing_returnsResultAndPersistsNothing() = runTest {
         val previous = ChargeEventEntity(id = 1, carId = 1, eventDate = 1000L, odometerKm = 200.0, kwhAdded = 10.0)
         val s = build(initialEvents = listOf(previous))
-        val result = s.useCase(SaveChargeEventInput(
-            carId = 1, eventDate = 2000L, odometerKm = 150.0,
-            kwhAdded = 10.0, chargeType = "AC"
-        ))
+        val result = s.useCase(
+            SaveChargeEventInput(
+                carId = 1,
+                eventDate = 2000L,
+                odometerKm = 150.0,
+                kwhAdded = 10.0,
+                chargeType = "AC",
+            ),
+        )
         assertEquals(SaveChargeEventResult.OdometerNotIncreasing, result)
         assertEquals(1, s.queries.current().size)
         assertEquals(0, s.scheduler.enqueueCount)
@@ -76,24 +93,37 @@ class SaveChargeEventUseCaseTest {
     @Test
     fun updateOdometerCheck_ignoresOwnId() = runTest {
         val existing = ChargeEventEntity(id = 5, carId = 1, eventDate = 2000L, odometerKm = 200.0, kwhAdded = 10.0)
-        val before   = ChargeEventEntity(id = 4, carId = 1, eventDate = 1000L, odometerKm = 100.0, kwhAdded = 10.0)
+        val before = ChargeEventEntity(id = 4, carId = 1, eventDate = 1000L, odometerKm = 100.0, kwhAdded = 10.0)
         val s = build(initialEvents = listOf(before, existing))
-        val result = s.useCase(SaveChargeEventInput(
-            eventId = 5, carId = 1, eventDate = 2000L, odometerKm = 210.0, kwhAdded = 12.0,
-            chargeType = "AC"
-        ))
+        val result = s.useCase(
+            SaveChargeEventInput(
+                eventId = 5,
+                carId = 1,
+                eventDate = 2000L,
+                odometerKm = 210.0,
+                kwhAdded = 12.0,
+                chargeType = "AC",
+            ),
+        )
         assertTrue(result is SaveChargeEventResult.Success)
     }
 
     @Test
     fun costInputZero_costFieldsAreNull() = runTest {
         val s = build()
-        s.useCase(SaveChargeEventInput(
-            carId = 1, eventDate = 1000L, odometerKm = 100.0, kwhAdded = 10.0,
-            chargeType = "AC",
-            costInput = CostInput(value = 0.0, mode = CostMode.TOTAL, currency = "EUR")
-        ))
+        s.useCase(
+            SaveChargeEventInput(
+                carId = 1,
+                eventDate = 1000L,
+                odometerKm = 100.0,
+                kwhAdded = 10.0,
+                chargeType = "AC",
+                costInput = CostInput(value = 0.0, mode = CostMode.TOTAL, currency = "EUR"),
+            ),
+        )
         val saved = s.queries.current().single()
-        assertNull(saved.costTotal); assertNull(saved.costPerKwh); assertNull(saved.currency)
+        assertNull(saved.costTotal)
+        assertNull(saved.costPerKwh)
+        assertNull(saved.currency)
     }
 }

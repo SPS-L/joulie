@@ -3,7 +3,6 @@ package org.spsl.evtracker.ui.locations
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
@@ -20,19 +19,22 @@ import org.spsl.evtracker.core.model.ManageLocationsUiState
 import org.spsl.evtracker.domain.backup.BackupScheduler
 import org.spsl.evtracker.domain.repository.LocationReader
 import org.spsl.evtracker.domain.repository.LocationWriter
+import javax.inject.Inject
 
 @HiltViewModel
 class ManageLocationsViewModel @Inject constructor(
     private val locationReader: LocationReader,
     private val locationWriter: LocationWriter,
-    private val backupScheduler: BackupScheduler
+    private val backupScheduler: BackupScheduler,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ManageLocationsUiState())
     val uiState: StateFlow<ManageLocationsUiState> = _uiState.asStateFlow()
 
     private val _events = MutableSharedFlow<ManageLocationsEvent>(
-        replay = 0, extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST
+        replay = 0,
+        extraBufferCapacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
     )
     val events: SharedFlow<ManageLocationsEvent> = _events.asSharedFlow()
 

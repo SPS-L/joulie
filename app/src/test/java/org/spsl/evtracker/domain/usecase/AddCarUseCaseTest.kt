@@ -26,7 +26,7 @@ class AddCarUseCaseTest {
         val useCase: AddCarUseCase,
         val cars: FakeCarRepository,
         val settingsWriter: FakeSettingsWriter,
-        val scheduler: FakeBackupScheduler
+        val scheduler: FakeBackupScheduler,
     )
 
     @Test

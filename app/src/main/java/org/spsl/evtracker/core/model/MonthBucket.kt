@@ -5,5 +5,5 @@ data class MonthBucket(
     val month: Int,
     val totalKwh: Double,
     val totalCost: Double?,
-    val currency: String?
+    val currency: String?,
 )

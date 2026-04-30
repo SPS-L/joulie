@@ -13,7 +13,7 @@ class StatsCalculatorMixedCurrencyTest {
         ChargeEventEntity(
             id = 0, carId = 1, eventDate = 0L, odometerKm = 0.0, kwhAdded = 1.0,
             chargeType = "AC", costTotal = costTotal, costPerKwh = null,
-            currency = currency, location = null, note = "", createdAt = 0L
+            currency = currency, location = null, note = "", createdAt = 0L,
         )
 
     @Test fun emptyEvents_notMixed() {
@@ -21,17 +21,26 @@ class StatsCalculatorMixedCurrencyTest {
     }
 
     @Test fun singleCurrency_notMixed() {
-        assertFalse(calc.detectMixedCurrency(listOf(
-            ev("EUR", 5.0),
-            ev("EUR", 7.0),
-            ev(null, null)              // uncosted events ignored
-        )))
+        assertFalse(
+            calc.detectMixedCurrency(
+                listOf(
+                    ev("EUR", 5.0),
+                    ev("EUR", 7.0),
+                    // uncosted events ignored
+                    ev(null, null),
+                ),
+            ),
+        )
     }
 
     @Test fun twoCurrencies_isMixed() {
-        assertTrue(calc.detectMixedCurrency(listOf(
-            ev("EUR", 5.0),
-            ev("USD", 7.0)
-        )))
+        assertTrue(
+            calc.detectMixedCurrency(
+                listOf(
+                    ev("EUR", 5.0),
+                    ev("USD", 7.0),
+                ),
+            ),
+        )
     }
 }

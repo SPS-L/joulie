@@ -1,8 +1,8 @@
 package org.spsl.evtracker.data.repository
 
 import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.Preferences
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -27,7 +27,7 @@ class SettingsRepositoryAtomicWritesTest {
     @Before fun setup() {
         dataStore = PreferenceDataStoreFactory.create(
             scope = TestScope(UnconfinedTestDispatcher()),
-            produceFile = { tempFolder.newFile("atomic-writes-test.preferences_pb") }
+            produceFile = { tempFolder.newFile("atomic-writes-test.preferences_pb") },
         )
         repo = SettingsRepository(dataStore)
     }
@@ -39,7 +39,7 @@ class SettingsRepositoryAtomicWritesTest {
     }
 
     @Test fun markGlobalResetInProgress_writesAllThreeKeys() = runTest {
-        repo.completeSetup("km_per_kwh", "km", "EUR")  // setupComplete=true
+        repo.completeSetup("km_per_kwh", "km", "EUR") // setupComplete=true
         repo.setActiveCarId(7)
         // Sanity:
         val data = dataStore.data.first()

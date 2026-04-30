@@ -32,7 +32,7 @@ class ManageLocationsFragment : Fragment() {
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
-        savedInstanceState: Bundle?
+        savedInstanceState: Bundle?,
     ): View {
         _binding = FragmentManageLocationsBinding.inflate(inflater, container, false)
         return binding.root
@@ -44,17 +44,17 @@ class ManageLocationsFragment : Fragment() {
         binding.recycler.layoutManager = LinearLayoutManager(requireContext())
         binding.recycler.adapter = adapter
         binding.recycler.addItemDecoration(
-            MaterialDividerItemDecoration(requireContext(), LinearLayoutManager.VERTICAL)
+            MaterialDividerItemDecoration(requireContext(), LinearLayoutManager.VERTICAL),
         )
 
         ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
             0,
-            ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT
+            ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT,
         ) {
             override fun onMove(
                 rv: RecyclerView,
                 vh: RecyclerView.ViewHolder,
-                target: RecyclerView.ViewHolder
+                target: RecyclerView.ViewHolder,
             ) = false
 
             override fun onSwiped(vh: RecyclerView.ViewHolder, direction: Int) {
@@ -78,7 +78,7 @@ class ManageLocationsFragment : Fragment() {
                                 Snackbar.make(
                                     binding.root,
                                     getString(R.string.manage_locations_undo_snackbar, event.label),
-                                    Snackbar.LENGTH_LONG
+                                    Snackbar.LENGTH_LONG,
                                 )
                                     .setAction(R.string.common_undo) { vm.onUndoDelete(event.label) }
                                     .show()

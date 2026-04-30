@@ -3,17 +3,17 @@ package org.spsl.evtracker.data.repository
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import org.spsl.evtracker.data.preferences.PreferenceKeys
 import org.spsl.evtracker.domain.repository.SettingsReader
 import org.spsl.evtracker.domain.repository.SettingsWriter
+import javax.inject.Inject
+import javax.inject.Singleton
 
 @Singleton
 class SettingsRepository @Inject constructor(
-    private val dataStore: DataStore<Preferences>
+    private val dataStore: DataStore<Preferences>,
 ) : SettingsReader, SettingsWriter {
     val setupComplete: Flow<Boolean> =
         dataStore.data.map { it[PreferenceKeys.SETUP_COMPLETE] ?: false }
@@ -45,8 +45,8 @@ class SettingsRepository @Inject constructor(
     suspend fun completeSetup(metric: String, unit: String, currency: String) {
         dataStore.edit { prefs ->
             prefs[PreferenceKeys.PRIMARY_METRIC] = metric
-            prefs[PreferenceKeys.DISTANCE_UNIT]  = unit
-            prefs[PreferenceKeys.CURRENCY]       = currency
+            prefs[PreferenceKeys.DISTANCE_UNIT] = unit
+            prefs[PreferenceKeys.CURRENCY] = currency
             prefs[PreferenceKeys.SETUP_COMPLETE] = true
         }
     }
@@ -78,14 +78,14 @@ class SettingsRepository @Inject constructor(
     override suspend fun setPrimaryMetricAndDistanceUnit(metric: String, unit: String) {
         dataStore.edit { prefs ->
             prefs[PreferenceKeys.PRIMARY_METRIC] = metric
-            prefs[PreferenceKeys.DISTANCE_UNIT]  = unit
+            prefs[PreferenceKeys.DISTANCE_UNIT] = unit
         }
     }
 
     override suspend fun markGlobalResetInProgress() {
         dataStore.edit { prefs ->
-            prefs[PreferenceKeys.SETUP_COMPLETE]    = false
-            prefs[PreferenceKeys.ACTIVE_CAR_ID]     = -1
+            prefs[PreferenceKeys.SETUP_COMPLETE] = false
+            prefs[PreferenceKeys.ACTIVE_CAR_ID] = -1
             prefs[PreferenceKeys.RESET_IN_PROGRESS] = true
         }
     }

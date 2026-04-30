@@ -20,12 +20,13 @@ class ManageLocationsAdapter : ListAdapter<CustomLocationEntity, ManageLocations
                 item.lastUsed,
                 System.currentTimeMillis(),
                 DateUtils.DAY_IN_MILLIS,
-                DateUtils.FORMAT_ABBREV_RELATIVE
+                DateUtils.FORMAT_ABBREV_RELATIVE,
             ).toString()
-            b.textSubtitle.text = if (item.useCount == 0)
+            b.textSubtitle.text = if (item.useCount == 0) {
                 ctx.getString(R.string.manage_locations_row_count_zero, rel)
-            else
+            } else {
                 ctx.getString(R.string.manage_locations_row_count, item.useCount, rel)
+            }
         }
     }
 

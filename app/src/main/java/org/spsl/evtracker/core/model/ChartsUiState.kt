@@ -24,6 +24,6 @@ sealed class ChartsUiState {
         val monthlyKwh: List<MonthBucket>,
         val monthlyCost: List<MonthBucket>,
         val acDc: AcDcSplit,
-        val locations: List<LocationSlice>
+        val locations: List<LocationSlice>,
     ) : ChartsUiState()
 }

@@ -15,7 +15,6 @@ import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
-import javax.inject.Inject
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -26,12 +25,14 @@ import org.junit.runner.RunWith
 import org.spsl.evtracker.R
 import org.spsl.evtracker.data.local.dao.CustomLocationDao
 import org.spsl.evtracker.data.local.entity.CustomLocationEntity
+import javax.inject.Inject
 
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
 class ManageLocationsFragmentTest {
 
-    @get:Rule(order = 0) val hiltRule = HiltAndroidRule(this)
+    @get:Rule(order = 0)
+    val hiltRule = HiltAndroidRule(this)
 
     @Inject lateinit var customLocationDao: CustomLocationDao
 
@@ -40,10 +41,10 @@ class ManageLocationsFragmentTest {
         runBlocking {
             customLocationDao.deleteAll()
             customLocationDao.insertIfMissing(
-                CustomLocationEntity(label = "Office", useCount = 5, lastUsed = 1_700_000_000_000L)
+                CustomLocationEntity(label = "Office", useCount = 5, lastUsed = 1_700_000_000_000L),
             )
             customLocationDao.insertIfMissing(
-                CustomLocationEntity(label = "Home",   useCount = 3, lastUsed = 1_700_000_001_000L)
+                CustomLocationEntity(label = "Home", useCount = 3, lastUsed = 1_700_000_001_000L),
             )
         }
     }
@@ -52,9 +53,14 @@ class ManageLocationsFragmentTest {
         launchFragmentInContainer<ManageLocationsFragment>(themeResId = R.style.Theme_EVTracker)
             .moveToState(Lifecycle.State.RESUMED).use {
                 onView(withText("Office")).check(matches(isDisplayed()))
-                onView(withText("Office")).perform(GeneralSwipeAction(
-                    Swipe.FAST, GeneralLocation.CENTER_RIGHT, GeneralLocation.CENTER_LEFT, Press.FINGER
-                ))
+                onView(withText("Office")).perform(
+                    GeneralSwipeAction(
+                        Swipe.FAST,
+                        GeneralLocation.CENTER_RIGHT,
+                        GeneralLocation.CENTER_LEFT,
+                        Press.FINGER,
+                    ),
+                )
                 onView(withText(R.string.common_undo)).perform(click())
                 onView(withText("Office")).check(matches(isDisplayed()))
             }
@@ -63,9 +69,14 @@ class ManageLocationsFragmentTest {
     @Test fun swipe_no_undo_after_5s_rowIsGone() {
         launchFragmentInContainer<ManageLocationsFragment>(themeResId = R.style.Theme_EVTracker)
             .moveToState(Lifecycle.State.RESUMED).use {
-                onView(withText("Office")).perform(GeneralSwipeAction(
-                    Swipe.FAST, GeneralLocation.CENTER_RIGHT, GeneralLocation.CENTER_LEFT, Press.FINGER
-                ))
+                onView(withText("Office")).perform(
+                    GeneralSwipeAction(
+                        Swipe.FAST,
+                        GeneralLocation.CENTER_RIGHT,
+                        GeneralLocation.CENTER_LEFT,
+                        Press.FINGER,
+                    ),
+                )
                 // Wait for the 5s job to commit by observing the DAO Flow.
                 runBlocking {
                     withTimeout(10_000) {

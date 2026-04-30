@@ -27,7 +27,7 @@ class WizardFragment : Fragment() {
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
-        savedInstanceState: Bundle?
+        savedInstanceState: Bundle?,
     ): View {
         _binding = FragmentWizardBinding.inflate(inflater, container, false)
         return binding.root

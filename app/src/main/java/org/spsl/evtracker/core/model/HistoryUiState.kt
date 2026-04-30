@@ -6,7 +6,7 @@ data class HistoryUiState(
     val rows: List<HistoryRow> = emptyList(),
     val filter: ChargeTypeFilter = ChargeTypeFilter.ALL,
     val distanceUnit: String = "km",
-    val activeCarId: Int = -1
+    val activeCarId: Int = -1,
 ) {
     val isEmpty: Boolean get() = rows.isEmpty()
 }
@@ -15,7 +15,7 @@ data class HistoryRow(
     val event: ChargeEventEntity,
     val displayOdometer: Double,
     val showCost: Boolean,
-    val isPendingDelete: Boolean
+    val isPendingDelete: Boolean,
 )
 
 sealed class HistoryEvent {

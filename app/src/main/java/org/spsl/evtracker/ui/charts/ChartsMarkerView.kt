@@ -6,10 +6,10 @@ import com.github.mikephil.charting.components.MarkerView
 import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.highlight.Highlight
 import com.github.mikephil.charting.utils.MPPointF
+import org.spsl.evtracker.R
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import org.spsl.evtracker.R
 
 /**
  * Tap-to-inspect marker for Line and Bar charts. Anchors above the data point.

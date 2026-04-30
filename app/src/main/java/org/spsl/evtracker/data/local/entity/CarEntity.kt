@@ -11,5 +11,5 @@ data class CarEntity(
     val model: String = "",
     val year: Int? = null,
     val batteryKwh: Double? = null,
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
 )

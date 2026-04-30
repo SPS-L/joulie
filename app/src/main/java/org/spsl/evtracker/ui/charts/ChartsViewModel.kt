@@ -3,7 +3,6 @@ package org.spsl.evtracker.ui.charts
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
@@ -22,12 +21,13 @@ import org.spsl.evtracker.core.model.ChartsScreenState
 import org.spsl.evtracker.core.model.ChartsUiState
 import org.spsl.evtracker.domain.repository.SettingsReader
 import org.spsl.evtracker.domain.usecase.ObserveChartsModelsUseCase
+import javax.inject.Inject
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class ChartsViewModel @Inject constructor(
     private val observeChartsModels: ObserveChartsModelsUseCase,
-    settingsReader: SettingsReader
+    settingsReader: SettingsReader,
 ) : ViewModel() {
 
     private val period = MutableStateFlow<ChartsPeriod>(ChartsPeriod.Last12Months)
@@ -35,7 +35,7 @@ class ChartsViewModel @Inject constructor(
     private val _events = MutableSharedFlow<ChartsEvent>(
         replay = 0,
         extraBufferCapacity = 1,
-        onBufferOverflow = BufferOverflow.DROP_OLDEST
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
     )
     val events: SharedFlow<ChartsEvent> = _events.asSharedFlow()
 
@@ -50,11 +50,19 @@ class ChartsViewModel @Inject constructor(
             ChartsScreenState(period = p, distanceUnit = du, charts = ui)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ChartsScreenState())
 
-    fun selectPeriod(p: ChartsPeriod) { period.value = p }
+    fun selectPeriod(p: ChartsPeriod) {
+        period.value = p
+    }
     fun selectCustomRange(from: Long, to: Long) {
         period.value = ChartsPeriod.Custom(from, to)
     }
-    fun onCustomChipClicked() { _events.tryEmit(ChartsEvent.OpenCustomRangePicker) }
-    fun onAddCarCta()         { _events.tryEmit(ChartsEvent.NavigateToCars) }
-    fun onLogChargeCta()      { _events.tryEmit(ChartsEvent.NavigateToChargeEdit) }
+    fun onCustomChipClicked() {
+        _events.tryEmit(ChartsEvent.OpenCustomRangePicker)
+    }
+    fun onAddCarCta() {
+        _events.tryEmit(ChartsEvent.NavigateToCars)
+    }
+    fun onLogChargeCta() {
+        _events.tryEmit(ChartsEvent.NavigateToChargeEdit)
+    }
 }

@@ -4,7 +4,6 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,6 +27,7 @@ import org.spsl.evtracker.domain.repository.SettingsReader
 import org.spsl.evtracker.domain.service.CostMode
 import org.spsl.evtracker.domain.service.UnitConverter
 import org.spsl.evtracker.domain.usecase.SaveChargeEventUseCase
+import javax.inject.Inject
 
 @HiltViewModel
 class ChargeEditViewModel @Inject constructor(
@@ -35,7 +35,7 @@ class ChargeEditViewModel @Inject constructor(
     locationReader: LocationReader,
     private val chargeEventQueries: ChargeEventQueries,
     private val settingsReader: SettingsReader,
-    savedStateHandle: SavedStateHandle
+    savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ChargeEditUiState())
@@ -43,7 +43,7 @@ class ChargeEditViewModel @Inject constructor(
 
     private val _events = MutableSharedFlow<ChargeEditEvent>(
         extraBufferCapacity = 1,
-        onBufferOverflow = BufferOverflow.DROP_OLDEST
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
     )
     val events: SharedFlow<ChargeEditEvent> = _events.asSharedFlow()
 
@@ -58,7 +58,7 @@ class ChargeEditViewModel @Inject constructor(
                     mode = ChargeEditUiState.Mode.Create,
                     carId = activeCarId,
                     distanceUnit = unit,
-                    currency = ccy
+                    currency = ccy,
                 )
             } else {
                 val event = chargeEventQueries.getById(rawId)
@@ -67,12 +67,14 @@ class ChargeEditViewModel @Inject constructor(
                         mode = ChargeEditUiState.Mode.Create,
                         carId = activeCarId,
                         distanceUnit = unit,
-                        currency = ccy
+                        currency = ccy,
                     )
                 } else {
-                    val displayOdo = if (unit == "miles")
+                    val displayOdo = if (unit == "miles") {
                         UnitConverter.kmToMiles(event.odometerKm)
-                    else event.odometerKm
+                    } else {
+                        event.odometerKm
+                    }
                     val costExpanded = event.costTotal != null
                     val costValue = event.costTotal?.toString() ?: ""
                     _uiState.value = ChargeEditUiState(
@@ -88,7 +90,7 @@ class ChargeEditViewModel @Inject constructor(
                         costValue = costValue,
                         note = event.note,
                         distanceUnit = unit,
-                        currency = event.currency ?: ccy
+                        currency = event.currency ?: ccy,
                     )
                 }
             }
@@ -131,7 +133,9 @@ class ChargeEditViewModel @Inject constructor(
         val costInput: CostInput? = if (state.costExpanded) {
             val v = state.costValue.trim().toDoubleOrNull()
             if (v != null && v > 0.0) CostInput(value = v, mode = state.costMode, currency = state.currency) else null
-        } else null
+        } else {
+            null
+        }
         val input = SaveChargeEventInput(
             eventId = (state.mode as? ChargeEditUiState.Mode.Edit)?.eventId,
             carId = state.carId,
@@ -141,7 +145,7 @@ class ChargeEditViewModel @Inject constructor(
             chargeType = state.chargeType,
             costInput = costInput,
             location = state.location.ifBlank { null },
-            note = state.note
+            note = state.note,
         )
         _uiState.update { it.copy(saving = true, odometerError = null, kwhError = null) }
         viewModelScope.launch {

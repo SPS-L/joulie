@@ -1,9 +1,9 @@
 package org.spsl.evtracker.testing
 
+import org.spsl.evtracker.domain.backup.DriveRemoteSource
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
-import org.spsl.evtracker.domain.backup.DriveRemoteSource
 
 @Singleton
 class FakeDriveRemoteSource @Inject constructor() : DriveRemoteSource {
@@ -34,7 +34,10 @@ class FakeDriveRemoteSource @Inject constructor() : DriveRemoteSource {
         return body ?: throw IOException("no body for $fileId")
     }
 
-    fun seed(jsonBytes: ByteArray) { fileId = "fake-file-id"; body = jsonBytes }
+    fun seed(jsonBytes: ByteArray) {
+        fileId = "fake-file-id"
+        body = jsonBytes
+    }
     fun lastUploadedBytes(): ByteArray? = body
     fun seededFileId(): String? = fileId
 

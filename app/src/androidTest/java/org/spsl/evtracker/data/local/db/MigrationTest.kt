@@ -46,7 +46,7 @@ class MigrationTest {
                         "year INTEGER, " +
                         "batteryKwh REAL, " +
                         "createdAt INTEGER NOT NULL" +
-                        ")"
+                        ")",
                 )
                 db.execSQL(
                     "CREATE TABLE IF NOT EXISTS charge_events (" +
@@ -57,7 +57,7 @@ class MigrationTest {
                         "kwhAdded REAL NOT NULL, " +
                         "createdAt INTEGER NOT NULL, " +
                         "FOREIGN KEY(carId) REFERENCES cars(id) ON DELETE CASCADE" +
-                        ")"
+                        ")",
                 )
             }
 
@@ -70,7 +70,7 @@ class MigrationTest {
             SupportSQLiteOpenHelper.Configuration.builder(context)
                 .name(testDbName)
                 .callback(callback)
-                .build()
+                .build(),
         )
         return helper.writableDatabase
     }
@@ -88,7 +88,7 @@ class MigrationTest {
                         "year INTEGER, " +
                         "batteryKwh REAL, " +
                         "createdAt INTEGER NOT NULL" +
-                        ")"
+                        ")",
                 )
                 db.execSQL(
                     "CREATE TABLE IF NOT EXISTS charge_events (" +
@@ -100,7 +100,7 @@ class MigrationTest {
                         "chargeType TEXT NOT NULL DEFAULT 'AC', " +
                         "createdAt INTEGER NOT NULL, " +
                         "FOREIGN KEY(carId) REFERENCES cars(id) ON DELETE CASCADE" +
-                        ")"
+                        ")",
                 )
             }
 
@@ -113,7 +113,7 @@ class MigrationTest {
             SupportSQLiteOpenHelper.Configuration.builder(context)
                 .name(testDbName)
                 .callback(callback)
-                .build()
+                .build(),
         )
         return helper.writableDatabase
     }
@@ -130,7 +130,7 @@ class MigrationTest {
         v1.execSQL("INSERT INTO cars (name, createdAt) VALUES ('A', 1000)")
         v1.execSQL(
             "INSERT INTO charge_events (carId, eventDate, odometerKm, kwhAdded, createdAt) " +
-                "VALUES (1, 2000, 100.0, 10.0, 2000)"
+                "VALUES (1, 2000, 100.0, 10.0, 2000)",
         )
 
         // Run MIGRATION_1_2 directly against the v1 raw SQLite DB — isolated, no
@@ -153,7 +153,7 @@ class MigrationTest {
         v2.execSQL(
             "INSERT INTO charge_events " +
                 "(carId, eventDate, odometerKm, kwhAdded, chargeType, createdAt) " +
-                "VALUES (1, 2000, 100.0, 10.0, 'DC', 2000)"
+                "VALUES (1, 2000, 100.0, 10.0, 'DC', 2000)",
         )
 
         // Run MIGRATION_2_3 directly — isolated, no Room schema validation.
@@ -163,9 +163,9 @@ class MigrationTest {
         v2.query("SELECT chargeType, costTotal, note FROM charge_events WHERE id = 1")
             .use { cursor ->
                 assertTrue("expected one row in charge_events", cursor.moveToFirst())
-                assertEquals("DC", cursor.getString(0))     // unchanged from v2
+                assertEquals("DC", cursor.getString(0)) // unchanged from v2
                 assertTrue("costTotal should be NULL", cursor.isNull(1))
-                assertEquals("", cursor.getString(2))         // NOT NULL DEFAULT ''
+                assertEquals("", cursor.getString(2)) // NOT NULL DEFAULT ''
             }
 
         // Verify the new custom_locations table exists and is empty.
@@ -182,7 +182,7 @@ class MigrationTest {
         v1.execSQL("INSERT INTO cars (name, createdAt) VALUES ('A', 1000)")
         v1.execSQL(
             "INSERT INTO charge_events (carId, eventDate, odometerKm, kwhAdded, createdAt) " +
-                "VALUES (1, 2000, 100.0, 10.0, 2000)"
+                "VALUES (1, 2000, 100.0, 10.0, 2000)",
         )
         v1.close()
 
@@ -193,9 +193,9 @@ class MigrationTest {
         val room = openWithRoom()
         try {
             val event = room.chargeEventDao().getAllForCarSorted(1).single()
-            assertEquals("AC", event.chargeType)  // from MIGRATION_1_2 default
-            assertEquals(null, event.costTotal)   // from MIGRATION_2_3 add column
-            assertEquals("", event.note)          // from MIGRATION_2_3 add column NOT NULL DEFAULT ''
+            assertEquals("AC", event.chargeType) // from MIGRATION_1_2 default
+            assertEquals(null, event.costTotal) // from MIGRATION_2_3 add column
+            assertEquals("", event.note) // from MIGRATION_2_3 add column NOT NULL DEFAULT ''
         } finally {
             room.close()
         }

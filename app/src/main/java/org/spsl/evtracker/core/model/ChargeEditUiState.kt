@@ -19,7 +19,7 @@ data class ChargeEditUiState(
     val currency: String = "EUR",
     val odometerError: Int? = null,
     val kwhError: Int? = null,
-    val saving: Boolean = false
+    val saving: Boolean = false,
 ) {
     sealed class Mode {
         object Create : Mode()
@@ -29,7 +29,7 @@ data class ChargeEditUiState(
 
 data class LocationChips(
     val fixed: List<String> = listOf("Home", "Work", "Public"),
-    val custom: List<String> = emptyList()
+    val custom: List<String> = emptyList(),
 )
 
 sealed class ChargeEditEvent {

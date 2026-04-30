@@ -13,6 +13,6 @@ interface RestoreTransactionRunner {
     suspend fun replaceAll(
         cars: List<CarEntity>,
         events: List<ChargeEventEntity>,
-        locations: List<CustomLocationEntity>
+        locations: List<CustomLocationEntity>,
     )
 }

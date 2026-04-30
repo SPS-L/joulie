@@ -13,11 +13,11 @@ import org.spsl.evtracker.data.local.entity.CarEntity
  */
 class DashboardCarSpinnerAdapter(
     context: Context,
-    cars: List<CarEntity>
+    cars: List<CarEntity>,
 ) : ArrayAdapter<String>(
     context,
     android.R.layout.simple_spinner_dropdown_item,
-    buildLabels(context, cars)
+    buildLabels(context, cars),
 ) {
     val tailIndex: Int = cars.size
 

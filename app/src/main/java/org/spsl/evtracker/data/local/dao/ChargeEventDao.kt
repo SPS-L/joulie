@@ -17,7 +17,7 @@ interface ChargeEventDao {
     @Query(
         "SELECT * FROM charge_events " +
             "WHERE carId = :carId AND eventDate BETWEEN :from AND :to " +
-            "ORDER BY eventDate ASC"
+            "ORDER BY eventDate ASC",
     )
     suspend fun getInRange(carId: Int, from: Long, to: Long): List<ChargeEventEntity>
 

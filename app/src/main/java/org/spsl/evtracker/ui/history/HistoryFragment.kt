@@ -35,7 +35,7 @@ class HistoryFragment : Fragment() {
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
-        savedInstanceState: Bundle?
+        savedInstanceState: Bundle?,
     ): View {
         _binding = FragmentHistoryBinding.inflate(inflater, container, false)
         return binding.root
@@ -47,10 +47,12 @@ class HistoryFragment : Fragment() {
         binding.historyRecycler.layoutManager = LinearLayoutManager(requireContext())
         binding.historyRecycler.adapter = adapter
 
-        val touchHelper = ItemTouchHelper(SwipeToDeleteCallback(
-            onSwipe = { viewModel.onSwipeDelete(it) },
-            rowAt = { pos -> adapter.currentList.getOrNull(pos)?.event }
-        ))
+        val touchHelper = ItemTouchHelper(
+            SwipeToDeleteCallback(
+                onSwipe = { viewModel.onSwipeDelete(it) },
+                rowAt = { pos -> adapter.currentList.getOrNull(pos)?.event },
+            ),
+        )
         touchHelper.attachToRecyclerView(binding.historyRecycler)
 
         binding.historyChipAll.setOnClickListener { viewModel.setFilter(ChargeTypeFilter.ALL) }
@@ -75,7 +77,7 @@ class HistoryFragment : Fragment() {
                         is HistoryEvent.NavigateToEdit -> {
                             findNavController().navigate(
                                 R.id.action_history_to_chargeEdit,
-                                bundleOf("eventId" to event.eventId)
+                                bundleOf("eventId" to event.eventId),
                             )
                         }
                         is HistoryEvent.ShowUndoSnackbar -> {

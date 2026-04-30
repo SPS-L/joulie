@@ -5,5 +5,5 @@ data class CarFormState(
     val make: String = "",
     val model: String = "",
     val year: String = "",
-    val batteryKwh: String = ""
+    val batteryKwh: String = "",
 )

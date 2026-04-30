@@ -12,7 +12,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.datepicker.MaterialDatePicker
-import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -41,7 +40,9 @@ class ChartsFragment : Fragment() {
     private var lastConcretePeriod: ChartsPeriod = ChartsPeriod.Last12Months
 
     override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?,
     ): View {
         _binding = FragmentChartsBinding.inflate(inflater, container, false)
         return binding.root
@@ -69,11 +70,11 @@ class ChartsFragment : Fragment() {
         binding.chartsPager.adapter = pagerAdapter
         tabMediator = TabLayoutMediator(binding.chartsTabLayout, binding.chartsPager) { tab, pos ->
             tab.text = when (pagerAdapter.tabKindAt(pos)) {
-                ChartsTabFragment.TabKind.TREND        -> getString(R.string.charts_tab_trend)
-                ChartsTabFragment.TabKind.MONTHLY_KWH  -> getString(R.string.charts_tab_monthly_kwh)
+                ChartsTabFragment.TabKind.TREND -> getString(R.string.charts_tab_trend)
+                ChartsTabFragment.TabKind.MONTHLY_KWH -> getString(R.string.charts_tab_monthly_kwh)
                 ChartsTabFragment.TabKind.MONTHLY_COST -> getString(R.string.charts_tab_monthly_cost)
-                ChartsTabFragment.TabKind.AC_DC        -> getString(R.string.charts_tab_ac_dc)
-                ChartsTabFragment.TabKind.LOCATIONS    -> getString(R.string.charts_tab_locations)
+                ChartsTabFragment.TabKind.AC_DC -> getString(R.string.charts_tab_ac_dc)
+                ChartsTabFragment.TabKind.LOCATIONS -> getString(R.string.charts_tab_locations)
             }
         }
         tabMediator.attach()
@@ -127,10 +128,10 @@ class ChartsFragment : Fragment() {
         }
         // Reflect the current period selection on the chip group.
         when (val p = state.period) {
-            ChartsPeriod.Last6Months  -> binding.chipLast6Months.isChecked = true
+            ChartsPeriod.Last6Months -> binding.chipLast6Months.isChecked = true
             ChartsPeriod.Last12Months -> binding.chipLast12Months.isChecked = true
-            ChartsPeriod.AllTime      -> binding.chipAllTime.isChecked = true
-            is ChartsPeriod.Custom    -> {
+            ChartsPeriod.AllTime -> binding.chipAllTime.isChecked = true
+            is ChartsPeriod.Custom -> {
                 binding.chipCustom.isChecked = true
                 // Spec §4: Custom chip exposes the selected range as its
                 // contentDescription so screen readers announce the actual
@@ -143,7 +144,7 @@ class ChartsFragment : Fragment() {
                         p.fromMillis,
                         p.toMillis,
                         android.text.format.DateUtils.FORMAT_SHOW_DATE
-                            or android.text.format.DateUtils.FORMAT_SHOW_YEAR
+                            or android.text.format.DateUtils.FORMAT_SHOW_YEAR,
                     )
             }
         }

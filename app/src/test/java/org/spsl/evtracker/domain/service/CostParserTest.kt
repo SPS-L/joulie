@@ -11,19 +11,22 @@ class CostParserTest {
     @Test
     fun costZero_returnsNull() {
         val (total, perKwh) = parser.parse(0.0, 10.0, CostMode.TOTAL)
-        assertNull(total); assertNull(perKwh)
+        assertNull(total)
+        assertNull(perKwh)
     }
 
     @Test
     fun costBlank_returnsNull() {
         val (total, perKwh) = parser.parse(null, 10.0, CostMode.TOTAL)
-        assertNull(total); assertNull(perKwh)
+        assertNull(total)
+        assertNull(perKwh)
     }
 
     @Test
     fun costNegative_returnsNull() {
         val (total, perKwh) = parser.parse(-5.0, 10.0, CostMode.TOTAL)
-        assertNull(total); assertNull(perKwh)
+        assertNull(total)
+        assertNull(perKwh)
     }
 
     @Test
@@ -43,7 +46,8 @@ class CostParserTest {
     @Test
     fun kwhZero_returnsNull() {
         val (total, perKwh) = parser.parse(5.0, 0.0, CostMode.TOTAL)
-        assertNull(total); assertNull(perKwh)
+        assertNull(total)
+        assertNull(perKwh)
     }
 
     @Test

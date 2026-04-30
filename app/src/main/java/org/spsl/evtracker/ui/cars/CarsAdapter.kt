@@ -15,7 +15,7 @@ import org.spsl.evtracker.databinding.ItemCarBinding
 class CarsAdapter(
     private val onSetActive: (Int) -> Unit,
     private val onEdit: (CarEntity) -> Unit,
-    private val onDelete: (CarEntity) -> Unit
+    private val onDelete: (CarEntity) -> Unit,
 ) : ListAdapter<CarRow, CarsAdapter.ViewHolder>(Diff) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -31,7 +31,7 @@ class CarsAdapter(
             val sub = listOfNotNull(
                 row.car.make.takeIf { it.isNotBlank() },
                 row.car.model.takeIf { it.isNotBlank() },
-                row.car.year?.toString()
+                row.car.year?.toString(),
             ).joinToString(" ")
             binding.itemCarSubtitle.text = sub
             binding.itemCarSubtitle.isVisible = sub.isNotEmpty()
@@ -42,9 +42,18 @@ class CarsAdapter(
                 popup.menu.findItem(R.id.car_overflow_set_active).isVisible = !row.isActive
                 popup.setOnMenuItemClickListener { item ->
                     when (item.itemId) {
-                        R.id.car_overflow_set_active -> { onSetActive(row.car.id); true }
-                        R.id.car_overflow_edit -> { onEdit(row.car); true }
-                        R.id.car_overflow_delete -> { onDelete(row.car); true }
+                        R.id.car_overflow_set_active -> {
+                            onSetActive(row.car.id)
+                            true
+                        }
+                        R.id.car_overflow_edit -> {
+                            onEdit(row.car)
+                            true
+                        }
+                        R.id.car_overflow_delete -> {
+                            onDelete(row.car)
+                            true
+                        }
                         else -> false
                     }
                 }

@@ -2,8 +2,6 @@ package org.spsl.evtracker.data.backup
 
 import com.google.api.client.http.HttpResponseException
 import com.google.gson.JsonParser
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlinx.coroutines.flow.first
 import org.spsl.evtracker.core.model.BackupData
 import org.spsl.evtracker.domain.backup.BackupRepository
@@ -14,6 +12,8 @@ import org.spsl.evtracker.domain.repository.CarReader
 import org.spsl.evtracker.domain.repository.ChargeEventQueries
 import org.spsl.evtracker.domain.repository.LocationReader
 import org.spsl.evtracker.domain.service.BackupSerializer
+import javax.inject.Inject
+import javax.inject.Singleton
 
 @Singleton
 class DriveBackupRepository @Inject constructor(
@@ -22,7 +22,7 @@ class DriveBackupRepository @Inject constructor(
     private val serializer: BackupSerializer,
     private val carReader: CarReader,
     private val chargeEventQueries: ChargeEventQueries,
-    private val locationReader: LocationReader
+    private val locationReader: LocationReader,
 ) : BackupRepository {
 
     override suspend fun backupCurrentData(): Unit = runTranslating {
@@ -33,8 +33,11 @@ class DriveBackupRepository @Inject constructor(
         val json = serializer.toJson(BackupData.fromEntities(cars, events, locations))
         val bytes = json.toByteArray(Charsets.UTF_8)
         val existing = remote.findBackupFileId(token)
-        if (existing == null) remote.createBackup(token, bytes)
-        else remote.updateBackup(token, existing, bytes)
+        if (existing == null) {
+            remote.createBackup(token, bytes)
+        } else {
+            remote.updateBackup(token, existing, bytes)
+        }
     }
 
     override suspend fun readRemoteBackup(): String? = runTranslating {
@@ -99,12 +102,12 @@ class DriveBackupRepository @Inject constructor(
             "appNotAuthorized",
             "insufficientFilePermissions",
             "insufficientPermissions",
-            "forbidden"
+            "forbidden",
         )
         private val QUOTA_REASONS = setOf(
             "rateLimitExceeded",
             "userRateLimitExceeded",
-            "quotaExceeded"
+            "quotaExceeded",
         )
     }
 }

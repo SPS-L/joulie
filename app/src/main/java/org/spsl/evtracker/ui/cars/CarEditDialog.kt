@@ -22,7 +22,7 @@ object CarEditDialog {
         context: Context,
         existing: CarEntity?,
         titleRes: Int,
-        onSubmit: (CarFormState) -> Unit
+        onSubmit: (CarFormState) -> Unit,
     ) {
         val binding = DialogEditCarBinding.inflate(LayoutInflater.from(context))
         existing?.let {
@@ -36,13 +36,15 @@ object CarEditDialog {
             .setTitle(titleRes)
             .setView(binding.root)
             .setPositiveButton(R.string.car_dialog_save) { _, _ ->
-                onSubmit(CarFormState(
-                    name = binding.carDialogName.text?.toString().orEmpty(),
-                    make = binding.carDialogMake.text?.toString().orEmpty(),
-                    model = binding.carDialogModel.text?.toString().orEmpty(),
-                    year = binding.carDialogYear.text?.toString().orEmpty(),
-                    batteryKwh = binding.carDialogBattery.text?.toString().orEmpty()
-                ))
+                onSubmit(
+                    CarFormState(
+                        name = binding.carDialogName.text?.toString().orEmpty(),
+                        make = binding.carDialogMake.text?.toString().orEmpty(),
+                        model = binding.carDialogModel.text?.toString().orEmpty(),
+                        year = binding.carDialogYear.text?.toString().orEmpty(),
+                        batteryKwh = binding.carDialogBattery.text?.toString().orEmpty(),
+                    ),
+                )
             }
             .setNegativeButton(R.string.car_dialog_cancel, null)
             .show()

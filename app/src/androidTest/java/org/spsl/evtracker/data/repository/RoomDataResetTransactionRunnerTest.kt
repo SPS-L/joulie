@@ -26,16 +26,18 @@ class RoomDataResetTransactionRunnerTest {
     @Before fun setup() {
         db = Room.inMemoryDatabaseBuilder(
             ApplicationProvider.getApplicationContext(),
-            AppDatabase::class.java
+            AppDatabase::class.java,
         ).allowMainThreadQueries().build()
         runner = RoomDataResetTransactionRunner(db)
     }
 
-    @After fun tearDown() { db.close() }
+    @After fun tearDown() {
+        db.close()
+    }
 
     @Test fun clearAllTables_emptiesAllThreeTables() = runBlocking {
         val carId = db.carDao().insert(
-            CarEntity(name = "Test", make = "M", model = "X", year = 2024, batteryKwh = 75.0)
+            CarEntity(name = "Test", make = "M", model = "X", year = 2024, batteryKwh = 75.0),
         ).toInt()
         db.chargeEventDao().insert(
             ChargeEventEntity(
@@ -43,11 +45,11 @@ class RoomDataResetTransactionRunnerTest {
                 eventDate = 1_700_000_000_000L,
                 odometerKm = 100.0,
                 kwhAdded = 20.0,
-                chargeType = "AC"
-            )
+                chargeType = "AC",
+            ),
         )
         db.customLocationDao().insertIfMissing(
-            CustomLocationEntity(label = "Office", useCount = 1, lastUsed = 1_700_000_000_000L)
+            CustomLocationEntity(label = "Office", useCount = 1, lastUsed = 1_700_000_000_000L),
         )
 
         runner.clearAllTables()
@@ -55,13 +57,16 @@ class RoomDataResetTransactionRunnerTest {
         assertTrue(db.chargeEventDao().getAllForCarSorted(carId).isEmpty())
         assertNull(db.carDao().getById(carId))
         val locationCount = db.openHelper.readableDatabase.query("SELECT COUNT(*) FROM custom_locations")
-            .use { cursor -> cursor.moveToFirst(); cursor.getInt(0) }
+            .use { cursor ->
+                cursor.moveToFirst()
+                cursor.getInt(0)
+            }
         assertEquals(0, locationCount)
     }
 
     @Test fun clearAllTables_isAtomic_throwingFromOneDeleteRollsBackOthers() = runBlocking {
         val carId = db.carDao().insert(
-            CarEntity(name = "Test", make = "M", model = "X", year = 2024, batteryKwh = 75.0)
+            CarEntity(name = "Test", make = "M", model = "X", year = 2024, batteryKwh = 75.0),
         ).toInt()
         db.chargeEventDao().insert(
             ChargeEventEntity(
@@ -69,8 +74,8 @@ class RoomDataResetTransactionRunnerTest {
                 eventDate = 1_700_000_000_000L,
                 odometerKm = 100.0,
                 kwhAdded = 20.0,
-                chargeType = "AC"
-            )
+                chargeType = "AC",
+            ),
         )
 
         // Simulate a failure inside a withTransaction block. Use the shared db so any

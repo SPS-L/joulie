@@ -1,6 +1,5 @@
 package org.spsl.evtracker.domain.usecase
 
-import javax.inject.Inject
 import org.spsl.evtracker.core.model.SaveChargeEventInput
 import org.spsl.evtracker.core.model.SaveChargeEventResult
 import org.spsl.evtracker.data.local.entity.ChargeEventEntity
@@ -9,13 +8,14 @@ import org.spsl.evtracker.domain.repository.ChargeEventQueries
 import org.spsl.evtracker.domain.repository.ChargeEventWriter
 import org.spsl.evtracker.domain.repository.LocationWriter
 import org.spsl.evtracker.domain.service.CostParser
+import javax.inject.Inject
 
 class SaveChargeEventUseCase @Inject constructor(
     private val chargeEventQueries: ChargeEventQueries,
     private val chargeEventWriter: ChargeEventWriter,
     private val locationWriter: LocationWriter,
     private val backupScheduler: BackupScheduler,
-    private val costParser: CostParser
+    private val costParser: CostParser,
 ) {
     suspend operator fun invoke(input: SaveChargeEventInput): SaveChargeEventResult {
         // 1. Validate odometer > previous event's (excluding own id when updating).
@@ -42,7 +42,7 @@ class SaveChargeEventUseCase @Inject constructor(
             costPerKwh = costPerKwh,
             currency = currency,
             location = input.location?.takeIf { it.isNotBlank() },
-            note = input.note
+            note = input.note,
         )
 
         // 3. Persist (insert or update by id).

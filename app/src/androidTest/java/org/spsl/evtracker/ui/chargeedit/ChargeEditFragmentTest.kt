@@ -15,7 +15,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
-import javax.inject.Inject
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
 import org.junit.Rule
@@ -23,6 +22,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.spsl.evtracker.R
 import org.spsl.evtracker.data.preferences.PreferenceKeys
+import javax.inject.Inject
 
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
@@ -50,7 +50,7 @@ class ChargeEditFragmentTest {
     @Test
     fun homeChip_clickedFillsLocation() {
         launchFragmentInContainer<ChargeEditFragment>(
-            themeResId = org.spsl.evtracker.R.style.Theme_EVTracker
+            themeResId = org.spsl.evtracker.R.style.Theme_EVTracker,
         ).moveToState(Lifecycle.State.RESUMED).use {
             onView(withText(R.string.location_home)).perform(click())
             onView(withId(R.id.charge_edit_location)).check(matches(withText("Home")))
@@ -60,7 +60,7 @@ class ChargeEditFragmentTest {
     @Test
     fun saveBlankOdometer_showsError() {
         launchFragmentInContainer<ChargeEditFragment>(
-            themeResId = org.spsl.evtracker.R.style.Theme_EVTracker
+            themeResId = org.spsl.evtracker.R.style.Theme_EVTracker,
         ).moveToState(Lifecycle.State.RESUMED).use {
             onView(withId(R.id.charge_edit_save)).perform(click())
             val expected = InstrumentationRegistry.getInstrumentation()

@@ -102,10 +102,10 @@ class ManageLocationsViewModelTest {
         advanceTimeBy(2_000L)
         // A's window: 1s left; B's window: 3s left.
         vm.onUndoDelete("A")
-        advanceTimeBy(2_000L)  // total 6s — B should commit, A undone.
+        advanceTimeBy(2_000L) // total 6s — B should commit, A undone.
         advanceUntilIdle()
         assertFalse("A" in vm.uiState.value.pendingDeletions)
-        assertEquals(1, backupScheduler.enqueueCount)  // only B
+        assertEquals(1, backupScheduler.enqueueCount) // only B
     }
 
     @Test fun swipe_then_clearVm_cancelsAllJobs_doesNotCallDelete() = runTest(dispatcher) {

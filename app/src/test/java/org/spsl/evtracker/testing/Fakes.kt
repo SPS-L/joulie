@@ -1,6 +1,5 @@
 package org.spsl.evtracker.testing
 
-import java.io.IOException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
@@ -21,16 +20,19 @@ import org.spsl.evtracker.domain.repository.LocationReader
 import org.spsl.evtracker.domain.repository.LocationWriter
 import org.spsl.evtracker.domain.repository.SettingsReader
 import org.spsl.evtracker.domain.repository.SettingsWriter
+import java.io.IOException
 
 class FakeCarReader(initial: List<CarEntity> = emptyList()) : CarReader {
     private val state = MutableStateFlow(initial)
     override fun observeAll(): Flow<List<CarEntity>> = state
     override suspend fun getById(id: Int): CarEntity? = state.value.firstOrNull { it.id == id }
-    fun seed(cars: List<CarEntity>) { state.value = cars }
+    fun seed(cars: List<CarEntity>) {
+        state.value = cars
+    }
 }
 
 class FakeChargeEventQueries(
-    private val store: MutableStateFlow<List<ChargeEventEntity>> = MutableStateFlow(emptyList())
+    private val store: MutableStateFlow<List<ChargeEventEntity>> = MutableStateFlow(emptyList()),
 ) : ChargeEventQueries {
 
     /** Incremented every time observeForCar(...) is called, regardless of carId.
@@ -49,13 +51,15 @@ class FakeChargeEventQueries(
     override suspend fun getAllForCarSorted(carId: Int): List<ChargeEventEntity> =
         store.value.filter { it.carId == carId }.sortedBy { it.eventDate }
     override suspend fun getById(id: Int) = store.value.firstOrNull { it.id == id }
-    fun seed(events: List<ChargeEventEntity>) { store.value = events }
+    fun seed(events: List<ChargeEventEntity>) {
+        store.value = events
+    }
     fun current(): List<ChargeEventEntity> = store.value
     fun shareStore(): MutableStateFlow<List<ChargeEventEntity>> = store
 }
 
 class FakeChargeEventWriter(
-    private val store: MutableStateFlow<List<ChargeEventEntity>>
+    private val store: MutableStateFlow<List<ChargeEventEntity>>,
 ) : ChargeEventWriter {
     private var nextId = 1L
     override suspend fun insert(event: ChargeEventEntity): Long {
@@ -86,7 +90,7 @@ class FakeLocationReader(initial: List<CustomLocationEntity> = emptyList()) : Lo
 }
 
 class FakeLocationWriter(
-    private val state: MutableStateFlow<List<CustomLocationEntity>> = MutableStateFlow(emptyList())
+    private val state: MutableStateFlow<List<CustomLocationEntity>> = MutableStateFlow(emptyList()),
 ) : LocationWriter {
     override suspend fun recordUsage(label: String, now: Long) {
         val existing = state.value.firstOrNull { it.label == label }
@@ -113,7 +117,7 @@ class FakeSettingsReader(
     driveEnabledInit: Boolean = false,
     lastBackupAtInit: Long? = null,
     themeInit: String = "system",
-    resetInProgressInit: Boolean = false
+    resetInProgressInit: Boolean = false,
 ) : SettingsReader {
     private val activeCar = MutableStateFlow(activeCarIdInit)
     private val metric = MutableStateFlow(primaryMetricInit)
@@ -131,18 +135,34 @@ class FakeSettingsReader(
     override val lastBackupAt: Flow<Long?> = backupAt
     override val theme: Flow<String> = themeFlow
     override val resetInProgress: Flow<Boolean> = resetInProgressFlow
-    fun setActiveCarId(id: Int) { activeCar.value = id }
-    fun setDriveEnabled(enabled: Boolean) { drive.value = enabled }
-    fun setLastBackupAt(value: Long?) { backupAt.value = value }
-    fun setTheme(value: String) { themeFlow.value = value }
-    fun setResetInProgress(value: Boolean) { resetInProgressFlow.value = value }
-    fun setPrimaryMetric(value: String) { metric.value = value }
-    fun setDistanceUnit(value: String) { unit.value = value }
-    fun setCurrency(value: String) { curr.value = value }
+    fun setActiveCarId(id: Int) {
+        activeCar.value = id
+    }
+    fun setDriveEnabled(enabled: Boolean) {
+        drive.value = enabled
+    }
+    fun setLastBackupAt(value: Long?) {
+        backupAt.value = value
+    }
+    fun setTheme(value: String) {
+        themeFlow.value = value
+    }
+    fun setResetInProgress(value: Boolean) {
+        resetInProgressFlow.value = value
+    }
+    fun setPrimaryMetric(value: String) {
+        metric.value = value
+    }
+    fun setDistanceUnit(value: String) {
+        unit.value = value
+    }
+    fun setCurrency(value: String) {
+        curr.value = value
+    }
 }
 
 class FakeSettingsWriter(
-    val callRecorder: MutableList<String>? = null
+    val callRecorder: MutableList<String>? = null,
 ) : SettingsWriter {
     var activeCarId: Int = -1
         private set
@@ -164,31 +184,40 @@ class FakeSettingsWriter(
         private set
 
     override suspend fun setActiveCarId(id: Int) {
-        callRecorder?.add("setActiveCarId($id)"); activeCarId = id
+        callRecorder?.add("setActiveCarId($id)")
+        activeCarId = id
     }
     override suspend fun setDriveEnabled(enabled: Boolean) {
-        callRecorder?.add("setDriveEnabled($enabled)"); driveEnabled = enabled
+        callRecorder?.add("setDriveEnabled($enabled)")
+        driveEnabled = enabled
     }
     override suspend fun setLastBackupAt(epochMs: Long) {
-        callRecorder?.add("setLastBackupAt($epochMs)"); lastBackupAt = epochMs
+        callRecorder?.add("setLastBackupAt($epochMs)")
+        lastBackupAt = epochMs
     }
     override suspend fun setTheme(value: String) {
-        callRecorder?.add("setTheme($value)"); theme = value
+        callRecorder?.add("setTheme($value)")
+        theme = value
     }
     override suspend fun setPrimaryMetric(metric: String) {
-        callRecorder?.add("setPrimaryMetric($metric)"); primaryMetric = metric
+        callRecorder?.add("setPrimaryMetric($metric)")
+        primaryMetric = metric
     }
     override suspend fun setDistanceUnit(unit: String) {
-        callRecorder?.add("setDistanceUnit($unit)"); distanceUnit = unit
+        callRecorder?.add("setDistanceUnit($unit)")
+        distanceUnit = unit
     }
     override suspend fun setCurrency(code: String) {
-        callRecorder?.add("setCurrency($code)"); currency = code
+        callRecorder?.add("setCurrency($code)")
+        currency = code
     }
     override suspend fun setSetupComplete(value: Boolean) {
-        callRecorder?.add("setSetupComplete($value)"); setupComplete = value
+        callRecorder?.add("setSetupComplete($value)")
+        setupComplete = value
     }
     override suspend fun setResetInProgress(value: Boolean) {
-        callRecorder?.add("setResetInProgress($value)"); resetInProgress = value
+        callRecorder?.add("setResetInProgress($value)")
+        resetInProgress = value
     }
     override suspend fun setPrimaryMetricAndDistanceUnit(metric: String, unit: String) {
         callRecorder?.add("setPrimaryMetricAndDistanceUnit($metric,$unit)")
@@ -206,20 +235,24 @@ class FakeSettingsWriter(
 class FakeBackupScheduler : BackupScheduler {
     var enqueueCount: Int = 0
         private set
-    override suspend fun enqueueBackup() { enqueueCount++ }
+    override suspend fun enqueueBackup() {
+        enqueueCount++
+    }
 }
 
 class FakeBackupRepository(
-    var remoteJson: String? = null
+    var remoteJson: String? = null,
 ) : BackupRepository {
     var backupCurrentDataCount: Int = 0
         private set
-    override suspend fun backupCurrentData() { backupCurrentDataCount++ }
+    override suspend fun backupCurrentData() {
+        backupCurrentDataCount++
+    }
     override suspend fun readRemoteBackup(): String? = remoteJson
 }
 
 class FakeRestoreTransactionRunner(
-    val callRecorder: MutableList<String>? = null
+    val callRecorder: MutableList<String>? = null,
 ) : RestoreTransactionRunner {
     var lastCars: List<CarEntity>? = null
         private set
@@ -230,15 +263,17 @@ class FakeRestoreTransactionRunner(
     override suspend fun replaceAll(
         cars: List<CarEntity>,
         events: List<ChargeEventEntity>,
-        locations: List<CustomLocationEntity>
+        locations: List<CustomLocationEntity>,
     ) {
         callRecorder?.add("transaction")
-        lastCars = cars; lastEvents = events; lastLocations = locations
+        lastCars = cars
+        lastEvents = events
+        lastLocations = locations
     }
 }
 
 class FakeRestoreSnapshotWriter(
-    val callRecorder: MutableList<String>? = null
+    val callRecorder: MutableList<String>? = null,
 ) : RestoreSnapshotWriter {
     var capturedJson: String? = null
         private set
@@ -263,10 +298,12 @@ class FakeSaveChargeEventGateway {
             chargeEventWriter = writer,
             locationWriter = locationWriter,
             backupScheduler = backupScheduler,
-            costParser = costParser
+            costParser = costParser,
         )
 
-    fun seedEvents(events: List<ChargeEventEntity>) { store.value = events }
+    fun seedEvents(events: List<ChargeEventEntity>) {
+        store.value = events
+    }
 }
 
 class FakeCarRepository(initial: List<CarEntity> = emptyList()) : CarReader, CarWriter {
@@ -294,12 +331,14 @@ class FakeCarRepository(initial: List<CarEntity> = emptyList()) : CarReader, Car
         state.value = emptyList()
     }
 
-    fun seed(cars: List<CarEntity>) { state.value = cars }
+    fun seed(cars: List<CarEntity>) {
+        state.value = cars
+    }
     fun current(): List<CarEntity> = state.value
 }
 
 class FakeDriveAuthManager(
-    var nextResult: DriveAuthManager.AuthResult = DriveAuthManager.AuthResult.Success("fake-token")
+    var nextResult: DriveAuthManager.AuthResult = DriveAuthManager.AuthResult.Success("fake-token"),
 ) : DriveAuthManager {
     var authorizeCallCount = 0
         private set
@@ -347,7 +386,10 @@ class FakeDriveRemoteSource : DriveRemoteSource {
         return body ?: throw IOException("no body for $fileId")
     }
 
-    fun seed(jsonBytes: ByteArray) { fileId = "fake-file-id"; body = jsonBytes }
+    fun seed(jsonBytes: ByteArray) {
+        fileId = "fake-file-id"
+        body = jsonBytes
+    }
     fun lastUploadedBytes(): ByteArray? = body
     fun seededFileId(): String? = fileId
 
@@ -360,7 +402,7 @@ class FakeDriveRemoteSource : DriveRemoteSource {
 
 class FakeDataResetTransactionRunner(
     val callRecorder: MutableList<String>? = null,
-    private val onClearStores: () -> Unit = {}
+    private val onClearStores: () -> Unit = {},
 ) : org.spsl.evtracker.domain.repository.DataResetTransactionRunner {
     var clearCallCount: Int = 0
         private set
@@ -368,7 +410,10 @@ class FakeDataResetTransactionRunner(
 
     override suspend fun clearAllTables() {
         callRecorder?.add("clearAllTables")
-        failNext?.let { failNext = null; throw it }
+        failNext?.let {
+            failNext = null
+            throw it
+        }
         clearCallCount++
         onClearStores()
     }
@@ -378,7 +423,10 @@ class FakeCsvFileSink : org.spsl.evtracker.domain.backup.CsvFileSink {
     var failNext: Throwable? = null
     var lastCarName: String? = null
     override suspend fun write(carName: String, body: (java.io.Writer) -> Unit): android.net.Uri {
-        failNext?.let { failNext = null; throw it }
+        failNext?.let {
+            failNext = null
+            throw it
+        }
         lastCarName = carName
         body(java.io.StringWriter())
         // android.net.Uri.parse() stubs throw RuntimeException in JVM unit tests; use a mock instead.

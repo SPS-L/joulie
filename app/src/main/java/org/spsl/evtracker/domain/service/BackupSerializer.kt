@@ -1,9 +1,9 @@
 package org.spsl.evtracker.domain.service
 
 import com.google.gson.GsonBuilder
-import javax.inject.Inject
 import org.spsl.evtracker.core.model.BackupData
 import org.spsl.evtracker.core.model.BackupVersionMismatch
+import javax.inject.Inject
 
 class BackupSerializer @Inject constructor() {
     private val gson = GsonBuilder().disableHtmlEscaping().create()

@@ -7,7 +7,7 @@ import org.spsl.evtracker.core.model.ChartsPeriod
 class DateRangeResolverChartsTest {
 
     private val resolver = DateRangeResolver()
-    private val now = 1_714_032_000_000L  // 2024-04-25T08:00Z; deterministic anchor
+    private val now = 1_714_032_000_000L // 2024-04-25T08:00Z; deterministic anchor
 
     @Test fun last6Months_182Days() {
         val r = resolver.resolveCharts(ChartsPeriod.Last6Months, now)

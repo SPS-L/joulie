@@ -18,7 +18,7 @@ data class SettingsUiState(
     val theme: String = "system",
     val activeCarId: Int = -1,
     val activeCarName: String? = null,
-    val customLocationCount: Int = 0
+    val customLocationCount: Int = 0,
 )
 
 sealed class SettingsEvent {

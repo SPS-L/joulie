@@ -19,16 +19,16 @@ import androidx.navigation.fragment.findNavController
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import javax.inject.Inject
 import kotlinx.coroutines.launch
 import org.spsl.evtracker.R
 import org.spsl.evtracker.core.model.SettingsEvent
 import org.spsl.evtracker.core.model.SettingsUiState
 import org.spsl.evtracker.databinding.FragmentSettingsBinding
 import org.spsl.evtracker.domain.backup.DriveAuthManager
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class SettingsFragment : Fragment() {
@@ -40,7 +40,7 @@ class SettingsFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val consentLauncher = registerForActivityResult(
-        ActivityResultContracts.StartIntentSenderForResult()
+        ActivityResultContracts.StartIntentSenderForResult(),
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             viewLifecycleOwner.lifecycleScope.launch {
@@ -57,7 +57,7 @@ class SettingsFragment : Fragment() {
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
-        savedInstanceState: Bundle?
+        savedInstanceState: Bundle?,
     ): View {
         _binding = FragmentSettingsBinding.inflate(inflater, container, false)
         return binding.root
@@ -123,28 +123,38 @@ class SettingsFragment : Fragment() {
     }
 
     private fun renderF1Rows(state: SettingsUiState) {
-        binding.summaryPrimaryMetric.setText(when (state.primaryMetric) {
-            "kwh_per_100km" -> R.string.wizard_metric_kwh_per_100km
-            "mi_per_kwh"    -> R.string.wizard_metric_mi_per_kwh
-            else            -> R.string.wizard_metric_km_per_kwh
-        })
+        binding.summaryPrimaryMetric.setText(
+            when (state.primaryMetric) {
+                "kwh_per_100km" -> R.string.wizard_metric_kwh_per_100km
+                "mi_per_kwh" -> R.string.wizard_metric_mi_per_kwh
+                else -> R.string.wizard_metric_km_per_kwh
+            },
+        )
         binding.summaryDistanceUnit.setText(
-            if (state.distanceUnit == "miles") R.string.wizard_unit_miles else R.string.wizard_unit_km
+            if (state.distanceUnit == "miles") R.string.wizard_unit_miles else R.string.wizard_unit_km,
         )
         binding.summaryCurrency.text = state.currency
-        binding.summaryTheme.setText(when (state.theme) {
-            "light" -> R.string.settings_theme_light
-            "dark"  -> R.string.settings_theme_dark
-            else    -> R.string.settings_theme_system
-        })
+        binding.summaryTheme.setText(
+            when (state.theme) {
+                "light" -> R.string.settings_theme_light
+                "dark" -> R.string.settings_theme_dark
+                else -> R.string.settings_theme_system
+            },
+        )
         binding.summaryManageLocations.text =
-            if (state.customLocationCount == 0) ""
-            else getString(R.string.settings_manage_locations_summary, state.customLocationCount)
+            if (state.customLocationCount == 0) {
+                ""
+            } else {
+                getString(R.string.settings_manage_locations_summary, state.customLocationCount)
+            }
 
         val activeName = state.activeCarName
         binding.titleResetActiveCar.text =
-            if (activeName == null) getString(R.string.settings_reset_active_car_default)
-            else getString(R.string.settings_reset_active_car, activeName)
+            if (activeName == null) {
+                getString(R.string.settings_reset_active_car_default)
+            } else {
+                getString(R.string.settings_reset_active_car, activeName)
+            }
 
         val activeCarMissing = state.activeCarId == -1
         binding.rowResetActiveCar.alpha = if (activeCarMissing) 0.5f else 1f
@@ -168,7 +178,7 @@ class SettingsFragment : Fragment() {
         val labels = arrayOf(
             getString(R.string.wizard_metric_km_per_kwh),
             getString(R.string.wizard_metric_kwh_per_100km),
-            getString(R.string.wizard_metric_mi_per_kwh)
+            getString(R.string.wizard_metric_mi_per_kwh),
         )
         val tokens = arrayOf("km_per_kwh", "kwh_per_100km", "mi_per_kwh")
         val current = viewModel.uiState.value.primaryMetric
@@ -216,7 +226,7 @@ class SettingsFragment : Fragment() {
         val labels = arrayOf(
             getString(R.string.settings_theme_system),
             getString(R.string.settings_theme_light),
-            getString(R.string.settings_theme_dark)
+            getString(R.string.settings_theme_dark),
         )
         val tokens = arrayOf("system", "light", "dark")
         val current = viewModel.uiState.value.theme
@@ -236,8 +246,8 @@ class SettingsFragment : Fragment() {
     private fun applyThemeImmediately(token: String) {
         val mode = when (token) {
             "light" -> AppCompatDelegate.MODE_NIGHT_NO
-            "dark"  -> AppCompatDelegate.MODE_NIGHT_YES
-            else    -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+            "dark" -> AppCompatDelegate.MODE_NIGHT_YES
+            else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
         }
         AppCompatDelegate.setDefaultNightMode(mode)
     }
@@ -265,10 +275,11 @@ class SettingsFragment : Fragment() {
     }
 
     private fun showResetAllDialog() {
-        val msgRes = if (viewModel.uiState.value.driveEnabled)
+        val msgRes = if (viewModel.uiState.value.driveEnabled) {
             R.string.settings_reset_all_confirm_drive_on
-        else
+        } else {
             R.string.settings_reset_all_confirm
+        }
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.settings_reset_all)
             .setMessage(msgRes)

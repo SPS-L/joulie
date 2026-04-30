@@ -32,12 +32,17 @@ import org.spsl.evtracker.testing.FakeSettingsWriter
 @OptIn(ExperimentalCoroutinesApi::class)
 class CarsViewModelTest {
 
-    @Before fun setMainDispatcher() { Dispatchers.setMain(UnconfinedTestDispatcher()) }
-    @After fun resetMainDispatcher() { Dispatchers.resetMain() }
+    @Before fun setMainDispatcher() {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+    }
+
+    @After fun resetMainDispatcher() {
+        Dispatchers.resetMain()
+    }
 
     private fun build(
         cars: List<CarEntity> = emptyList(),
-        activeCarId: Int = -1
+        activeCarId: Int = -1,
     ): VmFixture {
         val repo = FakeCarRepository(initial = cars)
         val reader = FakeSettingsReader(activeCarIdInit = activeCarId)
@@ -54,7 +59,7 @@ class CarsViewModelTest {
         val vm: CarsViewModel,
         val repo: FakeCarRepository,
         val settingsWriter: FakeSettingsWriter,
-        val scheduler: FakeBackupScheduler
+        val scheduler: FakeBackupScheduler,
     )
 
     @Test
@@ -68,7 +73,7 @@ class CarsViewModelTest {
     fun marksActiveCarInList() = runTest {
         val cars = listOf(
             CarEntity(id = 1, name = "A", createdAt = 0L),
-            CarEntity(id = 2, name = "B", createdAt = 0L)
+            CarEntity(id = 2, name = "B", createdAt = 0L),
         )
         val (vm, _, _, _) = build(cars = cars, activeCarId = 2)
         val state = vm.uiState.first { it.cars.size == 2 }

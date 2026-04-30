@@ -5,12 +5,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.work.WorkManager
 import dagger.hilt.android.lifecycle.HiltViewModel
-import java.io.IOException
-import java.text.SimpleDateFormat
-import java.time.Instant
-import java.util.Date
-import java.util.Locale
-import javax.inject.Inject
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,6 +29,12 @@ import org.spsl.evtracker.domain.usecase.ExportCsvUseCase
 import org.spsl.evtracker.domain.usecase.ResetActiveCarDataUseCase
 import org.spsl.evtracker.domain.usecase.ResetAllDataUseCase
 import org.spsl.evtracker.domain.usecase.RestoreBackupUseCase
+import java.io.IOException
+import java.text.SimpleDateFormat
+import java.time.Instant
+import java.util.Date
+import java.util.Locale
+import javax.inject.Inject
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
@@ -48,7 +48,7 @@ class SettingsViewModel @Inject constructor(
     private val restoreBackupUseCase: RestoreBackupUseCase,
     private val resetActiveCarDataUseCase: ResetActiveCarDataUseCase,
     private val resetAllDataUseCase: ResetAllDataUseCase,
-    private val exportCsvUseCase: ExportCsvUseCase
+    private val exportCsvUseCase: ExportCsvUseCase,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -57,7 +57,7 @@ class SettingsViewModel @Inject constructor(
     private val _events = MutableSharedFlow<SettingsEvent>(
         replay = 0,
         extraBufferCapacity = 1,
-        onBufferOverflow = BufferOverflow.DROP_OLDEST
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
     )
     val events: SharedFlow<SettingsEvent> = _events.asSharedFlow()
 
@@ -253,19 +253,19 @@ class SettingsViewModel @Inject constructor(
     private fun defaultMetricFor(unit: String, currentMetric: String): String =
         when (unit) {
             "miles" -> "mi_per_kwh"
-            "km"    -> if (currentMetric == "mi_per_kwh") "km_per_kwh" else currentMetric
-            else    -> currentMetric
+            "km" -> if (currentMetric == "mi_per_kwh") "km_per_kwh" else currentMetric
+            else -> currentMetric
         }
 
     @StringRes private fun unitFlipMsgRes(newUnit: String): Int = when (newUnit) {
         "miles" -> R.string.settings_unit_flipped_to_miles
-        else    -> R.string.settings_unit_flipped_to_km
+        else -> R.string.settings_unit_flipped_to_km
     }
 
     @StringRes private fun metricFlipMsgRes(newMetric: String): Int = when (newMetric) {
         "kwh_per_100km" -> R.string.settings_metric_flipped_kwh_per_100km
-        "mi_per_kwh"    -> R.string.settings_metric_flipped_mi_per_kwh
-        else            -> R.string.settings_metric_flipped_km_per_kwh
+        "mi_per_kwh" -> R.string.settings_metric_flipped_mi_per_kwh
+        else -> R.string.settings_metric_flipped_km_per_kwh
     }
 
     companion object {

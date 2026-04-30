@@ -28,7 +28,7 @@ class WizardViewModelTest {
     fun setUp() {
         dataStore = PreferenceDataStoreFactory.create(
             scope = TestScope(UnconfinedTestDispatcher()),
-            produceFile = { tempFolder.newFile("test.preferences_pb") }
+            produceFile = { tempFolder.newFile("test.preferences_pb") },
         )
         repo = SettingsRepository(dataStore)
         vm = WizardViewModel(repo)
@@ -36,7 +36,7 @@ class WizardViewModelTest {
 
     @Test
     fun finish_writesAllPrefs() = runTest {
-        vm.selectMetric("mi_per_kwh")    // forces unit to "miles"
+        vm.selectMetric("mi_per_kwh") // forces unit to "miles"
         vm.selectCurrency("USD")
         vm.finish()
         assertEquals("mi_per_kwh", repo.primaryMetric.first())
@@ -53,7 +53,7 @@ class WizardViewModelTest {
 
     @Test
     fun coupling_kmMetricForcesKm() {
-        vm.selectMetric("mi_per_kwh")    // unit = "miles"
+        vm.selectMetric("mi_per_kwh") // unit = "miles"
         vm.selectMetric("km_per_kwh")
         assertEquals("km", vm.state.value.unit)
     }

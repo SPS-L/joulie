@@ -39,12 +39,15 @@ class HistoryViewModelTest {
         dispatcher = StandardTestDispatcher()
         Dispatchers.setMain(dispatcher)
     }
-    @After fun resetMainDispatcher() { Dispatchers.resetMain() }
+
+    @After fun resetMainDispatcher() {
+        Dispatchers.resetMain()
+    }
 
     private fun build(
         events: List<ChargeEventEntity> = emptyList(),
         activeCarId: Int = 1,
-        distanceUnit: String = "km"
+        distanceUnit: String = "km",
     ): VmFixture {
         val store = MutableStateFlow(events)
         val queries = FakeChargeEventQueries(store)
@@ -61,12 +64,17 @@ class HistoryViewModelTest {
         val queries: FakeChargeEventQueries,
         val writer: FakeChargeEventWriter,
         val scheduler: FakeBackupScheduler,
-        val store: MutableStateFlow<List<ChargeEventEntity>>
+        val store: MutableStateFlow<List<ChargeEventEntity>>,
     )
 
     private fun event(id: Int, date: Long, type: String = "AC", carId: Int = 1) = ChargeEventEntity(
-        id = id, carId = carId, eventDate = date, odometerKm = id * 100.0, kwhAdded = 10.0,
-        chargeType = type, createdAt = 0L
+        id = id,
+        carId = carId,
+        eventDate = date,
+        odometerKm = id * 100.0,
+        kwhAdded = 10.0,
+        chargeType = type,
+        createdAt = 0L,
     )
 
     @Test
@@ -78,18 +86,26 @@ class HistoryViewModelTest {
 
     @Test
     fun eventsLoadedAndSortedNewestFirst() = runTest {
-        val (vm, _, _, _, _) = build(events = listOf(
-            event(1, 100L), event(2, 200L), event(3, 300L)
-        ))
+        val (vm, _, _, _, _) = build(
+            events = listOf(
+                event(1, 100L),
+                event(2, 200L),
+                event(3, 300L),
+            ),
+        )
         val state = vm.uiState.first { it.rows.size == 3 }
         assertEquals(listOf(3, 2, 1), state.rows.map { it.event.id })
     }
 
     @Test
     fun filterAc_filtersDcOut() = runTest {
-        val (vm, _, _, _, _) = build(events = listOf(
-            event(1, 100L, "AC"), event(2, 200L, "DC"), event(3, 300L, "AC")
-        ))
+        val (vm, _, _, _, _) = build(
+            events = listOf(
+                event(1, 100L, "AC"),
+                event(2, 200L, "DC"),
+                event(3, 300L, "AC"),
+            ),
+        )
         vm.uiState.first { it.rows.size == 3 }
         vm.setFilter(ChargeTypeFilter.AC)
         val state = vm.uiState.first { it.filter == ChargeTypeFilter.AC && it.rows.size == 2 }
@@ -98,9 +114,13 @@ class HistoryViewModelTest {
 
     @Test
     fun filterDc_filtersAcOut() = runTest {
-        val (vm, _, _, _, _) = build(events = listOf(
-            event(1, 100L, "AC"), event(2, 200L, "DC"), event(3, 300L, "AC")
-        ))
+        val (vm, _, _, _, _) = build(
+            events = listOf(
+                event(1, 100L, "AC"),
+                event(2, 200L, "DC"),
+                event(3, 300L, "AC"),
+            ),
+        )
         vm.uiState.first { it.rows.size == 3 }
         vm.setFilter(ChargeTypeFilter.DC)
         val state = vm.uiState.first { it.filter == ChargeTypeFilter.DC && it.rows.size == 1 }

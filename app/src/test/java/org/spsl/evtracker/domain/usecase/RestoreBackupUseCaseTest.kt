@@ -30,19 +30,20 @@ class RestoreBackupUseCaseTest {
         callRecorder: MutableList<String>? = null,
         cars: List<CarEntity> = emptyList(),
         events: List<ChargeEventEntity> = emptyList(),
-        locations: List<CustomLocationEntity> = emptyList()
+        locations: List<CustomLocationEntity> = emptyList(),
     ): RestoreSetup {
         val backupRepo = FakeBackupRepository(remoteJson = remoteJson)
         val transactionRunner = FakeRestoreTransactionRunner(callRecorder)
         val snapshotWriter = FakeRestoreSnapshotWriter(callRecorder)
         val carReader = FakeCarReader(cars)
-        val queries = FakeChargeEventQueries(); queries.seed(events)
+        val queries = FakeChargeEventQueries()
+        queries.seed(events)
         val locationReader = FakeLocationReader(locations)
         val settingsWriter = FakeSettingsWriter()
         val scheduler = FakeBackupScheduler()
         val useCase = RestoreBackupUseCase(
             backupRepo, serializer, transactionRunner, snapshotWriter,
-            carReader, queries, locationReader, settingsWriter, scheduler
+            carReader, queries, locationReader, settingsWriter, scheduler,
         )
         return RestoreSetup(useCase, transactionRunner, snapshotWriter, settingsWriter, scheduler)
     }
@@ -52,7 +53,7 @@ class RestoreBackupUseCaseTest {
         val txn: FakeRestoreTransactionRunner,
         val snap: FakeRestoreSnapshotWriter,
         val settings: FakeSettingsWriter,
-        val scheduler: FakeBackupScheduler
+        val scheduler: FakeBackupScheduler,
     )
 
     @Test
@@ -81,7 +82,7 @@ class RestoreBackupUseCaseTest {
             cars = listOf(CarEntity(id = 1, name = "T", createdAt = 0L)),
             events = listOf(ChargeEventEntity(id = 7, carId = 1, eventDate = 1L, odometerKm = 100.0, kwhAdded = 10.0)),
             locations = listOf(CustomLocationEntity(id = 1, label = "Home", useCount = 1, lastUsed = 0L)),
-            now = 0L
+            now = 0L,
         )
         val s = build(remoteJson = serializer.toJson(data))
         val r = s.useCase()
@@ -101,7 +102,7 @@ class RestoreBackupUseCaseTest {
         val s = build(remoteJson = serializer.toJson(data), callRecorder = recorder)
         s.useCase()
         val snapIdx = recorder.indexOf("snapshot")
-        val txnIdx  = recorder.indexOf("transaction")
+        val txnIdx = recorder.indexOf("transaction")
         assertTrue("expected snapshot before transaction; recorder=$recorder", snapIdx in 0 until txnIdx)
     }
 
@@ -127,11 +128,13 @@ class RestoreBackupUseCaseTest {
     @Test
     fun success_roundTripPreservesAllEntities() = runTest {
         val cars = listOf(CarEntity(id = 1, name = "T", createdAt = 1L))
-        val events = listOf(ChargeEventEntity(
-            id = 7, carId = 1, eventDate = 2L, odometerKm = 100.0, kwhAdded = 10.0,
-            chargeType = "DC", costTotal = 5.0, costPerKwh = 0.5, currency = "EUR",
-            location = "Home", note = "n"
-        ))
+        val events = listOf(
+            ChargeEventEntity(
+                id = 7, carId = 1, eventDate = 2L, odometerKm = 100.0, kwhAdded = 10.0,
+                chargeType = "DC", costTotal = 5.0, costPerKwh = 0.5, currency = "EUR",
+                location = "Home", note = "n",
+            ),
+        )
         val locations = listOf(CustomLocationEntity(id = 1, label = "Home", useCount = 3, lastUsed = 9L))
         val data = BackupData.fromEntities(cars, events, locations, now = 0L)
         val s = build(remoteJson = serializer.toJson(data))

@@ -4,11 +4,11 @@ import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import javax.inject.Singleton
 import org.spsl.evtracker.data.backup.AndroidDriveAuthManager
 import org.spsl.evtracker.data.backup.GoogleDriveRemoteSource
 import org.spsl.evtracker.domain.backup.DriveAuthManager
 import org.spsl.evtracker.domain.backup.DriveRemoteSource
+import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)

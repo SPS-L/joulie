@@ -11,13 +11,13 @@ data class SaveChargeEventInput(
     val chargeType: String,
     val costInput: CostInput? = null,
     val location: String? = null,
-    val note: String = ""
+    val note: String = "",
 )
 
 data class CostInput(
     val value: Double,
     val mode: CostMode,
-    val currency: String
+    val currency: String,
 )
 
 sealed class SaveChargeEventResult {

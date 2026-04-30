@@ -3,7 +3,6 @@ package org.spsl.evtracker.ui.dashboard
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
@@ -27,6 +26,7 @@ import org.spsl.evtracker.domain.repository.CarReader
 import org.spsl.evtracker.domain.repository.SettingsReader
 import org.spsl.evtracker.domain.repository.SettingsWriter
 import org.spsl.evtracker.domain.usecase.ObserveDashboardStatsUseCase
+import javax.inject.Inject
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
@@ -34,7 +34,7 @@ class DashboardViewModel @Inject constructor(
     private val observeDashboardStats: ObserveDashboardStatsUseCase,
     carReader: CarReader,
     settingsReader: SettingsReader,
-    private val settingsWriter: SettingsWriter
+    private val settingsWriter: SettingsWriter,
 ) : ViewModel() {
 
     private val period = MutableStateFlow<DashboardPeriod>(DashboardPeriod.Last30Days)
@@ -42,7 +42,7 @@ class DashboardViewModel @Inject constructor(
 
     private val _events = MutableSharedFlow<DashboardEvent>(
         extraBufferCapacity = 1,
-        onBufferOverflow = BufferOverflow.DROP_OLDEST
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
     )
     val events: SharedFlow<DashboardEvent> = _events.asSharedFlow()
 
@@ -55,7 +55,7 @@ class DashboardViewModel @Inject constructor(
         val activeCarId: Int,
         val primaryMetric: String,
         val distanceUnit: String,
-        val currency: String
+        val currency: String,
     )
 
     private val inputsFlow: Flow<Inputs> = combine(
@@ -63,7 +63,7 @@ class DashboardViewModel @Inject constructor(
         settingsReader.activeCarId,
         settingsReader.primaryMetric,
         settingsReader.distanceUnit,
-        settingsReader.currency
+        settingsReader.currency,
     ) { cars, active, metric, unit, ccy -> Inputs(cars, active, metric, unit, ccy) }
 
     val uiState: StateFlow<DashboardScreenState> =
@@ -76,17 +76,21 @@ class DashboardViewModel @Inject constructor(
                 primaryMetric = inputs.primaryMetric,
                 distanceUnit = inputs.distanceUnit,
                 currency = inputs.currency,
-                dashboard = dashboard
+                dashboard = dashboard,
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DashboardScreenState())
 
-    fun selectPeriod(newPeriod: DashboardPeriod) { period.value = newPeriod }
+    fun selectPeriod(newPeriod: DashboardPeriod) {
+        period.value = newPeriod
+    }
 
     fun selectCustomRange(from: Long, to: Long) {
         period.value = DashboardPeriod.Custom(fromMillis = from, toMillis = to)
     }
 
-    fun selectFilter(newFilter: ChargeTypeFilter) { filter.value = newFilter }
+    fun selectFilter(newFilter: ChargeTypeFilter) {
+        filter.value = newFilter
+    }
 
     fun selectCar(carId: Int) {
         viewModelScope.launch { settingsWriter.setActiveCarId(carId) }

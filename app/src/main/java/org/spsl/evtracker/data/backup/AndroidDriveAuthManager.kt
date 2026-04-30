@@ -6,17 +6,16 @@ import com.google.android.gms.auth.api.identity.AuthorizationResult
 import com.google.android.gms.auth.api.identity.Identity
 import com.google.android.gms.common.api.Scope
 import dagger.hilt.android.qualifiers.ApplicationContext
-import javax.inject.Inject
-import javax.inject.Singleton
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.spsl.evtracker.domain.backup.DriveAuthManager
 import org.spsl.evtracker.domain.backup.DriveAuthManager.AuthResult
+import javax.inject.Inject
+import javax.inject.Singleton
+import kotlin.coroutines.resume
 
 @Singleton
 class AndroidDriveAuthManager @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
 ) : DriveAuthManager {
 
     private val client = Identity.getAuthorizationClient(context)
@@ -42,8 +41,11 @@ class AndroidDriveAuthManager @Inject constructor(
                     cont.resume(AuthResult.NeedsResolution(pending.intentSender))
                 } else {
                     val token = result.accessToken
-                    if (!token.isNullOrEmpty()) cont.resume(AuthResult.Success(token))
-                    else cont.resume(AuthResult.Failed("no token returned"))
+                    if (!token.isNullOrEmpty()) {
+                        cont.resume(AuthResult.Success(token))
+                    } else {
+                        cont.resume(AuthResult.Failed("no token returned"))
+                    }
                 }
             }
             .addOnFailureListener { t ->

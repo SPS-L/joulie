@@ -12,18 +12,19 @@ import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.setupWithNavController
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
-import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.spsl.evtracker.data.repository.SettingsRepository
 import org.spsl.evtracker.databinding.ActivityMainBinding
 import org.spsl.evtracker.domain.usecase.ResetAllDataUseCase
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
 
     @Inject lateinit var settingsRepository: SettingsRepository
+
     @Inject lateinit var resetAllDataUseCase: ResetAllDataUseCase
 
     private val isLoading = MutableStateFlow(true)
@@ -48,7 +49,7 @@ class MainActivity : AppCompatActivity() {
             R.id.wizardFragment,
             R.id.chargeEditFragment,
             R.id.carsFragment,
-            R.id.manageLocationsFragment
+            R.id.manageLocationsFragment,
         )
         navController.addOnDestinationChangedListener { _, dest, _ ->
             binding.bottomNav.isVisible = dest.id !in hideOn

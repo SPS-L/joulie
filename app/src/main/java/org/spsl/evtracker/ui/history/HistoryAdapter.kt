@@ -12,7 +12,7 @@ import org.spsl.evtracker.ui.common.DateFormat
 import org.spsl.evtracker.ui.common.MoneyFormat
 
 class HistoryAdapter(
-    private val onRowClick: (Int) -> Unit
+    private val onRowClick: (Int) -> Unit,
 ) : ListAdapter<HistoryRow, HistoryAdapter.ViewHolder>(Diff) {
 
     private var distanceUnit: String = "km"

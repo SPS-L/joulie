@@ -6,11 +6,11 @@ import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.gson.GsonFactory
 import com.google.api.services.drive.Drive
 import com.google.api.services.drive.model.File
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.spsl.evtracker.domain.backup.DriveRemoteSource
+import javax.inject.Inject
+import javax.inject.Singleton
 
 @Singleton
 class GoogleDriveRemoteSource @Inject constructor() : DriveRemoteSource {

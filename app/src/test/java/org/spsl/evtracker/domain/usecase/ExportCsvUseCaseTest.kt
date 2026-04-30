@@ -1,10 +1,10 @@
 package org.spsl.evtracker.domain.usecase
 
-import java.io.StringWriter
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.spsl.evtracker.data.local.entity.ChargeEventEntity
+import java.io.StringWriter
 
 class ExportCsvUseCaseTest {
 
@@ -14,12 +14,12 @@ class ExportCsvUseCaseTest {
         csvFileSink = object : org.spsl.evtracker.domain.backup.CsvFileSink {
             override suspend fun write(carName: String, body: (java.io.Writer) -> Unit) =
                 throw NotImplementedError("not used in this test class")
-        }
+        },
     )
 
     private val sampleEvents = listOf(
         ChargeEventEntity(id = 1, carId = 1, eventDate = 1714044000000L, odometerKm = 1000.0, kwhAdded = 10.0, chargeType = "AC", costTotal = 5.0, currency = "EUR", note = "n"),
-        ChargeEventEntity(id = 2, carId = 1, eventDate = 1714130400000L, odometerKm = 1100.0, kwhAdded = 12.0, chargeType = "DC")
+        ChargeEventEntity(id = 2, carId = 1, eventDate = 1714130400000L, odometerKm = 1100.0, kwhAdded = 12.0, chargeType = "DC"),
     )
 
     @Test

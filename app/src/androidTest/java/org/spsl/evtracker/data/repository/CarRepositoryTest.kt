@@ -45,8 +45,8 @@ class CarRepositoryTest {
                     carId = carId,
                     eventDate = System.currentTimeMillis(),
                     odometerKm = 100.0 * (it + 1),
-                    kwhAdded = 10.0
-                )
+                    kwhAdded = 10.0,
+                ),
             )
         }
 

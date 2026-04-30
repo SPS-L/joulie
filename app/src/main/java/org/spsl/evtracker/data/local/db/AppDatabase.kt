@@ -15,10 +15,10 @@ import org.spsl.evtracker.data.local.entity.CustomLocationEntity
     entities = [
         CarEntity::class,
         ChargeEventEntity::class,
-        CustomLocationEntity::class
+        CustomLocationEntity::class,
     ],
     version = 3,
-    exportSchema = true
+    exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
 
@@ -32,7 +32,7 @@ abstract class AppDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(
                     "ALTER TABLE charge_events " +
-                        "ADD COLUMN chargeType TEXT NOT NULL DEFAULT 'AC'"
+                        "ADD COLUMN chargeType TEXT NOT NULL DEFAULT 'AC'",
                 )
             }
         }
@@ -46,7 +46,7 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE charge_events ADD COLUMN location TEXT")
                 db.execSQL(
                     "ALTER TABLE charge_events " +
-                        "ADD COLUMN note TEXT NOT NULL DEFAULT ''"
+                        "ADD COLUMN note TEXT NOT NULL DEFAULT ''",
                 )
 
                 // New custom_locations table.
@@ -56,11 +56,11 @@ abstract class AppDatabase : RoomDatabase() {
                         "label TEXT NOT NULL, " +
                         "useCount INTEGER NOT NULL DEFAULT 1, " +
                         "lastUsed INTEGER NOT NULL" +
-                        ")"
+                        ")",
                 )
                 db.execSQL(
                     "CREATE UNIQUE INDEX IF NOT EXISTS index_custom_locations_label " +
-                        "ON custom_locations(label)"
+                        "ON custom_locations(label)",
                 )
 
                 // Indices on charge_events. IF NOT EXISTS keeps each statement
@@ -68,15 +68,15 @@ abstract class AppDatabase : RoomDatabase() {
                 // the existing table.
                 db.execSQL(
                     "CREATE INDEX IF NOT EXISTS index_charge_events_carId_eventDate " +
-                        "ON charge_events(carId, eventDate)"
+                        "ON charge_events(carId, eventDate)",
                 )
                 db.execSQL(
                     "CREATE INDEX IF NOT EXISTS index_charge_events_chargeType " +
-                        "ON charge_events(chargeType)"
+                        "ON charge_events(chargeType)",
                 )
                 db.execSQL(
                     "CREATE INDEX IF NOT EXISTS index_charge_events_location " +
-                        "ON charge_events(location)"
+                        "ON charge_events(location)",
                 )
             }
         }

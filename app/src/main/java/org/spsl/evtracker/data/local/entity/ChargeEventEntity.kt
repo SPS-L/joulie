@@ -12,14 +12,14 @@ import androidx.room.PrimaryKey
             entity = CarEntity::class,
             parentColumns = ["id"],
             childColumns = ["carId"],
-            onDelete = ForeignKey.CASCADE
-        )
+            onDelete = ForeignKey.CASCADE,
+        ),
     ],
     indices = [
         Index(value = ["carId", "eventDate"]),
         Index("chargeType"),
-        Index("location")
-    ]
+        Index("location"),
+    ],
 )
 data class ChargeEventEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
@@ -33,5 +33,5 @@ data class ChargeEventEntity(
     val currency: String? = null,
     val location: String? = null,
     val note: String = "",
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
 )

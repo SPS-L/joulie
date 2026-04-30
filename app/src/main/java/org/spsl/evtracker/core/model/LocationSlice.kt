@@ -2,7 +2,7 @@ package org.spsl.evtracker.core.model
 
 data class LocationSlice(
     val label: String,
-    val count: Int
+    val count: Int,
 ) {
     val isOther: Boolean get() = label == OTHER_KEY
 

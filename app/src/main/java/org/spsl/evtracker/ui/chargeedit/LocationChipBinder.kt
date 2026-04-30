@@ -15,14 +15,14 @@ object LocationChipBinder {
         chipGroup: ChipGroup,
         custom: List<String>,
         onChipClick: (String) -> Unit,
-        onAddClick: () -> Unit
+        onAddClick: () -> Unit,
     ) {
         chipGroup.removeAllViews()
         val ctx: Context = chipGroup.context
         val fixed = listOf(
             ctx.getString(R.string.location_home),
             ctx.getString(R.string.location_work),
-            ctx.getString(R.string.location_public)
+            ctx.getString(R.string.location_public),
         )
         (fixed + custom).forEach { label ->
             val chip = newChip(ctx, label)

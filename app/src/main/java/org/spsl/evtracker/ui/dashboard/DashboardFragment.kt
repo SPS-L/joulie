@@ -39,7 +39,7 @@ class DashboardFragment : Fragment() {
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
-        savedInstanceState: Bundle?
+        savedInstanceState: Bundle?,
     ): View {
         _binding = FragmentDashboardBinding.inflate(inflater, container, false)
         return binding.root
@@ -67,10 +67,22 @@ class DashboardFragment : Fragment() {
         binding.dashboardPeriodTabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab) {
                 when (tab.position) {
-                    0 -> { selectedTabBeforePicker = 0; viewModel.selectPeriod(DashboardPeriod.SincePreviousCharge) }
-                    1 -> { selectedTabBeforePicker = 1; viewModel.selectPeriod(DashboardPeriod.Last7Days) }
-                    2 -> { selectedTabBeforePicker = 2; viewModel.selectPeriod(DashboardPeriod.Last30Days) }
-                    3 -> { selectedTabBeforePicker = 3; viewModel.selectPeriod(DashboardPeriod.Year) }
+                    0 -> {
+                        selectedTabBeforePicker = 0
+                        viewModel.selectPeriod(DashboardPeriod.SincePreviousCharge)
+                    }
+                    1 -> {
+                        selectedTabBeforePicker = 1
+                        viewModel.selectPeriod(DashboardPeriod.Last7Days)
+                    }
+                    2 -> {
+                        selectedTabBeforePicker = 2
+                        viewModel.selectPeriod(DashboardPeriod.Last30Days)
+                    }
+                    3 -> {
+                        selectedTabBeforePicker = 3
+                        viewModel.selectPeriod(DashboardPeriod.Year)
+                    }
                     4 -> showCustomDatePicker()
                 }
             }
@@ -182,9 +194,12 @@ class DashboardFragment : Fragment() {
     }
 
     private data class CardSet(
-        val primaryValue: String?, val primaryLabel: String,
-        val secondaryAValue: String?, val secondaryALabel: String,
-        val secondaryBValue: String?, val secondaryBLabel: String
+        val primaryValue: String?,
+        val primaryLabel: String,
+        val secondaryAValue: String?,
+        val secondaryALabel: String,
+        val secondaryBValue: String?,
+        val secondaryBLabel: String,
     )
 
     private fun pickMetrics(primaryMetric: String, stats: Stats): CardSet {
@@ -194,18 +209,18 @@ class DashboardFragment : Fragment() {
         val mi = format(stats.avgMiPerKwh)
         return when (primaryMetric) {
             "kwh_per_100km" -> CardSet(kwh100, getString(R.string.metric_kwh_per_100km), km, getString(R.string.metric_km_per_kwh), mi, getString(R.string.metric_mi_per_kwh))
-            "mi_per_kwh"    -> CardSet(mi, getString(R.string.metric_mi_per_kwh), km, getString(R.string.metric_km_per_kwh), kwh100, getString(R.string.metric_kwh_per_100km))
-            else            -> CardSet(km, getString(R.string.metric_km_per_kwh), mi, getString(R.string.metric_mi_per_kwh), kwh100, getString(R.string.metric_kwh_per_100km))
+            "mi_per_kwh" -> CardSet(mi, getString(R.string.metric_mi_per_kwh), km, getString(R.string.metric_km_per_kwh), kwh100, getString(R.string.metric_kwh_per_100km))
+            else -> CardSet(km, getString(R.string.metric_km_per_kwh), mi, getString(R.string.metric_mi_per_kwh), kwh100, getString(R.string.metric_kwh_per_100km))
         }
     }
 
     private fun renderCostCard(state: DashboardScreenState) {
         val stats = state.dashboard.stats
-        val showCost = stats != null
-            && stats.totalCost != null
-            && stats.currency != null
-            && stats.costPerKm != null
-            && !state.dashboard.showMultiCurrencyBanner
+        val showCost = stats != null &&
+            stats.totalCost != null &&
+            stats.currency != null &&
+            stats.costPerKm != null &&
+            !state.dashboard.showMultiCurrencyBanner
         binding.dashboardCardCost.isVisible = showCost
         if (showCost && stats != null) {
             val ccy = stats.currency!!

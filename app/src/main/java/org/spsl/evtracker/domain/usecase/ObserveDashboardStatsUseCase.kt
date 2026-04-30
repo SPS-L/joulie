@@ -1,6 +1,5 @@
 package org.spsl.evtracker.domain.usecase
 
-import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -17,13 +16,14 @@ import org.spsl.evtracker.domain.repository.ChargeEventQueries
 import org.spsl.evtracker.domain.repository.SettingsReader
 import org.spsl.evtracker.domain.service.DateRangeResolver
 import org.spsl.evtracker.domain.service.StatsCalculator
+import javax.inject.Inject
 
 class ObserveDashboardStatsUseCase @Inject constructor(
     private val carReader: CarReader,
     private val chargeEventQueries: ChargeEventQueries,
     private val settingsReader: SettingsReader,
     private val statsCalculator: StatsCalculator,
-    private val dateRangeResolver: DateRangeResolver
+    private val dateRangeResolver: DateRangeResolver,
 ) {
     @OptIn(ExperimentalCoroutinesApi::class)
     fun observe(period: DashboardPeriod, filter: ChargeTypeFilter): Flow<DashboardUiState> {
@@ -44,7 +44,7 @@ class ObserveDashboardStatsUseCase @Inject constructor(
     private fun buildUiState(
         allEventsForCar: List<ChargeEventEntity>,
         period: DashboardPeriod,
-        filter: ChargeTypeFilter
+        filter: ChargeTypeFilter,
     ): DashboardUiState {
         val periodEvents = when (period) {
             DashboardPeriod.SincePreviousCharge -> allEventsForCar.takeLast(2)
@@ -55,8 +55,8 @@ class ObserveDashboardStatsUseCase @Inject constructor(
         }
         val filtered = when (filter) {
             ChargeTypeFilter.ALL -> periodEvents
-            ChargeTypeFilter.AC  -> periodEvents.filter { it.chargeType == "AC" }
-            ChargeTypeFilter.DC  -> periodEvents.filter { it.chargeType == "DC" }
+            ChargeTypeFilter.AC -> periodEvents.filter { it.chargeType == "AC" }
+            ChargeTypeFilter.DC -> periodEvents.filter { it.chargeType == "DC" }
         }
         return if (filtered.isEmpty()) {
             DashboardUiState(emptyState = EmptyState.NoEvents)

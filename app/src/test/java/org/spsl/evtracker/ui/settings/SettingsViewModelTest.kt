@@ -1,13 +1,9 @@
 package org.spsl.evtracker.ui.settings
 
 import androidx.work.WorkManager
-import org.mockito.kotlin.any
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.verify
-import java.io.IOException
 import kotlinx.coroutines.CoroutineStart
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -23,6 +19,9 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.mockito.kotlin.any
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
 import org.spsl.evtracker.R
 import org.spsl.evtracker.core.model.SettingsEvent
 import org.spsl.evtracker.data.local.entity.CarEntity
@@ -43,21 +42,27 @@ import org.spsl.evtracker.testing.FakeRestoreSnapshotWriter
 import org.spsl.evtracker.testing.FakeRestoreTransactionRunner
 import org.spsl.evtracker.testing.FakeSettingsReader
 import org.spsl.evtracker.testing.FakeSettingsWriter
+import java.io.IOException
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SettingsViewModelTest {
 
     private val dispatcher = StandardTestDispatcher()
 
-    @Before fun setMain() { Dispatchers.setMain(dispatcher) }
-    @After fun reset() { Dispatchers.resetMain() }
+    @Before fun setMain() {
+        Dispatchers.setMain(dispatcher)
+    }
+
+    @After fun reset() {
+        Dispatchers.resetMain()
+    }
 
     private fun build(
         remoteJson: String? = null,
         readThrows: Throwable? = null,
         activeCarId: Int = -1,
         seededCars: List<CarEntity> = emptyList(),
-        seededLocations: List<CustomLocationEntity> = emptyList()
+        seededLocations: List<CustomLocationEntity> = emptyList(),
     ): Setup {
         val reader = FakeSettingsReader(activeCarIdInit = activeCarId)
         val writer = FakeSettingsWriter()
@@ -73,7 +78,7 @@ class SettingsViewModelTest {
             chargeEventQueries = FakeChargeEventQueries(),
             locationReader = FakeLocationReader(),
             settingsWriter = writer,
-            backupScheduler = scheduler
+            backupScheduler = scheduler,
         )
         val locationReader = FakeLocationReader(seededLocations)
         val carReader = FakeCarReader(seededCars)
@@ -89,10 +94,12 @@ class SettingsViewModelTest {
         val vm = SettingsViewModel(
             reader, writer, locationReader, carReader,
             backupRepo, scheduler, workManager, restoreUseCase,
-            resetActive, resetAll, exportCsv
+            resetActive, resetAll, exportCsv,
         )
-        return Setup(vm, reader, writer, backupRepo, scheduler, workManager,
-                     locationReader, carReader, csvSink, chargeEventQueries)
+        return Setup(
+            vm, reader, writer, backupRepo, scheduler, workManager,
+            locationReader, carReader, csvSink, chargeEventQueries,
+        )
     }
 
     private data class Setup(
@@ -105,13 +112,13 @@ class SettingsViewModelTest {
         val locationReader: FakeLocationReader,
         val carReader: FakeCarReader,
         val csvSink: FakeCsvFileSink,
-        val chargeEventQueries: FakeChargeEventQueries
+        val chargeEventQueries: FakeChargeEventQueries,
     )
 
     /** Like FakeBackupRepository but lets a test throw from readRemoteBackup. */
     private class ThrowingBackupRepository(
         var remoteJson: String? = null,
-        var throwOnRead: Throwable? = null
+        var throwOnRead: Throwable? = null,
     ) : org.spsl.evtracker.domain.backup.BackupRepository {
         override suspend fun backupCurrentData() {}
         override suspend fun readRemoteBackup(): String? {
@@ -202,7 +209,7 @@ class SettingsViewModelTest {
         val data = org.spsl.evtracker.core.model.BackupData.fromEntities(emptyList(), emptyList(), emptyList(), now = 0L)
         val json = org.spsl.evtracker.domain.service.BackupSerializer().toJson(data)
         val s = build(remoteJson = json)
-        s.vm.onDriveAuthGranted()                  // primes pendingRestoreLabel
+        s.vm.onDriveAuthGranted() // primes pendingRestoreLabel
         advanceUntilIdle()
 
         val received = mutableListOf<SettingsEvent>()
@@ -285,7 +292,7 @@ class SettingsViewModelTest {
         val s = build()
         s.reader.setDistanceUnit("miles")
         s.reader.setPrimaryMetric("mi_per_kwh")
-        advanceUntilIdle()  // let VM observe the new state
+        advanceUntilIdle() // let VM observe the new state
         val received = mutableListOf<SettingsEvent>()
         val job = launch(start = CoroutineStart.UNDISPATCHED) { s.vm.events.collect { received += it } }
         s.vm.onPrimaryMetricSelected("km_per_kwh")
@@ -392,7 +399,12 @@ class SettingsViewModelTest {
     @Test
     fun exportCsv_success_emitsLaunchIntent() = runTest {
         val car = CarEntity(
-            id = 5, name = "Tesla", make = "T", model = "M3", year = 2024, batteryKwh = 75.0
+            id = 5,
+            name = "Tesla",
+            make = "T",
+            model = "M3",
+            year = 2024,
+            batteryKwh = 75.0,
         )
         val s = build(activeCarId = 5, seededCars = listOf(car))
         advanceUntilIdle()
@@ -407,7 +419,12 @@ class SettingsViewModelTest {
     @Test
     fun exportCsv_ioException_emitsShowError() = runTest {
         val car = CarEntity(
-            id = 5, name = "Tesla", make = "T", model = "M3", year = 2024, batteryKwh = 75.0
+            id = 5,
+            name = "Tesla",
+            make = "T",
+            model = "M3",
+            year = 2024,
+            batteryKwh = 75.0,
         )
         val s = build(activeCarId = 5, seededCars = listOf(car))
         advanceUntilIdle()
@@ -424,7 +441,7 @@ class SettingsViewModelTest {
     fun customLocationCount_reflectsLocationReaderEmission() = runTest {
         val locations = listOf(
             CustomLocationEntity(id = 1, label = "A", useCount = 1, lastUsed = 1L),
-            CustomLocationEntity(id = 2, label = "B", useCount = 1, lastUsed = 2L)
+            CustomLocationEntity(id = 2, label = "B", useCount = 1, lastUsed = 2L),
         )
         val s = build(seededLocations = locations)
         advanceUntilIdle()

@@ -5,6 +5,7 @@ import android.net.Uri
 import android.os.Environment
 import androidx.core.content.FileProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
+import org.spsl.evtracker.domain.backup.CsvFileSink
 import java.io.File
 import java.io.Writer
 import java.text.SimpleDateFormat
@@ -12,11 +13,10 @@ import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
-import org.spsl.evtracker.domain.backup.CsvFileSink
 
 @Singleton
 class AndroidCsvFileSink @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
 ) : CsvFileSink {
     override suspend fun write(carName: String, body: (Writer) -> Unit): Uri {
         val timestamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date())

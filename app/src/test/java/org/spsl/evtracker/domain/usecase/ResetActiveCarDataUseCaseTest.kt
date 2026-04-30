@@ -14,8 +14,12 @@ import org.spsl.evtracker.testing.FakeChargeEventWriter
 class ResetActiveCarDataUseCaseTest {
 
     private fun event(id: Int, carId: Int): ChargeEventEntity = ChargeEventEntity(
-        id = id, carId = carId, eventDate = 1_700_000_000_000L + id,
-        odometerKm = 100.0 + id, kwhAdded = 20.0, chargeType = "AC"
+        id = id,
+        carId = carId,
+        eventDate = 1_700_000_000_000L + id,
+        odometerKm = 100.0 + id,
+        kwhAdded = 20.0,
+        chargeType = "AC",
     )
 
     private fun build(): Triple<ResetActiveCarDataUseCase, FakeChargeEventQueries, FakeBackupScheduler> {

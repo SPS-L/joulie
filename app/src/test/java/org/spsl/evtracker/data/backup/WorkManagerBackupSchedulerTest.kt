@@ -1,4 +1,4 @@
-@file:Suppress("RestrictedApi")  // accessing WorkRequest.workSpec is the standard way to unit-test request shape
+@file:Suppress("RestrictedApi") // accessing WorkRequest.workSpec is the standard way to unit-test request shape
 
 package org.spsl.evtracker.data.backup
 
@@ -7,7 +7,6 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequest
 import androidx.work.WorkManager
-import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -20,6 +19,7 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.spsl.evtracker.domain.backup.BackupScheduler
 import org.spsl.evtracker.testing.FakeSettingsReader
+import java.util.concurrent.TimeUnit
 
 class WorkManagerBackupSchedulerTest {
 
@@ -41,7 +41,7 @@ class WorkManagerBackupSchedulerTest {
         verify(workManager).enqueueUniqueWork(
             eq(BackupScheduler.UNIQUE_WORK_NAME),
             eq(ExistingWorkPolicy.REPLACE),
-            any<OneTimeWorkRequest>()
+            any<OneTimeWorkRequest>(),
         )
     }
 
@@ -57,7 +57,7 @@ class WorkManagerBackupSchedulerTest {
         verify(workManager, times(5)).enqueueUniqueWork(
             eq(BackupScheduler.UNIQUE_WORK_NAME),
             eq(ExistingWorkPolicy.REPLACE),
-            any<OneTimeWorkRequest>()
+            any<OneTimeWorkRequest>(),
         )
     }
 
@@ -74,7 +74,7 @@ class WorkManagerBackupSchedulerTest {
         verify(workManager).enqueueUniqueWork(
             eq(BackupScheduler.UNIQUE_WORK_NAME),
             eq(ExistingWorkPolicy.REPLACE),
-            captor.capture()
+            captor.capture(),
         )
         val spec = captor.firstValue.workSpec
         assertEquals(NetworkType.CONNECTED, spec.constraints.requiredNetworkType)

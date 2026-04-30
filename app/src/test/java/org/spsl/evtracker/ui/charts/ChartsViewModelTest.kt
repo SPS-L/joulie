@@ -1,6 +1,5 @@
 package org.spsl.evtracker.ui.charts
 
-import kotlin.coroutines.EmptyCoroutineContext
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -32,6 +31,7 @@ import org.spsl.evtracker.domain.usecase.ObserveChartsModelsUseCase
 import org.spsl.evtracker.testing.FakeCarReader
 import org.spsl.evtracker.testing.FakeChargeEventQueries
 import org.spsl.evtracker.testing.FakeSettingsReader
+import kotlin.coroutines.EmptyCoroutineContext
 
 /**
  * NOTE on test pattern (matches DashboardViewModelTest.kt:83/134):
@@ -73,7 +73,7 @@ class ChartsViewModelTest {
         settings = FakeSettingsReader(activeCarIdInit = 1, distanceUnitInit = "km")
         useCase = ObserveChartsModelsUseCase(
             carReader, queries, settings, StatsCalculator(), DateRangeResolver(),
-            now = now, aggregationContext = EmptyCoroutineContext
+            now = now, aggregationContext = EmptyCoroutineContext,
         )
         vm = ChartsViewModel(useCase, settings)
     }
@@ -81,14 +81,14 @@ class ChartsViewModelTest {
     private fun ev(date: Long, odo: Double) = ChargeEventEntity(
         id = 0, carId = 1, eventDate = date, odometerKm = odo, kwhAdded = 10.0,
         chargeType = "AC", costTotal = null, costPerKwh = null,
-        currency = null, location = null, note = "", createdAt = 0L
+        currency = null, location = null, note = "", createdAt = 0L,
     )
 
     /** Helper: keep a permanent subscriber on uiState so WhileSubscribed stays active
      *  across several state transitions in one test. Caller cancels via the returned Job. */
     private suspend fun keepSubscribed(
         scope: kotlinx.coroutines.CoroutineScope,
-        sink: MutableList<ChartsScreenState> = mutableListOf()
+        sink: MutableList<ChartsScreenState> = mutableListOf(),
     ): Pair<Job, MutableList<ChartsScreenState>> {
         val job = scope.launch(start = CoroutineStart.UNDISPATCHED) {
             vm.uiState.collect { sink += it }

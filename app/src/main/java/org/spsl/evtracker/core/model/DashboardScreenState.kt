@@ -10,7 +10,7 @@ data class DashboardScreenState(
     val primaryMetric: String = "km_per_kwh",
     val distanceUnit: String = "km",
     val currency: String = "EUR",
-    val dashboard: DashboardUiState = DashboardUiState()
+    val dashboard: DashboardUiState = DashboardUiState(),
 )
 
 sealed class DashboardEvent {

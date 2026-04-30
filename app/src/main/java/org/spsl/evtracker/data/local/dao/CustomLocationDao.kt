@@ -33,7 +33,7 @@ abstract class CustomLocationDao {
     @Transaction
     open suspend fun recordUsage(label: String, now: Long) {
         val rowId = insertIfMissing(
-            CustomLocationEntity(label = label, useCount = 1, lastUsed = now)
+            CustomLocationEntity(label = label, useCount = 1, lastUsed = now),
         )
         if (rowId == -1L) {
             // Insert was IGNORED because the label already exists — bump the counter.

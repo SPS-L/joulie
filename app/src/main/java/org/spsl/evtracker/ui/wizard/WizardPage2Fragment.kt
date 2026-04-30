@@ -18,7 +18,7 @@ import org.spsl.evtracker.databinding.FragmentWizardPage2Binding
 class WizardPage2Fragment : Fragment() {
 
     private val viewModel: WizardViewModel by viewModels(
-        ownerProducer = { requireParentFragment() }
+        ownerProducer = { requireParentFragment() },
     )
 
     private var _binding: FragmentWizardPage2Binding? = null
@@ -27,7 +27,7 @@ class WizardPage2Fragment : Fragment() {
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
-        savedInstanceState: Bundle?
+        savedInstanceState: Bundle?,
     ): View {
         _binding = FragmentWizardPage2Binding.inflate(inflater, container, false)
         return binding.root
@@ -38,9 +38,9 @@ class WizardPage2Fragment : Fragment() {
 
         binding.wizardPage2MetricGroup.setOnCheckedChangeListener { _, checkedId ->
             val metric = when (checkedId) {
-                R.id.wizard_page2_metric_km_per_kwh    -> "km_per_kwh"
+                R.id.wizard_page2_metric_km_per_kwh -> "km_per_kwh"
                 R.id.wizard_page2_metric_kwh_per_100km -> "kwh_per_100km"
-                R.id.wizard_page2_metric_mi_per_kwh    -> "mi_per_kwh"
+                R.id.wizard_page2_metric_mi_per_kwh -> "mi_per_kwh"
                 else -> return@setOnCheckedChangeListener
             }
             if (metric != viewModel.state.value.metric) {
@@ -51,7 +51,7 @@ class WizardPage2Fragment : Fragment() {
         binding.wizardPage2UnitGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (!isChecked) return@addOnButtonCheckedListener
             val unit = when (checkedId) {
-                R.id.wizard_page2_unit_km    -> "km"
+                R.id.wizard_page2_unit_km -> "km"
                 R.id.wizard_page2_unit_miles -> "miles"
                 else -> return@addOnButtonCheckedListener
             }
@@ -64,17 +64,18 @@ class WizardPage2Fragment : Fragment() {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.state.collect { state ->
                     val expectedRadio = when (state.metric) {
-                        "km_per_kwh"    -> R.id.wizard_page2_metric_km_per_kwh
+                        "km_per_kwh" -> R.id.wizard_page2_metric_km_per_kwh
                         "kwh_per_100km" -> R.id.wizard_page2_metric_kwh_per_100km
-                        else            -> R.id.wizard_page2_metric_mi_per_kwh
+                        else -> R.id.wizard_page2_metric_mi_per_kwh
                     }
                     if (binding.wizardPage2MetricGroup.checkedRadioButtonId != expectedRadio) {
                         binding.wizardPage2MetricGroup.check(expectedRadio)
                     }
-                    val expectedToggle = if (state.unit == "miles")
+                    val expectedToggle = if (state.unit == "miles") {
                         R.id.wizard_page2_unit_miles
-                    else
+                    } else {
                         R.id.wizard_page2_unit_km
+                    }
                     if (binding.wizardPage2UnitGroup.checkedButtonId != expectedToggle) {
                         binding.wizardPage2UnitGroup.check(expectedToggle)
                     }

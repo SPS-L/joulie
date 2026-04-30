@@ -27,7 +27,7 @@ class SettingsRepositoryTest {
     fun setUp() {
         dataStore = PreferenceDataStoreFactory.create(
             scope = TestScope(UnconfinedTestDispatcher()),
-            produceFile = { tempFolder.newFile("test.preferences_pb") }
+            produceFile = { tempFolder.newFile("test.preferences_pb") },
         )
         repo = SettingsRepository(dataStore)
     }

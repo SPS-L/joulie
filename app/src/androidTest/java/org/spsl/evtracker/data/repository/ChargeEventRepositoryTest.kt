@@ -21,7 +21,9 @@ class ChargeEventRepositoryTest {
     private lateinit var carRepository: CarRepository
     private lateinit var chargeEventRepository: ChargeEventRepository
 
-    private val MILLIS_PER_DAY = 24L * 60 * 60 * 1000
+    companion object {
+        private const val MILLIS_PER_DAY = 24L * 60 * 60 * 1000
+    }
 
     @Before
     fun setUp() {
@@ -50,8 +52,8 @@ class ChargeEventRepositoryTest {
                     carId = carAId,
                     eventDate = now - it * MILLIS_PER_DAY,
                     odometerKm = 100.0,
-                    kwhAdded = 10.0
-                )
+                    kwhAdded = 10.0,
+                ),
             )
         }
         repeat(2) {
@@ -60,8 +62,8 @@ class ChargeEventRepositoryTest {
                     carId = carBId,
                     eventDate = now - it * MILLIS_PER_DAY,
                     odometerKm = 200.0,
-                    kwhAdded = 15.0
-                )
+                    kwhAdded = 15.0,
+                ),
             )
         }
 
@@ -82,7 +84,7 @@ class ChargeEventRepositoryTest {
         val last30 = chargeEventRepository.getInRange(
             carId,
             t - 30 * MILLIS_PER_DAY,
-            t
+            t,
         )
         assertEquals(2, last30.size)
     }
@@ -91,6 +93,6 @@ class ChargeEventRepositoryTest {
         carId = carId,
         eventDate = eventDate,
         odometerKm = 100.0,
-        kwhAdded = 10.0
+        kwhAdded = 10.0,
     )
 }

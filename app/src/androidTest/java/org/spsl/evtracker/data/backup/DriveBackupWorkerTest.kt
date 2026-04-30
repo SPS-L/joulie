@@ -13,9 +13,6 @@ import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.UninstallModules
 import dagger.hilt.components.SingletonComponent
-import java.io.IOException
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -27,6 +24,9 @@ import org.spsl.evtracker.domain.backup.DriveAuthManager
 import org.spsl.evtracker.domain.backup.DriveRemoteSource
 import org.spsl.evtracker.testing.FakeDriveAuthManager
 import org.spsl.evtracker.testing.FakeDriveRemoteSource
+import java.io.IOException
+import javax.inject.Inject
+import javax.inject.Singleton
 
 @HiltAndroidTest
 @UninstallModules(BackupModule::class)
@@ -36,14 +36,19 @@ class DriveBackupWorkerTest {
     @get:Rule val hiltRule = HiltAndroidRule(this)
 
     @Inject lateinit var workerFactory: HiltWorkerFactory
+
     @Inject lateinit var fakeAuth: FakeDriveAuthManager
+
     @Inject lateinit var fakeRemote: FakeDriveRemoteSource
 
     @Module
     @InstallIn(SingletonComponent::class)
     abstract class TestBackupModule {
-        @Binds @Singleton abstract fun bindAuth(impl: FakeDriveAuthManager): DriveAuthManager
-        @Binds @Singleton abstract fun bindRemote(impl: FakeDriveRemoteSource): DriveRemoteSource
+        @Binds @Singleton
+        abstract fun bindAuth(impl: FakeDriveAuthManager): DriveAuthManager
+
+        @Binds @Singleton
+        abstract fun bindRemote(impl: FakeDriveRemoteSource): DriveRemoteSource
     }
 
     private lateinit var context: Context

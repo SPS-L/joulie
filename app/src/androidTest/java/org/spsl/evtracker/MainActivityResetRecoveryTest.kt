@@ -11,7 +11,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import dagger.hilt.android.testing.BindValue
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
-import javax.inject.Inject
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -28,14 +27,17 @@ import org.spsl.evtracker.data.local.db.AppDatabase
 import org.spsl.evtracker.data.local.entity.CarEntity
 import org.spsl.evtracker.data.repository.SettingsRepository
 import org.spsl.evtracker.domain.repository.DataResetTransactionRunner
+import javax.inject.Inject
 
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
 class MainActivityResetRecoveryTest {
 
-    @get:Rule(order = 0) val hiltRule = HiltAndroidRule(this)
+    @get:Rule(order = 0)
+    val hiltRule = HiltAndroidRule(this)
 
     @Inject lateinit var settingsRepository: SettingsRepository
+
     @Inject lateinit var database: AppDatabase
 
     /**
@@ -48,11 +50,16 @@ class MainActivityResetRecoveryTest {
 
     class TestableResetRunner : DataResetTransactionRunner {
         @Volatile var failNext: Throwable? = null
+
         @Volatile var realDelegate: DataResetTransactionRunner? = null
+
         @Volatile var clearCalls: Int = 0
         override suspend fun clearAllTables() {
             clearCalls++
-            failNext?.let { failNext = null; throw it }
+            failNext?.let {
+                failNext = null
+                throw it
+            }
             realDelegate?.clearAllTables()
         }
     }
@@ -78,7 +85,7 @@ class MainActivityResetRecoveryTest {
 
     @Test fun startup_resetInProgressTrue_runsUseCase_clearsFlag_beforeUiVisible() = runBlocking {
         val carId = database.carDao().insert(
-            CarEntity(name = "Test", make = "M", model = "X", year = 2024, batteryKwh = 75.0)
+            CarEntity(name = "Test", make = "M", model = "X", year = 2024, batteryKwh = 75.0),
         ).toInt()
         settingsRepository.setResetInProgress(true)
 
@@ -97,7 +104,7 @@ class MainActivityResetRecoveryTest {
 
     @Test fun startup_resetInProgressFalse_doesNotRunUseCase() = runBlocking {
         val carId = database.carDao().insert(
-            CarEntity(name = "Test", make = "M", model = "X", year = 2024, batteryKwh = 75.0)
+            CarEntity(name = "Test", make = "M", model = "X", year = 2024, batteryKwh = 75.0),
         ).toInt()
         settingsRepository.setResetInProgress(false)
 
@@ -124,14 +131,14 @@ class MainActivityResetRecoveryTest {
             scenario.onActivity { activity ->
                 assertFalse(
                     "nav graph must not be mounted while recovery dialog is showing",
-                    activity.isNavGraphMounted()
+                    activity.isNavGraphMounted(),
                 )
             }
         }
 
         assertTrue(
             "resetInProgress must remain true when recovery throws",
-            settingsRepository.resetInProgress.first()
+            settingsRepository.resetInProgress.first(),
         )
     }
 }

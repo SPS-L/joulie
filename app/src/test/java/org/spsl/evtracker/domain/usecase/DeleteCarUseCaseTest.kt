@@ -15,7 +15,7 @@ class DeleteCarUseCaseTest {
         cars: FakeCarRepository,
         activeCarId: Int,
         scheduler: FakeBackupScheduler = FakeBackupScheduler(),
-        settingsWriter: FakeSettingsWriter = FakeSettingsWriter()
+        settingsWriter: FakeSettingsWriter = FakeSettingsWriter(),
     ): Triple<DeleteCarUseCase, FakeSettingsWriter, FakeBackupScheduler> {
         val reader = FakeSettingsReader(activeCarIdInit = activeCarId)
         val uc = DeleteCarUseCase(cars, cars, reader, settingsWriter, scheduler)
@@ -24,10 +24,12 @@ class DeleteCarUseCaseTest {
 
     @Test
     fun deleteActiveCar_clearsToNextRemaining() = runTest {
-        val cars = FakeCarRepository(initial = listOf(
-            CarEntity(id = 1, name = "A", createdAt = 0L),
-            CarEntity(id = 2, name = "B", createdAt = 0L)
-        ))
+        val cars = FakeCarRepository(
+            initial = listOf(
+                CarEntity(id = 1, name = "A", createdAt = 0L),
+                CarEntity(id = 2, name = "B", createdAt = 0L),
+            ),
+        )
         val (uc, settingsWriter, _) = useCase(cars, activeCarId = 1)
         uc(carId = 1)
         assertEquals(2, settingsWriter.activeCarId)
@@ -43,10 +45,12 @@ class DeleteCarUseCaseTest {
 
     @Test
     fun deleteInactiveCar_leavesActiveAlone() = runTest {
-        val cars = FakeCarRepository(initial = listOf(
-            CarEntity(id = 3, name = "C", createdAt = 0L),
-            CarEntity(id = 5, name = "E", createdAt = 0L)
-        ))
+        val cars = FakeCarRepository(
+            initial = listOf(
+                CarEntity(id = 3, name = "C", createdAt = 0L),
+                CarEntity(id = 5, name = "E", createdAt = 0L),
+            ),
+        )
         val initialWriter = FakeSettingsWriter()
         val (uc, settingsWriter, _) = useCase(cars, activeCarId = 5, settingsWriter = initialWriter)
         uc(carId = 3)

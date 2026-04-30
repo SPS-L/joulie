@@ -10,11 +10,11 @@ import com.github.mikephil.charting.charts.PieChart
 import com.github.mikephil.charting.components.AxisBase
 import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.formatter.ValueFormatter
+import org.spsl.evtracker.R
+import org.spsl.evtracker.core.model.ChartsPeriod
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import org.spsl.evtracker.R
-import org.spsl.evtracker.core.model.ChartsPeriod
 
 /**
  * Pure (Context-only) helpers for MPAndroidChart configuration. Keeps Fragment
@@ -39,14 +39,18 @@ object ChartStyling {
         0xFFE53935.toInt(),
         0xFFFDD835.toInt(),
         0xFF6D4C41.toInt(),
-        0xFF757575.toInt()      // "Other" slot — neutral grey
+        // "Other" slot — neutral grey
+        0xFF757575.toInt(),
     )
 
     fun resolveSeriesColors(context: Context): Pair<Int, Int> {
         fun resolve(attr: Int, fallback: Int): Int {
             val tv = TypedValue()
-            return if (context.theme.resolveAttribute(attr, tv, true)) tv.data
-                   else ContextCompat.getColor(context, fallback)
+            return if (context.theme.resolveAttribute(attr, tv, true)) {
+                tv.data
+            } else {
+                ContextCompat.getColor(context, fallback)
+            }
         }
         val ac = resolve(com.google.android.material.R.attr.colorPrimary, R.color.chart_ac_fallback)
         val dc = resolve(com.google.android.material.R.attr.colorTertiary, R.color.chart_dc_fallback)

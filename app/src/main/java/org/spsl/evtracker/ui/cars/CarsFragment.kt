@@ -32,7 +32,7 @@ class CarsFragment : Fragment() {
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
-        savedInstanceState: Bundle?
+        savedInstanceState: Bundle?,
     ): View {
         _binding = FragmentCarsBinding.inflate(inflater, container, false)
         return binding.root
@@ -44,7 +44,7 @@ class CarsFragment : Fragment() {
         adapter = CarsAdapter(
             onSetActive = { viewModel.onRowSetActiveClick(it) },
             onEdit = { viewModel.onRowEditClick(it) },
-            onDelete = { viewModel.onRowDeleteClick(it) }
+            onDelete = { viewModel.onRowDeleteClick(it) },
         )
         binding.carsRecycler.layoutManager = LinearLayoutManager(requireContext())
         binding.carsRecycler.adapter = adapter

@@ -13,7 +13,6 @@ import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
-import javax.inject.Inject
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
 import org.junit.Rule
@@ -22,6 +21,7 @@ import org.junit.runner.RunWith
 import org.spsl.evtracker.MainActivity
 import org.spsl.evtracker.R
 import org.spsl.evtracker.data.preferences.PreferenceKeys
+import javax.inject.Inject
 
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)

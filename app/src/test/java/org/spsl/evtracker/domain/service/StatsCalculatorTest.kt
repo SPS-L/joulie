@@ -14,10 +14,13 @@ class StatsCalculatorTest {
         carId: Int = 1,
         eventDate: Long = 0L,
         odometerKm: Double = 0.0,
-        kwhAdded: Double = 10.0
+        kwhAdded: Double = 10.0,
     ) = ChargeEventEntity(
-        id = id, carId = carId, eventDate = eventDate,
-        odometerKm = odometerKm, kwhAdded = kwhAdded
+        id = id,
+        carId = carId,
+        eventDate = eventDate,
+        odometerKm = odometerKm,
+        kwhAdded = kwhAdded,
     )
 
     @Test
@@ -25,8 +28,11 @@ class StatsCalculatorTest {
         val s = calc.computeStats(emptyList(), "label")
         assertEquals(0.0, s.totalKwh, 0.0)
         assertEquals(0, s.chargeCount)
-        assertNull(s.avgKmPerKwh); assertNull(s.avgKwhPer100Km); assertNull(s.avgMiPerKwh)
-        assertNull(s.costPerKm); assertNull(s.costPer100Km)
+        assertNull(s.avgKmPerKwh)
+        assertNull(s.avgKwhPer100Km)
+        assertNull(s.avgMiPerKwh)
+        assertNull(s.costPerKm)
+        assertNull(s.costPer100Km)
         assertEquals(false, s.mixedCurrency)
     }
 
@@ -43,10 +49,10 @@ class StatsCalculatorTest {
     fun twoEvents_correctEfficiency() {
         val s = calc.computeStats(
             listOf(
-                event(eventDate = 1, odometerKm = 0.0,   kwhAdded = 0.0),
-                event(eventDate = 2, odometerKm = 100.0, kwhAdded = 20.0)
+                event(eventDate = 1, odometerKm = 0.0, kwhAdded = 0.0),
+                event(eventDate = 2, odometerKm = 100.0, kwhAdded = 20.0),
             ),
-            "label"
+            "label",
         )
         assertEquals(2, s.chargeCount)
         assertEquals(20.0, s.totalKwh, 0.0)
@@ -60,11 +66,11 @@ class StatsCalculatorTest {
     fun multipleEvents_sumCorrect() {
         val s = calc.computeStats(
             listOf(
-                event(eventDate = 1, odometerKm = 0.0,   kwhAdded = 0.0),
-                event(eventDate = 2, odometerKm = 50.0,  kwhAdded = 10.0),
-                event(eventDate = 3, odometerKm = 150.0, kwhAdded = 20.0)
+                event(eventDate = 1, odometerKm = 0.0, kwhAdded = 0.0),
+                event(eventDate = 2, odometerKm = 50.0, kwhAdded = 10.0),
+                event(eventDate = 3, odometerKm = 150.0, kwhAdded = 20.0),
             ),
-            "label"
+            "label",
         )
         assertEquals(3, s.chargeCount)
         assertEquals(150.0, s.totalDistanceKm, 0.0)
@@ -77,10 +83,10 @@ class StatsCalculatorTest {
         val s = calc.computeStats(
             listOf(
                 event(eventDate = 1, odometerKm = 100.0, kwhAdded = 0.0),
-                event(eventDate = 2, odometerKm = 50.0,  kwhAdded = 10.0),
-                event(eventDate = 3, odometerKm = 150.0, kwhAdded = 20.0)
+                event(eventDate = 2, odometerKm = 50.0, kwhAdded = 10.0),
+                event(eventDate = 3, odometerKm = 150.0, kwhAdded = 20.0),
             ),
-            "label"
+            "label",
         )
         assertEquals(100.0, s.totalDistanceKm, 0.0)
         assertEquals(5.0, s.avgKmPerKwh!!, 0.0001)
@@ -89,28 +95,40 @@ class StatsCalculatorTest {
     @Test
     fun monthlyAggregation_correctBuckets() {
         val jan15 = java.util.Calendar.getInstance().apply {
-            set(2026, java.util.Calendar.JANUARY, 15, 0, 0, 0); set(java.util.Calendar.MILLISECOND, 0)
+            set(2026, java.util.Calendar.JANUARY, 15, 0, 0, 0)
+            set(java.util.Calendar.MILLISECOND, 0)
         }.timeInMillis
-        val feb1  = java.util.Calendar.getInstance().apply {
-            set(2026, java.util.Calendar.FEBRUARY, 1, 0, 0, 0); set(java.util.Calendar.MILLISECOND, 0)
+        val feb1 = java.util.Calendar.getInstance().apply {
+            set(2026, java.util.Calendar.FEBRUARY, 1, 0, 0, 0)
+            set(java.util.Calendar.MILLISECOND, 0)
         }.timeInMillis
         val feb20 = java.util.Calendar.getInstance().apply {
-            set(2026, java.util.Calendar.FEBRUARY, 20, 0, 0, 0); set(java.util.Calendar.MILLISECOND, 0)
+            set(2026, java.util.Calendar.FEBRUARY, 20, 0, 0, 0)
+            set(java.util.Calendar.MILLISECOND, 0)
         }.timeInMillis
-        val mar5  = java.util.Calendar.getInstance().apply {
-            set(2026, java.util.Calendar.MARCH, 5, 0, 0, 0); set(java.util.Calendar.MILLISECOND, 0)
+        val mar5 = java.util.Calendar.getInstance().apply {
+            set(2026, java.util.Calendar.MARCH, 5, 0, 0, 0)
+            set(java.util.Calendar.MILLISECOND, 0)
         }.timeInMillis
 
-        val buckets = calc.computeMonthlyBuckets(listOf(
-            event(eventDate = jan15, kwhAdded = 10.0),
-            event(eventDate = feb1,  kwhAdded = 5.0),
-            event(eventDate = feb20, kwhAdded = 7.0),
-            event(eventDate = mar5,  kwhAdded = 12.0)
-        ))
+        val buckets = calc.computeMonthlyBuckets(
+            listOf(
+                event(eventDate = jan15, kwhAdded = 10.0),
+                event(eventDate = feb1, kwhAdded = 5.0),
+                event(eventDate = feb20, kwhAdded = 7.0),
+                event(eventDate = mar5, kwhAdded = 12.0),
+            ),
+        )
 
         assertEquals(3, buckets.size)
-        assertEquals(2026, buckets[0].year);  assertEquals(1, buckets[0].month);  assertEquals(10.0, buckets[0].totalKwh, 0.0)
-        assertEquals(2026, buckets[1].year);  assertEquals(2, buckets[1].month);  assertEquals(12.0, buckets[1].totalKwh, 0.0)
-        assertEquals(2026, buckets[2].year);  assertEquals(3, buckets[2].month);  assertEquals(12.0, buckets[2].totalKwh, 0.0)
+        assertEquals(2026, buckets[0].year)
+        assertEquals(1, buckets[0].month)
+        assertEquals(10.0, buckets[0].totalKwh, 0.0)
+        assertEquals(2026, buckets[1].year)
+        assertEquals(2, buckets[1].month)
+        assertEquals(12.0, buckets[1].totalKwh, 0.0)
+        assertEquals(2026, buckets[2].year)
+        assertEquals(3, buckets[2].month)
+        assertEquals(12.0, buckets[2].totalKwh, 0.0)
     }
 }

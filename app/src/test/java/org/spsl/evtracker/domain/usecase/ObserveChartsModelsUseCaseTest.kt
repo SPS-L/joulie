@@ -1,6 +1,5 @@
 package org.spsl.evtracker.domain.usecase
 
-import kotlin.coroutines.EmptyCoroutineContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -18,6 +17,7 @@ import org.spsl.evtracker.domain.service.StatsCalculator
 import org.spsl.evtracker.testing.FakeCarReader
 import org.spsl.evtracker.testing.FakeChargeEventQueries
 import org.spsl.evtracker.testing.FakeSettingsReader
+import kotlin.coroutines.EmptyCoroutineContext
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ObserveChartsModelsUseCaseTest {
@@ -29,7 +29,7 @@ class ObserveChartsModelsUseCaseTest {
     private fun setup(
         cars: List<CarEntity> = listOf(CarEntity(id = 1, name = "C")),
         activeCarId: Int = 1,
-        events: List<ChargeEventEntity> = emptyList()
+        events: List<ChargeEventEntity> = emptyList(),
     ): ObserveChartsModelsUseCase {
         val carReader = FakeCarReader(cars)
         val queries = FakeChargeEventQueries().apply { seed(events) }
@@ -41,17 +41,22 @@ class ObserveChartsModelsUseCaseTest {
             statsCalculator = StatsCalculator(),
             dateRangeResolver = DateRangeResolver(),
             now = now,
-            aggregationContext = EmptyCoroutineContext
+            aggregationContext = EmptyCoroutineContext,
         )
     }
 
     private fun ev(
-        date: Long, odo: Double, kwh: Double = 10.0, type: String = "AC",
-        cost: Double? = null, currency: String? = null, location: String? = null
+        date: Long,
+        odo: Double,
+        kwh: Double = 10.0,
+        type: String = "AC",
+        cost: Double? = null,
+        currency: String? = null,
+        location: String? = null,
     ) = ChargeEventEntity(
         id = 0, carId = 1, eventDate = date, odometerKm = odo, kwhAdded = kwh,
         chargeType = type, costTotal = cost, costPerKwh = null,
-        currency = currency, location = location, note = "", createdAt = 0L
+        currency = currency, location = location, note = "", createdAt = 0L,
     )
 
     @Test fun noCar_emitsNoCar() = runTest {
@@ -88,10 +93,12 @@ class ObserveChartsModelsUseCaseTest {
     @Test fun eventsInPeriod_singleCurrency_emitsAllSeriesAndPeriodCurrency() = runTest {
         // Two AC events 30 days apart, both EUR-costed
         val ms30d = 30L * 24 * 60 * 60 * 1000
-        val state = setup(events = listOf(
-            ev(nowMs - 2 * ms30d, 0.0,   10.0, "AC", cost = 5.0, currency = "EUR", location = "Home"),
-            ev(nowMs - 1 * ms30d, 100.0, 10.0, "AC", cost = 7.5, currency = "EUR", location = "Home")
-        )).observe(ChartsPeriod.Last12Months).first()
+        val state = setup(
+            events = listOf(
+                ev(nowMs - 2 * ms30d, 0.0, 10.0, "AC", cost = 5.0, currency = "EUR", location = "Home"),
+                ev(nowMs - 1 * ms30d, 100.0, 10.0, "AC", cost = 7.5, currency = "EUR", location = "Home"),
+            ),
+        ).observe(ChartsPeriod.Last12Months).first()
         assertTrue(state is ChartsUiState.Loaded)
         val l = state as ChartsUiState.Loaded
         assertTrue(l.periodHasEvents)
@@ -107,16 +114,18 @@ class ObserveChartsModelsUseCaseTest {
 
     @Test fun eventsInPeriod_mixedCurrency_zeroesMonthlyCostAndPeriodCurrencyNull() = runTest {
         val ms30d = 30L * 24 * 60 * 60 * 1000
-        val state = setup(events = listOf(
-            ev(nowMs - 2 * ms30d, 0.0,   10.0, "AC", cost = 5.0, currency = "EUR"),
-            ev(nowMs - 1 * ms30d, 100.0, 10.0, "AC", cost = 7.5, currency = "USD")
-        )).observe(ChartsPeriod.Last12Months).first()
+        val state = setup(
+            events = listOf(
+                ev(nowMs - 2 * ms30d, 0.0, 10.0, "AC", cost = 5.0, currency = "EUR"),
+                ev(nowMs - 1 * ms30d, 100.0, 10.0, "AC", cost = 7.5, currency = "USD"),
+            ),
+        ).observe(ChartsPeriod.Last12Months).first()
         assertTrue(state is ChartsUiState.Loaded)
         val l = state as ChartsUiState.Loaded
         assertTrue(l.mixedCurrency)
         assertNull(l.periodCurrency)
         assertTrue(l.monthlyCost.isEmpty())
-        assertTrue(l.monthlyKwh.isNotEmpty())          // kWh series unaffected
+        assertTrue(l.monthlyKwh.isNotEmpty()) // kWh series unaffected
     }
 
     @Test fun differentPeriodArg_producesDifferentBuild() = runTest {
@@ -131,23 +140,30 @@ class ObserveChartsModelsUseCaseTest {
     }
 
     @Test fun carSwitch_resetsState() = runTest {
-        val carReader = FakeCarReader(listOf(
-            CarEntity(id = 1, name = "A"),
-            CarEntity(id = 2, name = "B")
-        ))
+        val carReader = FakeCarReader(
+            listOf(
+                CarEntity(id = 1, name = "A"),
+                CarEntity(id = 2, name = "B"),
+            ),
+        )
         val queries = FakeChargeEventQueries().apply {
             seed(listOf(ev(nowMs - 100, 0.0).copy(carId = 1)))
         }
         val settings = FakeSettingsReader(activeCarIdInit = 1)
         val useCase = ObserveChartsModelsUseCase(
-            carReader, queries, settings, StatsCalculator(), DateRangeResolver(),
-            now = now, aggregationContext = EmptyCoroutineContext
+            carReader,
+            queries,
+            settings,
+            StatsCalculator(),
+            DateRangeResolver(),
+            now = now,
+            aggregationContext = EmptyCoroutineContext,
         )
         val first = useCase.observe(ChartsPeriod.Last12Months).first()
         assertTrue(first is ChartsUiState.Loaded)
 
         settings.setActiveCarId(2)
         val second = useCase.observe(ChartsPeriod.Last12Months).first()
-        assertTrue(second is ChartsUiState.NoEvents)   // car 2 has no events
+        assertTrue(second is ChartsUiState.NoEvents) // car 2 has no events
     }
 }

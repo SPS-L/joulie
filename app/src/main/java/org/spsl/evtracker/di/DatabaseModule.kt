@@ -7,11 +7,11 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import javax.inject.Singleton
 import org.spsl.evtracker.data.local.dao.CarDao
 import org.spsl.evtracker.data.local.dao.ChargeEventDao
 import org.spsl.evtracker.data.local.dao.CustomLocationDao
 import org.spsl.evtracker.data.local.db.AppDatabase
+import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)

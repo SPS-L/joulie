@@ -11,7 +11,7 @@ object DateFormat {
     fun formatEpochMs(
         ms: Long,
         zone: ZoneId = ZoneId.systemDefault(),
-        locale: Locale = Locale.getDefault()
+        locale: Locale = Locale.getDefault(),
     ): String =
         DateTimeFormatter.ofPattern(PATTERN, locale)
             .withZone(zone)

@@ -30,5 +30,5 @@ interface DriveAuthManager {
 /** Thrown by [DriveAuthManager.silentToken] callers when consent is required or revoked. */
 class DriveAuthRequiredException(
     message: String = "Drive consent required or revoked",
-    cause: Throwable? = null
+    cause: Throwable? = null,
 ) : IOException(message, cause)

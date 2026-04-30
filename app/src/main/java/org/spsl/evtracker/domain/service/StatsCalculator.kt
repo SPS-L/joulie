@@ -1,7 +1,5 @@
 package org.spsl.evtracker.domain.service
 
-import java.util.Calendar
-import javax.inject.Inject
 import org.spsl.evtracker.core.model.AcDcSplit
 import org.spsl.evtracker.core.model.EfficiencyPoint
 import org.spsl.evtracker.core.model.EfficiencySeries
@@ -9,6 +7,8 @@ import org.spsl.evtracker.core.model.LocationSlice
 import org.spsl.evtracker.core.model.MonthBucket
 import org.spsl.evtracker.core.model.Stats
 import org.spsl.evtracker.data.local.entity.ChargeEventEntity
+import java.util.Calendar
+import javax.inject.Inject
 
 class StatsCalculator @Inject constructor() {
 
@@ -29,7 +29,7 @@ class StatsCalculator @Inject constructor() {
                 currency = null,
                 costPerKm = null,
                 costPer100Km = null,
-                mixedCurrency = false
+                mixedCurrency = false,
             )
         }
 
@@ -48,18 +48,21 @@ class StatsCalculator @Inject constructor() {
                 pairKwh += sorted[i].kwhAdded
                 totalDist += dist
                 if (!mixedCurrency) {
-                    sorted[i].costTotal?.let { totalCost += it; costCount++ }
+                    sorted[i].costTotal?.let {
+                        totalCost += it
+                        costCount++
+                    }
                 }
             }
         }
 
-        val avgKmPerKwh    = if (pairKwh > 0)  totalDist / pairKwh else null
+        val avgKmPerKwh = if (pairKwh > 0) totalDist / pairKwh else null
         val avgKwhPer100Km = avgKmPerKwh?.let { 100.0 / it }
-        val avgMiPerKwh    = avgKmPerKwh?.let { UnitConverter.kmPerKwhToMiPerKwh(it) }
+        val avgMiPerKwh = avgKmPerKwh?.let { UnitConverter.kmPerKwhToMiPerKwh(it) }
         val resolvedTotalCost = if (costCount > 0) totalCost else null
-        val resolvedCurrency  = if (costCount > 0) costedCurrencies.singleOrNull() else null
-        val costPerKm      = if (costCount > 0 && totalDist > 0) totalCost / totalDist else null
-        val costPer100Km   = costPerKm?.times(100.0)
+        val resolvedCurrency = if (costCount > 0) costedCurrencies.singleOrNull() else null
+        val costPerKm = if (costCount > 0 && totalDist > 0) totalCost / totalDist else null
+        val costPer100Km = costPerKm?.times(100.0)
 
         return Stats(
             label = label,
@@ -73,7 +76,7 @@ class StatsCalculator @Inject constructor() {
             currency = resolvedCurrency,
             costPerKm = costPerKm,
             costPer100Km = costPer100Km,
-            mixedCurrency = mixedCurrency
+            mixedCurrency = mixedCurrency,
         )
     }
 
@@ -90,13 +93,15 @@ class StatsCalculator @Inject constructor() {
             val totalCost = if (singleCurrency != null) {
                 val sum = bucketEvents.mapNotNull { it.costTotal }.sum()
                 if (sum > 0) sum else null
-            } else null
+            } else {
+                null
+            }
             MonthBucket(
                 year = year,
                 month = month,
                 totalKwh = totalKwh,
                 totalCost = totalCost,
-                currency = if (totalCost != null) singleCurrency else null
+                currency = if (totalCost != null) singleCurrency else null,
             )
         }.sortedWith(compareBy({ it.year }, { it.month }))
     }
@@ -113,7 +118,7 @@ class StatsCalculator @Inject constructor() {
                 if (dist > 0 && sorted[i].kwhAdded > 0.0) {
                     out += EfficiencyPoint(
                         eventTimeMillis = sorted[i].eventDate,
-                        kmPerKwh = dist / sorted[i].kwhAdded
+                        kmPerKwh = dist / sorted[i].kwhAdded,
                     )
                 }
             }
@@ -121,7 +126,7 @@ class StatsCalculator @Inject constructor() {
         }
         return EfficiencySeries(
             acPoints = seriesFor("AC"),
-            dcPoints = seriesFor("DC")
+            dcPoints = seriesFor("DC"),
         )
     }
 
@@ -131,8 +136,8 @@ class StatsCalculator @Inject constructor() {
         return AcDcSplit(
             acCount = ac.size,
             dcCount = dc.size,
-            acKwh   = ac.sumOf { it.kwhAdded },
-            dcKwh   = dc.sumOf { it.kwhAdded }
+            acKwh = ac.sumOf { it.kwhAdded },
+            dcKwh = dc.sumOf { it.kwhAdded },
         )
     }
 
@@ -146,8 +151,11 @@ class StatsCalculator @Inject constructor() {
         val top = ranked.take(MAX_LOCATION_SLICES)
             .map { LocationSlice(it.key, it.value) }
         val tail = ranked.drop(MAX_LOCATION_SLICES)
-        return if (tail.isEmpty()) top
-               else top + LocationSlice(LocationSlice.OTHER_KEY, tail.sumOf { it.value })
+        return if (tail.isEmpty()) {
+            top
+        } else {
+            top + LocationSlice(LocationSlice.OTHER_KEY, tail.sumOf { it.value })
+        }
     }
 
     companion object {

@@ -6,13 +6,13 @@ import org.spsl.evtracker.data.local.entity.ChargeEventEntity
 
 class SwipeToDeleteCallback(
     private val onSwipe: (ChargeEventEntity) -> Unit,
-    private val rowAt: (Int) -> ChargeEventEntity?
+    private val rowAt: (Int) -> ChargeEventEntity?,
 ) : ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT) {
 
     override fun onMove(
         recyclerView: RecyclerView,
         viewHolder: RecyclerView.ViewHolder,
-        target: RecyclerView.ViewHolder
+        target: RecyclerView.ViewHolder,
     ): Boolean = false
 
     override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {

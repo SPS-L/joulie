@@ -5,17 +5,18 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import dagger.hilt.android.HiltAndroidApp
-import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.spsl.evtracker.data.repository.SettingsRepository
+import javax.inject.Inject
 
 @HiltAndroidApp
 class EVTrackerApp : Application(), Configuration.Provider {
 
     @Inject lateinit var workerFactory: HiltWorkerFactory
+
     @Inject lateinit var settingsRepository: SettingsRepository
 
     override val workManagerConfiguration: Configuration
@@ -35,7 +36,7 @@ class EVTrackerApp : Application(), Configuration.Provider {
                     "light" -> AppCompatDelegate.MODE_NIGHT_NO
                     "dark" -> AppCompatDelegate.MODE_NIGHT_YES
                     else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-                }
+                },
             )
         }
     }

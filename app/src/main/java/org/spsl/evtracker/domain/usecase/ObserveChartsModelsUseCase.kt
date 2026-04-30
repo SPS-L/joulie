@@ -1,7 +1,5 @@
 package org.spsl.evtracker.domain.usecase
 
-import javax.inject.Inject
-import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -18,6 +16,8 @@ import org.spsl.evtracker.domain.repository.ChargeEventQueries
 import org.spsl.evtracker.domain.repository.SettingsReader
 import org.spsl.evtracker.domain.service.DateRangeResolver
 import org.spsl.evtracker.domain.service.StatsCalculator
+import javax.inject.Inject
+import kotlin.coroutines.CoroutineContext
 
 class ObserveChartsModelsUseCase @Inject constructor(
     private val carReader: CarReader,
@@ -26,7 +26,7 @@ class ObserveChartsModelsUseCase @Inject constructor(
     private val statsCalculator: StatsCalculator,
     private val dateRangeResolver: DateRangeResolver,
     private val now: NowProvider,
-    @AggregationDispatcher private val aggregationContext: CoroutineContext
+    @AggregationDispatcher private val aggregationContext: CoroutineContext,
 ) {
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -37,8 +37,11 @@ class ObserveChartsModelsUseCase @Inject constructor(
             when {
                 cars.isEmpty() || active == -1 -> flowOf<ChartsUiState>(ChartsUiState.NoCar)
                 else -> chargeEventQueries.observeForCar(active).map { all ->
-                    if (all.isEmpty()) ChartsUiState.NoEvents
-                    else build(all, period)
+                    if (all.isEmpty()) {
+                        ChartsUiState.NoEvents
+                    } else {
+                        build(all, period)
+                    }
                 }
             }
         }.flowOn(aggregationContext)
@@ -60,7 +63,7 @@ class ObserveChartsModelsUseCase @Inject constructor(
             monthlyKwh = monthly,
             monthlyCost = costBuckets,
             acDc = statsCalculator.computeAcDcSplit(periodEvents),
-            locations = statsCalculator.computeLocationDistribution(periodEvents)
+            locations = statsCalculator.computeLocationDistribution(periodEvents),
         )
     }
 }

@@ -19,7 +19,7 @@ import org.spsl.evtracker.databinding.FragmentWizardPage3Binding
 class WizardPage3Fragment : Fragment() {
 
     private val viewModel: WizardViewModel by viewModels(
-        ownerProducer = { requireParentFragment() }
+        ownerProducer = { requireParentFragment() },
     )
 
     private var _binding: FragmentWizardPage3Binding? = null
@@ -28,7 +28,7 @@ class WizardPage3Fragment : Fragment() {
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
-        savedInstanceState: Bundle?
+        savedInstanceState: Bundle?,
     ): View {
         _binding = FragmentWizardPage3Binding.inflate(inflater, container, false)
         return binding.root
@@ -41,7 +41,7 @@ class WizardPage3Fragment : Fragment() {
         val adapter = ArrayAdapter(
             requireContext(),
             android.R.layout.simple_list_item_1,
-            currencies
+            currencies,
         )
         binding.wizardPage3CurrencyInput.setAdapter(adapter)
         binding.wizardPage3CurrencyInput.setOnItemClickListener { _, _, position, _ ->

@@ -4,7 +4,7 @@ import org.spsl.evtracker.data.local.entity.CarEntity
 
 data class CarsUiState(
     val cars: List<CarRow> = emptyList(),
-    val activeCarId: Int = -1
+    val activeCarId: Int = -1,
 ) {
     val empty: Boolean get() = cars.isEmpty()
 

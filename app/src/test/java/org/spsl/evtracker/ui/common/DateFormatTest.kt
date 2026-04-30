@@ -1,10 +1,10 @@
 package org.spsl.evtracker.ui.common
 
+import org.junit.Assert.assertEquals
+import org.junit.Test
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.util.Locale
-import org.junit.Assert.assertEquals
-import org.junit.Test
 
 class DateFormatTest {
 

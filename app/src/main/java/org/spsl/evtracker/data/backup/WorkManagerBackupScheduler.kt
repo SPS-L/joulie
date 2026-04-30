@@ -6,17 +6,17 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
-import java.util.concurrent.TimeUnit
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlinx.coroutines.flow.first
 import org.spsl.evtracker.domain.backup.BackupScheduler
 import org.spsl.evtracker.domain.repository.SettingsReader
+import java.util.concurrent.TimeUnit
+import javax.inject.Inject
+import javax.inject.Singleton
 
 @Singleton
 class WorkManagerBackupScheduler @Inject constructor(
     private val workManager: WorkManager,
-    private val settingsReader: SettingsReader
+    private val settingsReader: SettingsReader,
 ) : BackupScheduler {
 
     override suspend fun enqueueBackup() {
@@ -25,7 +25,7 @@ class WorkManagerBackupScheduler @Inject constructor(
             .setConstraints(
                 Constraints.Builder()
                     .setRequiredNetworkType(NetworkType.CONNECTED)
-                    .build()
+                    .build(),
             )
             .setInitialDelay(INITIAL_DELAY_SECONDS, TimeUnit.SECONDS)
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, BACKOFF_SECONDS, TimeUnit.SECONDS)

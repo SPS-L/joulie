@@ -1,6 +1,5 @@
 package org.spsl.evtracker.domain.usecase
 
-import javax.inject.Inject
 import kotlinx.coroutines.flow.first
 import org.spsl.evtracker.core.model.BackupData
 import org.spsl.evtracker.core.model.BackupVersionMismatch
@@ -14,6 +13,7 @@ import org.spsl.evtracker.domain.repository.ChargeEventQueries
 import org.spsl.evtracker.domain.repository.LocationReader
 import org.spsl.evtracker.domain.repository.SettingsWriter
 import org.spsl.evtracker.domain.service.BackupSerializer
+import javax.inject.Inject
 
 class RestoreBackupUseCase @Inject constructor(
     private val backupRepository: BackupRepository,
@@ -24,7 +24,7 @@ class RestoreBackupUseCase @Inject constructor(
     private val chargeEventQueries: ChargeEventQueries,
     private val locationReader: LocationReader,
     private val settingsWriter: SettingsWriter,
-    private val backupScheduler: BackupScheduler
+    private val backupScheduler: BackupScheduler,
 ) {
     suspend operator fun invoke(): RestoreResult {
         val json = backupRepository.readRemoteBackup()
@@ -55,7 +55,7 @@ class RestoreBackupUseCase @Inject constructor(
         return RestoreResult.Success(
             carCount = newCars.size,
             eventCount = newEvents.size,
-            locationCount = newLocations.size
+            locationCount = newLocations.size,
         )
     }
 }

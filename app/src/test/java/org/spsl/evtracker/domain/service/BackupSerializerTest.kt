@@ -18,13 +18,15 @@ class BackupSerializerTest {
     fun roundTrip_preservesAllFields() {
         val original = BackupData.fromEntities(
             cars = listOf(CarEntity(id = 1, name = "Tesla", make = "T", model = "M3", year = 2024, batteryKwh = 60.0, createdAt = 1000L)),
-            events = listOf(ChargeEventEntity(
-                id = 17, carId = 1, eventDate = 2000L, odometerKm = 12345.0, kwhAdded = 22.4,
-                chargeType = "AC", costTotal = 5.5, costPerKwh = 0.245, currency = "EUR",
-                location = "Home", note = "first", createdAt = 3000L
-            )),
+            events = listOf(
+                ChargeEventEntity(
+                    id = 17, carId = 1, eventDate = 2000L, odometerKm = 12345.0, kwhAdded = 22.4,
+                    chargeType = "AC", costTotal = 5.5, costPerKwh = 0.245, currency = "EUR",
+                    location = "Home", note = "first", createdAt = 3000L,
+                ),
+            ),
             locations = listOf(CustomLocationEntity(id = 5, label = "Supercharger A6", useCount = 4, lastUsed = 4000L)),
-            now = 5000L
+            now = 5000L,
         )
 
         val json = serializer.toJson(original)
@@ -47,10 +49,10 @@ class BackupSerializerTest {
     @Test
     fun toJson_isHtmlEscapeFree() {
         val data = BackupData.fromEntities(
-            cars = listOf(CarEntity(id = 1, name = "<&>",   createdAt = 1L)),
+            cars = listOf(CarEntity(id = 1, name = "<&>", createdAt = 1L)),
             events = emptyList(),
             locations = emptyList(),
-            now = 0L
+            now = 0L,
         )
         val json = serializer.toJson(data)
         assertFalse("HTML-escaped < should be absent", json.contains("\\u003c"))
@@ -61,8 +63,10 @@ class BackupSerializerTest {
     @Test
     fun fromEntities_setsExportedAtToIso8601Utc() {
         val data = BackupData.fromEntities(
-            cars = emptyList(), events = emptyList(), locations = emptyList(),
-            now = 1714044000000L
+            cars = emptyList(),
+            events = emptyList(),
+            locations = emptyList(),
+            now = 1714044000000L,
         )
         assertEquals("2024-04-25T11:20:00Z", data.exportedAt)
     }

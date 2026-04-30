@@ -1,16 +1,16 @@
 package org.spsl.evtracker.data.repository
 
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import org.spsl.evtracker.data.local.dao.ChargeEventDao
 import org.spsl.evtracker.data.local.entity.ChargeEventEntity
 import org.spsl.evtracker.domain.repository.ChargeEventQueries
 import org.spsl.evtracker.domain.repository.ChargeEventWriter
+import javax.inject.Inject
+import javax.inject.Singleton
 
 @Singleton
 class ChargeEventRepository @Inject constructor(
-    private val chargeEventDao: ChargeEventDao
+    private val chargeEventDao: ChargeEventDao,
 ) : ChargeEventQueries, ChargeEventWriter {
     override fun observeForCar(carId: Int): Flow<List<ChargeEventEntity>> =
         chargeEventDao.observeForCar(carId)

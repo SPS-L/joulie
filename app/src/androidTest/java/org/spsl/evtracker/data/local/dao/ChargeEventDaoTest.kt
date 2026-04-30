@@ -24,7 +24,10 @@ class ChargeEventDaoTest {
     private var carId: Int = 0
 
     private val now: Long get() = System.currentTimeMillis()
-    private val MILLIS_PER_DAY = 24L * 60 * 60 * 1000
+
+    companion object {
+        private const val MILLIS_PER_DAY = 24L * 60 * 60 * 1000
+    }
 
     @Before
     fun setUp() = runBlocking {
@@ -45,12 +48,12 @@ class ChargeEventDaoTest {
     private fun event(
         eventDate: Long = now,
         odometerKm: Double = 1000.0,
-        kwhAdded: Double = 10.0
+        kwhAdded: Double = 10.0,
     ) = ChargeEventEntity(
         carId = carId,
         eventDate = eventDate,
         odometerKm = odometerKm,
-        kwhAdded = kwhAdded
+        kwhAdded = kwhAdded,
     )
 
     @Test
@@ -102,7 +105,7 @@ class ChargeEventDaoTest {
     @Test
     fun update_persistsChanges() = runBlocking {
         val eventRowId = chargeEventDao.insert(
-            event(odometerKm = 100.0, kwhAdded = 10.0)
+            event(odometerKm = 100.0, kwhAdded = 10.0),
         ).toInt()
         // Re-fetch — the original local has id = 0.
         val saved = chargeEventDao.getById(eventRowId)!!

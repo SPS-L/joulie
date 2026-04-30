@@ -6,6 +6,6 @@ sealed class RestoreResult {
     data class Success(
         val carCount: Int,
         val eventCount: Int,
-        val locationCount: Int
+        val locationCount: Int,
     ) : RestoreResult()
 }

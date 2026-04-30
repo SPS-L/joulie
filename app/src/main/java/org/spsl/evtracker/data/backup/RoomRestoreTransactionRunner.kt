@@ -1,22 +1,22 @@
 package org.spsl.evtracker.data.backup
 
 import androidx.room.withTransaction
-import javax.inject.Inject
-import javax.inject.Singleton
 import org.spsl.evtracker.data.local.db.AppDatabase
 import org.spsl.evtracker.data.local.entity.CarEntity
 import org.spsl.evtracker.data.local.entity.ChargeEventEntity
 import org.spsl.evtracker.data.local.entity.CustomLocationEntity
 import org.spsl.evtracker.domain.backup.RestoreTransactionRunner
+import javax.inject.Inject
+import javax.inject.Singleton
 
 @Singleton
 class RoomRestoreTransactionRunner @Inject constructor(
-    private val database: AppDatabase
+    private val database: AppDatabase,
 ) : RestoreTransactionRunner {
     override suspend fun replaceAll(
         cars: List<CarEntity>,
         events: List<ChargeEventEntity>,
-        locations: List<CustomLocationEntity>
+        locations: List<CustomLocationEntity>,
     ) {
         database.withTransaction {
             database.chargeEventDao().deleteAll()

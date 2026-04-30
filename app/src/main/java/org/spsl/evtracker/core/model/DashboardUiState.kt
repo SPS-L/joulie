@@ -3,7 +3,7 @@ package org.spsl.evtracker.core.model
 data class DashboardUiState(
     val emptyState: EmptyState? = null,
     val stats: Stats? = null,
-    val showMultiCurrencyBanner: Boolean = false
+    val showMultiCurrencyBanner: Boolean = false,
 )
 
 sealed class EmptyState {

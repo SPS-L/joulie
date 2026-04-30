@@ -1,14 +1,14 @@
 package org.spsl.evtracker.domain.usecase
 
-import javax.inject.Inject
 import org.spsl.evtracker.domain.backup.BackupScheduler
 import org.spsl.evtracker.domain.repository.DataResetTransactionRunner
 import org.spsl.evtracker.domain.repository.SettingsWriter
+import javax.inject.Inject
 
 class ResetAllDataUseCase @Inject constructor(
     private val resetRunner: DataResetTransactionRunner,
     private val settingsWriter: SettingsWriter,
-    private val backupScheduler: BackupScheduler
+    private val backupScheduler: BackupScheduler,
 ) {
     suspend operator fun invoke() {
         // Step 1 — atomic flag flip; if we crash between here and Step 3, the next

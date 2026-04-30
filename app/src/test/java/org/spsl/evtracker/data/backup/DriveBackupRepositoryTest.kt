@@ -1,7 +1,6 @@
 package org.spsl.evtracker.data.backup
 
 import com.google.api.client.http.HttpResponseException
-import java.io.IOException
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -20,6 +19,7 @@ import org.spsl.evtracker.testing.FakeChargeEventQueries
 import org.spsl.evtracker.testing.FakeDriveAuthManager
 import org.spsl.evtracker.testing.FakeDriveRemoteSource
 import org.spsl.evtracker.testing.FakeLocationReader
+import java.io.IOException
 
 class DriveBackupRepositoryTest {
 
@@ -30,7 +30,7 @@ class DriveBackupRepositoryTest {
         events: List<ChargeEventEntity> = emptyList(),
         locations: List<CustomLocationEntity> = emptyList(),
         auth: FakeDriveAuthManager = FakeDriveAuthManager(),
-        remote: FakeDriveRemoteSource = FakeDriveRemoteSource()
+        remote: FakeDriveRemoteSource = FakeDriveRemoteSource(),
     ): Setup {
         val carReader = FakeCarReader(cars)
         val queries = FakeChargeEventQueries().also { it.seed(events) }
@@ -42,7 +42,7 @@ class DriveBackupRepositoryTest {
     private data class Setup(
         val repo: DriveBackupRepository,
         val auth: FakeDriveAuthManager,
-        val remote: FakeDriveRemoteSource
+        val remote: FakeDriveRemoteSource,
     )
 
     @Test
@@ -73,7 +73,7 @@ class DriveBackupRepositoryTest {
             id = 7, carId = 1, eventDate = 1L,
             odometerKm = 100.0, kwhAdded = 10.0, chargeType = "DC",
             costTotal = 5.0, costPerKwh = 0.5, currency = "EUR",
-            location = "Home", note = "n"
+            location = "Home", note = "n",
         )
         val loc = CustomLocationEntity(id = 1, label = "Home", useCount = 1, lastUsed = 9L)
         val s = build(cars = listOf(car), events = listOf(event), locations = listOf(loc))

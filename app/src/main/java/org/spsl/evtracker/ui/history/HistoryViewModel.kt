@@ -3,7 +3,6 @@ package org.spsl.evtracker.ui.history
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BufferOverflow
@@ -30,13 +29,14 @@ import org.spsl.evtracker.domain.repository.ChargeEventQueries
 import org.spsl.evtracker.domain.repository.SettingsReader
 import org.spsl.evtracker.domain.service.UnitConverter
 import org.spsl.evtracker.domain.usecase.DeleteChargeEventUseCase
+import javax.inject.Inject
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class HistoryViewModel @Inject constructor(
     private val chargeEventQueries: ChargeEventQueries,
     private val deleteChargeEvent: DeleteChargeEventUseCase,
-    settingsReader: SettingsReader
+    settingsReader: SettingsReader,
 ) : ViewModel() {
 
     private data class PendingDelete(val event: ChargeEventEntity, val job: Job)
@@ -46,7 +46,7 @@ class HistoryViewModel @Inject constructor(
 
     private val _events = MutableSharedFlow<HistoryEvent>(
         extraBufferCapacity = 1,
-        onBufferOverflow = BufferOverflow.DROP_OLDEST
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
     )
     val events: SharedFlow<HistoryEvent> = _events.asSharedFlow()
 
@@ -54,20 +54,24 @@ class HistoryViewModel @Inject constructor(
         val activeCarId: Int,
         val distanceUnit: String,
         val filter: ChargeTypeFilter,
-        val pending: Map<Int, PendingDelete>
+        val pending: Map<Int, PendingDelete>,
     )
 
     val uiState: StateFlow<HistoryUiState> = combine(
         settingsReader.activeCarId,
         settingsReader.distanceUnit,
         filter,
-        pendingDeletes
+        pendingDeletes,
     ) { active, unit, f, pending -> Inputs(active, unit, f, pending) }
         .flatMapLatest { inputs ->
             if (inputs.activeCarId == -1) {
-                flowOf(HistoryUiState(
-                    activeCarId = -1, distanceUnit = inputs.distanceUnit, filter = inputs.filter
-                ))
+                flowOf(
+                    HistoryUiState(
+                        activeCarId = -1,
+                        distanceUnit = inputs.distanceUnit,
+                        filter = inputs.filter,
+                    ),
+                )
             } else {
                 chargeEventQueries.observeForCar(inputs.activeCarId).map { events ->
                     val visible = events
@@ -77,16 +81,18 @@ class HistoryViewModel @Inject constructor(
                         rows = visible.map { e ->
                             HistoryRow(
                                 event = e,
-                                displayOdometer = if (inputs.distanceUnit == "miles")
+                                displayOdometer = if (inputs.distanceUnit == "miles") {
                                     UnitConverter.kmToMiles(e.odometerKm)
-                                else e.odometerKm,
+                                } else {
+                                    e.odometerKm
+                                },
                                 showCost = e.costTotal != null && e.currency != null,
-                                isPendingDelete = e.id in inputs.pending.keys
+                                isPendingDelete = e.id in inputs.pending.keys,
                             )
                         },
                         filter = inputs.filter,
                         distanceUnit = inputs.distanceUnit,
-                        activeCarId = inputs.activeCarId
+                        activeCarId = inputs.activeCarId,
                     )
                 }
             }
@@ -99,7 +105,9 @@ class HistoryViewModel @Inject constructor(
         ChargeTypeFilter.DC -> event.chargeType == "DC"
     }
 
-    fun setFilter(newFilter: ChargeTypeFilter) { filter.value = newFilter }
+    fun setFilter(newFilter: ChargeTypeFilter) {
+        filter.value = newFilter
+    }
 
     fun onSwipeDelete(event: ChargeEventEntity) {
         val id = event.id

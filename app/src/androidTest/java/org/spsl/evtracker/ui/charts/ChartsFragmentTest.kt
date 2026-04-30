@@ -19,7 +19,6 @@ import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
-import javax.inject.Inject
 import kotlinx.coroutines.runBlocking
 import org.hamcrest.Matchers.not
 import org.junit.Assert.assertEquals
@@ -33,27 +32,31 @@ import org.spsl.evtracker.data.local.dao.ChargeEventDao
 import org.spsl.evtracker.data.local.entity.CarEntity
 import org.spsl.evtracker.data.local.entity.ChargeEventEntity
 import org.spsl.evtracker.data.preferences.PreferenceKeys
+import javax.inject.Inject
 
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
 class ChartsFragmentTest {
 
-    @get:Rule(order = 0) val hiltRule = HiltAndroidRule(this)
+    @get:Rule(order = 0)
+    val hiltRule = HiltAndroidRule(this)
 
     @Inject lateinit var dataStore: DataStore<Preferences>
+
     @Inject lateinit var carDao: CarDao
+
     @Inject lateinit var chargeEventDao: ChargeEventDao
 
     private fun seedDataStore(activeCarId: Int = 1) = runBlocking {
         dataStore.edit {
             it.clear()
             it[PreferenceKeys.SETUP_COMPLETE] = true
-            it[PreferenceKeys.ACTIVE_CAR_ID]  = activeCarId
-            it[PreferenceKeys.DISTANCE_UNIT]  = "km"
-            it[PreferenceKeys.CURRENCY]       = "EUR"
+            it[PreferenceKeys.ACTIVE_CAR_ID] = activeCarId
+            it[PreferenceKeys.DISTANCE_UNIT] = "km"
+            it[PreferenceKeys.CURRENCY] = "EUR"
             it[PreferenceKeys.PRIMARY_METRIC] = "km_per_kwh"
-            it[PreferenceKeys.THEME]          = "system"
-            it[PreferenceKeys.DRIVE_ENABLED]  = false
+            it[PreferenceKeys.THEME] = "system"
+            it[PreferenceKeys.DRIVE_ENABLED] = false
         }
     }
 
@@ -65,12 +68,15 @@ class ChartsFragmentTest {
     }
 
     private fun ev(
-        date: Long, odo: Double, type: String = "AC",
-        cost: Double? = null, currency: String? = null
+        date: Long,
+        odo: Double,
+        type: String = "AC",
+        cost: Double? = null,
+        currency: String? = null,
     ) = ChargeEventEntity(
         id = 0, carId = 1, eventDate = date, odometerKm = odo, kwhAdded = 10.0,
         chargeType = type, costTotal = cost, costPerKwh = null,
-        currency = currency, location = null, note = "", createdAt = 0L
+        currency = currency, location = null, note = "", createdAt = 0L,
     )
 
     /**
@@ -93,14 +99,17 @@ class ChartsFragmentTest {
             androidx.test.espresso.matcher.ViewMatchers.isDescendantOfA(
                 org.hamcrest.Matchers.allOf(
                     androidx.test.espresso.matcher.ViewMatchers.withId(R.id.charts_tab_chart_root),
-                    androidx.test.espresso.matcher.ViewMatchers.isDisplayed()
-                )
-            )
+                    androidx.test.espresso.matcher.ViewMatchers.isDisplayed(),
+                ),
+            ),
         )
 
     @Before fun setUp() {
         hiltRule.inject()
-        runBlocking { chargeEventDao.deleteAll(); carDao.deleteAll() }
+        runBlocking {
+            chargeEventDao.deleteAll()
+            carDao.deleteAll()
+        }
     }
 
     @Test fun tabSwitch_showsCorrectChart() = runBlocking {
@@ -116,11 +125,13 @@ class ChartsFragmentTest {
         seedDataStore()
         val now = System.currentTimeMillis()
         val d = 24L * 60 * 60 * 1000
-        seedDb(listOf(
-            ev(now - 60 * d, 0.0,   "AC", cost = 5.0, currency = "EUR"),
-            ev(now - 30 * d, 100.0, "AC", cost = 7.5, currency = "EUR"),
-            ev(now -  5 * d, 200.0, "DC", cost = 4.0, currency = "EUR")
-        ))
+        seedDb(
+            listOf(
+                ev(now - 60 * d, 0.0, "AC", cost = 5.0, currency = "EUR"),
+                ev(now - 30 * d, 100.0, "AC", cost = 7.5, currency = "EUR"),
+                ev(now - 5 * d, 200.0, "DC", cost = 4.0, currency = "EUR"),
+            ),
+        )
         launchFragmentInContainer<ChartsFragment>(themeResId = R.style.Theme_EVTracker)
             .moveToState(Lifecycle.State.RESUMED).use {
                 // Default tab is TREND. Empty message is GONE → chart populated.
@@ -207,10 +218,12 @@ class ChartsFragmentTest {
         seedDataStore()
         val now = System.currentTimeMillis()
         val d = 24L * 60 * 60 * 1000
-        seedDb(listOf(
-            ev(now - 60 * d, 0.0,   "AC", cost = 5.0, currency = "EUR"),
-            ev(now - 30 * d, 100.0, "AC", cost = 7.5, currency = "USD")
-        ))
+        seedDb(
+            listOf(
+                ev(now - 60 * d, 0.0, "AC", cost = 5.0, currency = "EUR"),
+                ev(now - 30 * d, 100.0, "AC", cost = 7.5, currency = "USD"),
+            ),
+        )
         launchFragmentInContainer<ChartsFragment>(themeResId = R.style.Theme_EVTracker)
             .moveToState(Lifecycle.State.RESUMED).use {
                 // Default TREND tab does NOT show the multi-currency banner string.
