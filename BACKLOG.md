@@ -9,7 +9,7 @@ Each task is written as a self-contained instruction suitable for a coding agent
 
 | Task | Priority | Description | Done |
 |------|----------|-------------|------|
-| TASK-01 | 🔴 | Relocate `AggregationDispatcher` out of `di/` | ☐ |
+| TASK-01 | 🔴 | Relocate `AggregationDispatcher` out of `di/` | ☑ |
 | TASK-02 | 🔴 | Enforce `ResetAllDataUseCase` as sole caller of `RoomDataResetTransactionRunner` | ☐ |
 | TASK-03 | 🔴 | Unify `UiState` vs `ScreenState` naming in `core/model` | ☐ |
 | TASK-04 | 🟡 | JVM unit tests for `CostParser` | ☐ |
