@@ -29,6 +29,15 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-19 | 🟡 | Backup failure notification channel + Android 13+ `POST_NOTIFICATIONS` handling | ☐ |
 | TASK-20 | 🟢 | CO₂ savings tracker (ICE baseline, Cyprus grid intensity, methodology doc) | ☐ |
 | TASK-21 | 🟢 | Android Baseline Profile module for cold-start performance | ☐ |
+| TASK-22 | 🔴 | Upgrade `targetSdk` and `compileSdk` to API 35 | ☐ |
+| TASK-23 | 🔴 | Move startup `isLoading` state into `MainViewModel` | ☐ |
+| TASK-24 | 🔴 | Enforce ViewModel/Activity consumption of the existing narrow domain interfaces (no concrete `data.repository.*` imports outside `di/`) | ☐ |
+| TASK-25 | 🟡 | Replace `chargeType: String` with a sealed class / TypeConverter-backed enum | ☐ |
+| TASK-26 | 🟡 | Change all Room primary-key and foreign-key fields from `Int` to `Long` | ☐ |
+| TASK-27 | 🟡 | Decouple bottom-nav visibility from hardcoded `hideOn` set in `MainActivity` | ☐ |
+| TASK-28 | 🟡 | Consolidate time on existing `NowProvider`; remove direct `System.currentTimeMillis()` from entities and helpers; drop the parallel `() -> Long` clock in `WorkerModule` | ☐ |
+| TASK-29 | 🟢 | Add explicit `debug` build type with `applicationIdSuffix` and `BuildConfig` flags | ☐ |
+| TASK-30 | 🟢 | Migrate from MPAndroidChart to Vico (line/bar) + custom `Canvas` `PieChartView` (pie tabs) | ☐ |
 
 **Priority legend:** 🔴 High (architecture/data safety) · 🟡 Medium (robustness/UX) · 🟢 Low (new feature)  
 Mark done by replacing `☐` with `☑` when a task is merged.
@@ -895,6 +904,469 @@ cold-start latency on user devices.
 7. Document in `../CLAUDE.md` the cadence: "Regenerate baseline profile when:
    adding/removing a major dependency, restructuring startup, or before
    each `v*` tag."
+
+---
+
+## 🔴 TASK-22 — Upgrade `targetSdk` and `compileSdk` to API 35
+
+`app/build.gradle.kts:18,23` currently pin `compileSdk = 34` / `targetSdk = 34`
+(Android 14). As of early 2026, Google Play requires `targetSdk ≥ 35` for new
+submissions and updates; staying on 34 will block Play Store publishing.
+
+1. In `app/build.gradle.kts`, change both:
+   ```kotlin
+   compileSdk = 35
+   // inside defaultConfig:
+   targetSdk = 35
+   ```
+2. If/when `gradle/libs.versions.toml` gains version aliases for these,
+   keep them in sync.
+3. Rebuild with `./gradlew :app:assembleDebug` and resolve API-35 deprecations.
+   Pay particular attention to:
+   - **Edge-to-edge by default** on API 35: `WindowInsets` handling in
+     `MainActivity` and any Fragment that sets window flags.
+   - `PendingIntent.FLAG_IMMUTABLE` — required since API 31 but newer Lint flags
+     it more loudly.
+   - Photo / media picker changes that landed in API 35 (relevant if a future
+     task adds an image-picker for charge-event notes).
+4. Run `./gradlew lint` and address new API-35 Lint errors.
+5. Run the full instrumented suite on an API-35 emulator:
+   `./gradlew connectedAndroidTest`.
+6. Once TASK-16 (CI lint gate) is merged, bump the `api-level` in the matrix
+   in `.github/workflows/ci.yml` from 34 to 35 so PRs are tested on the new
+   target.
+
+---
+
+## 🔴 TASK-23 — Move startup `isLoading` state into `MainViewModel`
+
+`MainActivity.kt:29` declares `private val isLoading = MutableStateFlow(true)`
+directly inside the Activity, and `startupSequence()` (line 60) plus the two
+`@Inject` fields (`settingsRepository`, `resetAllDataUseCase`, lines 26–27)
+also live in the Activity. On every configuration change (rotation, locale,
+dark/light mode) the Activity is recreated, `isLoading` resets to `true`, and
+`startupSequence()` re-runs. This can trigger duplicate auto-recovery attempts
+and produces a visible splash flicker on rotation during startup.
+
+1. Create `app/src/main/java/org/spsl/evtracker/ui/MainViewModel.kt`:
+   ```kotlin
+   @HiltViewModel
+   class MainViewModel @Inject constructor(
+       private val settingsRepository: SettingsRepository,
+       private val resetAllDataUseCase: ResetAllDataUseCase,
+   ) : ViewModel() {
+
+       sealed class StartupState {
+           data object Loading : StartupState()
+           data class Ready(val setupComplete: Boolean) : StartupState()
+           data class RecoveryFailed(val cause: Throwable?) : StartupState()
+       }
+
+       private val _startupState = MutableStateFlow<StartupState>(StartupState.Loading)
+       val startupState: StateFlow<StartupState> = _startupState.asStateFlow()
+
+       init { runStartupSequence() }
+
+       fun runStartupSequence() { /* move logic from MainActivity here */ }
+   }
+   ```
+   (Once TASK-24 lands, swap the constructor to `SettingsReader`.)
+2. In `MainActivity`, inject `MainViewModel` via `viewModels()` and remove the
+   `isLoading` field, `startupSequence()`, and the two `@Inject` fields.
+3. Observe `mainViewModel.startupState` in `onCreate` using
+   `lifecycleScope.launch { repeatOnLifecycle(STARTED) { … } }`:
+   - `Loading` → keep splash on screen (`setKeepOnScreenCondition { true }`).
+   - `Ready(setupComplete)` → call `mountNavGraph(setupComplete)`; dismiss splash.
+   - `RecoveryFailed(cause)` → call `showRecoveryFailureDialog(cause)`; dismiss splash.
+4. Recovery-failure dialog's retry button must call
+   `mainViewModel.runStartupSequence()`, not re-launch a coroutine in the Activity.
+5. Update `isNavGraphMounted()` (`@VisibleForTesting`) to check
+   `mainViewModel.startupState.value is StartupState.Ready` instead of the
+   removed `isLoading` field.
+6. Add `app/src/test/.../MainViewModelTest.kt` covering:
+   - `resetInProgress = false` path → emits `Ready` immediately.
+   - `resetInProgress = true`, success path → emits `Loading` then `Ready`.
+   - `resetInProgress = true`, failure path → emits `Loading` then `RecoveryFailed`.
+   Use `kotlinx-coroutines-test` `UnconfinedTestDispatcher` and existing fakes.
+
+---
+
+## 🔴 TASK-24 — Enforce ViewModel/Activity consumption of the existing narrow domain interfaces
+
+> **Note on premise.** The original framing was "introduce repository interfaces
+> to break the data → domain dependency." Narrow IFs **already exist** in
+> `domain/repository/`: `CarReader`, `CarWriter`, `ChargeEventQueries`,
+> `ChargeEventWriter`, `LocationReader`, `LocationWriter`, `SettingsReader`,
+> `SettingsWriter`, and `DataResetTransactionRunner`. The remaining work is
+> narrower: **enforce** that consumers depend on those IFs and never on the
+> concrete `data.repository.*` classes (with `di/` modules being the sole
+> exception, where bindings legitimately reference the implementations).
+
+A `grep -rn "data\.repository" app/src/main/java | grep import` shows three
+violations on `main`:
+
+- `EVTrackerApp.kt` imports `data.repository.SettingsRepository`.
+- `MainActivity.kt` imports and `@Inject`s `data.repository.SettingsRepository`.
+- `WizardViewModel.kt` imports `data.repository.SettingsRepository`.
+
+(Plus expected references inside `di/DomainModule.kt` for the bindings — those
+are correct and should stay.)
+
+1. Audit and replace each violation:
+   - `MainActivity` and `WizardViewModel` should depend on `SettingsReader` (and
+     `SettingsWriter` only if they actually mutate settings — for the wizard,
+     yes; for `MainActivity` startup gate, only `SettingsReader`).
+   - `EVTrackerApp` (Hilt application class): if the import is just for a
+     downstream binding, remove it; otherwise replace with the narrow IF.
+2. Confirm `di/DomainModule.kt` already binds the narrow IFs to their concrete
+   classes; if any IF is missing a `@Binds`, add it.
+3. After the refactor, the only files matching
+   `import org\.spsl\.evtracker\.data\.repository\.` should live under `di/`.
+   Add a Lint or ktlint custom rule (TASK-16 follow-up) once that infrastructure
+   exists.
+4. Run `./gradlew test connectedAndroidTest` and verify all green.
+5. Update `../CLAUDE.md` (Architecture section) to make the rule explicit:
+   "ViewModels, Activities, and use cases depend only on `domain/repository/*`
+   interfaces. Concrete implementations live in `data/repository/*` and are
+   wired by Hilt in `di/`."
+6. **Sequencing:** TASK-23 must land before TASK-24, because `MainViewModel`
+   becomes the new `SettingsReader` consumer that the audit verifies.
+
+---
+
+## 🟡 TASK-25 — Replace `chargeType: String` with a TypeConverter-backed enum
+
+`ChargeEventEntity.kt:30` has `val chargeType: String = "AC"`. Nothing prevents
+the values `"ac"`, `"DC"`, `"dc_fast"`, or any arbitrary string from being
+written, breaking filter queries and chart groupings silently.
+
+1. Add a Kotlin enum to the core model layer:
+   ```kotlin
+   // app/src/main/java/org/spsl/evtracker/core/model/ChargeType.kt
+   enum class ChargeType { AC, DC_FAST, DC_ULTRA }
+   ```
+2. Create a Room `TypeConverter`:
+   ```kotlin
+   // app/src/main/java/org/spsl/evtracker/data/local/db/ChargeTypeConverter.kt
+   class ChargeTypeConverter {
+       @TypeConverter fun fromChargeType(value: ChargeType): String = value.name
+       @TypeConverter fun toChargeType(value: String): ChargeType =
+           ChargeType.entries.firstOrNull { it.name == value } ?: ChargeType.AC
+   }
+   ```
+   Register via `@TypeConverters(ChargeTypeConverter::class)` on `AppDatabase`.
+3. Change `ChargeEventEntity.chargeType` to `val chargeType: ChargeType = ChargeType.AC`.
+   The stored column is still `TEXT`, so the schema is binary-compatible.
+   **Data migration:** existing rows have either `"AC"` or `"DC"`. Add a Room
+   migration that updates `"DC"` → `"DC_FAST"` (the closest semantic match), so
+   `toChargeType` doesn't silently fall back to `AC` for legacy rows.
+4. Update `ChargeEditFragment`, its ViewModel, `ChartsViewModel`, and DAO `@Query`
+   filters that match on `chargeType` to use `ChargeType.*` literals (e.g.
+   `WHERE chargeType = :type` with `type: ChargeType` parameter — Room will use
+   the converter).
+5. Update `BackupData` DTO + Gson serialiser to map `ChargeType` ↔ `String`
+   (custom `JsonDeserializer` + serialiser) so existing `evtracker_backup.json`
+   files still restore. Bump `backup_version` to **4** and update DESIGN.md §8.
+6. Add `ChargeTypeConverterTest.kt` covering round-trip, invalid input fallback,
+   and the legacy `"DC"` rewrite path.
+
+---
+
+## 🟡 TASK-26 — Change Room primary-key and foreign-key fields from `Int` to `Long`
+
+`CarEntity.id`, `ChargeEventEntity.id`, `ChargeEventEntity.carId`, and
+`CustomLocationEntity.id` are typed as `Int` (32-bit). Room's documentation and
+Android best practices recommend `Long` for auto-generated primary keys to
+align with SQLite's 64-bit `ROWID` and eliminate any overflow risk.
+
+1. Change `@PrimaryKey(autoGenerate = true) val id: Int = 0` → `Long = 0L` in:
+   - `CarEntity.kt:8`
+   - `ChargeEventEntity.kt:25`
+   - `CustomLocationEntity.kt:12`
+2. Change the corresponding foreign-key columns from `Int` to `Long`:
+   - `ChargeEventEntity.carId: Int` → `Long`
+3. Write a Room migration. Because SQLite `INTEGER` columns are already 64-bit
+   regardless of Kotlin type, the migration mainly fixes Kotlin type safety; it
+   should be a copy-and-rename pattern:
+   1. Create `<table>_new` with the corrected schema.
+   2. `INSERT INTO <table>_new SELECT * FROM <table>`.
+   3. `DROP TABLE <table>; ALTER TABLE <table>_new RENAME TO <table>`.
+   Repeat for `cars`, `charge_events`, `custom_locations`. Recreate the
+   composite indices (`charge_events(carId, eventDate)`, plus single-column
+   indices on `chargeType` and `location`).
+4. Update all DAOs, repositories, narrow IFs, use cases, and ViewModels that
+   accept or return car/event/location IDs to use `Long`.
+5. Run `./gradlew test connectedAndroidTest` and verify the Room migration test
+   passes against the new schema version.
+
+> **Sequencing note (also see "Notes for Agents" addendum below):** TASK-14
+> (battery degradation tracker) and TASK-25 (charge-type enum) also bump the
+> Room schema version. Whichever lands first claims the next version number;
+> later tasks must increment again and update the migration list in
+> `AppDatabase.getInstance`.
+
+---
+
+## 🟡 TASK-27 — Decouple bottom-nav visibility from the hardcoded `hideOn` set
+
+`MainActivity.kt:47` declares `val hideOn = setOf(R.id.wizardFragment, …)` to
+decide when to hide the `BottomNavigationView`. Every new full-screen
+destination requires editing `MainActivity`, coupling the Activity to specific
+Fragment IDs. This is easy to forget — the `manageLocationsFragment` and
+`carsFragment` cases were both retrofits that had to chase down the omission.
+
+1. In `app/src/main/res/navigation/nav_graph.xml`, declare a per-destination
+   argument:
+   ```xml
+   <fragment android:id="@+id/wizardFragment" …>
+       <argument
+           android:name="hideBottomNav"
+           app:argType="boolean"
+           android:defaultValue="true" />
+   </fragment>
+   ```
+   Set `android:defaultValue="true"` on `wizardFragment`, `chargeEditFragment`,
+   `carsFragment`, `manageLocationsFragment`. Set `false` (or omit — the default
+   is `false`) on `dashboardFragment`, `historyFragment`, `chartsFragment`,
+   `settingsFragment`.
+2. In `MainActivity`, replace the `hideOn` set with:
+   ```kotlin
+   navController.addOnDestinationChangedListener { _, dest, args ->
+       val hide = args?.getBoolean("hideBottomNav") ?: false
+       binding.bottomNav.isVisible = !hide
+   }
+   ```
+3. Delete the `hideOn` `setOf(…)` declaration entirely.
+4. Update or add an instrumented test in `app/src/androidTest/` that navigates
+   to `chargeEditFragment` and asserts `bottomNav.visibility == View.GONE`,
+   then back to `dashboardFragment` and asserts `View.VISIBLE`.
+5. Document the `hideBottomNav` argument convention in `../CLAUDE.md`
+   (Architecture / Navigation note) so new destinations get the argument set
+   correctly without anyone having to edit `MainActivity` again.
+
+---
+
+## 🟡 TASK-28 — Consolidate time on the existing `NowProvider` abstraction
+
+> **Note on premise.** A `NowProvider` (`fun interface NowProvider { fun nowMillis(): Long }`)
+> already exists in `domain/usecase/NowProvider.kt` and is bound by
+> `DispatcherModule.provideNowProvider`. `ObserveChartsModelsUseCase` already
+> consumes it. Don't introduce a parallel `Clock` interface — extend usage of
+> the existing one. There is also a duplicate `() -> Long` provider in
+> `WorkerModule.provideClock` that should be removed.
+
+A `grep -rn "System.currentTimeMillis()" app/src/main/java` (excluding tests
+and the production `NowProvider` binding) finds these direct uses that should
+go through `NowProvider` instead:
+
+- `data/local/entity/CarEntity.kt:14` (`createdAt` default)
+- `data/local/entity/ChargeEventEntity.kt:36` (`createdAt` default)
+- `data/local/entity/CustomLocationEntity.kt:15` (`lastUsed` default)
+- `core/model/BackupData.kt:23` (`now: Long` default arg)
+- `core/model/ChargeEditUiState.kt:8` (`eventDateMillis` default)
+- `domain/repository/LocationWriter.kt:6` (`now: Long` default arg)
+- `domain/service/DateRangeResolver.kt:11,20` (two `nowMillis: Long` defaults)
+- `ui/locations/ManageLocationsAdapter.kt:21`
+- `di/WorkerModule.kt:23` (`provideClock`: a `() -> Long` that duplicates `NowProvider`)
+
+1. Remove the `= System.currentTimeMillis()` default from all entity constructors.
+   Set the timestamp at the call site in repositories / use cases by injecting
+   `NowProvider` and calling `now.nowMillis()` before insert.
+2. For service/use-case default args, drop the default and require the caller to
+   pass `now.nowMillis()` from an injected `NowProvider`. (Default args that
+   call `System.currentTimeMillis()` capture wall-clock time at function-default
+   evaluation, which is fine in production but undermines deterministic tests.)
+3. Delete `WorkerModule.provideClock` entirely; consumers should `@Inject NowProvider`
+   instead.
+4. The `BackupData.serialize(now: Long = System.currentTimeMillis())` default
+   should also be removed; `BackupSerializer` already has the use-case context
+   to resolve `now` via `NowProvider`.
+5. In tests, replace ad-hoc time fakes with a fixed `NowProvider`:
+   ```kotlin
+   class FakeNowProvider(@Volatile var time: Long = 0L) : NowProvider {
+       override fun nowMillis() = time
+       fun advance(ms: Long) { time += ms }
+   }
+   ```
+   Add it to `app/src/test/java/org/spsl/evtracker/testing/Fakes.kt`.
+6. Update or add tests around entity creation to assert that `createdAt` /
+   `lastUsed` equal the fake's value, not the real wall clock.
+
+---
+
+## 🟢 TASK-29 — Add an explicit `debug` build type with `applicationIdSuffix` and `BuildConfig` flags
+
+`app/build.gradle.kts` defines only a `release` block; `debug` is left as
+Gradle's implicit default. Consequences: (1) debug and release share the same
+`applicationId` so they cannot coexist on a device; (2) no `BuildConfig`
+booleans exist to guard development-only features; (3) `buildConfig` is not
+enabled in `buildFeatures` (`viewBinding = true` is — `buildConfig` is missing
+since AGP 8.0 disabled it by default).
+
+1. Add an explicit `debug` block to `buildTypes`:
+   ```kotlin
+   debug {
+       applicationIdSuffix = ".debug"
+       versionNameSuffix = "-debug"
+       isDebuggable = true
+       buildConfigField("boolean", "ENABLE_SEED_DATA", "true")
+       buildConfigField("boolean", "VERBOSE_LOGGING", "true")
+       buildConfigField("String", "DRIVE_FOLDER_SUFFIX", "\"_debug\"")
+   }
+   release {
+       // existing config …
+       buildConfigField("boolean", "ENABLE_SEED_DATA", "false")
+       buildConfigField("boolean", "VERBOSE_LOGGING", "false")
+       buildConfigField("String", "DRIVE_FOLDER_SUFFIX", "\"\"")
+   }
+   ```
+2. Enable `BuildConfig` generation:
+   ```kotlin
+   buildFeatures {
+       viewBinding = true
+       buildConfig = true   // add this line
+   }
+   ```
+3. Use `BuildConfig.VERBOSE_LOGGING` (or appropriate flag) where finer-grained
+   guards are useful; preserve `if (BuildConfig.DEBUG)` only where the binary
+   debug/release distinction is genuinely the right gate.
+4. **OAuth implication:** changing the debug `applicationId` to
+   `org.spsl.evtracker.debug` invalidates the existing debug OAuth Android
+   client (which is bound to `org.spsl.evtracker` + the debug keystore SHA-1).
+   Either register a **second** debug OAuth client for `org.spsl.evtracker.debug`
+   in the Google Cloud project (recommended), or document in
+   `../docs/GOOGLE_CLOUD_SETUP.md` that Drive backup is unavailable on debug
+   builds after this change.
+5. Update `../CLAUDE.md` (Build & Test section) to document:
+   - Debug + release can be installed side-by-side (different `applicationId`).
+   - Each `BuildConfig` flag's purpose and when to toggle it.
+6. Once TASK-16 lands, ensure `.github/workflows/ci.yml` runs both
+   `assembleDebug` and `assembleRelease` so the build types stay in sync.
+
+---
+
+## 🟢 TASK-30 — Migrate from MPAndroidChart to Vico (line/bar) + custom `PieChartView` (pie tabs)
+
+A `grep -rln "com.github.mikephil.charting"` confirmed exactly three importer
+files: `ChartsMarkerView.kt`, `ChartStyling.kt`, `ChartsTabFragment.kt`. The
+five tabs map to Vico like this:
+
+| Tab | MPAndroidChart type | Replacement | Notes |
+|---|---|---|---|
+| Trend | `LineChart` (AC + DC) | Vico `CartesianChartView` + `LineCartesianLayer` | Direct port |
+| Monthly kWh | `BarChart` | Vico `CartesianChartView` + `ColumnCartesianLayer` | Renamed in Vico, same semantics |
+| Monthly cost | `BarChart` | Vico `CartesianChartView` + `ColumnCartesianLayer` | Same |
+| AC vs DC split | `PieChart` | **Custom `Canvas` `PieChartView`** | Vico has no pie chart |
+| Locations | `PieChart` | **Custom `Canvas` `PieChartView`** | Same |
+
+### Implementation
+
+**Step 1 — Add Vico; keep MPAndroidChart in place during the migration.**
+
+```toml
+# gradle/libs.versions.toml
+[versions]
+vico = "2.0.0"   # check latest stable at github.com/patrykandpatrick/vico
+
+[libraries]
+vico-views = { group = "com.patrykandpatrick.vico", name = "views", version.ref = "vico" }
+```
+```kotlin
+// app/build.gradle.kts
+implementation(libs.vico.views)
+```
+
+**Step 2 — Migrate the line `Trend` tab.**
+
+1. Replace `configureLineChart(chart: LineChart)` in `ChartStyling.kt` with a
+   helper that configures `CartesianChartView` + `LineCartesianLayer`.
+2. In `ChartsTabFragment.renderTrend()` swap `LineChart`/`LineDataSet`/`LineData`
+   for Vico's `CartesianChartView` + `LineCartesianLayerModel.build {}`.
+3. Port x-axis date formatting to a Vico `CartesianValueFormatter`.
+4. `Entry.data` (currently used to stash epoch millis for the marker) doesn't
+   exist on Vico models — pass marker payload via the model's
+   `extraStore` map instead.
+5. Replace `ChartsMarkerView` (extends MPAndroidChart `MarkerView`, overrides
+   `getOffset`) with a Vico `DefaultCartesianMarker` or a custom
+   `CartesianMarker`. Vico positions markers automatically — the `getOffset`
+   override is no longer needed.
+
+**Step 3 — Migrate the two bar tabs (Monthly kWh, Monthly cost).**
+
+1. Replace `configureBarChart(chart: BarChart)` with a Vico helper for
+   `ColumnCartesianLayer`.
+2. Replace `BarChart` instantiation with `CartesianChartView`; replace
+   `BarDataSet` / `BarData` / `BarEntry` with `ColumnCartesianLayerModel.build {}`.
+3. Port `ChartStyling.monthBucketFormatter` from MPAndroidChart `ValueFormatter`
+   to a Vico `CartesianValueFormatter` lambda.
+4. Reuse the same Vico marker wrapper introduced in Step 2 — do **not** port
+   the marker implementation twice.
+
+**Step 4 — Replace pie tabs with a custom `Canvas` view.**
+
+Vico has no pie chart. Implement once, use twice:
+
+1. Create `app/src/main/java/org/spsl/evtracker/ui/common/PieChartView.kt`:
+   a custom `View` that:
+   - Accepts `data class PieSlice(val label: String, val value: Float, val color: Int)`.
+   - Draws segments via `canvas.drawArc()` with a configurable hole radius
+     (donut style, matching `ChartStyling.configurePieChart` `setHoleColor`).
+   - Draws an optional center text string (for AC/DC count).
+   - Draws a legend below the circle (label + colour swatch) replacing
+     MPAndroidChart's built-in legend.
+   - Animates the sweep via `ValueAnimator` (0° → 360° over 400 ms),
+     mirroring the existing `chart.animateY(400)`.
+2. In `renderAcDc()` and `renderLocations()`, replace `PieChart(requireContext())`
+   with `PieChartView(requireContext())`. Pass slices + center text.
+3. Port `ChartStyling.locationPalette()` as-is — it's a colour-array helper with
+   no MPAndroidChart dependency.
+4. Add a JVM unit test for `PieChartView` slice-angle math: empty data → zero
+   sweep, non-empty data → angles sum to exactly 360°.
+
+**Step 5 — Remove MPAndroidChart.**
+
+Once all five tabs render correctly with the new implementations:
+
+1. Drop `implementation(libs.mpandroidchart)` and the `mpandroidchart` entry
+   from `gradle/libs.versions.toml`.
+2. Delete the MPAndroidChart keep rule added in TASK-17 (`-keep class
+   com.github.mikephil.charting.** { *; }` and matching `-dontwarn`).
+3. Run `./gradlew lint` and confirm no dangling `dontwarn` references remain.
+
+**Step 6 — Tests and docs.**
+
+1. Update or add Espresso tests in `app/src/androidTest/` for each of the five
+   tabs: assert the chart `View` is non-empty when the ViewModel emits a
+   `Loaded` state with mock data.
+2. Update `TEST_PLAN.md` (Charts section): replace MPAndroidChart-specific
+   interaction notes (pinch-zoom, tap-marker) with Vico equivalents, and note
+   that `PieChartView` does not support pinch-zoom by design.
+3. Update `../CLAUDE.md` (Architecture / Dependencies note): remove the
+   MPAndroidChart entry; add `vico-views` with a note on which tabs use it and
+   which use `PieChartView`.
+
+---
+
+## Notes for Agents (TASK-22 to TASK-30 addendum)
+
+- **TASK-23 must land before TASK-24:** `MainViewModel` becomes the new
+  `SettingsReader` consumer that the audit verifies.
+- **TASK-26 schema-version coordination:** TASK-14 (battery degradation),
+  TASK-25 (`ChargeType` enum), and TASK-26 (`Int` → `Long`) all bump the Room
+  schema. Whichever lands first claims the next version; later tasks must
+  increment again and update the migration list in `AppDatabase.getInstance`.
+- **TASK-25 backup compatibility:** the `ChargeType` enum rename (`DC` →
+  `DC_FAST`) must round-trip through `BackupData` JSON without data loss.
+  Bump `backup_version` to 4 and add a deserialiser fallback for the legacy
+  string. A broken backup round-trip is a data-loss risk.
+- **TASK-28 already partially exists:** don't introduce a parallel `Clock`
+  interface — use the existing `NowProvider` and delete the duplicate
+  `() -> Long` in `WorkerModule`.
+- **TASK-30 marker reuse:** complete the Vico marker wrapper once in Step 2
+  and reuse in Step 3. Do not port `ChartsMarkerView` twice.
+- **TASK-29 OAuth implication:** if you add `applicationIdSuffix = ".debug"`,
+  register a second debug OAuth Android client in the Google Cloud project
+  (or document that Drive backup is unavailable on debug builds).
 
 ---
 
