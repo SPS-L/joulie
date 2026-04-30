@@ -1,24 +1,56 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="primary">#1565C0</color>
-    <color name="primary_variant">#003c8f</color>
-    <color name="secondary">#00796B</color>
-    <color name="secondary_variant">#004c40</color>
-    <color name="background">#FAFAFA</color>
-    <color name="surface">#FFFFFF</color>
-    <color name="error">#B00020</color>
-    <color name="on_primary">#FFFFFF</color>
-    <color name="on_secondary">#FFFFFF</color>
-    <color name="on_background">#000000</color>
-    <color name="on_surface">#000000</color>
+    <!-- M3 — Primary (seeded #1565C0) -->
+    <color name="md_theme_light_primary">#0061A4</color>
+    <color name="md_theme_light_onPrimary">#FFFFFF</color>
+    <color name="md_theme_light_primaryContainer">#D1E4FF</color>
+    <color name="md_theme_light_onPrimaryContainer">#001D36</color>
+
+    <!-- M3 — Secondary (algorithmic, seeded #1565C0) -->
+    <color name="md_theme_light_secondary">#535F70</color>
+    <color name="md_theme_light_onSecondary">#FFFFFF</color>
+    <color name="md_theme_light_secondaryContainer">#D7E3F8</color>
+    <color name="md_theme_light_onSecondaryContainer">#101C2B</color>
+
+    <!-- M3 — Tertiary (overridden orange ramp anchored on #FB8C00 — DESIGN §6 "DC orange") -->
+    <color name="md_theme_light_tertiary">#A04E00</color>
+    <color name="md_theme_light_onTertiary">#FFFFFF</color>
+    <color name="md_theme_light_tertiaryContainer">#FFDCC0</color>
+    <color name="md_theme_light_onTertiaryContainer">#341000</color>
+
+    <!-- M3 — Error -->
+    <color name="md_theme_light_error">#BA1A1A</color>
+    <color name="md_theme_light_onError">#FFFFFF</color>
+    <color name="md_theme_light_errorContainer">#FFDAD6</color>
+    <color name="md_theme_light_onErrorContainer">#410002</color>
+
+    <!-- M3 — Neutral / surface -->
+    <color name="md_theme_light_background">#FDFCFF</color>
+    <color name="md_theme_light_onBackground">#1A1C1E</color>
+    <color name="md_theme_light_surface">#FDFCFF</color>
+    <color name="md_theme_light_onSurface">#1A1C1E</color>
+    <color name="md_theme_light_surfaceVariant">#DFE2EB</color>
+    <color name="md_theme_light_onSurfaceVariant">#43474E</color>
+    <color name="md_theme_light_outline">#73777F</color>
+    <color name="md_theme_light_outlineVariant">#C3C7CF</color>
+
+    <!-- M3 — Inverse + scrim -->
+    <color name="md_theme_light_inverseSurface">#2F3033</color>
+    <color name="md_theme_light_inverseOnSurface">#F1F0F4</color>
+    <color name="md_theme_light_inversePrimary">#9ECAFF</color>
+    <color name="md_theme_light_scrim">#000000</color>
+
+    <!-- F2 — Chart palette (kept verbatim from F2; non-theme product colors) -->
     <color name="chart_1">#1565C0</color>
     <color name="chart_2">#00796B</color>
     <color name="chart_3">#F57F17</color>
     <color name="chart_4">#AD1457</color>
     <color name="chart_5">#6A1B9A</color>
 
-    <!-- F2 — Chart series fallback colors. Used only when theme attrs (?attr/colorPrimary,
-         ?attr/colorTertiary) cannot be resolved. Matches DESIGN §6 "AC blue, DC orange". -->
+    <!-- F2 — Chart series fallback colors. Used only when theme attrs
+         (?attr/colorPrimary, ?attr/colorTertiary) cannot be resolved. With the
+         M3 theme rewrite the theme attrs *do* resolve, but the fallbacks remain
+         for defensive code paths. -->
     <color name="chart_ac_fallback">#1E88E5</color>
     <color name="chart_dc_fallback">#FB8C00</color>
 </resources>
