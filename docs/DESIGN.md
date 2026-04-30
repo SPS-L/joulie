@@ -5,7 +5,7 @@
 **App Name:** EV Efficiency Tracker  
 **Package:** `org.spsl.evtracker`  
 **Min SDK:** API 26 (Android 8.0)  
-**Target SDK:** API 34 (Android 14)  
+**Target SDK:** API 35 (Android 15)  
 **Language:** Kotlin  
 **Architecture:** MVVM + Repository pattern  
 **Build system:** Gradle (Kotlin DSL)

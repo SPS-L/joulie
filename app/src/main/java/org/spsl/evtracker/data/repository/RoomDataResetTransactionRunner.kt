@@ -6,6 +6,17 @@ import org.spsl.evtracker.domain.repository.DataResetTransactionRunner
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Room-backed [DataResetTransactionRunner].
+ *
+ * **Destructive operation — must only be reached through
+ * [org.spsl.evtracker.domain.usecase.ResetAllDataUseCase].** Hilt binds this
+ * class to the [DataResetTransactionRunner] interface in
+ * [org.spsl.evtracker.di.DomainModule]; consumers depend on the interface, not
+ * on this concrete type, and even the interface is reserved for the use case.
+ * See the interface KDoc for the rationale (the `resetInProgress` durable-flag
+ * protocol).
+ */
 @Singleton
 class RoomDataResetTransactionRunner @Inject constructor(
     private val database: AppDatabase,

@@ -64,13 +64,13 @@ UI (Fragments + ViewModels)  →  Domain (use cases + services)  →  Repositori
 - **WorkManager** for Drive backup scheduling (uniqueness via `enqueueUniqueWork`).
 - **Material 3** with light/dark token palettes.
 
-Min SDK 26 · target / compile SDK 34 · JDK 17 · Gradle 8.4 · AGP 8.2.0 · Kotlin 1.9.21.
+Min SDK 26 · target / compile SDK 35 · JDK 17 · Gradle 8.4 · AGP 8.2.0 · Kotlin 1.9.21.
 
 The full technical design lives in [`docs/DESIGN.md`](docs/DESIGN.md).
 
 ## Building from source
 
-You need **JDK 17** and the **Android SDK with Build Tools 34**, with `ANDROID_HOME` set.
+You need **JDK 17** and the **Android SDK with Build Tools 35**, with `ANDROID_HOME` set. AGP will auto-download the API 35 platform on first build.
 
 ```bash
 git clone https://github.com/SPS-L/EV-android-app.git
@@ -83,7 +83,7 @@ The debug APK lands at `app/build/outputs/apk/debug/app-debug.apk`.
 ### Tests
 
 ```bash
-./gradlew test                  # JVM unit tests (~236)
+./gradlew test                  # JVM unit tests (~243)
 ./gradlew connectedAndroidTest  # Espresso / Room — needs API 26+ device or emulator
 ```
 
