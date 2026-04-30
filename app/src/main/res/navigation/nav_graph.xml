@@ -67,6 +67,19 @@
             app:destination="@id/wizardFragment"
             app:popUpTo="@id/nav_graph"
             app:popUpToInclusive="true"/>
+        <action
+            android:id="@+id/action_settings_to_about"
+            app:destination="@id/aboutFragment"/>
+    </fragment>
+
+    <fragment
+        android:id="@+id/aboutFragment"
+        android:name="org.spsl.evtracker.ui.about.AboutFragment"
+        android:label="@string/about_title">
+        <argument
+            android:name="hideBottomNav"
+            app:argType="boolean"
+            android:defaultValue="true"/>
     </fragment>
 
     <fragment

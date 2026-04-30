@@ -17,7 +17,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-07 | 🟡 | Drive backup error handling & retry logic | — | ☐ |
 | TASK-08 | 🟢 | Replace `CarEditDialog` with a Compose `AlertDialog` (requires adding Compose) | — | ☐ |
 | TASK-09 | 🟢 | CSV export of charge events with efficiency column, date-range picker | — | ☐ |
-| TASK-10 | 🟢 | In-app About / Info screen with SPS-Lab acknowledgment | — | ☐ |
+| TASK-10 | 🟢 | In-app About / Info screen with SPS-Lab acknowledgment | — | ☑ |
 | TASK-11 | 🟡 | Odometer regression detection UX improvement | — | ☐ |
 | TASK-12 | 🟡 | Widget: last-charge summary on home screen | — | ☐ |
 | TASK-13 | 🟢 | Charging session timer / live session mode | — | ☐ |
@@ -309,7 +309,35 @@ release build still compiles (`./gradlew :app:assembleRelease`).
 
 ---
 
-## 🟢 TASK-10 — Add In-App "About / Info" Screen
+## 🟢 TASK-10 — Add In-App "About / Info" Screen ☑ Done (2026-05-01)
+
+> **Outcome:** new `AboutFragment` at
+> `app/src/main/java/org/spsl/evtracker/ui/about/AboutFragment.kt` with
+> a CoordinatorLayout + MaterialToolbar + NestedScrollView body of
+> Material 3 cards (app info, acknowledgment, license, disclaimer,
+> open-source libraries). Reachable from `Settings → About` via
+> `R.id.action_settings_to_about`; the destination declares
+> `hideBottomNav=true` per the TASK-27 convention. Version text comes
+> from `BuildConfig.VERSION_NAME` / `VERSION_CODE` (unblocked by
+> TASK-29). Two tappable URL rows fire `Intent.ACTION_VIEW` and fall
+> back to a Snackbar on `ActivityNotFoundException`. The bundled
+> launcher icon pack drop-in: 20 PNG mipmaps (4 files × 5 density
+> buckets) extracted from `exported-assets.zip` →
+> `ev_tracker_icons.zip` into `app/src/main/res/mipmap-*/`;
+> `mipmap-anydpi-v26/ic_launcher.xml` and `ic_launcher_round.xml`
+> repointed from `@drawable/ic_launcher_{foreground,background}` to
+> `@mipmap/...`; the now-orphan vector drawables in
+> `drawable/ic_launcher_{foreground,background}.xml` deleted (lint
+> `UnusedResources` is in error mode). `drawable/ic_spslab_badge.xml`
+> kept and consumed by the About app-info card header. New
+> instrumented `AboutFragmentTest` covers the five required assertions
+> (version non-empty, SPS-Lab visible, sps-lab.org link present,
+> license card contains "MIT", disclaimer contains "liability"); the
+> test compiles via `:app:assembleDebugAndroidTest` (running needs an
+> emulator). Spec:
+> `superpowers/specs/2026-05-01-task10-about-screen-design.md`. Plan:
+> `superpowers/plans/2026-05-01-task10-about-screen.md`. The original
+> task text is preserved below for historical context.
 
 > **Prerequisite resolved (2026-05-01):** TASK-29 has merged.
 > `buildFeatures.buildConfig = true` is enabled, so
