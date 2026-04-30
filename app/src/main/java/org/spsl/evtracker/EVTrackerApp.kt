@@ -9,7 +9,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import org.spsl.evtracker.data.repository.SettingsRepository
+import org.spsl.evtracker.domain.repository.SettingsReader
 import javax.inject.Inject
 
 @HiltAndroidApp
@@ -17,7 +17,7 @@ class EVTrackerApp : Application(), Configuration.Provider {
 
     @Inject lateinit var workerFactory: HiltWorkerFactory
 
-    @Inject lateinit var settingsRepository: SettingsRepository
+    @Inject lateinit var settingsReader: SettingsReader
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
@@ -30,7 +30,7 @@ class EVTrackerApp : Application(), Configuration.Provider {
         // Default to follow-system synchronously; update once DataStore yields the persisted value.
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
         CoroutineScope(Dispatchers.Main).launch {
-            val theme = settingsRepository.theme.first()
+            val theme = settingsReader.theme.first()
             AppCompatDelegate.setDefaultNightMode(
                 when (theme) {
                     "light" -> AppCompatDelegate.MODE_NIGHT_NO

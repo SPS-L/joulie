@@ -6,12 +6,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import org.spsl.evtracker.data.repository.SettingsRepository
+import org.spsl.evtracker.domain.repository.SettingsWriter
 import javax.inject.Inject
 
 @HiltViewModel
 class WizardViewModel @Inject constructor(
-    private val settingsRepository: SettingsRepository,
+    private val settingsWriter: SettingsWriter,
 ) : ViewModel() {
 
     data class UiState(
@@ -60,7 +60,7 @@ class WizardViewModel @Inject constructor(
 
     suspend fun finish() {
         val s = state.value
-        settingsRepository.completeSetup(
+        settingsWriter.completeSetup(
             metric = s.metric,
             unit = s.unit,
             currency = s.currency,

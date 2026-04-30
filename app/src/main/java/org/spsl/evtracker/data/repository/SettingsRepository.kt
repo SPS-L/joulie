@@ -42,7 +42,7 @@ class SettingsRepository @Inject constructor(
     override val activeCarId: Flow<Int> =
         dataStore.data.map { it[PreferenceKeys.ACTIVE_CAR_ID] ?: -1 }
 
-    suspend fun completeSetup(metric: String, unit: String, currency: String) {
+    override suspend fun completeSetup(metric: String, unit: String, currency: String) {
         dataStore.edit { prefs ->
             prefs[PreferenceKeys.PRIMARY_METRIC] = metric
             prefs[PreferenceKeys.DISTANCE_UNIT] = unit

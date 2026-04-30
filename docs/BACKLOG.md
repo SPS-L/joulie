@@ -31,7 +31,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-21 | 🟢 | Android Baseline Profile module for cold-start performance | — | ☐ |
 | TASK-22 | 🔴 | Upgrade `targetSdk` and `compileSdk` to API 35 | TASK-16 | ☐ |
 | TASK-23 | 🔴 | Move startup `isLoading` state into `MainViewModel` | — | ☑ |
-| TASK-24 | 🔴 | Enforce ViewModel/Activity consumption of the existing narrow domain interfaces (no concrete `data.repository.*` imports outside `di/`) | TASK-23 | ☐ |
+| TASK-24 | 🔴 | Enforce ViewModel/Activity consumption of the existing narrow domain interfaces (no concrete `data.repository.*` imports outside `di/`) | TASK-23 | ☑ |
 | TASK-25 | 🟡 | Replace `chargeType: String` with a sealed class / TypeConverter-backed enum | — | ☐ |
 | TASK-26 | 🟡 | Change all Room primary-key and foreign-key fields from `Int` to `Long` | — | ☐ |
 | TASK-27 | 🟡 | Decouple bottom-nav visibility from hardcoded `hideOn` set in `MainActivity` | — | ☐ |
@@ -1038,7 +1038,20 @@ and produces a visible splash flicker on rotation during startup.
 
 ---
 
-## 🔴 TASK-24 — Enforce ViewModel/Activity consumption of the existing narrow domain interfaces
+## 🔴 TASK-24 — Enforce ViewModel/Activity consumption of the existing narrow domain interfaces ☑ Done (2026-05-01)
+
+> **Outcome:** the two remaining concrete-repository imports are gone.
+> `EVTrackerApp` now `@Inject`s `SettingsReader` (for the launch-time theme
+> read); `WizardViewModel` now `@Inject`s `SettingsWriter` (for the atomic
+> wizard finish). `SettingsWriter` gained
+> `suspend fun completeSetup(metric, unit, currency)` so the wizard's
+> 4-key atomic write is preserved as part of the narrow interface, not
+> the concrete class. The audit
+> `grep -rn "data\.repository" app/src/main/java | grep import | grep -v "/di/"`
+> now returns empty. CLAUDE.md Architecture section codifies the rule.
+> Spec: `superpowers/specs/2026-05-01-task24-narrow-interface-enforcement-design.md`.
+> Plan: `superpowers/plans/2026-05-01-task24-narrow-interface-enforcement.md`.
+> The original task text is preserved below for historical context.
 
 > **Note on premise.** The original framing was "introduce repository interfaces
 > to break the data → domain dependency." Narrow IFs **already exist** in

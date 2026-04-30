@@ -17,6 +17,14 @@ interface SettingsWriter {
     suspend fun setPrimaryMetricAndDistanceUnit(metric: String, unit: String)
 
     /**
+     * Wizard finish: writes primaryMetric, distanceUnit, currency, and
+     * setupComplete=true together inside a single dataStore.edit { ... } block.
+     * Atomicity is required by the wizard gate invariant — a partially-applied
+     * finish must never leave setupComplete=true while the other three keys are unset.
+     */
+    suspend fun completeSetup(metric: String, unit: String, currency: String)
+
+    /**
      * Atomic Step 1 of ResetAllDataUseCase: writes setupComplete=false, activeCarId=-1,
      * AND resetInProgress=true inside a single dataStore.edit { ... } block.
      */

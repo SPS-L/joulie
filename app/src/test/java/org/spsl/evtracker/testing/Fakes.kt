@@ -230,6 +230,13 @@ class FakeSettingsWriter(
         this.primaryMetric = metric
         this.distanceUnit = unit
     }
+    override suspend fun completeSetup(metric: String, unit: String, currency: String) {
+        callRecorder?.add("completeSetup($metric,$unit,$currency)")
+        this.primaryMetric = metric
+        this.distanceUnit = unit
+        this.currency = currency
+        this.setupComplete = true
+    }
     override suspend fun markGlobalResetInProgress() {
         callRecorder?.add("markGlobalResetInProgress")
         setupComplete = false
