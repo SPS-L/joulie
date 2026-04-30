@@ -43,11 +43,16 @@ class ChartsViewModel @Inject constructor(
     private val chartsFlow: Flow<ChartsUiState> =
         period.flatMapLatest { p -> observeChartsModels.observe(p) }
 
-    // Render inputs (distance unit) join at the outer combine so flipping km/miles
-    // rebuilds the screen state without tearing down the Room subscription.
+    // Render inputs (distance unit, primary metric) join at the outer combine so flipping
+    // either rebuilds the screen state without tearing down the Room subscription.
     val uiState: StateFlow<ChartsScreenState> =
-        combine(chartsFlow, period, settingsReader.distanceUnit) { ui, p, du ->
-            ChartsScreenState(period = p, distanceUnit = du, charts = ui)
+        combine(
+            chartsFlow,
+            period,
+            settingsReader.distanceUnit,
+            settingsReader.primaryMetric,
+        ) { ui, p, du, pm ->
+            ChartsScreenState(period = p, distanceUnit = du, primaryMetric = pm, charts = ui)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ChartsScreenState())
 
     fun selectPeriod(p: ChartsPeriod) {

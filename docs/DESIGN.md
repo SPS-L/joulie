@@ -136,7 +136,7 @@ Use an `AutoCompleteTextView` (ExposedDropdownMenu) populated from a `string-arr
 | Key | Type | Default | Written by |
 |-----|------|---------|------------|
 | `setupComplete` | Boolean | `false` | Wizard — on Finish |
-| `primaryMetric` | String | `"km_per_kwh"` | Wizard / Settings |
+| `primaryMetric` | String | `"kwh_per_100km"` | Wizard / Settings |
 | `distanceUnit` | String | `"km"` | Wizard / Settings |
 | `currency` | String | `"EUR"` | Wizard / Settings |
 | `activeCarId` | Int | `-1` | Car selector |
@@ -361,7 +361,10 @@ Recommended package layout for long-term maintainability:
 - Save → validates odometer > last entry, persists, updates `custom_locations`
 
 ### Charts
-- Line chart: efficiency trend over time, AC series (blue) vs DC series (orange)
+- Line chart: efficiency trend over time, AC series (blue) vs DC series (orange).
+  The Y-axis follows `primaryMetric`: `km_per_kwh` plots raw `kmPerKwh`,
+  `kwh_per_100km` plots `100 / kmPerKwh` (skipping rows with `kmPerKwh ≤ 0`),
+  and `mi_per_kwh` plots `UnitConverter.kmPerKwhToMiPerKwh(kmPerKwh)`.
 - Bar chart: monthly kWh consumed
 - Bar chart: monthly cost (hidden if no cost data)
 - Pie chart: AC vs DC split

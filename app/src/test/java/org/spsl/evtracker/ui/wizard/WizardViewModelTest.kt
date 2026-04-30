@@ -73,7 +73,7 @@ class WizardViewModelTest {
 
     @Test
     fun manualUnit_milesFlipsKmMetric() {
-        // default metric is km_per_kwh
+        vm.selectMetric("km_per_kwh")
         vm.selectUnit("miles")
         assertEquals("mi_per_kwh", vm.state.value.metric)
     }

@@ -113,14 +113,31 @@ class ChartsTabFragment : Fragment() {
         val chart = LineChart(requireContext())
         ChartStyling.configureLineChart(chart)
         val (acColor, dcColor) = ChartStyling.resolveSeriesColors(requireContext())
-        val unitToMi = state.distanceUnit == "miles"
         val windowStart = charts.periodStartMillis
+
+        // Y-axis mode follows primaryMetric. The kwh_per_100km branch returns null
+        // for kmPerKwh <= 0 so the resulting Entry list skips invalid points instead
+        // of plotting +/-Infinity. The other two branches always produce a value.
+        val (yTransform, unitSuffix) = when (state.primaryMetric) {
+            "kwh_per_100km" -> Pair<(Double) -> Double?, String>(
+                { kmPerKwh -> if (kmPerKwh > 0.0) 100.0 / kmPerKwh else null },
+                getString(R.string.charts_trend_y_kwh100),
+            )
+            "mi_per_kwh" -> Pair<(Double) -> Double?, String>(
+                { kmPerKwh -> UnitConverter.kmPerKwhToMiPerKwh(kmPerKwh) },
+                getString(R.string.charts_trend_y_mi),
+            )
+            else -> Pair<(Double) -> Double?, String>(
+                { kmPerKwh -> kmPerKwh },
+                getString(R.string.charts_trend_y_kmh),
+            )
+        }
 
         // x = day offset from windowStart (Float-safe). Real millis stays in Entry.data
         // so the marker view shows the exact date.
         fun toEntries(points: List<org.spsl.evtracker.core.model.EfficiencyPoint>): List<Entry> =
-            points.map {
-                val y = if (unitToMi) UnitConverter.kmPerKwhToMiPerKwh(it.kmPerKwh) else it.kmPerKwh
+            points.mapNotNull {
+                val y = yTransform(it.kmPerKwh) ?: return@mapNotNull null
                 val xDays = ((it.eventTimeMillis - windowStart).toDouble() / ChartStyling.MILLIS_PER_DAY).toFloat()
                 Entry(xDays, y.toFloat(), it.eventTimeMillis as Any)
             }
@@ -141,11 +158,6 @@ class ChartsTabFragment : Fragment() {
         }
         chart.data = LineData(sets.toList())
         chart.xAxis.valueFormatter = ChartStyling.dateLabelFormatter(windowStart, state.period)
-        val unitSuffix = if (unitToMi) {
-            getString(R.string.charts_trend_y_mi)
-        } else {
-            getString(R.string.charts_trend_y_kmh)
-        }
         chart.marker = ChartsMarkerView(requireContext(), unitSuffix)
         if (!firstRenderConsumed) {
             chart.animateY(400)

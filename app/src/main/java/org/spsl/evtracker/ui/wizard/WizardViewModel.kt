@@ -16,7 +16,7 @@ class WizardViewModel @Inject constructor(
 
     data class UiState(
         val page: Int = 0,
-        val metric: String = "km_per_kwh",
+        val metric: String = "kwh_per_100km",
         val unit: String = "km",
         val currency: String = "EUR",
     )

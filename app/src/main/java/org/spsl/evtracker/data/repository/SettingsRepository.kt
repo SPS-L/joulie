@@ -19,7 +19,7 @@ class SettingsRepository @Inject constructor(
         dataStore.data.map { it[PreferenceKeys.SETUP_COMPLETE] ?: false }
 
     override val primaryMetric: Flow<String> =
-        dataStore.data.map { it[PreferenceKeys.PRIMARY_METRIC] ?: "km_per_kwh" }
+        dataStore.data.map { it[PreferenceKeys.PRIMARY_METRIC] ?: "kwh_per_100km" }
 
     override val distanceUnit: Flow<String> =
         dataStore.data.map { it[PreferenceKeys.DISTANCE_UNIT] ?: "km" }
