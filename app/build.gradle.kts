@@ -62,6 +62,10 @@ android {
 
     packaging {
         resources {
+            // Required by the Drive backup path: google-api-client + google-http-client
+            // ship duplicate META-INF/{DEPENDENCIES,LICENSE,NOTICE,INDEX.LIST} entries
+            // and the build fails with DuplicatesStrategy.FAIL without these excludes.
+            // Removing entries here will surface as a runtime/build error on Drive sync.
             excludes += setOf(
                 "META-INF/DEPENDENCIES",
                 "META-INF/LICENSE",

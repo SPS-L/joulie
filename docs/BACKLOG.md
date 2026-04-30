@@ -23,7 +23,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-13 | 🟢 | Charging session timer / live session mode | ☐ |
 | TASK-14 | 🟡 | Battery capacity degradation tracker | ☐ |
 | TASK-15 | 🟢 | Localisation (i18n) foundation | ☐ |
-| TASK-16 | 🟡 | Static analysis & code style gate in CI (ktlint + Android Lint) | ☐ |
+| TASK-16 | 🔴 | Static analysis & code style gate in CI (ktlint + Android Lint) | ☐ |
 | TASK-17 | 🟡 | R8/ProGuard follow-up audit: MPAndroidChart keep rule + release smoke test | ☐ |
 | TASK-18 | 🟡 | Accessibility (a11y) pass — TalkBack, contentDescription, contrast, touch targets | ☐ |
 | TASK-19 | 🟡 | Backup failure notification channel + Android 13+ `POST_NOTIFICATIONS` handling | ☐ |
@@ -292,6 +292,13 @@ release build still compiles (`./gradlew :app:assembleRelease`).
 ---
 
 ## 🟢 TASK-10 — Add In-App "About / Info" Screen
+
+> **Requires: TASK-29.** This screen reads `BuildConfig.VERSION_NAME` /
+> `BuildConfig.VERSION_CODE`. The project is on AGP 8.2.0, where
+> `buildConfig` generation is **off** by default and there are no current
+> `BuildConfig` consumers in `app/src/main/java`. Either land TASK-29 first
+> (which flips `buildFeatures.buildConfig = true`), or include that one-line
+> flag flip as part of TASK-10.
 
 Add a dedicated About screen accessible from the Settings or main navigation
 that displays app metadata, acknowledgments, license, and a disclaimer.
@@ -617,7 +624,12 @@ proper i18n support so the app can be translated in the future.
 
 ---
 
-## 🟡 TASK-16 — Static analysis & code-style gate in CI
+## 🔴 TASK-16 — Static analysis & code-style gate in CI
+
+> **Priority raised to 🔴 (2026-04-30):** without this gate, regressions on
+> hardcoded strings (TASK-15), API-35 deprecations (TASK-22), and
+> `ChargeType` enum/conversion (TASK-25) cannot be caught at PR time. Land
+> this before the next round of feature work.
 
 The only CI workflow today is `.github/workflows/release.yml`, which triggers
 **only on `v*` tag pushes** and `workflow_dispatch`. It runs `:app:assembleRelease`,
@@ -756,6 +768,11 @@ WCAG 2.1 AA.
 ---
 
 ## 🟡 TASK-19 — Backup failure notification channel
+
+> **Requires: TASK-07.** Step §4 below distinguishes auth-failure
+> notifications via TASK-07's `BackupResult.AuthRequired` sealed-class
+> variant. Land TASK-07 first so this task consumes a stable error model
+> rather than inventing one that later diverges.
 
 Drive auto-backup runs via WorkManager (`enqueueUniqueWork("drive_backup", REPLACE, ...)`).
 On failure (network down, OAuth revoked, quota exceeded), the only signal is
@@ -1357,6 +1374,21 @@ Once all five tabs render correctly with the new implementations:
 
 ## Notes for Agents (TASK-22 to TASK-30 addendum)
 
+- **TASK-22 ↔ TASK-16 (CI matrix):** when TASK-16's `ci.yml` lands, its
+  `connectedAndroidTest` job (or any emulator matrix) must use the
+  same API level as `targetSdk`/`compileSdk`. If TASK-22 has merged first,
+  start the matrix at API 35; if not, bump the matrix at the same time as
+  the SDK bump. Otherwise CI will silently keep validating against a stale
+  API level.
+- **TASK-29 prerequisite for TASK-10:** the About screen reads
+  `BuildConfig.VERSION_NAME` / `VERSION_CODE`. AGP 8.2.0 has `buildConfig`
+  generation **off** by default, and the project currently has zero
+  `BuildConfig` consumers, so TASK-29 (which flips
+  `buildFeatures.buildConfig = true`) must land first or be folded into
+  TASK-10.
+- **TASK-19 prerequisite for TASK-07:** TASK-19's auth-failure
+  notification path consumes TASK-07's `BackupResult.AuthRequired` sealed
+  variant. Land TASK-07 first so the error model is stable.
 - **TASK-23 must land before TASK-24:** `MainViewModel` becomes the new
   `SettingsReader` consumer that the audit verifies.
 - **TASK-26 schema-version coordination:** TASK-14 (battery degradation),
