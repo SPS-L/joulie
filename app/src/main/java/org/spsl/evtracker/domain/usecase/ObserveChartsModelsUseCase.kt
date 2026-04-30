@@ -9,10 +9,10 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import org.spsl.evtracker.core.coroutines.AggregationDispatcher
 import org.spsl.evtracker.core.model.ChartsPeriod
 import org.spsl.evtracker.core.model.ChartsUiState
 import org.spsl.evtracker.data.local.entity.ChargeEventEntity
-import org.spsl.evtracker.core.coroutines.AggregationDispatcher
 import org.spsl.evtracker.domain.repository.CarReader
 import org.spsl.evtracker.domain.repository.ChargeEventQueries
 import org.spsl.evtracker.domain.repository.SettingsReader

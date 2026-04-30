@@ -30,7 +30,18 @@ Mark done by replacing `☐` with `☑` when a task is merged.
 
 ---
 
-## 🔴 TASK-01 — Relocate `AggregationDispatcher` to the correct package
+## 🔴 TASK-01 — Relocate `AggregationDispatcher` to the correct package ☑ Done (2026-04-30)
+
+> **Outcome:** the file (a Hilt `@Qualifier` annotation, not a class with logic) was relocated from
+> `app/src/main/java/org/spsl/evtracker/di/AggregationDispatcher.kt` to
+> `app/src/main/java/org/spsl/evtracker/core/coroutines/AggregationDispatcher.kt`.
+> The new package is a cross-cutting home for coroutine qualifiers (room for `IoDispatcher`,
+> `MainDispatcher`, etc.) and removes the previous `domain → di` import in
+> `ObserveChartsModelsUseCase`. Imports updated in `di/DispatcherModule.kt` and
+> `domain/usecase/ObserveChartsModelsUseCase.kt`. See spec
+> `docs/superpowers/specs/2026-04-30-task01-aggregation-dispatcher-relocation-design.md`
+> and plan `docs/superpowers/plans/2026-04-30-task01-aggregation-dispatcher-relocation.md`.
+> The original task text is preserved below for historical context.
 
 The file `app/src/main/java/org/spsl/evtracker/di/AggregationDispatcher.kt`
 is incorrectly placed inside the `di` (dependency injection) package.
