@@ -38,6 +38,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-28 | 🟡 | Consolidate time on existing `NowProvider`; remove direct `System.currentTimeMillis()` from entities and helpers; drop the parallel `() -> Long` clock in `WorkerModule` | — | ☐ |
 | TASK-29 | 🟢 | Add explicit `debug` build type with `applicationIdSuffix` and `BuildConfig` flags | — | ☐ |
 | TASK-30 | 🟢 | Migrate from MPAndroidChart to Vico (line/bar) + custom `Canvas` `PieChartView` (pie tabs) | — | ☐ |
+| TASK-31 | 🟡 | Manual Drive controls in Settings: "Back up now" (force overwrite) and "Wipe remote backup" (delete the App Data file) | — | ☐ |
 
 **Priority legend:** 🔴 High (architecture/data safety) · 🟡 Medium (robustness/UX) · 🟢 Low (new feature)  
 **Status legend:** ☐ open · ☑ done · ☒ closed (premise no longer holds)  
@@ -1390,6 +1391,232 @@ Once all five tabs render correctly with the new implementations:
 3. Update `../CLAUDE.md` (Architecture / Dependencies note): remove the
    MPAndroidChart entry; add `vico-views` with a note on which tabs use it and
    which use `PieChartView`.
+
+---
+
+## 🟡 TASK-31 — Manual Drive controls: "Back up now" and "Wipe remote backup"
+
+Drive auto-backup runs through WorkManager after every committed local change
+(`enqueueUniqueWork("drive_backup", REPLACE, …)`), but there is no way for the
+user to (a) force an immediate sync without waiting for WorkManager, or
+(b) explicitly delete the snapshot stored in the App Data folder. Both gaps
+matter:
+
+- **Force-push** is the standard user-trust affordance — "I just made changes,
+  I want to confirm they reached the cloud right now." Today the only signal
+  is the "Last backup at …" timestamp, which only updates after the worker
+  completes and the user has no way to drive the worker.
+- **Remote wipe** is needed to (1) recover from a corrupted or test snapshot
+  written during early development; (2) start over cleanly when the user
+  switches accounts or wants to re-test the first-time-enable replace-or-skip
+  flow; (3) honour a "delete my data from the cloud" request without forcing
+  the user to disable Drive globally and lose the local-write trigger.
+
+Both are local-only actions in Settings — they do **not** change the
+auto-backup contract elsewhere.
+
+### Domain layer
+
+1. Extend `app/src/main/java/org/spsl/evtracker/domain/backup/BackupRepository.kt`
+   with a new method:
+
+   ```kotlin
+   /**
+    * Deletes the remote snapshot file ("evtracker_backup.json") from the
+    * App Data folder. No-op if the file does not exist. Drive must be
+    * authorised before calling — callers verify that via SettingsReader.driveEnabled
+    * and the auth state.
+    */
+   suspend fun deleteRemoteBackup()
+   ```
+
+2. Implement it on
+   `app/src/main/java/org/spsl/evtracker/data/backup/DriveBackupRepository.kt`:
+   list `appDataFolder` for files named `evtracker_backup.json`, call
+   `drive.files().delete(fileId)` for each match, and translate IO errors
+   through the existing `runTranslating` helper. (If TASK-07 has landed,
+   return the sealed `BackupResult` flavour instead.)
+
+3. Add two new use cases under `app/src/main/java/org/spsl/evtracker/domain/usecase/`:
+
+   ```kotlin
+   class PushBackupNowUseCase @Inject constructor(
+       private val backupRepository: BackupRepository,
+       private val settingsWriter: SettingsWriter,
+       private val now: NowProvider,
+   ) {
+       suspend operator fun invoke() {
+           backupRepository.backupCurrentData()
+           settingsWriter.setLastBackupAt(now.nowMillis())
+       }
+   }
+   ```
+
+   ```kotlin
+   class WipeRemoteBackupUseCase @Inject constructor(
+       private val backupRepository: BackupRepository,
+       private val settingsWriter: SettingsWriter,
+   ) {
+       suspend operator fun invoke() {
+           backupRepository.deleteRemoteBackup()
+           // Wipe clears the "Last backup at …" hint so the UI does not
+           // show a stale timestamp pointing at a snapshot that no longer exists.
+           settingsWriter.setLastBackupAt(0L)
+       }
+   }
+   ```
+
+   `PushBackupNowUseCase` deliberately bypasses `BackupScheduler` so the
+   user gets synchronous-feeling feedback: success or failure surfaces in
+   the UI as soon as the upload completes. The auto-backup worker remains
+   the only writer through WorkManager — manual push is one extra path,
+   not a replacement.
+
+   **Note on TASK-28 sequencing:** `PushBackupNowUseCase` injects `NowProvider`.
+   If TASK-28 has not yet consolidated `lastBackupAt` writes onto `NowProvider`,
+   that's fine — this task introduces the pattern for one new caller; TASK-28
+   sweeps the rest.
+
+### Settings UI
+
+4. In `app/src/main/res/layout/fragment_settings.xml`, add two new rows in the
+   Drive section, **only visible when `driveEnabled = true`**:
+
+   - **"Back up now"** — `MaterialButton`, primary tone. Tapping triggers
+     the use case and disables itself with a `CircularProgressIndicator`
+     overlay until completion. On success, show a Snackbar `"Backup
+     uploaded"`. On failure, show a Snackbar with the error message.
+   - **"Wipe remote backup"** — `MaterialButton`, **destructive tone**
+     (`?attr/colorError`). Tapping shows a `MaterialAlertDialog`:
+
+     ```
+     Title:   Delete remote backup?
+     Body:    This permanently deletes "evtracker_backup.json" from your
+              Google Drive App Data folder. Local data on this device is
+              NOT affected. The next local change will create a fresh
+              backup automatically.
+     Buttons: [Cancel]  [Delete]
+     ```
+
+     Only on confirm, invoke `WipeRemoteBackupUseCase`. Snackbar feedback
+     on both success and failure.
+
+5. Both rows must be hidden (View.GONE) — not merely disabled — when
+   `driveEnabled = false`, since neither makes sense without an authorised
+   client.
+
+### ViewModel + state
+
+6. Extend `SettingsViewModel`:
+   - Add use case parameters: `pushBackupNow: PushBackupNowUseCase`,
+     `wipeRemoteBackup: WipeRemoteBackupUseCase`.
+   - Add `isManualBackupRunning: StateFlow<Boolean>` (gates the "Back up
+     now" button's progress overlay; also disables "Wipe" while a push is
+     in flight).
+   - Add `isManualWipeRunning: StateFlow<Boolean>` (analogous, for wipe).
+   - Add `events` of a new `SettingsEvent` sealed type (or extend whatever
+     event channel SettingsViewModel already uses) with:
+     - `BackupNowSucceeded`
+     - `BackupNowFailed(messageRes: Int, detail: String? = null)`
+     - `WipeSucceeded`
+     - `WipeFailed(messageRes: Int, detail: String? = null)`
+   - Methods:
+     - `fun onPushBackupClicked() { viewModelScope.launch { … } }`
+     - `fun onConfirmWipeClicked() { viewModelScope.launch { … } }`
+
+7. The two operations must be **mutually exclusive**: a push in flight
+   disables the wipe button, and vice versa. A second tap on a running
+   button is a no-op (do not stack two pushes).
+
+### Strings (i18n-ready)
+
+8. All user-visible strings go in `app/src/main/res/values/strings.xml` —
+   never hardcoded — so TASK-15 can translate them without rework. Names
+   follow the existing `drive_*` prefix convention, e.g.
+   `drive_backup_now_button`, `drive_wipe_button`,
+   `drive_wipe_confirm_title`, `drive_wipe_confirm_body`,
+   `drive_backup_now_success`, `drive_wipe_success`,
+   `drive_backup_now_failure`, `drive_wipe_failure`.
+
+### Tests
+
+9. Add JVM unit tests:
+
+   - `app/src/test/.../domain/usecase/PushBackupNowUseCaseTest.kt`:
+     a. Calls `backupCurrentData()` exactly once.
+     b. Updates `lastBackupAt` to the fake `NowProvider`'s value on success.
+     c. Propagates the exception when `backupCurrentData()` throws.
+     d. Does **not** update `lastBackupAt` when the upload throws.
+
+   - `app/src/test/.../domain/usecase/WipeRemoteBackupUseCaseTest.kt`:
+     a. Calls `deleteRemoteBackup()` exactly once.
+     b. Sets `lastBackupAt = 0L` on success.
+     c. Propagates the exception when delete throws.
+     d. Does **not** clear `lastBackupAt` when delete throws.
+
+   Use the existing `FakeBackupRepository` (extend it with `deleteCount: Int`
+   and `failNextDelete: Throwable?`) and `FakeSettingsWriter`.
+
+   - `app/src/test/.../ui/settings/SettingsViewModelTest.kt` (new tests in
+     the existing class):
+     a. `onPushBackupClicked` toggles `isManualBackupRunning` true → false.
+     b. On push success, emits `BackupNowSucceeded`.
+     c. On push failure, emits `BackupNowFailed`.
+     d. `onConfirmWipeClicked` analogous coverage for wipe.
+     e. Push in flight → `onConfirmWipeClicked` is a no-op (running flags
+        guard each other).
+
+10. Add an instrumented Espresso test
+    `app/src/androidTest/.../ui/settings/SettingsBackupControlsTest.kt`:
+    a. With Drive disabled, neither row is visible.
+    b. With Drive enabled (Hilt-bound fake `DriveAuthManager`), both rows
+       are visible.
+    c. Tapping "Wipe remote backup" shows the confirmation dialog and
+       does **not** call the use case until "Delete" is tapped.
+
+### Documentation
+
+11. Update `docs/DESIGN.md §8` (Drive backup): document the two new manual
+    actions and that they bypass WorkManager. Note that the wipe action
+    clears `lastBackupAt` so the UI does not show a stale timestamp.
+
+12. Update `../CLAUDE.md` "Google Drive backup" subsection: add a bullet
+    that the backup model now includes manual force-push and remote wipe,
+    and that the auto-backup worker contract is unchanged.
+
+### Out of scope
+
+- Per-entity selective wipe (e.g., "delete only my charge events from
+  Drive"). The remote snapshot is a single file by design — partial wipe
+  is not supported.
+- A full backup history with revisions on Drive. Drive's built-in
+  revision history is opaque to App Data scope; surfacing it is a separate
+  feature.
+- Showing a Drive-quota meter in Settings. Quota awareness belongs to
+  TASK-07 (error handling), not this task.
+- "Restore from backup" affordance on demand (the existing first-time
+  replace-or-skip flow already covers it; an explicit "Restore now"
+  button is a separate task if needed).
+
+### Acceptance criteria
+
+The change is complete when **all** of the following hold:
+
+1. `./gradlew ktlintCheck :app:lint :app:testDebugUnitTest :app:assembleRelease`
+   succeeds.
+2. New JVM tests for both use cases (4 + 4 cases) and the `SettingsViewModel`
+   additions (≥ 5 cases) pass.
+3. `:app:assembleDebugAndroidTest` compiles with the new instrumented test.
+4. With Drive disabled in Settings, neither button is visible.
+5. With Drive enabled, "Back up now" pushes a fresh snapshot; verifying via
+   Drive `files.list?spaces=appDataFolder` shows the file's `modifiedTime`
+   updated. "Wipe remote backup" then removes the file; the same
+   `files.list` returns no `evtracker_backup.json`.
+6. After "Wipe remote backup", `lastBackupAt` is cleared and the UI hint
+   reverts to its empty state. The next local change re-enqueues the
+   auto-backup worker, recreating the file (regression check).
+7. Mutual-exclusion holds: kicking off a slow push and then tapping wipe
+   leaves wipe disabled until push completes.
 
 ---
 
