@@ -1,7 +1,6 @@
 # EV Tracker — Development Backlog
 
-Generated from a senior Android developer code review of the `main` branch (April 2026).  
-Each task is written as a self-contained instruction suitable for a coding agent.
+Tasks 1–15 were generated from a senior Android developer code review of the `main` branch (April 2026). Tasks 16–21 are follow-up improvements identified during a 2026-04-30 verification pass against `main` (CI/release pipeline, R8 keep-rules, a11y posture, and SPS-Lab research relevance). Each task is written as a self-contained instruction suitable for a coding agent.
 
 ---
 
@@ -24,6 +23,12 @@ Each task is written as a self-contained instruction suitable for a coding agent
 | TASK-13 | 🟢 | Charging session timer / live session mode | ☐ |
 | TASK-14 | 🟡 | Battery capacity degradation tracker | ☐ |
 | TASK-15 | 🟢 | Localisation (i18n) foundation | ☐ |
+| TASK-16 | 🟡 | Static analysis & code style gate in CI (ktlint + Android Lint) | ☐ |
+| TASK-17 | 🟡 | R8/ProGuard follow-up audit: MPAndroidChart keep rule + release smoke test | ☐ |
+| TASK-18 | 🟡 | Accessibility (a11y) pass — TalkBack, contentDescription, contrast, touch targets | ☐ |
+| TASK-19 | 🟡 | Backup failure notification channel + Android 13+ `POST_NOTIFICATIONS` handling | ☐ |
+| TASK-20 | 🟢 | CO₂ savings tracker (ICE baseline, Cyprus grid intensity, methodology doc) | ☐ |
+| TASK-21 | 🟢 | Android Baseline Profile module for cold-start performance | ☐ |
 
 **Priority legend:** 🔴 High (architecture/data safety) · 🟡 Medium (robustness/UX) · 🟢 Low (new feature)  
 Mark done by replacing `☐` with `☑` when a task is merged.
@@ -592,6 +597,304 @@ proper i18n support so the app can be translated in the future.
 6. Verify the app renders correctly at the two most common system font
    scales (100% and 150%) after the string extraction, as translated
    strings are often longer than English equivalents.
+
+---
+
+## 🟡 TASK-16 — Static analysis & code-style gate in CI
+
+The only CI workflow today is `.github/workflows/release.yml`, which triggers
+**only on `v*` tag pushes** and `workflow_dispatch`. It runs `:app:assembleRelease`,
+verifies signing, and publishes the APK — but no linter, no style checker, and
+no static analysis ever runs against PRs or `main`. With ~176 Kotlin files in
+`app/src`, style drift will accumulate silently and hardcoded-string regressions
+(needed by TASK-15) cannot be detected before merge.
+
+**What to add:**
+
+1. Create a **new** workflow file `.github/workflows/ci.yml` (do not edit
+   `release.yml`) that triggers on `pull_request` and `push: branches: [main]`.
+
+2. Add **ktlint** via the `org.jlleitschuh.gradle.ktlint` plugin to the root
+   `build.gradle.kts` (or `app/build.gradle.kts`). Configure it to use the
+   project's existing 4-space indentation and Kotlin official code style.
+
+3. Enable **Android Lint** in error mode for the rules most likely to bite
+   this project, in `app/build.gradle.kts`:
+
+   ```kotlin
+   android {
+       lint {
+           abortOnError = true
+           checkReleaseBuilds = true
+           error += listOf("HardcodedText", "MissingTranslation",
+                           "TypographyDashes", "UnusedResources")
+           // Once TASK-15 (i18n) lands, also flip "HardcodedText" + "MissingTranslation"
+           // from optional to required — currently they should error already, since
+           // there are no localised strings yet to miss.
+       }
+   }
+   ```
+
+4. The new `ci.yml` job runs `./gradlew ktlintCheck lint` on Java 17 with the
+   gradle action cache. Fail the build on any violation.
+
+5. Generate a `lint-baseline.xml` for existing pre-existing offenses by running
+   `./gradlew lint --baseline lint-baseline.xml` once locally; commit the
+   baseline so only **new** violations break the build.
+
+6. Document the new gate in `CLAUDE.md` (Build & Test section): "PRs must
+   pass `:app:ktlintCheck :app:lint` before merge."
+
+---
+
+## 🟡 TASK-17 — R8/ProGuard follow-up audit: chart library + release smoke test
+
+The release build's R8 rules (`app/proguard-rules.pro`) were partially audited
+in commit `48f0f14` (v1.0.1) for the Drive sync path: keep rules now cover
+`com.google.api.client.**`, `com.google.api.services.drive.**`, Gson
+reflection, and the backup DTOs (`BackupData`, `CarDto`, `ChargeEventDto`,
+`CustomLocationDto`). What's **not** yet covered or verified:
+
+1. **MPAndroidChart** — add a defensive keep rule even though MPAndroidChart's
+   release surface is mostly non-reflective; some renderers and
+   `IValueFormatter` subclasses can still bite under aggressive R8:
+   ```
+   -keep class com.github.mikephil.charting.** { *; }
+   -dontwarn com.github.mikephil.charting.**
+   ```
+
+2. **Hilt + Room** — both ship comprehensive consumer ProGuard rules with
+   their AARs (verify by running `./gradlew :app:assembleRelease` and
+   inspecting `app/build/outputs/mapping/release/configuration.txt`). Add a
+   short comment to `proguard-rules.pro` stating that no app-side keep rules
+   are needed for these libraries, with the AAR rule paths as evidence — this
+   prevents a future contributor from adding redundant rules "just in case".
+
+3. **End-to-end release-APK smoke test** (this is the bulk of the work):
+   - Build a signed release APK locally: `./gradlew :app:assembleRelease`.
+   - Install on a physical device or API-34 emulator: `adb install -r app/build/outputs/apk/release/app-release.apk`.
+   - Walk the smoke matrix:
+     a. Wizard completes successfully (writes `setupComplete=true`).
+     b. Add a car, add a charge event with cost; verify Dashboard stats render.
+     c. Open Charts; verify all five tabs (Trend / Monthly kWh / Monthly cost / AC vs DC / Locations) render without crash.
+     d. Settings → enable Drive backup; sign in; trigger a backup; verify `evtracker_backup.json` lands in the App Data folder via `files.list?spaces=appDataFolder`.
+     e. Reset preferences; verify wizard re-routes.
+     f. CSV export from Settings; verify the share sheet opens.
+   - File a follow-up issue for any crash or rendering bug discovered.
+
+4. Document the smoke test as a manual checklist in `TEST_PLAN.md` (new
+   section "Release-APK smoke test") so future tag pushes can be verified
+   against it before publishing the GitHub Release.
+
+> **Note on priority:** the original proposal flagged this 🔴 on the premise
+> that R8 rules had never been audited. Since the Drive/Gson path is already
+> covered as of v1.0.1, the residual risk is bounded — hence 🟡, not 🔴.
+
+---
+
+## 🟡 TASK-18 — Accessibility (a11y) pass
+
+There is no mention of accessibility in `DESIGN.md`, `CLAUDE.md`, or
+`TEST_PLAN.md`. The app is intended for public use and must meet at least
+WCAG 2.1 AA.
+
+**Required changes:**
+
+1. Add `contentDescription` (or `android:contentDescription` in XML) to every
+   `ImageView`, icon button, AC/DC toggle, and chart view. MPAndroidChart
+   charts are entirely invisible to TalkBack without an explicit description
+   on their host `View` — supply a short summary of what the chart shows.
+
+2. Audit interactive elements for a minimum touch target of 48×48dp. Likely
+   offenders: the location chips on `ChargeEditFragment`, the small AC/DC
+   badge, and the History row delete button.
+
+3. Mark purely decorative views (`View` dividers, background shapes, brand
+   ornaments) with `android:importantForAccessibility="no"` so TalkBack
+   skips them.
+
+4. For every `TextInputLayout` field that has a separate companion label or
+   helper text in another view, set `android:labelFor` so the label gets
+   announced.
+
+5. Verify the charge-type `MaterialButtonToggleGroup` announces state
+   changes (e.g., "AC selected", "DC selected"). Add explicit
+   `contentDescription` strings on each child `MaterialButton` if needed.
+
+6. Add `AccessibilityChecks.enable()` in the Espresso test setup
+   (`app/src/androidTest/.../TestApplication.kt` or a base test class). This
+   automatically fails any instrumented test that interacts with a view
+   missing required a11y metadata.
+
+7. Run a contrast audit on both light and dark M3 themes. Pay special
+   attention to the `#FB8C00` DC orange tertiary token (DESIGN §6) and any
+   white-on-tertiary text — verify ≥ 4.5:1 against the surface it's drawn
+   on. Tools: Material Theme Builder's contrast checker or the WebAIM
+   contrast checker.
+
+8. Add a section "A11y" to `DESIGN.md` documenting the WCAG 2.1 AA target
+   and the smoke checklist (TalkBack walkthrough of the wizard,
+   add-event flow, and Settings).
+
+---
+
+## 🟡 TASK-19 — Backup failure notification channel
+
+Drive auto-backup runs via WorkManager (`enqueueUniqueWork("drive_backup", REPLACE, ...)`).
+On failure (network down, OAuth revoked, quota exceeded), the only signal is
+the "Last backup: …" timestamp in `SettingsFragment` — which most users will
+never look at. There is currently **no notification code anywhere in
+`app/src/main/java`**.
+
+**What to implement:**
+
+1. Register a `NotificationChannel` (`id = "backup_status"`,
+   `IMPORTANCE_LOW`) inside `EvTrackerApplication.onCreate()` (the
+   `@HiltAndroidApp` class). Use `NotificationManagerCompat.from(this).createNotificationChannel(...)`.
+
+2. Track consecutive failures in DataStore (new key
+   `consecutiveBackupFailures: Int`, declared in `PreferenceKeys`). Increment
+   on each `Result.failure()` from the backup worker; reset to 0 on
+   `Result.success()`.
+
+3. After 3 consecutive failures, post a low-priority sticky notification
+   (`"Drive backup failed. Tap to open Settings."`) with a `PendingIntent`
+   that opens `MainActivity` and navigates to `SettingsFragment`. Cancel the
+   notification on the next success.
+
+4. For HTTP-401 (auth revoked / token expired — see TASK-07's sealed-class
+   error model), post a higher-importance notification (`IMPORTANCE_DEFAULT`):
+   `"Drive sign-in required — tap to reconnect."` Tapping deep-links to the
+   "Sign in to Drive" affordance in Settings.
+
+5. Handle Android 13+ `POST_NOTIFICATIONS` runtime permission. Request the
+   permission **only after the first user-visible failure** (not on app
+   launch), with a short rationale dialog explaining that notifications are
+   used for backup status only. If denied, do nothing — never re-prompt.
+
+6. Add a JVM unit test class
+   `app/src/test/.../BackupNotificationManagerTest.kt` covering the failure
+   counter (increment-on-failure, reset-on-success, 3-strike threshold). Use
+   the existing fakes (`FakeBackupRepository`, `FakeSettingsWriter`).
+
+7. Document the new channel and permission in `DESIGN.md` (new subsection
+   under Drive backup) and in `GOOGLE_CLOUD_SETUP.md` (auth-failure UX
+   walkthrough for testers).
+
+---
+
+## 🟢 TASK-20 — CO₂ savings tracker
+
+This is the most research-aligned addition for SPS-Lab. The app already tracks
+kWh consumed and distance driven; it never contextualises the environmental
+impact against an ICE-vehicle baseline. This ties directly to the lab's grid
+decarbonisation and renewable-integration work, and the Cyprus grid intensity
+default makes the result locally meaningful.
+
+**Implementation:**
+
+1. Add two preferences to Settings (declared in `PreferenceKeys`):
+
+   - `iceBaselineLPer100km: Float` — preset choices presented as a dropdown:
+     - Small petrol car: 6.0 L/100km
+     - Average petrol car: 8.0 L/100km
+     - Large petrol / SUV: 11.0 L/100km
+     - Custom (user-entered, validate 1.0 ≤ x ≤ 20.0)
+
+   - `gridIntensityGCO2PerKwh: Float` — preset choices:
+     - Cyprus grid: 600 gCO₂/kWh **(default — relevant for CUT context)**
+     - EU average: 250 gCO₂/kWh
+     - Renewable-heavy (Norway-style): 20 gCO₂/kWh
+     - Custom (validate 0 ≤ x ≤ 1500)
+
+2. Add a pure service `app/src/main/java/org/spsl/evtracker/domain/service/CO2Calculator.kt`:
+
+   ```kotlin
+   class CO2Calculator @Inject constructor() {
+       /** All inputs SI; returns kg CO₂. */
+       fun iceCo2Kg(distanceKm: Double, lPer100km: Double): Double =
+           distanceKm / 100.0 * lPer100km * 2.31  // 2.31 kg CO₂ per L petrol (EPA)
+
+       fun evCo2Kg(energyKwh: Double, gridGCo2PerKwh: Double): Double =
+           energyKwh * gridGCo2PerKwh / 1000.0
+
+       fun savedCo2Kg(distanceKm: Double, energyKwh: Double,
+                      lPer100km: Double, gridGCo2PerKwh: Double): Double =
+           iceCo2Kg(distanceKm, lPer100km) - evCo2Kg(energyKwh, gridGCo2PerKwh)
+   }
+   ```
+
+3. Add an "Environmental Impact" card on the Dashboard (below the cost
+   cards) showing:
+   - CO₂ saved vs. ICE baseline for the selected period (kg, switching to
+     tonnes when ≥ 1000 kg).
+   - "Equivalent to driving X km in a petrol car" line.
+   - **Hide** the card if the user has not yet configured `iceBaselineLPer100km`.
+
+4. Add a "CO₂ Impact" bar chart in the Charts screen: monthly CO₂ savings
+   stacked above the ICE-equivalent emissions, on a shared kgCO₂ axis.
+
+5. Add `app/src/test/.../CO2CalculatorTest.kt` covering boundaries (zero
+   distance → zero ICE CO₂, zero grid intensity → zero EV CO₂, Cyprus
+   default with realistic monthly numbers).
+
+6. Add a `METHODOLOGY.md` at the repo root documenting:
+   - The 2.31 kg/L petrol factor (cite EPA / IPCC source).
+   - The 600 gCO₂/kWh Cyprus default (cite TSOC or IEA data).
+   - The grid intensity ranges for the EU / renewable presets.
+   - Caveats: no embodied emissions, no upstream fuel-cycle CO₂ for petrol.
+
+   This is essential for research transparency and any future publication
+   that references the app's data.
+
+7. Update `DESIGN.md §7` (formulas table) to include the CO₂ formulas, and
+   reference `METHODOLOGY.md`.
+
+---
+
+## 🟢 TASK-21 — Android Baseline Profile for cold-start performance
+
+App cold start currently traverses Room init + Hilt graph build + DataStore
+reads + the wizard gate, all in the main-thread path. A Baseline Profile
+pre-compiles the critical paths into AOT machine code on install, reducing
+cold-start latency on user devices.
+
+**Implementation:**
+
+1. Add `androidx.profileinstaller:profileinstaller` to `app/build.gradle.kts`
+   dependencies (use the version catalog).
+
+2. Create a new Gradle module `baselineprofile/` (sibling of `app/`):
+   - Apply `com.android.test` plugin and `androidx.baselineprofile` plugin.
+   - Depend on `androidx.benchmark:benchmark-macro-junit4` and
+     `androidx.test.uiautomator:uiautomator`.
+   - Wire `targetProjectPath = ":app"` and `experimentalProperties["android.experimental.self-instrumenting"] = true`.
+
+3. Write `BaselineProfileGenerator` covering the hot startup paths:
+   - Cold start to **Dashboard** (wizard already completed) — the most
+     common everyday case.
+   - Cold start to **Wizard** (first launch) — important for first-impression
+     latency.
+   - Open `ChargeEditFragment` from the Dashboard FAB.
+   - Open `ChartsFragment` (this triggers MPAndroidChart class loading,
+     which is otherwise lazy and very expensive on first chart render).
+
+4. Generate the profile on a connected device or managed AVD:
+   `./gradlew :baselineprofile:generateBaselineProfile`. Commit the
+   resulting `app/src/main/baseline-prof.txt`.
+
+5. Add `StartupBenchmark.kt` measuring `measureRepeated { startActivityAndWait() }`
+   with `CompilationMode.None()` vs `CompilationMode.Partial(BaselineProfileMode.Require)`.
+   Document the cold-start delta in the README.
+
+6. Wire profile generation into CI as a `workflow_dispatch`-only job in
+   `.github/workflows/baselineprofile.yml` (do **not** add to PR/main runs —
+   the job needs a managed AVD and is too slow). Refresh the committed
+   profile manually before each tagged release.
+
+7. Document in `CLAUDE.md` the cadence: "Regenerate baseline profile when:
+   adding/removing a major dependency, restructuring startup, or before
+   each `v*` tag."
 
 ---
 
