@@ -9,14 +9,14 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | Task | Priority | Description | Done |
 |------|----------|-------------|------|
 | TASK-01 | 🔴 | Relocate `AggregationDispatcher` out of `di/` | ☑ |
-| TASK-02 | 🔴 | Enforce `ResetAllDataUseCase` as sole caller of `RoomDataResetTransactionRunner` | ☐ |
-| TASK-03 | 🔴 | Unify `UiState` vs `ScreenState` naming in `core/model` | ☐ |
-| TASK-04 | 🟡 | JVM unit tests for `CostParser` | ☐ |
-| TASK-05 | 🟡 | JVM unit tests for `EfficiencyPoint` | ☐ |
-| TASK-06 | 🟡 | JVM unit tests for use cases | ☐ |
+| TASK-02 | 🔴 | Add safeguard KDoc to `RoomDataResetTransactionRunner` (structural rule already holds) | ☐ |
+| TASK-03 | — | ~~Unify `UiState` vs `ScreenState` naming in `core/model`~~ — **closed, premise wrong** | ☒ |
+| TASK-04 | 🟡 | JVM unit tests for `CostParser` | ☑ |
+| TASK-05 | — | ~~JVM unit tests for `EfficiencyPoint`~~ — **closed, premise wrong** | ☒ |
+| TASK-06 | 🟡 | JVM unit tests for use cases | ☑ |
 | TASK-07 | 🟡 | Drive backup error handling & retry logic | ☐ |
-| TASK-08 | 🟢 | Migrate `CarEditDialog` to Compose `AlertDialog` | ☐ |
-| TASK-09 | 🟢 | CSV export for `EfficiencyPoint` data with date-range picker | ☐ |
+| TASK-08 | 🟢 | Replace `CarEditDialog` with a Compose `AlertDialog` (requires adding Compose) | ☐ |
+| TASK-09 | 🟢 | CSV export of charge events with efficiency column, date-range picker | ☐ |
 | TASK-10 | 🟢 | In-app About / Info screen with SPS-Lab acknowledgment | ☐ |
 | TASK-11 | 🟡 | Odometer regression detection UX improvement | ☐ |
 | TASK-12 | 🟡 | Widget: last-charge summary on home screen | ☐ |
@@ -40,6 +40,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-30 | 🟢 | Migrate from MPAndroidChart to Vico (line/bar) + custom `Canvas` `PieChartView` (pie tabs) | ☐ |
 
 **Priority legend:** 🔴 High (architecture/data safety) · 🟡 Medium (robustness/UX) · 🟢 Low (new feature)  
+**Status legend:** ☐ open · ☑ done · ☒ closed (premise no longer holds)  
 Mark done by replacing `☐` with `☑` when a task is merged.
 
 ---
@@ -71,39 +72,47 @@ A dispatcher is a domain or data concern, not a DI module.
 
 ---
 
-## 🔴 TASK-02 — Enforce that `RoomDataResetTransactionRunner` is only called from `ResetAllDataUseCase`
+## 🔴 TASK-02 — Add safeguard KDoc to `RoomDataResetTransactionRunner`
 
-The class `RoomDataResetTransactionRunner` performs a destructive database
-transaction. It must never be called directly from a ViewModel or Fragment.
+> **Verification (2026-04-30):** the structural rule already holds. A
+> `grep -rn "RoomDataResetTransactionRunner" app/src/main/java` returns only
+> `data/repository/RoomDataResetTransactionRunner.kt` (the implementation) and
+> `di/DomainModule.kt` (the `@Binds` to `DataResetTransactionRunner`). All
+> consumers — currently only `ResetAllDataUseCase` — depend on the narrow
+> `DataResetTransactionRunner` interface. The remaining work is documentation
+> only.
 
-1. Audit all usages of `RoomDataResetTransactionRunner` across the codebase.
-2. If it is called from anywhere other than `ResetAllDataUseCase`, refactor
-   so that the ViewModel calls `ResetAllDataUseCase` and that use case
-   delegates to `RoomDataResetTransactionRunner`.
-3. Add a KDoc comment to `RoomDataResetTransactionRunner` explicitly stating:
-   `"This class must only be called from ResetAllDataUseCase."`
-4. If no violation is found, add the KDoc comment and confirm in a code comment.
-
----
-
-## 🔴 TASK-03 — Unify `UiState` vs `ScreenState` naming convention in `core/model`
-
-The `core/model` package contains both `*UiState` and `*ScreenState` naming
-patterns (e.g., `ChartsUiState.kt` and `ChartsScreenState.kt`), which is
-inconsistent and confusing.
-
-1. Audit all files in:
-   `app/src/main/java/org/spsl/evtracker/core/model/`
-2. Rename all `*ScreenState` classes to `*UiState` to match the Android
-   ViewModel/StateFlow convention.
-3. Update all references across ViewModels, Fragments, and tests.
-4. Ensure no duplicate state classes exist for the same screen (merge if
-   `ChartsUiState` and `ChartsScreenState` represent the same concept).
-5. Verify the project builds and all tests pass.
+1. Add a KDoc to `RoomDataResetTransactionRunner` and to
+   `DataResetTransactionRunner` explicitly stating: *"Destructive operation —
+   must only be called from `ResetAllDataUseCase`. ViewModels and Fragments
+   must not depend on this type or its interface directly."*
+2. Optionally add a `lint-baseline.xml` or ktlint custom rule (TASK-16
+   follow-up) once that infrastructure exists, to mechanically enforce the
+   no-direct-consumer invariant.
 
 ---
 
-## 🟡 TASK-04 — Add JVM unit tests for `CostParser`
+## ☒ TASK-03 — ~~Unify `UiState` vs `ScreenState` naming convention in `core/model`~~
+
+> **Closed (2026-04-30):** premise is wrong. `ChartsUiState` and
+> `ChartsScreenState` are not duplicates. `ChartsScreenState` is the outer
+> screen frame (`period`, `distanceUnit`, plus a `charts: ChartsUiState`
+> field), and `ChartsUiState` is the inner sealed content state
+> (`Loading / NoCar / NoEvents / Loaded`). Same pattern for
+> `DashboardScreenState` (frame) wrapping `DashboardUiState` (content with
+> `emptyState`, `stats`, `showMultiCurrencyBanner`). The split is intentional;
+> renaming would conflate the two layers. If a stylistic rename of `*ScreenState`
+> ever becomes desirable, file a fresh task — but it is not the
+> deduplication described here.
+
+---
+
+## 🟡 TASK-04 — Add JVM unit tests for `CostParser` ☑ Done (verified 2026-04-30)
+
+> **Outcome:** `app/src/test/java/org/spsl/evtracker/domain/service/CostParserTest.kt`
+> exists (55 lines) and covers zero-cost, blank, negative, total→perKwh
+> derivation, and per-kWh→total derivation paths. The original task text is
+> preserved below for historical context.
 
 The class `app/src/main/java/org/spsl/evtracker/domain/service/CostParser.kt`
 has no corresponding JVM unit tests. This is a pure logic class and must be
@@ -125,31 +134,27 @@ any Android framework classes — this must be a pure JVM test.
 
 ---
 
-## 🟡 TASK-05 — Add JVM unit tests for `EfficiencyPoint`
+## ☒ TASK-05 — ~~Add JVM unit tests for `EfficiencyPoint`~~
 
-The class `app/src/main/java/org/spsl/evtracker/core/model/EfficiencyPoint.kt`
-models energy efficiency data (likely kWh/km or Wh/km). It has no unit tests.
-
-Create the file:
-`app/src/test/java/org/spsl/evtracker/core/model/EfficiencyPointTest.kt`
-
-Write unit tests covering:
-1. Normal efficiency calculation with valid energy (kWh) and distance (km).
-2. Zero distance — expect an exception or a defined sentinel value (not `NaN`
-   or `Infinity`). Document the chosen behavior.
-3. Zero energy consumed — confirm output is `0.0` efficiency.
-4. Very large distances or energy values — check for overflow.
-5. If `EfficiencyPoint` is a data class, test `equals()` and `copy()` for
-   correctness.
-6. If it derives cost-per-km, combine with a mock cost value and test the
-   combined computation.
-
-Use JUnit 4 or JUnit 5 consistent with the existing test setup. No Android
-dependencies.
+> **Closed (2026-04-30):** premise is wrong. `EfficiencyPoint` is a 2-field
+> data class (`eventTimeMillis: Long`, `kmPerKwh: Double`) with zero logic.
+> The proposed cases (zero distance, NaN handling, overflow,
+> cost-per-km derivation) belong to the *producer* of these points, not the
+> point itself — the production logic lives in `StatsCalculator` /
+> `EfficiencyStats`, which already have JVM tests in
+> `app/src/test/java/org/spsl/evtracker/domain/service/`. If gaps exist
+> there, file a fresh task naming the missing scenarios.
 
 ---
 
-## 🟡 TASK-06 — Add JVM unit tests for `RenameCarUseCase` and `ResetAllDataUseCase`
+## 🟡 TASK-06 — Add JVM unit tests for `RenameCarUseCase` and `ResetAllDataUseCase` ☑ Done (verified 2026-04-30)
+
+> **Outcome:** both test files exist on `main`:
+> `app/src/test/java/org/spsl/evtracker/domain/usecase/RenameCarUseCaseTest.kt`
+> (42 lines) and `…/ResetAllDataUseCaseTest.kt` (130 lines), both wired
+> through the existing fakes in
+> `app/src/test/java/org/spsl/evtracker/testing/Fakes.kt`. The original task
+> text is preserved below for historical context.
 
 The domain use cases have no JVM unit tests. Business logic must be tested
 independently of the Android framework.
@@ -216,70 +221,73 @@ interfaces with the Google Drive API. It must handle common failure modes.
 
 ---
 
-## 🟢 TASK-08 — Migrate `CarEditDialog` to a Compose `AlertDialog`
+## 🟢 TASK-08 — Replace `CarEditDialog` with a Compose `AlertDialog`
 
-The class `app/src/main/java/org/spsl/evtracker/ui/cars/CarEditDialog.kt`
-is a `DialogFragment` managing its own lifecycle. Replace it with a Compose
-`AlertDialog` rendered from within the Cars screen.
+> **Premise correction (2026-04-30):** `CarEditDialog` is **not** a
+> `DialogFragment`. It is a Kotlin `object` wrapping
+> `MaterialAlertDialogBuilder` over `DialogEditCarBinding` (see
+> `app/src/main/java/org/spsl/evtracker/ui/cars/CarEditDialog.kt`). Compose is
+> also **not** in the dependency graph today — no `androidx.compose.*`
+> entries appear in `app/build.gradle.kts` or `gradle/libs.versions.toml`.
+> The work below therefore has two parts: introducing Compose to the project,
+> and porting the dialog. Treat introducing Compose as the gating decision —
+> if the team prefers staying on Views, close this task and the dialog can
+> stay as-is.
 
-Pre-conditions: Confirm that `app/build.gradle.kts` already has Compose
-dependencies. If not, add:
+### Step 1 — decide whether to adopt Compose
+
+Pulling Compose in for a single dialog is rarely worth it. Reasonable triggers
+to actually adopt it: planned Compose-first new screens, the future
+`PieChartView` work in TASK-30 benefits from Compose Canvas, or a desire to
+phase out ViewBinding. If none of these apply, close this task.
+
+### Step 2 — add Compose dependencies (only if Step 1 is "yes")
+
+Add to `gradle/libs.versions.toml` and reference from `app/build.gradle.kts`:
+
+- `androidx.compose:compose-bom` (use `platform(...)`)
 - `androidx.compose.ui:ui`
 - `androidx.compose.material3:material3`
 - `androidx.activity:activity-compose`
+- `androidx.fragment:fragment-compose` (or use `ComposeView` from a Fragment)
 
-Steps:
-1. Create a new Composable function `CarEditDialog` in a new file:
-   `app/src/main/java/org/spsl/evtracker/ui/cars/CarEditDialogCompose.kt`
+Enable `buildFeatures.compose = true` and configure `composeOptions`. Verify
+release build still compiles (`./gradlew :app:assembleRelease`).
 
-   The composable must accept:
-   - `isVisible: Boolean`
-   - `initialName: String`
-   - `onConfirm: (String) -> Unit`
-   - `onDismiss: () -> Unit`
+### Step 3 — port the dialog
 
-2. Implement a Material3 `AlertDialog` with a single `TextField` for the
-   car name, a Confirm button (disabled if name is blank), and a Cancel button.
-
-3. Replace all usages of the old `CarEditDialog` DialogFragment with this
-   composable, driven by a boolean state in the host ViewModel or Fragment.
-
-4. Delete the old `CarEditDialog.kt` once all usages are removed.
-
-5. Update or add a UI test in `app/src/androidTest/` to verify the dialog
-   appears, accepts input, and confirms correctly.
+1. Create a Composable `CarEditDialogCompose(state: CarFormState, onConfirm: (CarFormState) -> Unit, onDismiss: () -> Unit)` rendering a Material3 `AlertDialog` with the same fields as `R.layout.dialog_edit_car` (name, make, model, battery kWh).
+2. Render it from `CarsFragment` via a `ComposeView` whose visibility is driven by `CarsViewModel` state (a `showDialog: CarFormState?` field plus an event).
+3. Delete `CarEditDialog.kt` and `R.layout.dialog_edit_car` once unreferenced. Confirm `CarsFragment` and `CarsViewModel` still compile.
+4. Add a UI test in `app/src/androidTest/.../CarsFragmentTest.kt` (or extend the existing one) asserting the dialog renders, validates blank names, and emits `onConfirm` with trimmed input.
 
 ---
 
-## 🟢 TASK-09 — Add CSV export for `EfficiencyPoint` data
+## 🟢 TASK-09 — Add date-ranged CSV export for charge events with efficiency column
 
-The SPS-Lab uses EV charging and efficiency data for smart grid research.
-Add a CSV export feature so aggregated efficiency data can be extracted
-for offline analysis.
+> **Premise correction (2026-04-30):** `EfficiencyPoint` is just a
+> `(eventTimeMillis, kmPerKwh)` data class and does not carry distance,
+> energy, or cost — so it cannot fill the originally proposed CSV header.
+> An `ExportCsvUseCase` already exists and writes to
+> `getExternalFilesDir(DIRECTORY_DOWNLOADS)`. The remaining work is a
+> **date-ranged variant** of the existing exporter that also emits the
+> per-row efficiency derived from the previous event for the same car.
 
-1. Create a new use case:
-   `app/src/main/java/org/spsl/evtracker/domain/usecase/ExportEfficiencyDataUseCase.kt`
-
-   This use case must:
-   - Accept a date range (`startDate: LocalDate`, `endDate: LocalDate`).
-   - Query all `EfficiencyPoint` records within that range from the repository.
-   - Serialize them to CSV with header:
-     `timestamp,distance_km,energy_kwh,efficiency_wh_per_km,cost_eur`
-   - Write the CSV to the app's external files directory using
-     `Context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)`.
-   - Return the `File` reference on success, or throw on failure.
-
-2. Add an "Export Data" button in the Settings screen that:
-   - Prompts the user for a date range (use `MaterialDatePicker`).
-   - Calls the use case via the `SettingsViewModel`.
-   - On success, triggers an Android share intent (`ACTION_SEND`) with the
-     CSV file so it can be sent via email or saved to Drive.
-
-3. Add unit tests for `ExportEfficiencyDataUseCase` in:
-   `app/src/test/java/org/spsl/evtracker/domain/usecase/ExportEfficiencyDataUseCaseTest.kt`
-
-   Test: correct CSV header, correct row count, correct handling of empty
-   result set, and correct file naming (e.g., `ev_efficiency_YYYY-MM-DD.csv`).
+1. Add a `ExportChargeEventsRangeUseCase` (or extend `ExportCsvUseCase` with
+   a `DateRange?` parameter) that:
+   - Accepts `startMillis: Long`, `endMillis: Long`, optional `carId: Long`.
+   - Reads charge events through the existing `ChargeEventQueries` narrow IF
+     (no new repo type).
+   - Computes the same per-row delta-odometer efficiency the History screen
+     uses (`kmPerKwh = (odo[i] - odo[i-1]) / kwh[i]`; first event for a car
+     emits an empty efficiency cell).
+   - Writes `event_date_iso,car_name,odometer_km,kwh,charge_type,location,cost_total,cost_per_kwh,currency,km_per_kwh,note` and shares via the existing FileProvider authority `${packageName}.fileprovider`.
+2. Add an "Export range…" entry in Settings next to the existing CSV export
+   that opens `MaterialDatePicker.Builder.dateRangePicker()` and calls the
+   new use case via `SettingsViewModel`.
+3. Add JVM unit tests for the new use case covering: empty range, single
+   event (efficiency cell empty), multi-event efficiency derivation, mixed
+   currency rows, and `costTotal IS NULL` rows. Use the existing fakes.
 
 ---
 
