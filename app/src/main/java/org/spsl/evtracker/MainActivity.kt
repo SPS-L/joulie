@@ -105,5 +105,5 @@ class MainActivity : AppCompatActivity() {
      */
     @VisibleForTesting
     fun isNavGraphMounted(): Boolean =
-        ::navController.isInitialized && navController.graph != null && !isLoading.value
+        ::navController.isInitialized && !isLoading.value
 }

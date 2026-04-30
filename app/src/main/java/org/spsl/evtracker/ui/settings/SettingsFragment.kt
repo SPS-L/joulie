@@ -44,7 +44,7 @@ class SettingsFragment : Fragment() {
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             viewLifecycleOwner.lifecycleScope.launch {
-                when (val r = auth.authorize()) {
+                when (auth.authorize()) {
                     is DriveAuthManager.AuthResult.Success -> viewModel.onDriveAuthGranted()
                     else -> viewModel.onDriveAuthFailed(R.string.drive_auth_failed)
                 }
