@@ -5,13 +5,28 @@ Each task is written as a self-contained instruction suitable for a coding agent
 
 ---
 
-## Priority Legend
+## Task Overview
 
-| Symbol | Meaning |
-|--------|---------|
-| 🔴 | High priority — architecture correctness or data safety |
-| 🟡 | Medium priority — robustness and test coverage |
-| 🟢 | Low priority — UX improvement or new feature |
+| Task | Priority | Description | Done |
+|------|----------|-------------|------|
+| TASK-01 | 🔴 | Relocate `AggregationDispatcher` out of `di/` | ☐ |
+| TASK-02 | 🔴 | Enforce `ResetAllDataUseCase` as sole caller of `RoomDataResetTransactionRunner` | ☐ |
+| TASK-03 | 🔴 | Unify `UiState` vs `ScreenState` naming in `core/model` | ☐ |
+| TASK-04 | 🟡 | JVM unit tests for `CostParser` | ☐ |
+| TASK-05 | 🟡 | JVM unit tests for `EfficiencyPoint` | ☐ |
+| TASK-06 | 🟡 | JVM unit tests for use cases | ☐ |
+| TASK-07 | 🟡 | Drive backup error handling & retry logic | ☐ |
+| TASK-08 | 🟢 | Migrate `CarEditDialog` to Compose `AlertDialog` | ☐ |
+| TASK-09 | 🟢 | CSV export for `EfficiencyPoint` data with date-range picker | ☐ |
+| TASK-10 | 🟢 | In-app About / Info screen with SPS-Lab acknowledgment | ☐ |
+| TASK-11 | 🟡 | Odometer regression detection UX improvement | ☐ |
+| TASK-12 | 🟡 | Widget: last-charge summary on home screen | ☐ |
+| TASK-13 | 🟢 | Charging session timer / live session mode | ☐ |
+| TASK-14 | 🟡 | Battery capacity degradation tracker | ☐ |
+| TASK-15 | 🟢 | Localisation (i18n) foundation | ☐ |
+
+**Priority legend:** 🔴 High (architecture/data safety) · 🟡 Medium (robustness/UX) · 🟢 Low (new feature)  
+Mark done by replacing `☐` with `☑` when a task is merged.
 
 ---
 
@@ -352,14 +367,234 @@ made based on data recorded or displayed by this app.
 
 ---
 
+## 🟡 TASK-11 — Odometer Regression UX Improvement
+
+The app currently validates that each new charge event's odometer is greater
+than the previous one, but the error experience can be improved.
+
+**Current behavior:** a generic validation error is shown after the user
+attempts to save.
+
+**Required improvements:**
+
+1. In `ChargeEditFragment` (or the corresponding ViewModel), pre-fill the
+   odometer field with the **last recorded odometer value + 1** for the
+   active car when creating a new charge event (not when editing an existing
+   one). This gives the user a useful starting point.
+
+2. Show an **inline warning** (not just on save) below the odometer field
+   as soon as the entered value is less than or equal to the previous
+   odometer. Use a `TextInputLayout` error message that updates on
+   `TextWatcher` changes. The warning text must be:
+   `"Must be greater than last entry ([previous value] [unit])"`
+   where `[unit]` is `km` or `mi` per the user's preference.
+
+3. The Save button must remain disabled while the odometer regression
+   warning is shown.
+
+4. When editing an existing event (not the most recent one), do not apply
+   the regression check against the car's latest odometer. Instead, validate
+   that the edited value is:
+   - Greater than the event immediately before it in chronological order.
+   - Less than the event immediately after it in chronological order.
+   Show appropriate inline messages for each case.
+
+5. Add unit tests to `ChargeEditViewModelTest` (or create it) for:
+   - Pre-fill logic (new event vs. edit event).
+   - Inline error message content and Save button enabled state.
+
+---
+
+## 🟡 TASK-12 — Home Screen Widget: Last Charge Summary
+
+Add a `AppWidgetProvider`-based Android home screen widget that displays
+a compact summary of the most recent charge event for the active car.
+
+### Widget content
+
+The widget (minimum 2×2 cells) must show:
+- Car name
+- Date of last charge (relative: "Today", "Yesterday", or "3 days ago")
+- kWh added
+- Efficiency value (in the user's preferred metric, e.g., `6.2 km/kWh`)
+- Cost (if non-null, formatted with currency symbol)
+- A small `⚡` icon indicating AC or DC charge type
+
+If no charge events exist for the active car, show: `"No charges logged yet."`
+
+### Implementation
+
+1. Create `app/src/main/java/org/spsl/evtracker/widget/LastChargeWidget.kt`
+   extending `AppWidgetProvider`.
+
+2. Create the widget layout:
+   `app/src/main/res/layout/widget_last_charge.xml`
+   Use `RemoteViews`-compatible views only (`TextView`, `ImageView`, `LinearLayout`).
+
+3. Create the widget metadata:
+   `app/src/main/res/xml/widget_last_charge_info.xml`
+   Set `minWidth="110dp"`, `minHeight="110dp"`, `updatePeriodMillis="0"` (use
+   WorkManager or a broadcast instead of polling).
+
+4. Register the widget in `AndroidManifest.xml` with
+   `android.appwidget.action.APPWIDGET_UPDATE` intent filter.
+
+5. Wire the widget update to the existing WorkManager backup job or a
+   separate `OneTimeWorkRequest` triggered after every committed charge event
+   save or delete. Use `AppWidgetManager.updateAppWidget()` to push new
+   `RemoteViews` data.
+
+6. Tapping the widget must open the app's Dashboard screen via a
+   `PendingIntent`.
+
+7. Add an instrumented test that verifies the `RemoteViews` are populated
+   correctly with mock data.
+
+---
+
+## 🟢 TASK-13 — Live Charging Session Timer
+
+Add an optional "I am charging now" mode that lets the user start a timed
+charging session and auto-fills the timestamp and duration on the charge
+edit form when they finish.
+
+### Behavior
+
+1. Add a **"Start charging session"** floating action button (or prominent
+   button) on the Dashboard screen, visible only when no session is active.
+
+2. When tapped, record `sessionStartTime = System.currentTimeMillis()` in
+   a `StateFlow` inside `DashboardViewModel` (not persisted to DB; in-memory only).
+
+3. While a session is active:
+   - Show a persistent, non-dismissible notification: `"Charging in progress
+     — [elapsed time]"`; update the elapsed time every minute using a
+     `CoroutineScope` + `delay` loop in a `ForegroundService`.
+   - Replace the Dashboard FAB with a **"Stop & Log"** button.
+   - Show an elapsed time chip on the Dashboard (e.g., `⏱ 1h 23m`).
+
+4. When the user taps **"Stop & Log"**:
+   - Navigate to `ChargeEditFragment`.
+   - Pre-fill the `event_date` with `sessionStartTime`.
+   - Pre-fill a `note` field with `"Session duration: [elapsed]"`.
+   - Stop the foreground service and clear the notification.
+
+5. If the app is killed while a session is active, use `DataStore` to
+   persist `sessionStartTime` so the session survives process death. On
+   next launch, if `sessionStartTime` is non-null and the active car has
+   not had a new charge event logged since that time, resume the active
+   session display.
+
+6. Add unit tests for session start/stop state transitions in
+   `DashboardViewModelTest`.
+
+---
+
+## 🟡 TASK-14 — Battery Capacity Degradation Tracker
+
+The `cars` table already has a `battery_kwh` field for the nominal battery
+capacity. Use it to track and visualise real-world effective capacity over
+time, which is directly relevant to the SPS-Lab’s EV integration research.
+
+### Feature description
+
+An EV’s effective battery capacity can be estimated from charge events where:
+- The car was charged from a known low state (e.g., cost-per-kWh data implies
+  a near-full charge), OR
+- The user manually enters the SoC (state of charge) before and after.
+
+For a simpler first implementation, use the following heuristic:
+- Identify charge events where `kwh_added ≥ 0.8 × battery_kwh` (likely a
+  near-full charge from low SoC).
+- Plot `kwh_added` for these events over time as a proxy for effective capacity.
+
+### Implementation
+
+1. Add two **optional** fields to the `charge_events` table via a Room
+   migration (version bump to 4):
+   - `soc_before REAL` — State of Charge before charging (0.0–1.0 or 0–100;
+     store as a fraction 0.0–1.0 internally).
+   - `soc_after REAL` — State of Charge after charging.
+
+2. Add optional SoC input fields to `ChargeEditFragment`:
+   - Two optional fields labelled "SoC before (%)" and "SoC after (%)".
+   - Collapsed by default behind a "+ Add SoC data" expansion tap.
+   - Validate: 0–100 range; `soc_after > soc_before`.
+
+3. Add a new "Degradation" tab or card in the Charts screen:
+   - X-axis: date of charge event.
+   - Y-axis: effective capacity (kWh), computed as
+     `kwh_added / (soc_after - soc_before)` when both SoC fields are
+     non-null, otherwise fall back to the heuristic `kwh_added` proxy.
+   - Draw a horizontal dashed reference line at the car’s nominal
+     `battery_kwh` value.
+   - Only show this chart if the car has a `battery_kwh` set and at
+     least 3 qualifying data points exist.
+
+4. Add a `batteryHealthPercent` computed property:
+   `(latestEffectiveCapacity / nominalCapacity) × 100`
+   Display this as a secondary stat card on the Dashboard when available.
+
+5. Add unit tests for the capacity calculation logic in a new
+   `CapacityEstimatorTest.kt` in `app/src/test/`.
+
+---
+
+## 🟢 TASK-15 — Localisation (i18n) Foundation
+
+The app currently has all user-facing strings hardcoded in English. Add
+proper i18n support so the app can be translated in the future.
+
+1. Audit all Kotlin source files and XML layouts for hardcoded user-facing
+   strings. Extract every string to
+   `app/src/main/res/values/strings.xml`.
+   Do **not** extract:
+   - Log tag strings (internal developer-facing)
+   - Room entity column names
+   - DataStore preference key names
+
+2. Ensure all `String.format()` calls use named or positional format
+   arguments compatible with `getString(R.string.x, arg)` so translators
+   can reorder arguments.
+
+3. Add plurals resources (`<plurals>`) for any strings that vary by count
+   (e.g., "1 charge event" vs. "3 charge events").
+
+4. Create a Greek translation file as a first target locale (relevant for
+   Cyprus University of Technology context):
+   `app/src/main/res/values-el/strings.xml`
+   Translate at minimum: all navigation labels, screen titles, button
+   labels, empty state messages, and error messages. Domain-specific
+   technical terms (kWh, km/kWh, AC, DC) should remain in their
+   internationally recognised forms.
+
+5. Add a lint rule to `app/build.gradle.kts` to fail the build on
+   hardcoded strings in layouts:
+   ```kotlin
+   android {
+       lint {
+           error += "HardcodedText"
+       }
+   }
+   ```
+
+6. Verify the app renders correctly at the two most common system font
+   scales (100% and 150%) after the string extraction, as translated
+   strings are often longer than English equivalents.
+
+---
+
 ## Notes for Agents
 
 - The package root is `org.spsl.evtracker`.
 - The project uses Kotlin DSL (`build.gradle.kts`), Hilt for DI, Room for
-  local persistence, and Kotlin Coroutines with Flow throughout.
+  local persistence (currently at schema version 3), and Kotlin Coroutines
+  with Flow throughout.
 - All new classes must follow the existing naming and packaging conventions
   documented in [`CLAUDE.md`](CLAUDE.md).
 - Do not introduce new third-party dependencies without checking
   `app/build.gradle.kts` first. Prefer libraries already present.
 - After any structural change, run `./gradlew test` (JVM) and
   `./gradlew connectedAndroidTest` (instrumented) to verify no regressions.
+- Room schema version is currently **3**. Any migration must bump it to **4**
+  and add a corresponding migration file under `app/schemas/`.
