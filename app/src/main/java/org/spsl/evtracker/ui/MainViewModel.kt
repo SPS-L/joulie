@@ -29,7 +29,9 @@ class MainViewModel @Inject constructor(
 
     @Volatile private var inFlight = false
 
-    init { runStartupSequence() }
+    init {
+        runStartupSequence()
+    }
 
     fun runStartupSequence() {
         if (inFlight) return
