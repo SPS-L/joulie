@@ -15,7 +15,7 @@ import javax.inject.Singleton
 class SettingsRepository @Inject constructor(
     private val dataStore: DataStore<Preferences>,
 ) : SettingsReader, SettingsWriter {
-    val setupComplete: Flow<Boolean> =
+    override val setupComplete: Flow<Boolean> =
         dataStore.data.map { it[PreferenceKeys.SETUP_COMPLETE] ?: false }
 
     override val primaryMetric: Flow<String> =

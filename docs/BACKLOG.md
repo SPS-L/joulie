@@ -30,7 +30,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-20 | 🟢 | CO₂ savings tracker (ICE baseline, Cyprus grid intensity, methodology doc) | — | ☐ |
 | TASK-21 | 🟢 | Android Baseline Profile module for cold-start performance | — | ☐ |
 | TASK-22 | 🔴 | Upgrade `targetSdk` and `compileSdk` to API 35 | TASK-16 | ☐ |
-| TASK-23 | 🔴 | Move startup `isLoading` state into `MainViewModel` | — | ☐ |
+| TASK-23 | 🔴 | Move startup `isLoading` state into `MainViewModel` | — | ☑ |
 | TASK-24 | 🔴 | Enforce ViewModel/Activity consumption of the existing narrow domain interfaces (no concrete `data.repository.*` imports outside `di/`) | TASK-23 | ☐ |
 | TASK-25 | 🟡 | Replace `chargeType: String` with a sealed class / TypeConverter-backed enum | — | ☐ |
 | TASK-26 | 🟡 | Change all Room primary-key and foreign-key fields from `Int` to `Long` | — | ☐ |
@@ -972,7 +972,19 @@ submissions and updates; staying on 34 will block Play Store publishing.
 
 ---
 
-## 🔴 TASK-23 — Move startup `isLoading` state into `MainViewModel`
+## 🔴 TASK-23 — Move startup `isLoading` state into `MainViewModel` ☑ Done (2026-04-30)
+
+> **Outcome:** `MainViewModel` now owns the startup auto-recovery state.
+> `MainActivity` is a thin presenter that observes `startupState` via
+> `repeatOnLifecycle(STARTED)` and routes to `mountNavGraph(setupComplete)` or
+> `showRecoveryFailureDialog(cause)`. `SettingsReader` gained
+> `setupComplete: Flow<Boolean>` so the new VM consumes the narrow IF (one of
+> the three TASK-24 violations resolved as a side effect; `EVTrackerApp` and
+> `WizardViewModel` remain for TASK-24). Six new JVM tests in
+> `MainViewModelTest`. Spec:
+> `superpowers/specs/2026-04-30-task23-main-viewmodel-design.md`. Plan:
+> `superpowers/plans/2026-04-30-task23-main-viewmodel.md`.
+> The original task text is preserved below for historical context.
 
 `MainActivity.kt:29` declares `private val isLoading = MutableStateFlow(true)`
 directly inside the Activity, and `startupSequence()` (line 60) plus the two

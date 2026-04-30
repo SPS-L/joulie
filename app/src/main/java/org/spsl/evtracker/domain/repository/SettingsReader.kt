@@ -21,4 +21,11 @@ interface SettingsReader {
      * before any UI mounts so the user never reaches an inconsistent state.
      */
     val resetInProgress: Flow<Boolean>
+
+    /**
+     * F1 wizard gate. False until the wizard's finish step writes primaryMetric,
+     * distanceUnit, currency together with this flag. Settings → Reset preferences
+     * sets it back to false.
+     */
+    val setupComplete: Flow<Boolean>
 }
