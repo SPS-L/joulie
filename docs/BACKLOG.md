@@ -9,7 +9,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | Task | Priority | Description | Requires | Done |
 |------|----------|-------------|----------|------|
 | TASK-01 | 🔴 | Relocate `AggregationDispatcher` out of `di/` | — | ☑ |
-| TASK-02 | 🔴 | Add safeguard KDoc to `RoomDataResetTransactionRunner` (structural rule already holds) | — | ☐ |
+| TASK-02 | 🔴 | Add safeguard KDoc to `RoomDataResetTransactionRunner` (structural rule already holds) | — | ☑ |
 | TASK-03 | — | ~~Unify `UiState` vs `ScreenState` naming in `core/model`~~ — **closed, premise wrong** | — | ☒ |
 | TASK-04 | 🟡 | JVM unit tests for `CostParser` | — | ☑ |
 | TASK-05 | — | ~~JVM unit tests for `EfficiencyPoint`~~ — **closed, premise wrong** | — | ☒ |
@@ -74,7 +74,23 @@ A dispatcher is a domain or data concern, not a DI module.
 
 ---
 
-## 🔴 TASK-02 — Add safeguard KDoc to `RoomDataResetTransactionRunner`
+## 🔴 TASK-02 — Add safeguard KDoc to `RoomDataResetTransactionRunner` ☑ Done (2026-05-01)
+
+> **Outcome:** the safeguard KDoc was added to both
+> `domain/repository/DataResetTransactionRunner.kt` and
+> `data/repository/RoomDataResetTransactionRunner.kt`. The block on the
+> interface explains that `clearAllTables()` is reachable only through
+> [`ResetAllDataUseCase`] because the use case owns the `resetInProgress`
+> durable-flag protocol that lets startup auto-recovery resume a
+> half-finished reset; the impl points back to the interface KDoc and
+> notes that even the interface is not for general consumption. The
+> structural rule already held empirically (`grep` finds only the impl
+> file and `di/DomainModule.kt`), and the wider narrow-IF rule from
+> TASK-24 is now codified in CLAUDE.md §Architecture, so this KDoc is the
+> last layer — a type-level reminder for the next agent reading the
+> code. Mechanical enforcement (a custom ktlint rule) remains a TASK-16
+> follow-up; the current cost/benefit doesn't justify spinning one up
+> for two files. The original task text is preserved below.
 
 > **Verification (2026-04-30):** the structural rule already holds. A
 > `grep -rn "RoomDataResetTransactionRunner" app/src/main/java` returns only
@@ -1651,17 +1667,13 @@ The change is complete when **all** of the following hold:
 
 ## Notes for Agents (TASK-22 to TASK-30 addendum)
 
-- **TASK-16 → TASK-15 / TASK-22 (gate before invariants):** the CI lint
-  gate is a soft prerequisite for both. Land TASK-16 first so that
-  TASK-15's `HardcodedText` / `MissingTranslation` rules and TASK-22's
-  API-35 deprecation fixes are protected at PR time; otherwise
-  regressions can re-enter `main` undetected.
-- **TASK-22 ↔ TASK-16 (CI matrix):** when TASK-16's `ci.yml` lands, its
-  `connectedAndroidTest` job (or any emulator matrix) must use the
-  same API level as `targetSdk`/`compileSdk`. If TASK-22 has merged first,
-  start the matrix at API 35; if not, bump the matrix at the same time as
-  the SDK bump. Otherwise CI will silently keep validating against a stale
-  API level.
+> Sequencing notes for **TASK-16, TASK-22, TASK-23, TASK-24** are obsolete —
+> all four landed. The static-analysis CI gate (TASK-16) is in place; the
+> SDK bump to 35 (TASK-22) merged with no `connectedAndroidTest` matrix to
+> coordinate (the workflow is static-analysis only); and TASK-23 → TASK-24
+> ran in the prescribed order. Sequencing notes below cover the remaining
+> open work only.
+
 - **TASK-29 prerequisite for TASK-10:** the About screen reads
   `BuildConfig.VERSION_NAME` / `VERSION_CODE`. AGP 8.2.0 has `buildConfig`
   generation **off** by default, and the project currently has zero
@@ -1671,8 +1683,6 @@ The change is complete when **all** of the following hold:
 - **TASK-19 prerequisite for TASK-07:** TASK-19's auth-failure
   notification path consumes TASK-07's `BackupResult.AuthRequired` sealed
   variant. Land TASK-07 first so the error model is stable.
-- **TASK-23 must land before TASK-24:** `MainViewModel` becomes the new
-  `SettingsReader` consumer that the audit verifies.
 - **TASK-26 schema-version coordination:** TASK-14 (battery degradation),
   TASK-25 (`ChargeType` enum), and TASK-26 (`Int` → `Long`) all bump the Room
   schema. Whichever lands first claims the next version; later tasks must

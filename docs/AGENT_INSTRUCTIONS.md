@@ -11,7 +11,7 @@ This document gives a complete step-by-step guide for an AI coding agent (or dev
 ## Prerequisites
 
 - JDK 17+
-- Android SDK (API 26 min, API 34 target, Build Tools 34.0.0)
+- Android SDK (API 26 min, API 35 target, Build Tools 35.0.0)
 - Gradle 8.4+
 - `ANDROID_HOME` environment variable set
 - Internet access (to download Maven dependencies)
