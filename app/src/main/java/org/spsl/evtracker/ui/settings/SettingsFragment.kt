@@ -81,6 +81,9 @@ class SettingsFragment : Fragment() {
         binding.rowExportCsv.setOnClickListener { viewModel.onExportCsv() }
         binding.rowResetPreferences.setOnClickListener { showResetPreferencesDialog() }
         binding.rowResetActiveCar.setOnClickListener { showResetActiveCarDialog() }
+        binding.rowAbout.setOnClickListener {
+            findNavController().navigate(R.id.action_settings_to_about)
+        }
         binding.rowResetAll.setOnClickListener { showResetAllDialog() }
 
         viewLifecycleOwner.lifecycleScope.launch {
