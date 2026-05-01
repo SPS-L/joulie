@@ -53,4 +53,11 @@
          for defensive code paths. -->
     <color name="chart_ac_fallback">#1E88E5</color>
     <color name="chart_dc_fallback">#FB8C00</color>
+
+    <!-- Defensive fallbacks for chart axis text and gridlines. Used only
+         when ?attr/colorOnSurface and ?attr/colorOutlineVariant cannot be
+         resolved (which the M3 theme always provides). The values match the
+         light-theme M3 surface roles approximately. -->
+    <color name="chart_axis_text_fallback">#1C1B1F</color>
+    <color name="chart_axis_grid_fallback">#79747E</color>
 </resources>

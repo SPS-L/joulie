@@ -44,17 +44,52 @@ object ChartStyling {
     )
 
     fun resolveSeriesColors(context: Context): Pair<Int, Int> {
-        fun resolve(attr: Int, fallback: Int): Int {
-            val tv = TypedValue()
-            return if (context.theme.resolveAttribute(attr, tv, true)) {
-                tv.data
-            } else {
-                ContextCompat.getColor(context, fallback)
-            }
-        }
-        val ac = resolve(com.google.android.material.R.attr.colorPrimary, R.color.chart_ac_fallback)
-        val dc = resolve(com.google.android.material.R.attr.colorTertiary, R.color.chart_dc_fallback)
+        val ac = resolveAttr(context, com.google.android.material.R.attr.colorPrimary, R.color.chart_ac_fallback)
+        val dc = resolveAttr(context, com.google.android.material.R.attr.colorTertiary, R.color.chart_dc_fallback)
         return ac to dc
+    }
+
+    /**
+     * Theme-aware axis / legend / gridline colors. MPAndroidChart's defaults
+     * are hardcoded grey/black, which becomes invisible on a dark surface —
+     * we resolve the M3 `colorOnSurface` for text and `colorOutlineVariant`
+     * for gridlines so charts follow the system theme.
+     */
+    data class AxisColors(val text: Int, val grid: Int)
+
+    fun resolveAxisColors(context: Context): AxisColors = AxisColors(
+        text = resolveAttr(context, com.google.android.material.R.attr.colorOnSurface, R.color.chart_axis_text_fallback),
+        grid = resolveAttr(context, com.google.android.material.R.attr.colorOutlineVariant, R.color.chart_axis_grid_fallback),
+    )
+
+    private fun resolveAttr(context: Context, attr: Int, fallback: Int): Int {
+        val tv = TypedValue()
+        return if (context.theme.resolveAttribute(attr, tv, true)) {
+            tv.data
+        } else {
+            ContextCompat.getColor(context, fallback)
+        }
+    }
+
+    /**
+     * Apply theme-aware axis and legend colors to any MPAndroidChart so its
+     * labels stay readable under both Light and Dark M3 themes. Called by
+     * each `configureXxxChart` helper after the basic chart shape is set.
+     */
+    private fun applyThemeAwareAxisColors(chart: com.github.mikephil.charting.charts.Chart<*>) {
+        val colors = resolveAxisColors(chart.context)
+        chart.legend.textColor = colors.text
+        chart.xAxis.textColor = colors.text
+        chart.xAxis.gridColor = colors.grid
+        chart.xAxis.axisLineColor = colors.grid
+        if (chart is com.github.mikephil.charting.charts.BarLineChartBase<*>) {
+            chart.axisLeft.textColor = colors.text
+            chart.axisLeft.gridColor = colors.grid
+            chart.axisLeft.axisLineColor = colors.grid
+            chart.axisRight.textColor = colors.text
+            chart.axisRight.gridColor = colors.grid
+            chart.axisRight.axisLineColor = colors.grid
+        }
     }
 
     fun configureLineChart(chart: LineChart) {
@@ -71,6 +106,7 @@ object ChartStyling {
         chart.xAxis.position = XAxis.XAxisPosition.BOTTOM
         chart.xAxis.granularity = 1f
         chart.xAxis.setAvoidFirstLastClipping(true)
+        applyThemeAwareAxisColors(chart)
     }
 
     fun configureBarChart(chart: BarChart) {
@@ -83,6 +119,7 @@ object ChartStyling {
         chart.xAxis.position = XAxis.XAxisPosition.BOTTOM
         chart.xAxis.granularity = 1f
         chart.setFitBars(true)
+        applyThemeAwareAxisColors(chart)
     }
 
     fun configurePieChart(chart: PieChart) {
@@ -90,9 +127,15 @@ object ChartStyling {
         chart.setNoDataText("")
         chart.legend.isEnabled = true
         chart.setUsePercentValues(false)
+        // Slice labels are drawn ON the saturated palette colors — white is
+        // correct in both themes regardless of system surface colors.
         chart.setEntryLabelColor(Color.WHITE)
         chart.isRotationEnabled = false
         chart.setHoleColor(Color.TRANSPARENT)
+        // Hole-text (PieChart.centerText) sits on the surface, not on a slice
+        // — must follow the theme so it's readable in dark mode.
+        chart.setCenterTextColor(resolveAxisColors(chart.context).text)
+        applyThemeAwareAxisColors(chart)
     }
 
     /** Formatter for monthly bar charts. Bars store the bucket *index* in
