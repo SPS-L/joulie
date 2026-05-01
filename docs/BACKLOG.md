@@ -2575,18 +2575,20 @@ UI change.
 
 ## Notes for Agents (TASK-22 to TASK-30 addendum)
 
-> Sequencing notes for **TASK-07, TASK-16, TASK-22, TASK-23, TASK-24,
-> TASK-25, TASK-28, TASK-29** are obsolete — all eight landed. The
-> static-analysis CI gate (TASK-16) is in place; the SDK bump to 35
-> (TASK-22) merged with no `connectedAndroidTest` matrix to coordinate;
-> TASK-23 → TASK-24 ran in the prescribed order; TASK-25 claimed Room
-> v3 → v4 + `MIGRATION_3_4` and bumped `backup_version` to 4;
-> TASK-28 retired the parallel `() -> Long` clock; TASK-29's debug
-> build type + `BuildConfig` enablement is merged with the OAuth-client
-> implication documented in `GOOGLE_CLOUD_SETUP.md` Step 5b; TASK-07
-> introduced the `BackupResult` sealed class so TASK-19 has a stable
-> error model to consume. Sequencing notes below cover the remaining
-> open work only.
+> Sequencing notes for **TASK-07, TASK-16, TASK-19, TASK-22, TASK-23,
+> TASK-24, TASK-25, TASK-28, TASK-29, TASK-36** are obsolete — all ten
+> landed. The static-analysis CI gate (TASK-16) is in place; the SDK
+> bump to 35 (TASK-22) merged with no `connectedAndroidTest` matrix to
+> coordinate; TASK-23 → TASK-24 ran in the prescribed order; TASK-25
+> claimed Room v3 → v4 + `MIGRATION_3_4` and bumped `backup_version`
+> to 4; TASK-28 retired the parallel `() -> Long` clock; TASK-29's
+> debug build type + `BuildConfig` enablement is merged with the
+> OAuth-client implication documented in `GOOGLE_CLOUD_SETUP.md`
+> Step 5b; TASK-07 introduced the `BackupResult` sealed class which
+> TASK-19 then consumed when wiring the failure notification surface;
+> TASK-36's inline `Result.retry()` invariant comments were folded
+> into the TASK-19 worker rewrite. Sequencing notes below cover the
+> remaining open work only.
 
 - **TASK-30 marker reuse:** complete the Vico marker wrapper once in Step 2
   and reuse in Step 3. Do not port `ChartsMarkerView` twice.
