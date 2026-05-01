@@ -333,6 +333,7 @@ class ChartsTabFragment : Fragment() {
         val ds = PieDataSet(entries, "").apply {
             colors = listOf(acColor, dcColor)
             valueTextSize = 12f
+            valueTextColor = android.graphics.Color.WHITE
         }
         chart.data = PieData(ds)
         // Spec §6.4: centered hole text = total event count; sub-label below = kWh.
@@ -375,6 +376,7 @@ class ChartsTabFragment : Fragment() {
         val ds = PieDataSet(entries, "").apply {
             colors = charts.locations.indices.map { ChartStyling.locationPalette(it) }
             valueTextSize = 12f
+            valueTextColor = android.graphics.Color.WHITE
         }
         chart.data = PieData(ds)
         if (!firstRenderConsumed) {
