@@ -39,8 +39,27 @@
                 android:layout_height="wrap_content"
                 android:textAppearance="?attr/textAppearanceBodyMedium"
                 android:paddingTop="4dp"
-                android:paddingBottom="16dp"
+                android:paddingBottom="8dp"
                 tools:text="Last backup: April 27, 2026 at 9:30 AM"/>
+
+            <!-- TASK-31: manual Drive controls — visibility gated on driveEnabled. -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/button_backup_now"
+                style="?attr/materialButtonStyle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:text="@string/drive_backup_now_button"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/button_wipe_remote"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:text="@string/drive_wipe_button"
+                android:textColor="?attr/colorError"
+                app:strokeColor="?attr/colorError"/>
 
             <View
                 android:layout_width="match_parent"

@@ -71,6 +71,32 @@ class DriveBackupRepository @Inject constructor(
         remote.downloadBackup(token, fileId).toString(Charsets.UTF_8)
     }
 
+    /**
+     * TASK-31: deletes the remote `evtracker_backup.json` from the App Data
+     * folder, sharing the same retry + error-translation harness as
+     * [backupCurrentData]. Returns [BackupResult.Success] when the desired
+     * post-state holds — including the no-file case, since "no remote
+     * snapshot" is already true and a noisy error here would mask a clean
+     * outcome the user just asked for.
+     */
+    override suspend fun deleteRemoteBackup(): BackupResult = try {
+        withRetry {
+            val token = requireToken()
+            val fileId = remote.findBackupFileId(token) ?: return@withRetry
+            remote.deleteBackup(token, fileId)
+        }
+        BackupResult.Success
+    } catch (e: DriveAuthRequiredException) {
+        Log.e(TAG, "Drive consent required or revoked on delete", e)
+        BackupResult.AuthRequired
+    } catch (e: HttpResponseException) {
+        Log.e(TAG, "Drive delete HTTP ${e.statusCode} after $MAX_ATTEMPTS attempts", e)
+        BackupResult.Failure("HTTP ${e.statusCode}", e)
+    } catch (e: IOException) {
+        Log.e(TAG, "Drive delete network failure after $MAX_ATTEMPTS attempts", e)
+        BackupResult.Failure("Network failure: ${e.javaClass.simpleName}", e)
+    }
+
     private suspend fun requireToken(): String =
         when (val r = auth.silentToken()) {
             is DriveAuthManager.AuthResult.Success -> r.accessToken

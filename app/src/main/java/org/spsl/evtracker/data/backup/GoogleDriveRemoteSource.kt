@@ -57,6 +57,12 @@ class GoogleDriveRemoteSource @Inject constructor() : DriveRemoteSource {
             client(accessToken).files().get(fileId).executeMediaAsInputStream().use { it.readBytes() }
         }
 
+    override suspend fun deleteBackup(accessToken: String, fileId: String) {
+        withContext(Dispatchers.IO) {
+            client(accessToken).files().delete(fileId).execute()
+        }
+    }
+
     companion object {
         const val BACKUP_FILE_NAME = "evtracker_backup.json"
     }

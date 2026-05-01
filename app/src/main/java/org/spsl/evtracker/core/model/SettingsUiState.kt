@@ -11,6 +11,12 @@ data class SettingsUiState(
     /** Non-null while the restore prompt is on screen. */
     val pendingRestoreLabel: String? = null,
 
+    // TASK-31 — manual Drive controls:
+    /** True while [PushBackupNowUseCase] is in flight. Mutually exclusive with [isManualWipeRunning]. */
+    val isManualBackupRunning: Boolean = false,
+    /** True while [WipeRemoteBackupUseCase] is in flight. Mutually exclusive with [isManualBackupRunning]. */
+    val isManualWipeRunning: Boolean = false,
+
     // F1:
     val primaryMetric: String = "kwh_per_100km",
     val distanceUnit: String = "km",
@@ -36,4 +42,10 @@ sealed class SettingsEvent {
     data class AutoFlipped(@StringRes val msgRes: Int) : SettingsEvent()
     data class LaunchCsvShareIntent(val uri: Uri) : SettingsEvent()
     object NavigateToWizard : SettingsEvent()
+
+    // TASK-31 — manual Drive controls:
+    object BackupNowSucceeded : SettingsEvent()
+    data class BackupNowFailed(@StringRes val msgRes: Int) : SettingsEvent()
+    object WipeSucceeded : SettingsEvent()
+    data class WipeFailed(@StringRes val msgRes: Int) : SettingsEvent()
 }

@@ -34,6 +34,13 @@ class FakeDriveRemoteSource @Inject constructor() : DriveRemoteSource {
         return body ?: throw IOException("no body for $fileId")
     }
 
+    override suspend fun deleteBackup(accessToken: String, fileId: String) {
+        consumeFailure()
+        check(this.fileId == fileId) { "fileId mismatch: had=${this.fileId} got=$fileId" }
+        this.fileId = null
+        this.body = null
+    }
+
     fun seed(jsonBytes: ByteArray) {
         fileId = "fake-file-id"
         body = jsonBytes

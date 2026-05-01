@@ -82,6 +82,18 @@
     <string name="drive_remote_backup_too_new">This backup was created by a newer version. Update the app to restore.</string>
     <string name="drive_restore_failed">Couldn’t restore backup. Local data is unchanged.</string>
 
+    <!-- Drive — manual controls (TASK-31) -->
+    <string name="drive_backup_now_button">Back up now</string>
+    <string name="drive_wipe_button">Wipe remote backup</string>
+    <string name="drive_wipe_confirm_title">Delete remote backup?</string>
+    <string name="drive_wipe_confirm_body">This permanently deletes \"evtracker_backup.json\" from your Google Drive App Data folder. Local data on this device is NOT affected. The next local change will create a fresh backup automatically.</string>
+    <string name="drive_wipe_confirm_delete">Delete</string>
+    <string name="drive_backup_now_success">Backup uploaded</string>
+    <string name="drive_wipe_success">Remote backup deleted</string>
+    <string name="drive_backup_now_failure">Backup failed. Try again.</string>
+    <string name="drive_wipe_failure">Couldn’t delete remote backup. Try again.</string>
+    <string name="drive_storage_full">Drive storage full. Free up space and retry.</string>
+
     <!-- Backup notifications (TASK-19) -->
     <string name="backup_notif_channel_status_name">Backup status</string>
     <string name="backup_notif_channel_status_description">Low-priority alerts when Drive backup has failed multiple times in a row.</string>
