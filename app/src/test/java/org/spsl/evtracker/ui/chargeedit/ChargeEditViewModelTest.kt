@@ -41,11 +41,11 @@ class ChargeEditViewModelTest {
     }
 
     private fun build(
-        eventId: Int = -1,
+        eventId: Long = -1L,
         gateway: FakeSaveChargeEventGateway = FakeSaveChargeEventGateway(),
         distanceUnit: String = "km",
         currency: String = "EUR",
-        activeCarId: Int = 1,
+        activeCarId: Long = 1L,
         customLocations: List<CustomLocationEntity> = emptyList(),
     ): VmFixture {
         gateway.locationReader.state.value = customLocations
@@ -71,9 +71,9 @@ class ChargeEditViewModelTest {
 
     @Test
     fun createMode_blankInitialState() = runTest {
-        val (vm, _) = build(eventId = -1)
-        val state = vm.uiState.first { it.mode is ChargeEditUiState.Mode.Create && it.carId == 1 }
-        assertEquals(1, state.carId)
+        val (vm, _) = build(eventId = -1L)
+        val state = vm.uiState.first { it.mode is ChargeEditUiState.Mode.Create && it.carId == 1L }
+        assertEquals(1L, state.carId)
         assertEquals("", state.odometer)
         assertEquals("", state.kwh)
     }
@@ -84,15 +84,15 @@ class ChargeEditViewModelTest {
         gateway.seedEvents(
             listOf(
                 ChargeEventEntity(
-                    id = 7, carId = 3, eventDate = 1_000L, odometerKm = 100.0, kwhAdded = 20.0,
+                    id = 7L, carId = 3L, eventDate = 1_000L, odometerKm = 100.0, kwhAdded = 20.0,
                     chargeType = ChargeType.DC_FAST, costTotal = 5.0, costPerKwh = 0.25, currency = "EUR",
                     location = "Home", note = "test", createdAt = 0L,
                 ),
             ),
         )
-        val (vm, _) = build(eventId = 7, gateway = gateway)
+        val (vm, _) = build(eventId = 7L, gateway = gateway)
         val state = vm.uiState.first { it.mode is ChargeEditUiState.Mode.Edit }
-        assertEquals(3, state.carId)
+        assertEquals(3L, state.carId)
         assertEquals("100.0", state.odometer)
         assertEquals("20.0", state.kwh)
         assertEquals(ChargeType.DC_FAST, state.chargeType)
@@ -108,8 +108,8 @@ class ChargeEditViewModelTest {
         gateway.seedEvents(
             listOf(
                 ChargeEventEntity(
-                    id = 7,
-                    carId = 1,
+                    id = 7L,
+                    carId = 1L,
                     eventDate = 0L,
                     odometerKm = 100.0,
                     kwhAdded = 20.0,
@@ -117,7 +117,7 @@ class ChargeEditViewModelTest {
                 ),
             ),
         )
-        val (vm, _) = build(eventId = 7, gateway = gateway, distanceUnit = "miles")
+        val (vm, _) = build(eventId = 7L, gateway = gateway, distanceUnit = "miles")
         val state = vm.uiState.first { it.mode is ChargeEditUiState.Mode.Edit }
         // 100 km ≈ 62.137 mi
         assertEquals(62.137, state.odometer.toDouble(), 0.005)
@@ -157,7 +157,7 @@ class ChargeEditViewModelTest {
         vm.setCostValue("0")
         vm.save()
         advanceUntilIdle()
-        val written = gateway.queries.current().firstOrNull { it.carId == 1 }
+        val written = gateway.queries.current().firstOrNull { it.carId == 1L }
         assertNotNull(written)
         assertNull(written!!.costTotal)
     }
@@ -172,7 +172,7 @@ class ChargeEditViewModelTest {
         vm.setCostValue("")
         vm.save()
         advanceUntilIdle()
-        val written = gateway.queries.current().firstOrNull { it.carId == 1 }
+        val written = gateway.queries.current().firstOrNull { it.carId == 1L }
         assertNotNull(written)
         assertNull(written!!.costTotal)
     }
@@ -188,7 +188,7 @@ class ChargeEditViewModelTest {
         vm.setCostValue("5.5")
         vm.save()
         advanceUntilIdle()
-        val written = gateway.queries.current().firstOrNull { it.carId == 1 }
+        val written = gateway.queries.current().firstOrNull { it.carId == 1L }
         assertNotNull(written)
         assertEquals(5.5, written!!.costTotal!!, 0.001)
         assertEquals("EUR", written.currency)
@@ -204,8 +204,8 @@ class ChargeEditViewModelTest {
         gateway.seedEvents(
             listOf(
                 ChargeEventEntity(
-                    id = 1,
-                    carId = 1,
+                    id = 1L,
+                    carId = 1L,
                     eventDate = 0L,
                     odometerKm = 200.0,
                     kwhAdded = 10.0,
@@ -247,7 +247,7 @@ class ChargeEditViewModelTest {
         vm.setKwh("20")
         vm.save()
         advanceUntilIdle()
-        val written = gateway.queries.current().firstOrNull { it.carId == 1 }
+        val written = gateway.queries.current().firstOrNull { it.carId == 1L }
         assertNotNull(written)
         // 62.137 mi ≈ 100 km
         assertEquals(100.0, written!!.odometerKm, 0.05)
@@ -265,8 +265,8 @@ class ChargeEditViewModelTest {
     @Test
     fun customLocationsObserved() = runTest {
         val locations = listOf(
-            CustomLocationEntity(id = 1, label = "A", useCount = 3, lastUsed = 100L),
-            CustomLocationEntity(id = 2, label = "B", useCount = 2, lastUsed = 200L),
+            CustomLocationEntity(id = 1L, label = "A", useCount = 3, lastUsed = 100L),
+            CustomLocationEntity(id = 2L, label = "B", useCount = 2, lastUsed = 200L),
         )
         val (vm, _) = build(customLocations = locations)
         val state = vm.uiState.first { it.locationChips.custom.isNotEmpty() }
@@ -294,8 +294,8 @@ class ChargeEditViewModelTest {
         gateway.seedEvents(
             listOf(
                 ChargeEventEntity(
-                    id = 1,
-                    carId = 1,
+                    id = 1L,
+                    carId = 1L,
                     eventDate = 1_000L,
                     odometerKm = 12_345.0,
                     kwhAdded = 20.0,
@@ -320,8 +320,8 @@ class ChargeEditViewModelTest {
         gateway.seedEvents(
             listOf(
                 ChargeEventEntity(
-                    id = 1,
-                    carId = 1,
+                    id = 1L,
+                    carId = 1L,
                     eventDate = 1_000L,
                     odometerKm = 100.0,
                     kwhAdded = 20.0,
@@ -342,12 +342,12 @@ class ChargeEditViewModelTest {
         val gateway = FakeSaveChargeEventGateway()
         gateway.seedEvents(
             listOf(
-                ChargeEventEntity(id = 1, carId = 1, eventDate = 1_000L, odometerKm = 100.0, kwhAdded = 10.0, createdAt = 0L),
-                ChargeEventEntity(id = 2, carId = 1, eventDate = 2_000L, odometerKm = 200.0, kwhAdded = 10.0, createdAt = 0L),
-                ChargeEventEntity(id = 3, carId = 1, eventDate = 3_000L, odometerKm = 300.0, kwhAdded = 10.0, createdAt = 0L),
+                ChargeEventEntity(id = 1L, carId = 1L, eventDate = 1_000L, odometerKm = 100.0, kwhAdded = 10.0, createdAt = 0L),
+                ChargeEventEntity(id = 2L, carId = 1L, eventDate = 2_000L, odometerKm = 200.0, kwhAdded = 10.0, createdAt = 0L),
+                ChargeEventEntity(id = 3L, carId = 1L, eventDate = 3_000L, odometerKm = 300.0, kwhAdded = 10.0, createdAt = 0L),
             ),
         )
-        val (vm, _) = build(eventId = 2, gateway = gateway)
+        val (vm, _) = build(eventId = 2L, gateway = gateway)
         val state = vm.uiState.first { it.mode is ChargeEditUiState.Mode.Edit }
         assertEquals(100.0, state.previousOdometerKm!!, 0.0)
         assertEquals(300.0, state.nextOdometerKm!!, 0.0)
@@ -360,11 +360,11 @@ class ChargeEditViewModelTest {
         val gateway = FakeSaveChargeEventGateway()
         gateway.seedEvents(
             listOf(
-                ChargeEventEntity(id = 1, carId = 1, eventDate = 1_000L, odometerKm = 100.0, kwhAdded = 10.0, createdAt = 0L),
-                ChargeEventEntity(id = 2, carId = 1, eventDate = 2_000L, odometerKm = 200.0, kwhAdded = 10.0, createdAt = 0L),
+                ChargeEventEntity(id = 1L, carId = 1L, eventDate = 1_000L, odometerKm = 100.0, kwhAdded = 10.0, createdAt = 0L),
+                ChargeEventEntity(id = 2L, carId = 1L, eventDate = 2_000L, odometerKm = 200.0, kwhAdded = 10.0, createdAt = 0L),
             ),
         )
-        val (vm, _) = build(eventId = 1, gateway = gateway)
+        val (vm, _) = build(eventId = 1L, gateway = gateway)
         val state = vm.uiState.first { it.mode is ChargeEditUiState.Mode.Edit }
         assertNull(state.previousOdometerKm)
         assertEquals(200.0, state.nextOdometerKm!!, 0.0)
@@ -375,11 +375,11 @@ class ChargeEditViewModelTest {
         val gateway = FakeSaveChargeEventGateway()
         gateway.seedEvents(
             listOf(
-                ChargeEventEntity(id = 1, carId = 1, eventDate = 1_000L, odometerKm = 100.0, kwhAdded = 10.0, createdAt = 0L),
-                ChargeEventEntity(id = 2, carId = 1, eventDate = 2_000L, odometerKm = 200.0, kwhAdded = 10.0, createdAt = 0L),
+                ChargeEventEntity(id = 1L, carId = 1L, eventDate = 1_000L, odometerKm = 100.0, kwhAdded = 10.0, createdAt = 0L),
+                ChargeEventEntity(id = 2L, carId = 1L, eventDate = 2_000L, odometerKm = 200.0, kwhAdded = 10.0, createdAt = 0L),
             ),
         )
-        val (vm, _) = build(eventId = 2, gateway = gateway)
+        val (vm, _) = build(eventId = 2L, gateway = gateway)
         val state = vm.uiState.first { it.mode is ChargeEditUiState.Mode.Edit }
         assertEquals(100.0, state.previousOdometerKm!!, 0.0)
         assertNull(state.nextOdometerKm)
@@ -391,8 +391,8 @@ class ChargeEditViewModelTest {
         gateway.seedEvents(
             listOf(
                 ChargeEventEntity(
-                    id = 1,
-                    carId = 1,
+                    id = 1L,
+                    carId = 1L,
                     eventDate = 1_000L,
                     odometerKm = 200.0,
                     kwhAdded = 10.0,
@@ -413,8 +413,8 @@ class ChargeEditViewModelTest {
         gateway.seedEvents(
             listOf(
                 ChargeEventEntity(
-                    id = 1,
-                    carId = 1,
+                    id = 1L,
+                    carId = 1L,
                     eventDate = 1_000L,
                     odometerKm = 200.0,
                     kwhAdded = 10.0,
@@ -436,12 +436,12 @@ class ChargeEditViewModelTest {
         val gateway = FakeSaveChargeEventGateway()
         gateway.seedEvents(
             listOf(
-                ChargeEventEntity(id = 1, carId = 1, eventDate = 1_000L, odometerKm = 100.0, kwhAdded = 10.0, createdAt = 0L),
-                ChargeEventEntity(id = 2, carId = 1, eventDate = 2_000L, odometerKm = 200.0, kwhAdded = 10.0, createdAt = 0L),
-                ChargeEventEntity(id = 3, carId = 1, eventDate = 3_000L, odometerKm = 300.0, kwhAdded = 10.0, createdAt = 0L),
+                ChargeEventEntity(id = 1L, carId = 1L, eventDate = 1_000L, odometerKm = 100.0, kwhAdded = 10.0, createdAt = 0L),
+                ChargeEventEntity(id = 2L, carId = 1L, eventDate = 2_000L, odometerKm = 200.0, kwhAdded = 10.0, createdAt = 0L),
+                ChargeEventEntity(id = 3L, carId = 1L, eventDate = 3_000L, odometerKm = 300.0, kwhAdded = 10.0, createdAt = 0L),
             ),
         )
-        val (vm, _) = build(eventId = 2, gateway = gateway)
+        val (vm, _) = build(eventId = 2L, gateway = gateway)
         vm.uiState.first { it.nextOdometerKm == 300.0 }
         vm.setOdometer("350")
         val state = vm.uiState.first { it.odometer == "350" }
@@ -453,12 +453,12 @@ class ChargeEditViewModelTest {
         val gateway = FakeSaveChargeEventGateway()
         gateway.seedEvents(
             listOf(
-                ChargeEventEntity(id = 1, carId = 1, eventDate = 1_000L, odometerKm = 100.0, kwhAdded = 10.0, createdAt = 0L),
-                ChargeEventEntity(id = 2, carId = 1, eventDate = 2_000L, odometerKm = 200.0, kwhAdded = 10.0, createdAt = 0L),
-                ChargeEventEntity(id = 3, carId = 1, eventDate = 3_000L, odometerKm = 300.0, kwhAdded = 10.0, createdAt = 0L),
+                ChargeEventEntity(id = 1L, carId = 1L, eventDate = 1_000L, odometerKm = 100.0, kwhAdded = 10.0, createdAt = 0L),
+                ChargeEventEntity(id = 2L, carId = 1L, eventDate = 2_000L, odometerKm = 200.0, kwhAdded = 10.0, createdAt = 0L),
+                ChargeEventEntity(id = 3L, carId = 1L, eventDate = 3_000L, odometerKm = 300.0, kwhAdded = 10.0, createdAt = 0L),
             ),
         )
-        val (vm, _) = build(eventId = 2, gateway = gateway)
+        val (vm, _) = build(eventId = 2L, gateway = gateway)
         vm.uiState.first { it.previousOdometerKm == 100.0 }
         vm.setOdometer("99")
         vm.uiState.first { it.odometerBelowPrevious }

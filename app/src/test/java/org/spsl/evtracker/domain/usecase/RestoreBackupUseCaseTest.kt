@@ -82,9 +82,9 @@ class RestoreBackupUseCaseTest {
     @Test
     fun success_clearsAndImportsAndEnqueuesBackup() = runTest {
         val data = BackupData.fromEntities(
-            cars = listOf(CarEntity(id = 1, name = "T", createdAt = 0L)),
-            events = listOf(ChargeEventEntity(id = 7, carId = 1, eventDate = 1L, odometerKm = 100.0, kwhAdded = 10.0, createdAt = 0L)),
-            locations = listOf(CustomLocationEntity(id = 1, label = "Home", useCount = 1, lastUsed = 0L)),
+            cars = listOf(CarEntity(id = 1L, name = "T", createdAt = 0L)),
+            events = listOf(ChargeEventEntity(id = 7L, carId = 1L, eventDate = 1L, odometerKm = 100.0, kwhAdded = 10.0, createdAt = 0L)),
+            locations = listOf(CustomLocationEntity(id = 1L, label = "Home", useCount = 1, lastUsed = 0L)),
             now = 0L,
         )
         val s = build(remoteJson = serializer.toJson(data))
@@ -93,7 +93,7 @@ class RestoreBackupUseCaseTest {
         assertEquals(1, (r as RestoreResult.Success).carCount)
         assertEquals(1, r.eventCount)
         assertEquals(1, r.locationCount)
-        assertEquals(listOf(CarEntity(id = 1, name = "T", createdAt = 0L)), s.txn.lastCars)
+        assertEquals(listOf(CarEntity(id = 1L, name = "T", createdAt = 0L)), s.txn.lastCars)
         assertNotNull(s.txn.lastEvents)
         assertEquals(1, s.scheduler.enqueueCount)
     }
@@ -130,15 +130,15 @@ class RestoreBackupUseCaseTest {
 
     @Test
     fun success_roundTripPreservesAllEntities() = runTest {
-        val cars = listOf(CarEntity(id = 1, name = "T", createdAt = 1L))
+        val cars = listOf(CarEntity(id = 1L, name = "T", createdAt = 1L))
         val events = listOf(
             ChargeEventEntity(
-                id = 7, carId = 1, eventDate = 2L, odometerKm = 100.0, kwhAdded = 10.0,
+                id = 7L, carId = 1L, eventDate = 2L, odometerKm = 100.0, kwhAdded = 10.0,
                 chargeType = ChargeType.DC_FAST, costTotal = 5.0, costPerKwh = 0.5, currency = "EUR",
                 location = "Home", note = "n", createdAt = 0L,
             ),
         )
-        val locations = listOf(CustomLocationEntity(id = 1, label = "Home", useCount = 3, lastUsed = 9L))
+        val locations = listOf(CustomLocationEntity(id = 1L, label = "Home", useCount = 3, lastUsed = 9L))
         val data = BackupData.fromEntities(cars, events, locations, now = 0L)
         val s = build(remoteJson = serializer.toJson(data))
         s.useCase()

@@ -35,7 +35,7 @@ class ObserveChartsModelsUseCase @Inject constructor(
             active to cars
         }.flatMapLatest { (active, cars) ->
             when {
-                cars.isEmpty() || active == -1 -> flowOf<ChartsUiState>(ChartsUiState.NoCar)
+                cars.isEmpty() || active == -1L -> flowOf<ChartsUiState>(ChartsUiState.NoCar)
                 else -> chargeEventQueries.observeForCar(active).map { all ->
                     if (all.isEmpty()) {
                         ChartsUiState.NoEvents

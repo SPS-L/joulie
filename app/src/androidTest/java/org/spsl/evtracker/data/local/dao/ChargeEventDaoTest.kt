@@ -21,7 +21,7 @@ class ChargeEventDaoTest {
     private lateinit var db: AppDatabase
     private lateinit var carDao: CarDao
     private lateinit var chargeEventDao: ChargeEventDao
-    private var carId: Int = 0
+    private var carId: Long = 0L
 
     private val now: Long get() = System.currentTimeMillis()
 
@@ -37,7 +37,7 @@ class ChargeEventDaoTest {
             .build()
         carDao = db.carDao()
         chargeEventDao = db.chargeEventDao()
-        carId = carDao.insert(CarEntity(name = "T", createdAt = 0L)).toInt()
+        carId = carDao.insert(CarEntity(name = "T", createdAt = 0L))
     }
 
     @After
@@ -107,7 +107,7 @@ class ChargeEventDaoTest {
     fun update_persistsChanges() = runBlocking {
         val eventRowId = chargeEventDao.insert(
             event(odometerKm = 100.0, kwhAdded = 10.0),
-        ).toInt()
+        )
         // Re-fetch — the original local has id = 0.
         val saved = chargeEventDao.getById(eventRowId)!!
 

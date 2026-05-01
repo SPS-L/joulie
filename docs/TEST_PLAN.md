@@ -96,7 +96,8 @@
 | `migrate_1_to_2` | Adds `chargeType` column |
 | `migrate_2_to_3` | Creates `custom_locations`; adds cost/location/note columns (camelCase) |
 | `migrate_3_to_4_rewritesLegacyDcRows` | Seeds a v3 DB with a `chargeType = 'DC'` row, runs `MIGRATION_3_4`, asserts the row is rewritten to `'DC_FAST'`. Column type stays TEXT — `@TypeConverters(ChargeTypeConverter)` does the enum round-trip. |
-| `migrate_1_to_4_validatesSchema` | Full chain v1 → v4; opens via `Room.databaseBuilder(...).build().openHelper.writableDatabase` to force schema validation against the entity declarations (catches column-name casing drift) and asserts the migrated `ChargeType` decodes to `ChargeType.AC` |
+| `migrate_4_to_5_isNoOp_widenIntPksToLong` | Runs `MIGRATION_3_4` then `MIGRATION_4_5` against a v3 fixture and asserts existing rows survive untouched with PKs round-tripping as 64-bit `Long`. SQLite `INTEGER` columns already hold 64 bits, so the migration is a deliberate no-op (TASK-26). |
+| `migrate_1_to_5_validatesSchema` | Full chain v1 → v5; opens via `Room.databaseBuilder(...).build().openHelper.writableDatabase` to force schema validation against the entity declarations (catches column-name casing drift), asserts the migrated `ChargeType` decodes to `ChargeType.AC`, and asserts entity PKs round-trip as `Long`. |
 
 ---
 

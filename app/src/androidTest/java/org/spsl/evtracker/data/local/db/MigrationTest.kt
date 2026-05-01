@@ -198,6 +198,7 @@ class MigrationTest {
                 AppDatabase.MIGRATION_1_2,
                 AppDatabase.MIGRATION_2_3,
                 AppDatabase.MIGRATION_3_4,
+                AppDatabase.MIGRATION_4_5,
             )
             .build()
 
@@ -277,7 +278,32 @@ class MigrationTest {
     }
 
     @Test
-    fun migrate_1_to_4_validatesSchema() = runBlocking {
+    fun migrate_4_to_5_isNoOp_widenIntPksToLong() = runBlocking {
+        // MIGRATION_4_5 (TASK-26): widening Kotlin Int → Long PKs is a no-op
+        // at the SQLite level — INTEGER columns already hold 64-bit signed
+        // integers. Verify the migration runs cleanly and existing rows
+        // survive untouched.
+        val v3 = buildV3Database()
+        v3.execSQL("INSERT INTO cars (name, createdAt) VALUES ('A', 1000)")
+        v3.execSQL(
+            "INSERT INTO charge_events " +
+                "(carId, eventDate, odometerKm, kwhAdded, chargeType, note, createdAt) " +
+                "VALUES (1, 2000, 100.0, 10.0, 'AC', '', 2000)",
+        )
+        // Push v3 → v4 first, then v4 → v5.
+        AppDatabase.MIGRATION_3_4.migrate(v3)
+        AppDatabase.MIGRATION_4_5.migrate(v3)
+
+        v3.query("SELECT id, carId FROM charge_events WHERE id = 1").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals(1L, cursor.getLong(0)) // PK survives as 64-bit value
+            assertEquals(1L, cursor.getLong(1))
+        }
+        v3.close()
+    }
+
+    @Test
+    fun migrate_1_to_5_validatesSchema() = runBlocking {
         val v1 = buildV1Database()
         v1.execSQL("INSERT INTO cars (name, createdAt) VALUES ('A', 1000)")
         v1.execSQL(
@@ -286,13 +312,15 @@ class MigrationTest {
         )
         v1.close()
 
-        // Open through Room with all three migrations registered. Room runs them
-        // in order and then validates the resulting schema against v4 entity
-        // declarations. Schema validation also exercises the
-        // ChargeTypeConverter wiring on the chargeType column.
+        // Open through Room with all four migrations registered. Room runs them
+        // in order and then validates the resulting schema against v5 entity
+        // declarations. Schema validation also exercises the ChargeTypeConverter
+        // wiring on the chargeType column and the Long-PK widening (TASK-26).
         val room = openWithRoom()
         try {
-            val event = room.chargeEventDao().getAllForCarSorted(1).single()
+            val event = room.chargeEventDao().getAllForCarSorted(1L).single()
+            assertEquals(1L, event.id)
+            assertEquals(1L, event.carId)
             assertEquals(ChargeType.AC, event.chargeType) // MIGRATION_1_2 default → enum AC
             assertEquals(null, event.costTotal) // MIGRATION_2_3 add column
             assertEquals("", event.note) // MIGRATION_2_3 add column NOT NULL DEFAULT ''

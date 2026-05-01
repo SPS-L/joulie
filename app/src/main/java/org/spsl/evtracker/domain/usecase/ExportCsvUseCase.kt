@@ -15,7 +15,7 @@ class ExportCsvUseCase @Inject constructor(
     private val chargeEventQueries: ChargeEventQueries,
     private val csvFileSink: CsvFileSink,
 ) {
-    suspend fun export(carId: Int, useKm: Boolean): Uri {
+    suspend fun export(carId: Long, useKm: Boolean): Uri {
         val car = carReader.getById(carId) ?: throw IllegalArgumentException("Unknown carId=$carId")
         val events = chargeEventQueries.getAllForCarSorted(carId)
         return csvFileSink.write(car.name) { writer -> writeCsv(writer, events, useKm) }

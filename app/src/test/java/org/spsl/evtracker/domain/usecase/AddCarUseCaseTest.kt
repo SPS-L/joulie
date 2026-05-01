@@ -15,7 +15,7 @@ import org.spsl.evtracker.testing.FakeSettingsWriter
 class AddCarUseCaseTest {
 
     private fun setup(
-        activeCarId: Int = -1,
+        activeCarId: Long = -1L,
         initialCars: List<org.spsl.evtracker.data.local.entity.CarEntity> = emptyList(),
         nowMs: Long = 0L,
     ): Quadruple {
@@ -45,7 +45,7 @@ class AddCarUseCaseTest {
 
     @Test
     fun firstCar_setsActiveCarId() = runTest {
-        val (useCase, _, settingsWriter, _) = setup(activeCarId = -1)
+        val (useCase, _, settingsWriter, _) = setup(activeCarId = -1L)
         val result = useCase(CarFormState(name = "Tesla"))
         assertTrue(result is AddCarUseCase.Result.Success)
         assertEquals(1, settingsWriter.activeCarId)
@@ -53,8 +53,8 @@ class AddCarUseCaseTest {
 
     @Test
     fun secondCar_doesNotChangeActive() = runTest {
-        val existing = org.spsl.evtracker.data.local.entity.CarEntity(id = 5, name = "Old", createdAt = 0L)
-        val (useCase, _, settingsWriter, _) = setup(activeCarId = 5, initialCars = listOf(existing))
+        val existing = org.spsl.evtracker.data.local.entity.CarEntity(id = 5L, name = "Old", createdAt = 0L)
+        val (useCase, _, settingsWriter, _) = setup(activeCarId = 5L, initialCars = listOf(existing))
         useCase(CarFormState(name = "New"))
         assertEquals(-1, settingsWriter.activeCarId) // FakeSettingsWriter default; setActiveCarId never called
     }

@@ -39,7 +39,7 @@ class RoomDataResetTransactionRunnerTest {
     @Test fun clearAllTables_emptiesAllThreeTables() = runBlocking {
         val carId = db.carDao().insert(
             CarEntity(name = "Test", make = "M", model = "X", year = 2024, batteryKwh = 75.0, createdAt = 0L),
-        ).toInt()
+        )
         db.chargeEventDao().insert(
             ChargeEventEntity(
                 carId = carId,
@@ -69,7 +69,7 @@ class RoomDataResetTransactionRunnerTest {
     @Test fun clearAllTables_isAtomic_throwingFromOneDeleteRollsBackOthers() = runBlocking {
         val carId = db.carDao().insert(
             CarEntity(name = "Test", make = "M", model = "X", year = 2024, batteryKwh = 75.0, createdAt = 0L),
-        ).toInt()
+        )
         db.chargeEventDao().insert(
             ChargeEventEntity(
                 carId = carId,

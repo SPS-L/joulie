@@ -173,8 +173,8 @@ class DashboardFragment : Fragment() {
             null -> {
                 binding.dashboardEmptyContainer.isVisible = false
                 binding.dashboardContent.isVisible = true
-                binding.dashboardFab.isEnabled = state.activeCarId != -1
-                binding.dashboardFab.alpha = if (state.activeCarId != -1) 1.0f else 0.5f
+                binding.dashboardFab.isEnabled = state.activeCarId != -1L
+                binding.dashboardFab.alpha = if (state.activeCarId != -1L) 1.0f else 0.5f
             }
         }
     }

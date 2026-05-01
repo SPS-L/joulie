@@ -16,7 +16,7 @@ data class SettingsUiState(
     val distanceUnit: String = "km",
     val currency: String = "EUR",
     val theme: String = "system",
-    val activeCarId: Int = -1,
+    val activeCarId: Long = -1L,
     val activeCarName: String? = null,
     val customLocationCount: Int = 0,
 )

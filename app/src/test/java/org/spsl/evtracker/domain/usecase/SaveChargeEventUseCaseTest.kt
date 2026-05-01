@@ -47,7 +47,7 @@ class SaveChargeEventUseCaseTest {
         val s = build()
         val result = s.useCase(
             SaveChargeEventInput(
-                carId = 1,
+                carId = 1L,
                 eventDate = 1000L,
                 odometerKm = 100.0,
                 kwhAdded = 10.0,
@@ -63,12 +63,12 @@ class SaveChargeEventUseCaseTest {
 
     @Test
     fun update_success_keepsId() = runTest {
-        val existing = ChargeEventEntity(id = 5, carId = 1, eventDate = 1000L, odometerKm = 100.0, kwhAdded = 10.0, createdAt = 0L)
+        val existing = ChargeEventEntity(id = 5L, carId = 1L, eventDate = 1000L, odometerKm = 100.0, kwhAdded = 10.0, createdAt = 0L)
         val s = build(initialEvents = listOf(existing))
         val result = s.useCase(
             SaveChargeEventInput(
-                eventId = 5,
-                carId = 1,
+                eventId = 5L,
+                carId = 1L,
                 eventDate = 1000L,
                 odometerKm = 110.0,
                 kwhAdded = 12.0,
@@ -81,11 +81,11 @@ class SaveChargeEventUseCaseTest {
 
     @Test
     fun insertOdometerNotIncreasing_returnsResultAndPersistsNothing() = runTest {
-        val previous = ChargeEventEntity(id = 1, carId = 1, eventDate = 1000L, odometerKm = 200.0, kwhAdded = 10.0, createdAt = 0L)
+        val previous = ChargeEventEntity(id = 1L, carId = 1L, eventDate = 1000L, odometerKm = 200.0, kwhAdded = 10.0, createdAt = 0L)
         val s = build(initialEvents = listOf(previous))
         val result = s.useCase(
             SaveChargeEventInput(
-                carId = 1,
+                carId = 1L,
                 eventDate = 2000L,
                 odometerKm = 150.0,
                 kwhAdded = 10.0,
@@ -99,13 +99,13 @@ class SaveChargeEventUseCaseTest {
 
     @Test
     fun updateOdometerCheck_ignoresOwnId() = runTest {
-        val existing = ChargeEventEntity(id = 5, carId = 1, eventDate = 2000L, odometerKm = 200.0, kwhAdded = 10.0, createdAt = 0L)
-        val before = ChargeEventEntity(id = 4, carId = 1, eventDate = 1000L, odometerKm = 100.0, kwhAdded = 10.0, createdAt = 0L)
+        val existing = ChargeEventEntity(id = 5L, carId = 1L, eventDate = 2000L, odometerKm = 200.0, kwhAdded = 10.0, createdAt = 0L)
+        val before = ChargeEventEntity(id = 4L, carId = 1L, eventDate = 1000L, odometerKm = 100.0, kwhAdded = 10.0, createdAt = 0L)
         val s = build(initialEvents = listOf(before, existing))
         val result = s.useCase(
             SaveChargeEventInput(
-                eventId = 5,
-                carId = 1,
+                eventId = 5L,
+                carId = 1L,
                 eventDate = 2000L,
                 odometerKm = 210.0,
                 kwhAdded = 12.0,
@@ -120,7 +120,7 @@ class SaveChargeEventUseCaseTest {
         val s = build()
         s.useCase(
             SaveChargeEventInput(
-                carId = 1,
+                carId = 1L,
                 eventDate = 1000L,
                 odometerKm = 100.0,
                 kwhAdded = 10.0,
@@ -139,7 +139,7 @@ class SaveChargeEventUseCaseTest {
         val s = build(nowMs = 12_345L)
         s.useCase(
             SaveChargeEventInput(
-                carId = 1,
+                carId = 1L,
                 eventDate = 1000L,
                 odometerKm = 100.0,
                 kwhAdded = 10.0,

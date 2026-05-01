@@ -52,7 +52,7 @@ class DashboardViewModel @Inject constructor(
 
     private data class Inputs(
         val cars: List<CarEntity>,
-        val activeCarId: Int,
+        val activeCarId: Long,
         val primaryMetric: String,
         val distanceUnit: String,
         val currency: String,
@@ -92,12 +92,12 @@ class DashboardViewModel @Inject constructor(
         filter.value = newFilter
     }
 
-    fun selectCar(carId: Int) {
+    fun selectCar(carId: Long) {
         viewModelScope.launch { settingsWriter.setActiveCarId(carId) }
     }
 
     fun onFabClick() {
-        if (uiState.value.activeCarId != -1) {
+        if (uiState.value.activeCarId != -1L) {
             _events.tryEmit(DashboardEvent.NavigateToChargeEdit)
         }
     }

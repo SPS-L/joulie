@@ -10,8 +10,8 @@ class StatsCalculatorTest {
     private val calc = StatsCalculator()
 
     private fun event(
-        id: Int = 0,
-        carId: Int = 1,
+        id: Long = 0L,
+        carId: Long = 1L,
         eventDate: Long = 0L,
         odometerKm: Double = 0.0,
         kwhAdded: Double = 10.0,

@@ -159,7 +159,7 @@ class SettingsFragment : Fragment() {
                 getString(R.string.settings_reset_active_car, activeName)
             }
 
-        val activeCarMissing = state.activeCarId == -1
+        val activeCarMissing = state.activeCarId == -1L
         binding.rowResetActiveCar.alpha = if (activeCarMissing) 0.5f else 1f
         binding.rowResetActiveCar.isClickable = !activeCarMissing
         binding.rowResetActiveCar.isFocusable = !activeCarMissing

@@ -12,7 +12,7 @@ class DeleteChargeEventUseCaseTest {
 
     @Test
     fun invoke_deletesAndEnqueuesBackup() = runTest {
-        val event = ChargeEventEntity(id = 1, carId = 1, eventDate = 1000L, odometerKm = 100.0, kwhAdded = 10.0, createdAt = 0L)
+        val event = ChargeEventEntity(id = 1L, carId = 1L, eventDate = 1000L, odometerKm = 100.0, kwhAdded = 10.0, createdAt = 0L)
         val queries = FakeChargeEventQueries()
         queries.seed(listOf(event))
         val writer = FakeChargeEventWriter(queries.shareStore())

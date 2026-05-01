@@ -16,7 +16,7 @@ class StatsCalculatorTrendTest {
         kwhAdded: Double = 10.0,
         chargeType: ChargeType = ChargeType.AC,
     ) = ChargeEventEntity(
-        id = 0, carId = 1, eventDate = date, odometerKm = odometerKm,
+        id = 0L, carId = 1L, eventDate = date, odometerKm = odometerKm,
         kwhAdded = kwhAdded, chargeType = chargeType, costTotal = null,
         costPerKwh = null, currency = null, location = null, note = "",
         createdAt = 0L,

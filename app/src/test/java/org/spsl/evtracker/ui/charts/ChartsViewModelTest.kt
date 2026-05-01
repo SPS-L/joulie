@@ -67,7 +67,7 @@ class ChartsViewModelTest {
 
     @Before fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
-        carReader = FakeCarReader(listOf(CarEntity(id = 1, name = "C", createdAt = 0L)))
+        carReader = FakeCarReader(listOf(CarEntity(id = 1L, name = "C", createdAt = 0L)))
         queries = FakeChargeEventQueries().apply {
             seed(listOf(ev(nowMs - 100, 0.0)))
         }
@@ -80,7 +80,7 @@ class ChartsViewModelTest {
     }
 
     private fun ev(date: Long, odo: Double) = ChargeEventEntity(
-        id = 0, carId = 1, eventDate = date, odometerKm = odo, kwhAdded = 10.0,
+        id = 0L, carId = 1L, eventDate = date, odometerKm = odo, kwhAdded = 10.0,
         chargeType = ChargeType.AC, costTotal = null, costPerKwh = null,
         currency = null, location = null, note = "", createdAt = 0L,
     )

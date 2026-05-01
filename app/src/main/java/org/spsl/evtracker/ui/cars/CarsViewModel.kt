@@ -58,7 +58,7 @@ class CarsViewModel @Inject constructor(
     fun onRowDeleteClick(car: CarEntity) {
         _events.tryEmit(CarsEvent.ShowDeleteConfirm(car))
     }
-    fun onRowSetActiveClick(carId: Int) {
+    fun onRowSetActiveClick(carId: Long) {
         viewModelScope.launch { settingsWriter.setActiveCarId(carId) }
     }
 
@@ -73,7 +73,7 @@ class CarsViewModel @Inject constructor(
         }
     }
 
-    fun submitRename(carId: Int, newName: String) {
+    fun submitRename(carId: Long, newName: String) {
         viewModelScope.launch {
             when (renameCar(carId, newName)) {
                 RenameCarUseCase.Result.NameBlank ->
@@ -83,7 +83,7 @@ class CarsViewModel @Inject constructor(
         }
     }
 
-    fun confirmDelete(carId: Int) {
+    fun confirmDelete(carId: Long) {
         viewModelScope.launch { deleteCar(carId) }
     }
 }

@@ -64,7 +64,7 @@ class ChartsFragmentTest {
     private suspend fun seedDb(events: List<ChargeEventEntity>, withCar: Boolean = true) {
         chargeEventDao.deleteAll()
         carDao.deleteAll()
-        if (withCar) carDao.insert(CarEntity(id = 1, name = "Car", createdAt = 0L))
+        if (withCar) carDao.insert(CarEntity(id = 1L, name = "Car", createdAt = 0L))
         events.forEach { chargeEventDao.insert(it) }
     }
 
@@ -75,7 +75,7 @@ class ChartsFragmentTest {
         cost: Double? = null,
         currency: String? = null,
     ) = ChargeEventEntity(
-        id = 0, carId = 1, eventDate = date, odometerKm = odo, kwhAdded = 10.0,
+        id = 0L, carId = 1L, eventDate = date, odometerKm = odo, kwhAdded = 10.0,
         chargeType = type, costTotal = cost, costPerKwh = null,
         currency = currency, location = null, note = "", createdAt = 0L,
     )

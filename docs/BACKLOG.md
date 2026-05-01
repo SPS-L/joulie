@@ -33,7 +33,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-23 | 🔴 | Move startup `isLoading` state into `MainViewModel` | — | ☑ |
 | TASK-24 | 🔴 | Enforce ViewModel/Activity consumption of the existing narrow domain interfaces (no concrete `data.repository.*` imports outside `di/`) | TASK-23 | ☑ |
 | TASK-25 | 🟡 | Replace `chargeType: String` with a sealed class / TypeConverter-backed enum | — | ☑ |
-| TASK-26 | 🟡 | Change all Room primary-key and foreign-key fields from `Int` to `Long` | — | ☐ |
+| TASK-26 | 🟡 | Change all Room primary-key and foreign-key fields from `Int` to `Long` | — | ☑ |
 | TASK-27 | 🟡 | Decouple bottom-nav visibility from hardcoded `hideOn` set in `MainActivity` | — | ☑ |
 | TASK-28 | 🟡 | Consolidate time on existing `NowProvider`; remove direct `System.currentTimeMillis()` from entities and helpers; drop the parallel `() -> Long` clock in `WorkerModule` | — | ☑ |
 | TASK-29 | 🟢 | Add explicit `debug` build type with `applicationIdSuffix` and `BuildConfig` flags | — | ☑ |
@@ -1391,7 +1391,40 @@ written, breaking filter queries and chart groupings silently.
 
 ---
 
-## 🟡 TASK-26 — Change Room primary-key and foreign-key fields from `Int` to `Long`
+## 🟡 TASK-26 — Change Room primary-key and foreign-key fields from `Int` to `Long` ☑ Done (2026-05-01)
+
+> **Outcome:** all three entities (`CarEntity`, `ChargeEventEntity`,
+> `CustomLocationEntity`) widen `id: Int` → `id: Long` and
+> `ChargeEventEntity.carId: Int` → `Long`. DAOs, narrow domain
+> interfaces (`CarReader`/`CarWriter`/`ChargeEventQueries`/
+> `ChargeEventWriter`), all use cases that take an id, and every
+> ViewModel state field (`activeCarId`, `eventId`, `carId`,
+> `pendingDeletes` map key) flip to `Long`. Navigation safe-args:
+> `nav_graph.xml` `eventId` argument switches `app:argType="integer"
+> default="-1"` → `app:argType="long" default="-1L"`. **DataStore
+> `ACTIVE_CAR_ID` stays an `intPreferencesKey`** — switching the same
+> key name from `intPreferencesKey` to `longPreferencesKey` would
+> silently drop the existing value, and a single user with thousands
+> of cars over decades won't exceed `Int.MAX_VALUE`. The repository
+> widens to `Long` at the boundary (`Flow<Long>` reader / `setActiveCarId(id: Long)`
+> writer with internal `id.toInt()`) so callers see the entity-PK type
+> consistently. Room schema bump v4 → v5 with a **deliberately no-op**
+> `MIGRATION_4_5`: SQLite `INTEGER` columns already hold 64-bit signed
+> integers, so widening Kotlin `Int` → `Long` doesn't change DDL —
+> diff between `5.json` and `4.json` is exactly the version field
+> (verified). The migration is registered as a tripwire so future
+> downgrades trip Room's schema validator instead of silently
+> truncating. `BackupData.CURRENT_VERSION` 4 → 5; DTO ids widen to
+> `Long`; `BackupSerializer.SUPPORTED_VERSIONS = {3, 4, 5}` so v3/v4
+> backups still restore (Gson reads narrower JSON Int into wider
+> Kotlin Long without coercion). New instrumented test
+> `migrate_4_to_5_isNoOp_widenIntPksToLong` exercises the migration;
+> `migrate_1_to_4_validatesSchema` renamed to
+> `migrate_1_to_5_validatesSchema` and asserts ids round-trip as
+> `Long`. All gates green: `:app:assembleDebug`, `:app:assembleRelease`
+> (R8), `:app:assembleDebugAndroidTest`, `ktlintCheck`, `:app:lint`,
+> `:app:testDebugUnitTest` (275 cases — count unchanged because the
+> Long-widening is a refactor that doesn't add behavior).
 
 `CarEntity.id`, `ChargeEventEntity.id`, `ChargeEventEntity.carId`, and
 `CustomLocationEntity.id` are typed as `Int` (32-bit). Room's documentation and

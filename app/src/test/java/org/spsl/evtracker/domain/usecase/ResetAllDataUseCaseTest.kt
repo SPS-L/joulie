@@ -59,7 +59,7 @@ class ResetAllDataUseCaseTest {
     @Test fun invoke_setsActiveCarIdToMinusOne_andSetupCompleteFalse_andResetInProgressTrue_atStart() = runTest {
         val rig = build()
         rig.eventStore.value = listOf(
-            ChargeEventEntity(id = 1, carId = 7, eventDate = 1L, odometerKm = 0.0, kwhAdded = 0.0, chargeType = ChargeType.AC, createdAt = 0L),
+            ChargeEventEntity(id = 1L, carId = 7L, eventDate = 1L, odometerKm = 0.0, kwhAdded = 0.0, chargeType = ChargeType.AC, createdAt = 0L),
         )
         rig.useCase()
         // markGlobalResetInProgress wrote all three keys at start; final state of writer:

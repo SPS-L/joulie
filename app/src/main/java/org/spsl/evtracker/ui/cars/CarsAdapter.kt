@@ -13,7 +13,7 @@ import org.spsl.evtracker.data.local.entity.CarEntity
 import org.spsl.evtracker.databinding.ItemCarBinding
 
 class CarsAdapter(
-    private val onSetActive: (Int) -> Unit,
+    private val onSetActive: (Long) -> Unit,
     private val onEdit: (CarEntity) -> Unit,
     private val onDelete: (CarEntity) -> Unit,
 ) : ListAdapter<CarRow, CarsAdapter.ViewHolder>(Diff) {

@@ -12,19 +12,19 @@ import javax.inject.Singleton
 class ChargeEventRepository @Inject constructor(
     private val chargeEventDao: ChargeEventDao,
 ) : ChargeEventQueries, ChargeEventWriter {
-    override fun observeForCar(carId: Int): Flow<List<ChargeEventEntity>> =
+    override fun observeForCar(carId: Long): Flow<List<ChargeEventEntity>> =
         chargeEventDao.observeForCar(carId)
 
-    override suspend fun getInRange(carId: Int, from: Long, to: Long): List<ChargeEventEntity> =
+    override suspend fun getInRange(carId: Long, from: Long, to: Long): List<ChargeEventEntity> =
         chargeEventDao.getInRange(carId, from, to)
 
-    override suspend fun getAllForCarSorted(carId: Int): List<ChargeEventEntity> =
+    override suspend fun getAllForCarSorted(carId: Long): List<ChargeEventEntity> =
         chargeEventDao.getAllForCarSorted(carId)
 
-    override suspend fun getById(id: Int): ChargeEventEntity? = chargeEventDao.getById(id)
+    override suspend fun getById(id: Long): ChargeEventEntity? = chargeEventDao.getById(id)
     override suspend fun insert(event: ChargeEventEntity): Long = chargeEventDao.insert(event)
     override suspend fun update(event: ChargeEventEntity) = chargeEventDao.update(event)
     override suspend fun delete(event: ChargeEventEntity) = chargeEventDao.delete(event)
-    override suspend fun deleteForCar(carId: Int) = chargeEventDao.deleteForCar(carId)
+    override suspend fun deleteForCar(carId: Long) = chargeEventDao.deleteForCar(carId)
     override suspend fun deleteAll() = chargeEventDao.deleteAll()
 }

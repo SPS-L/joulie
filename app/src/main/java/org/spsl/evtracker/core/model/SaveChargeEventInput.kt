@@ -3,8 +3,8 @@ package org.spsl.evtracker.core.model
 import org.spsl.evtracker.domain.service.CostMode
 
 data class SaveChargeEventInput(
-    val eventId: Int? = null,
-    val carId: Int,
+    val eventId: Long? = null,
+    val carId: Long,
     val eventDate: Long,
     val odometerKm: Double,
     val kwhAdded: Double,

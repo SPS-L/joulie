@@ -34,7 +34,7 @@ class SaveChargeEventUseCase @Inject constructor(
 
         val nowMs = now.nowMillis()
         val entity = ChargeEventEntity(
-            id = input.eventId ?: 0,
+            id = input.eventId ?: 0L,
             carId = input.carId,
             eventDate = input.eventDate,
             odometerKm = input.odometerKm,
@@ -53,7 +53,7 @@ class SaveChargeEventUseCase @Inject constructor(
             chargeEventWriter.insert(entity)
         } else {
             chargeEventWriter.update(entity)
-            input.eventId.toLong()
+            input.eventId
         }
 
         // 4. Record location usage if non-blank.

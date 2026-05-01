@@ -4,7 +4,7 @@ import org.spsl.evtracker.domain.service.CostMode
 
 data class ChargeEditUiState(
     val mode: Mode = Mode.Create,
-    val carId: Int = -1,
+    val carId: Long = -1L,
     val eventDateMillis: Long,
     val odometer: String = "",
     val kwh: String = "",
@@ -38,7 +38,7 @@ data class ChargeEditUiState(
 ) {
     sealed class Mode {
         object Create : Mode()
-        data class Edit(val eventId: Int) : Mode()
+        data class Edit(val eventId: Long) : Mode()
     }
 }
 

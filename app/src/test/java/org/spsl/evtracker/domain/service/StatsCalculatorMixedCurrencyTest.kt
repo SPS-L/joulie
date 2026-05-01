@@ -12,7 +12,7 @@ class StatsCalculatorMixedCurrencyTest {
 
     private fun ev(currency: String? = null, costTotal: Double? = null): ChargeEventEntity =
         ChargeEventEntity(
-            id = 0, carId = 1, eventDate = 0L, odometerKm = 0.0, kwhAdded = 1.0,
+            id = 0L, carId = 1L, eventDate = 0L, odometerKm = 0.0, kwhAdded = 1.0,
             chargeType = ChargeType.AC, costTotal = costTotal, costPerKwh = null,
             currency = currency, location = null, note = "", createdAt = 0L,
         )

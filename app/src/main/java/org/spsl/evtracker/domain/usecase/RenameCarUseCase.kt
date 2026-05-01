@@ -8,7 +8,7 @@ class RenameCarUseCase @Inject constructor(
     private val carWriter: CarWriter,
     private val backupScheduler: BackupScheduler,
 ) {
-    suspend operator fun invoke(carId: Int, newName: String): Result {
+    suspend operator fun invoke(carId: Long, newName: String): Result {
         if (newName.isBlank()) return Result.NameBlank
         carWriter.rename(carId, newName.trim())
         backupScheduler.enqueueBackup()

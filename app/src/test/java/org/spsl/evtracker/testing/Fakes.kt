@@ -38,7 +38,7 @@ class FakeNowProvider(@Volatile var time: Long = 0L) : NowProvider {
 class FakeCarReader(initial: List<CarEntity> = emptyList()) : CarReader {
     private val state = MutableStateFlow(initial)
     override fun observeAll(): Flow<List<CarEntity>> = state
-    override suspend fun getById(id: Int): CarEntity? = state.value.firstOrNull { it.id == id }
+    override suspend fun getById(id: Long): CarEntity? = state.value.firstOrNull { it.id == id }
     fun seed(cars: List<CarEntity>) {
         state.value = cars
     }
@@ -55,15 +55,15 @@ class FakeChargeEventQueries(
     @Volatile var observeForCarCallCount: Int = 0
         private set
 
-    override fun observeForCar(carId: Int): Flow<List<ChargeEventEntity>> {
+    override fun observeForCar(carId: Long): Flow<List<ChargeEventEntity>> {
         observeForCarCallCount++
         return store.map { it.filter { e -> e.carId == carId }.sortedBy { e -> e.eventDate } }
     }
-    override suspend fun getInRange(carId: Int, from: Long, to: Long): List<ChargeEventEntity> =
+    override suspend fun getInRange(carId: Long, from: Long, to: Long): List<ChargeEventEntity> =
         store.value.filter { it.carId == carId && it.eventDate in from..to }.sortedBy { it.eventDate }
-    override suspend fun getAllForCarSorted(carId: Int): List<ChargeEventEntity> =
+    override suspend fun getAllForCarSorted(carId: Long): List<ChargeEventEntity> =
         store.value.filter { it.carId == carId }.sortedBy { it.eventDate }
-    override suspend fun getById(id: Int) = store.value.firstOrNull { it.id == id }
+    override suspend fun getById(id: Long) = store.value.firstOrNull { it.id == id }
     fun seed(events: List<ChargeEventEntity>) {
         store.value = events
     }
@@ -77,7 +77,7 @@ class FakeChargeEventWriter(
     private var nextId = 1L
     override suspend fun insert(event: ChargeEventEntity): Long {
         val id = nextId++
-        store.value = store.value + event.copy(id = id.toInt())
+        store.value = store.value + event.copy(id = id)
         return id
     }
     override suspend fun update(event: ChargeEventEntity) {
@@ -86,7 +86,7 @@ class FakeChargeEventWriter(
     override suspend fun delete(event: ChargeEventEntity) {
         store.value = store.value.filter { it.id != event.id }
     }
-    override suspend fun deleteForCar(carId: Int) {
+    override suspend fun deleteForCar(carId: Long) {
         store.value = store.value.filter { it.carId != carId }
     }
     override suspend fun deleteAll() {
@@ -110,7 +110,7 @@ class FakeLocationWriter(
         state.value = if (existing != null) {
             state.value.map { if (it.label == label) it.copy(useCount = it.useCount + 1, lastUsed = now) else it }
         } else {
-            state.value + CustomLocationEntity(id = (state.value.maxOfOrNull { it.id } ?: 0) + 1, label = label, useCount = 1, lastUsed = now)
+            state.value + CustomLocationEntity(id = (state.value.maxOfOrNull { it.id } ?: 0L) + 1L, label = label, useCount = 1, lastUsed = now)
         }
     }
     override suspend fun delete(location: CustomLocationEntity) {
@@ -123,7 +123,7 @@ class FakeLocationWriter(
 }
 
 class FakeSettingsReader(
-    activeCarIdInit: Int = -1,
+    activeCarIdInit: Long = -1L,
     primaryMetricInit: String = "kwh_per_100km",
     distanceUnitInit: String = "km",
     currencyInit: String = "EUR",
@@ -142,7 +142,7 @@ class FakeSettingsReader(
     private val themeFlow = MutableStateFlow(themeInit)
     private val resetInProgressFlow = MutableStateFlow(resetInProgressInit)
     private val setupCompleteFlow = MutableStateFlow(setupCompleteInit)
-    override val activeCarId: Flow<Int> = activeCar
+    override val activeCarId: Flow<Long> = activeCar
     override val primaryMetric: Flow<String> = metric
     override val distanceUnit: Flow<String> = unit
     override val currency: Flow<String> = curr
@@ -151,7 +151,7 @@ class FakeSettingsReader(
     override val theme: Flow<String> = themeFlow
     override val resetInProgress: Flow<Boolean> = resetInProgressFlow
     override val setupComplete: Flow<Boolean> = setupCompleteFlow
-    fun setActiveCarId(id: Int) {
+    fun setActiveCarId(id: Long) {
         activeCar.value = id
     }
     fun setDriveEnabled(enabled: Boolean) {
@@ -183,7 +183,7 @@ class FakeSettingsReader(
 class FakeSettingsWriter(
     val callRecorder: MutableList<String>? = null,
 ) : SettingsWriter {
-    var activeCarId: Int = -1
+    var activeCarId: Long = -1L
         private set
     var driveEnabled: Boolean = false
         private set
@@ -202,7 +202,7 @@ class FakeSettingsWriter(
     var resetInProgress: Boolean = false
         private set
 
-    override suspend fun setActiveCarId(id: Int) {
+    override suspend fun setActiveCarId(id: Long) {
         callRecorder?.add("setActiveCarId($id)")
         activeCarId = id
     }
@@ -339,22 +339,22 @@ class FakeSaveChargeEventGateway {
 
 class FakeCarRepository(initial: List<CarEntity> = emptyList()) : CarReader, CarWriter {
     private val state = MutableStateFlow(initial)
-    private var nextId = (initial.maxOfOrNull { it.id } ?: 0) + 1
+    private var nextId: Long = (initial.maxOfOrNull { it.id } ?: 0L) + 1L
 
     override fun observeAll(): Flow<List<CarEntity>> = state
-    override suspend fun getById(id: Int): CarEntity? = state.value.firstOrNull { it.id == id }
+    override suspend fun getById(id: Long): CarEntity? = state.value.firstOrNull { it.id == id }
 
     override suspend fun insert(car: CarEntity): Long {
         val id = nextId++
         state.value = state.value + car.copy(id = id)
-        return id.toLong()
+        return id
     }
 
-    override suspend fun rename(carId: Int, newName: String) {
+    override suspend fun rename(carId: Long, newName: String) {
         state.value = state.value.map { if (it.id == carId) it.copy(name = newName) else it }
     }
 
-    override suspend fun deleteById(carId: Int) {
+    override suspend fun deleteById(carId: Long) {
         state.value = state.value.filter { it.id != carId }
     }
 

@@ -10,7 +10,7 @@ class StatsCalculatorAcDcSplitTest {
     private val calc = StatsCalculator()
 
     private fun ev(type: ChargeType, kwh: Double) = ChargeEventEntity(
-        id = 0, carId = 1, eventDate = 0L, odometerKm = 0.0, kwhAdded = kwh,
+        id = 0L, carId = 1L, eventDate = 0L, odometerKm = 0.0, kwhAdded = kwh,
         chargeType = type, costTotal = null, costPerKwh = null,
         currency = null, location = null, note = "", createdAt = 0L,
     )

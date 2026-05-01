@@ -60,7 +60,7 @@ class SettingsViewModelTest {
     private fun build(
         remoteJson: String? = null,
         readThrows: Throwable? = null,
-        activeCarId: Int = -1,
+        activeCarId: Long = -1L,
         seededCars: List<CarEntity> = emptyList(),
         seededLocations: List<CustomLocationEntity> = emptyList(),
     ): Setup {
@@ -345,7 +345,7 @@ class SettingsViewModelTest {
 
     @Test
     fun resetActiveCar_disabled_whenNoActiveCar() = runTest {
-        val s = build(activeCarId = -1)
+        val s = build(activeCarId = -1L)
         advanceUntilIdle()
         s.vm.onResetActiveCarData()
         advanceUntilIdle()
@@ -354,7 +354,7 @@ class SettingsViewModelTest {
 
     @Test
     fun resetActiveCar_callsUseCase_withActiveCarId() = runTest {
-        val s = build(activeCarId = 5)
+        val s = build(activeCarId = 5L)
         advanceUntilIdle()
         s.vm.onResetActiveCarData()
         advanceUntilIdle()
@@ -388,7 +388,7 @@ class SettingsViewModelTest {
 
     @Test
     fun exportCsv_disabled_whenNoActiveCar() = runTest {
-        val s = build(activeCarId = -1)
+        val s = build(activeCarId = -1L)
         advanceUntilIdle()
         val received = mutableListOf<SettingsEvent>()
         val job = launch(start = CoroutineStart.UNDISPATCHED) { s.vm.events.collect { received += it } }
@@ -401,7 +401,7 @@ class SettingsViewModelTest {
     @Test
     fun exportCsv_success_emitsLaunchIntent() = runTest {
         val car = CarEntity(
-            id = 5,
+            id = 5L,
             name = "Tesla",
             make = "T",
             model = "M3",
@@ -409,7 +409,7 @@ class SettingsViewModelTest {
             batteryKwh = 75.0,
             createdAt = 0L,
         )
-        val s = build(activeCarId = 5, seededCars = listOf(car))
+        val s = build(activeCarId = 5L, seededCars = listOf(car))
         advanceUntilIdle()
         val received = mutableListOf<SettingsEvent>()
         val job = launch(start = CoroutineStart.UNDISPATCHED) { s.vm.events.collect { received += it } }
@@ -422,7 +422,7 @@ class SettingsViewModelTest {
     @Test
     fun exportCsv_ioException_emitsShowError() = runTest {
         val car = CarEntity(
-            id = 5,
+            id = 5L,
             name = "Tesla",
             make = "T",
             model = "M3",
@@ -430,7 +430,7 @@ class SettingsViewModelTest {
             batteryKwh = 75.0,
             createdAt = 0L,
         )
-        val s = build(activeCarId = 5, seededCars = listOf(car))
+        val s = build(activeCarId = 5L, seededCars = listOf(car))
         advanceUntilIdle()
         s.csvSink.failNext = IOException("disk full")
         val received = mutableListOf<SettingsEvent>()
@@ -444,8 +444,8 @@ class SettingsViewModelTest {
     @Test
     fun customLocationCount_reflectsLocationReaderEmission() = runTest {
         val locations = listOf(
-            CustomLocationEntity(id = 1, label = "A", useCount = 1, lastUsed = 1L),
-            CustomLocationEntity(id = 2, label = "B", useCount = 1, lastUsed = 2L),
+            CustomLocationEntity(id = 1L, label = "A", useCount = 1, lastUsed = 1L),
+            CustomLocationEntity(id = 2L, label = "B", useCount = 1, lastUsed = 2L),
         )
         val s = build(seededLocations = locations)
         advanceUntilIdle()
