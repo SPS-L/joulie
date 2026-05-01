@@ -123,7 +123,7 @@ builds are unaffected.
 2. Open the app → **Settings → Google Drive backup** → toggle ON
 3. The system Authorization sheet appears asking for permission to manage EV Tracker files in its hidden folder
 4. Sign in with the same Google account you added as a test user in Step 4
-5. After at least one charge save, verify the backup file exists by calling Drive `files.list` with `spaces=appDataFolder` (the App Data folder is hidden from the regular Drive UI)
+5. Save a charge event **or** tap **Settings → Back up now** (TASK-31), then verify the backup file exists by calling Drive `files.list` with `spaces=appDataFolder` (the App Data folder is hidden from the regular Drive UI). Use **Settings → Wipe remote backup** to scrub the file when re-testing the first-time replace-or-skip restore flow.
 
 ---
 

@@ -2592,8 +2592,10 @@ without reading the function-level KDoc, breaking the invariant.
 > a target (the body's premise); (2) Drive auth friction (separate
 > OAuth client per keystore SHA-1, tester allow-list on the consent
 > screen) becomes a blocker for new contributors; (3) Drive API
-> deprecation. Until then, leave the Drive code path in place and
-> route any new backup work (TASK-31, TASK-19) through it.
+> deprecation. Until then, leave the Drive code path in place — the
+> error model (TASK-07), failure notifications (TASK-19), and manual
+> controls (TASK-31) all build on it; future backup work routes through
+> the same path.
 
 **Blocks F-Droid distribution.** `play-services-auth`,
 `google-api-client-android`, and `google-api-services-drive` are flagged
@@ -2603,13 +2605,19 @@ with a Storage Access Framework implementation. The domain layer
 `RestoreBackupUseCase`) is unchanged — only `data/backup/` and Settings
 UI change.
 
-> **Sequencing note.** This task obsoletes the Drive-specific UI in
-> TASK-31 ("Back up now" / "Wipe remote backup"). If TASK-31 is still
-> open when TASK-37 is scheduled, fold its acceptance criteria into
-> TASK-37's Settings rework (the use-case names carry over;
-> `WipeRemoteBackupUseCase` becomes `ClearBackupLocationUseCase`) rather
-> than landing TASK-31 against the Drive code path that's about to be
-> deleted.
+> **Sequencing note.** This task **obsoletes** the Drive-specific UI
+> shipped in TASK-31 ("Back up now" / "Wipe remote backup", merged
+> 2026-05-01). When TASK-37 is revived, the existing
+> `PushBackupNowUseCase` becomes `PushBackupUseCase` (or stays — name
+> is incidental) and `WipeRemoteBackupUseCase` becomes
+> `ClearBackupLocationUseCase`; the Settings rows / dialog / VM
+> mutual-exclusion logic carry over with minor renames. The
+> `BackupResult` contract from TASK-07 is reused unchanged. Plan to
+> delete the Drive code path (`DriveBackupRepository`,
+> `GoogleDriveRemoteSource`, `AndroidDriveAuthManager`,
+> `DriveBackupWorker` → renamed `BackupWorker`) and rebind
+> `BackupRepository` to the new SAF impl in a single PR — the domain
+> layer is untouched.
 
 ### Scope
 

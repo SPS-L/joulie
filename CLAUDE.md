@@ -90,12 +90,14 @@ UI:       Fragments + ViewModels (Wizard ✓, Dashboard ✓, ChargeEdit ✓, Car
           ui/common/        MoneyFormat · DateFormat · PeriodLabels (pure helpers)
           core/model/ states DashboardScreenState · ChargeEditUiState · CarsUiState · CarFormState · HistoryUiState
 Domain:   Use cases  SaveChargeEvent · DeleteChargeEvent · ObserveDashboardStats · RestoreBackup · ExportCsv
-                     AddCar · RenameCar · DeleteCar (D)
+                     AddCar · RenameCar · DeleteCar (D) · PushBackupNow · WipeRemoteBackup (TASK-31)
           Services   StatsCalculator · CostParser · UnitConverter · DateRangeResolver · BackupSerializer · CapacityEstimator (TASK-14)
+                     BackupOutcomeReporter (TASK-19, in domain/notification/)
           Narrow IFs CarReader · CarWriter (D) · ChargeEventQueries · ChargeEventWriter · LocationReader · LocationWriter · SettingsReader · SettingsWriter
-          Backup IFs BackupScheduler · BackupRepository · RestoreTransactionRunner · RestoreSnapshotWriter · CsvFileSink
+          Backup IFs BackupScheduler · BackupRepository · RestoreTransactionRunner · RestoreSnapshotWriter · CsvFileSink · BackupNotifier (TASK-19)
 Repo:     CarRepository (CarReader + CarWriter) · ChargeEventRepository · LocationRepository · SettingsRepository · BackupRepository
 Data:     Room (CarDao, ChargeEventDao, CustomLocationDao) · Preferences DataStore · Drive AppData client (E ✓) · WorkManager backup scheduler (E ✓)
+          AndroidBackupNotifier (TASK-19, in data/notification/)
 ```
 
 Legend: ✓ = wired
