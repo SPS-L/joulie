@@ -320,7 +320,7 @@ adb install -r app/build/outputs/apk/release/app-release.apk
 | 3 | Settings → Cars → add a car | Car appears in list; Dashboard now shows the active car |
 | 4 | Dashboard FAB → log a charge with cost (e.g. 30 kWh / €12.50) | Save returns to Dashboard; total kWh + cost rows render correct values |
 | 5 | Add a second event so efficiency can compute | Efficiency stat is no longer "—"; the configured primary metric (default `kwh_per_100km`) renders a number |
-| 6 | Bottom nav → Charts; cycle every tab (Trend / Monthly kWh / Monthly cost / AC vs DC / Locations) | Each tab renders without crash; MPAndroidChart canvases are non-empty (this exercises the new keep rule) |
+| 6 | Bottom nav → Charts; cycle every tab (Trend / Monthly kWh / Monthly cost / AC vs DC / Locations / Degradation) | Each tab renders without crash; MPAndroidChart canvases are non-empty (this exercises the new keep rule). The Degradation tab shows an empty-state for cars with no nominal `battery_kwh` set or fewer than 3 qualifying charges — that's expected, not a failure. |
 | 7 | Settings → enable Drive backup → sign in (allow-listed Google account) → wait for first backup | Snackbar reports success; verify `evtracker_backup.json` lands in the App Data folder via `files.list?spaces=appDataFolder` |
 | 8 | Add another charge event after Drive is enabled | WorkManager fires a follow-up backup; remote `modifiedTime` advances |
 | 9 | Settings → Reset preferences → confirm | App relaunches into the wizard; existing charge data intact (TASK-23 startup auto-recovery path) |
