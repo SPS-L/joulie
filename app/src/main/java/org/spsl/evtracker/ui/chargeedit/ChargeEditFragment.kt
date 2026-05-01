@@ -22,6 +22,7 @@ import org.spsl.evtracker.core.model.ChargeEditEvent
 import org.spsl.evtracker.core.model.ChargeEditUiState
 import org.spsl.evtracker.databinding.FragmentChargeEditBinding
 import org.spsl.evtracker.domain.service.CostMode
+import org.spsl.evtracker.domain.service.UnitConverter
 import org.spsl.evtracker.ui.common.DateFormat
 import java.time.Instant
 import java.time.ZoneId
@@ -88,7 +89,22 @@ class ChargeEditFragment : Fragment() {
         if (binding.chargeEditOdometer.text?.toString() != state.odometer) {
             binding.chargeEditOdometer.setText(state.odometer)
         }
-        binding.chargeEditOdometerLayout.error = state.odometerError?.let { getString(it) }
+        binding.chargeEditOdometerLayout.error = when {
+            state.odometerError != null -> getString(state.odometerError)
+            state.odometerBelowPrevious && state.previousOdometerKm != null ->
+                getString(
+                    R.string.error_odometer_must_be_greater_than,
+                    formatOdometer(state.previousOdometerKm, state.distanceUnit),
+                    unitLabel(state.distanceUnit),
+                )
+            state.odometerAboveNext && state.nextOdometerKm != null ->
+                getString(
+                    R.string.error_odometer_must_be_less_than,
+                    formatOdometer(state.nextOdometerKm, state.distanceUnit),
+                    unitLabel(state.distanceUnit),
+                )
+            else -> null
+        }
         if (binding.chargeEditKwh.text?.toString() != state.kwh) {
             binding.chargeEditKwh.setText(state.kwh)
         }
@@ -120,8 +136,16 @@ class ChargeEditFragment : Fragment() {
         if (binding.chargeEditNote.text?.toString() != state.note) {
             binding.chargeEditNote.setText(state.note)
         }
-        binding.chargeEditSave.isEnabled = !state.saving
+        binding.chargeEditSave.isEnabled =
+            !state.saving && !state.odometerBelowPrevious && !state.odometerAboveNext
     }
+
+    private fun formatOdometer(km: Double, unit: String): String {
+        val display = if (unit == "miles") UnitConverter.kmToMiles(km) else km
+        return "%.1f".format(display)
+    }
+
+    private fun unitLabel(unit: String): String = if (unit == "miles") "mi" else "km"
 
     private fun showDateTimePicker() {
         val current = ZonedDateTime.ofInstant(
