@@ -79,6 +79,21 @@ Locks in the TASK-14 battery-capacity estimator. SoC fields are stored as fracti
 | `startOfYear` | today | Jan 1 of current year |
 | `customRangeInclusive` | from/to | both endpoints included |
 
+### 1.7 BackupOutcomeReporterTest.kt
+
+Locks in the TASK-19 orchestration: `BackupOutcomeReporter` translates each `BackupResult` into a counter update and a notifier call. Threshold is `CHRONIC_FAILURE_THRESHOLD = 3`. Uses an in-test `LinkedSettings` paired SettingsReader+Writer so the reporter's read-then-write sequence sees the value it just wrote (the shared `Fakes.kt` reader/writer are independent stores).
+
+| Test | Description |
+|------|-------------|
+| `success_resetsCounter_andClearsNotifications` | `Success` writes counter = 0 and calls `notifier.clearAll()` once |
+| `firstFailure_incrementsCounter_doesNotFireChronic` | Counter 0 → 1; chronic does **not** fire |
+| `secondFailure_stillBelowThreshold_doesNotFireChronic` | Counter 1 → 2; chronic does **not** fire |
+| `thirdFailure_firesChronic` | Counter 2 → 3; `notifier.notifyChronicFailure()` fires once; clearAll **not** called |
+| `fourthFailure_keepsFiringChronic` | Counter 3 → 4; chronic fires every time past threshold (sticky semantics) |
+| `authRequired_firesAuthEveryTime_andIncrementsCounter` | Two `AuthRequired` calls → counter 0 → 2; authCount = 2; chronicCount = 0 |
+| `successAfterStreak_resetsCounter_andClearsBothChannels` | Counter 5 → 0; clearAll fires once |
+| `authRequired_doesNotFireChronicEvenAtThreshold` | `AuthRequired` increments counter past threshold but only fires the auth surface, never chronic |
+
 ---
 
 ## 2. Room Integration Tests (in-memory DB)
@@ -328,6 +343,7 @@ adb install -r app/build/outputs/apk/release/app-release.apk
 | 10 | Re-complete the wizard (page 4 disclaimer must be re-accepted) | Dashboard returns; previously logged events still visible |
 | 11 | Settings → Export CSV | Share-sheet opens; chosen target receives a non-empty `.csv` with the correct header for the active distance unit |
 | 12 | Settings → About | About screen renders with version (e.g. `1.0.1`), SPS-Lab card with tappable links, MIT license, and the open-source-libraries card |
+| 13 | **TASK-19 backup notifications.** Settings → enable Drive backup, then put the device into airplane mode and trigger 3 charge-event saves to drive 3 backup failures in a row | On the 3rd failure, when the app is opened, the rationale dialog appears (Android 13+). Tap **Allow**, then **Allow** on the system prompt → channel `backup_status` shows the sticky "Drive backup failed — Tap to open Settings" notification. Tap it → app opens to Settings. Disable airplane mode and trigger another save → next backup succeeds → the chronic notification is cancelled. To verify the **Not now** path, repeat with a fresh install / re-grant cycle and decline; the rationale must never re-fire and notifications stay silent. Pre-13 devices skip the rationale (channel exists, permission implicit). |
 
 **On any failure:** capture `adb logcat *:E` from the moment of the crash,
 file an issue, and **do not publish the GitHub Release** — keep it in draft
