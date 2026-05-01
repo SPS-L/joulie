@@ -14,6 +14,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.spsl.evtracker.core.model.ChargeType
 
 @RunWith(AndroidJUnit4::class)
 class MigrationTest {
@@ -118,10 +119,86 @@ class MigrationTest {
         return helper.writableDatabase
     }
 
-    /** Opens [testDbName] via Room with the migrations registered, forcing schema validation. */
+    /** Builds a v3 DB at [testDbName] (= v2 + cost columns + custom_locations table + indices). */
+    private fun buildV3Database(): SupportSQLiteDatabase {
+        val callback = object : SupportSQLiteOpenHelper.Callback(3) {
+            override fun onCreate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS cars (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "name TEXT NOT NULL, " +
+                        "make TEXT NOT NULL DEFAULT '', " +
+                        "model TEXT NOT NULL DEFAULT '', " +
+                        "year INTEGER, " +
+                        "batteryKwh REAL, " +
+                        "createdAt INTEGER NOT NULL" +
+                        ")",
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS charge_events (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "carId INTEGER NOT NULL, " +
+                        "eventDate INTEGER NOT NULL, " +
+                        "odometerKm REAL NOT NULL, " +
+                        "kwhAdded REAL NOT NULL, " +
+                        "chargeType TEXT NOT NULL DEFAULT 'AC', " +
+                        "costTotal REAL, " +
+                        "costPerKwh REAL, " +
+                        "currency TEXT, " +
+                        "location TEXT, " +
+                        "note TEXT NOT NULL DEFAULT '', " +
+                        "createdAt INTEGER NOT NULL, " +
+                        "FOREIGN KEY(carId) REFERENCES cars(id) ON DELETE CASCADE" +
+                        ")",
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS custom_locations (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "label TEXT NOT NULL, " +
+                        "useCount INTEGER NOT NULL DEFAULT 1, " +
+                        "lastUsed INTEGER NOT NULL" +
+                        ")",
+                )
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS index_custom_locations_label " +
+                        "ON custom_locations(label)",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_charge_events_carId_eventDate " +
+                        "ON charge_events(carId, eventDate)",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_charge_events_chargeType " +
+                        "ON charge_events(chargeType)",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_charge_events_location " +
+                        "ON charge_events(location)",
+                )
+            }
+
+            override fun onUpgrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) {
+                // No upgrades; this helper only ever opens at v3.
+            }
+        }
+
+        val helper = FrameworkSQLiteOpenHelperFactory().create(
+            SupportSQLiteOpenHelper.Configuration.builder(context)
+                .name(testDbName)
+                .callback(callback)
+                .build(),
+        )
+        return helper.writableDatabase
+    }
+
+    /** Opens [testDbName] via Room with all migrations registered, forcing schema validation. */
     private fun openWithRoom(): AppDatabase =
         Room.databaseBuilder(context, AppDatabase::class.java, testDbName)
-            .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3)
+            .addMigrations(
+                AppDatabase.MIGRATION_1_2,
+                AppDatabase.MIGRATION_2_3,
+                AppDatabase.MIGRATION_3_4,
+            )
             .build()
 
     @Test
@@ -177,7 +254,30 @@ class MigrationTest {
     }
 
     @Test
-    fun migrate_1_to_3_validatesSchema() = runBlocking {
+    fun migrate_3_to_4_rewritesLegacyDcRows() = runBlocking {
+        val v3 = buildV3Database()
+        v3.execSQL("INSERT INTO cars (name, createdAt) VALUES ('A', 1000)")
+        v3.execSQL(
+            "INSERT INTO charge_events " +
+                "(carId, eventDate, odometerKm, kwhAdded, chargeType, note, createdAt) " +
+                "VALUES (1, 2000, 100.0, 10.0, 'DC', '', 2000), " +
+                "(1, 3000, 200.0, 10.0, 'AC', '', 3000)",
+        )
+
+        AppDatabase.MIGRATION_3_4.migrate(v3)
+
+        v3.query("SELECT chargeType FROM charge_events ORDER BY eventDate ASC")
+            .use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertEquals("DC_FAST", cursor.getString(0)) // legacy "DC" rewritten
+                assertTrue(cursor.moveToNext())
+                assertEquals("AC", cursor.getString(0)) // unchanged
+            }
+        v3.close()
+    }
+
+    @Test
+    fun migrate_1_to_4_validatesSchema() = runBlocking {
         val v1 = buildV1Database()
         v1.execSQL("INSERT INTO cars (name, createdAt) VALUES ('A', 1000)")
         v1.execSQL(
@@ -186,16 +286,16 @@ class MigrationTest {
         )
         v1.close()
 
-        // Open through Room with both migrations registered. Room runs MIGRATION_1_2
-        // then MIGRATION_2_3, then validates the resulting schema against v3 entity
-        // declarations. If column names, indices, or defaults drift, Room throws
-        // IllegalStateException.
+        // Open through Room with all three migrations registered. Room runs them
+        // in order and then validates the resulting schema against v4 entity
+        // declarations. Schema validation also exercises the
+        // ChargeTypeConverter wiring on the chargeType column.
         val room = openWithRoom()
         try {
             val event = room.chargeEventDao().getAllForCarSorted(1).single()
-            assertEquals("AC", event.chargeType) // from MIGRATION_1_2 default
-            assertEquals(null, event.costTotal) // from MIGRATION_2_3 add column
-            assertEquals("", event.note) // from MIGRATION_2_3 add column NOT NULL DEFAULT ''
+            assertEquals(ChargeType.AC, event.chargeType) // MIGRATION_1_2 default → enum AC
+            assertEquals(null, event.costTotal) // MIGRATION_2_3 add column
+            assertEquals("", event.note) // MIGRATION_2_3 add column NOT NULL DEFAULT ''
         } finally {
             room.close()
         }

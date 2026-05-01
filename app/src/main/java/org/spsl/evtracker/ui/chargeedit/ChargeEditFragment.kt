@@ -20,6 +20,7 @@ import kotlinx.coroutines.launch
 import org.spsl.evtracker.R
 import org.spsl.evtracker.core.model.ChargeEditEvent
 import org.spsl.evtracker.core.model.ChargeEditUiState
+import org.spsl.evtracker.core.model.ChargeType
 import org.spsl.evtracker.databinding.FragmentChargeEditBinding
 import org.spsl.evtracker.domain.service.CostMode
 import org.spsl.evtracker.domain.service.UnitConverter
@@ -54,8 +55,8 @@ class ChargeEditFragment : Fragment() {
         binding.chargeEditLocation.doAfterTextChanged { viewModel.setLocation(it?.toString().orEmpty()) }
         binding.chargeEditNote.doAfterTextChanged { viewModel.setNote(it?.toString().orEmpty()) }
         binding.chargeEditCost.doAfterTextChanged { viewModel.setCostValue(it?.toString().orEmpty()) }
-        binding.chargeEditTypeAc.setOnClickListener { viewModel.setChargeType("AC") }
-        binding.chargeEditTypeDc.setOnClickListener { viewModel.setChargeType("DC") }
+        binding.chargeEditTypeAc.setOnClickListener { viewModel.setChargeType(ChargeType.AC) }
+        binding.chargeEditTypeDc.setOnClickListener { viewModel.setChargeType(ChargeType.DC_FAST) }
         binding.chargeEditCostModeTotal.setOnClickListener { viewModel.setCostMode(CostMode.TOTAL) }
         binding.chargeEditCostModePerKwh.setOnClickListener { viewModel.setCostMode(CostMode.PER_KWH) }
         binding.chargeEditCostToggle.setOnClickListener { viewModel.toggleCostExpanded() }
@@ -109,7 +110,7 @@ class ChargeEditFragment : Fragment() {
             binding.chargeEditKwh.setText(state.kwh)
         }
         binding.chargeEditKwhLayout.error = state.kwhError?.let { getString(it) }
-        if (state.chargeType == "DC") {
+        if (state.chargeType.isDc) {
             binding.chargeEditTypeGroup.check(R.id.charge_edit_type_dc)
         } else {
             binding.chargeEditTypeGroup.check(R.id.charge_edit_type_ac)

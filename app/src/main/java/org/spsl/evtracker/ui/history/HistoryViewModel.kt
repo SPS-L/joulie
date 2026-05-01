@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.spsl.evtracker.core.model.ChargeType
 import org.spsl.evtracker.core.model.ChargeTypeFilter
 import org.spsl.evtracker.core.model.HistoryEvent
 import org.spsl.evtracker.core.model.HistoryRow
@@ -101,8 +102,8 @@ class HistoryViewModel @Inject constructor(
 
     private fun applyFilter(event: ChargeEventEntity, filter: ChargeTypeFilter): Boolean = when (filter) {
         ChargeTypeFilter.ALL -> true
-        ChargeTypeFilter.AC -> event.chargeType == "AC"
-        ChargeTypeFilter.DC -> event.chargeType == "DC"
+        ChargeTypeFilter.AC -> event.chargeType == ChargeType.AC
+        ChargeTypeFilter.DC -> event.chargeType.isDc
     }
 
     fun setFilter(newFilter: ChargeTypeFilter) {

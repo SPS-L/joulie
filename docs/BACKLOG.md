@@ -32,7 +32,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-22 | 🔴 | Upgrade `targetSdk` and `compileSdk` to API 35 | TASK-16 | ☑ |
 | TASK-23 | 🔴 | Move startup `isLoading` state into `MainViewModel` | — | ☑ |
 | TASK-24 | 🔴 | Enforce ViewModel/Activity consumption of the existing narrow domain interfaces (no concrete `data.repository.*` imports outside `di/`) | TASK-23 | ☑ |
-| TASK-25 | 🟡 | Replace `chargeType: String` with a sealed class / TypeConverter-backed enum | — | ☐ |
+| TASK-25 | 🟡 | Replace `chargeType: String` with a sealed class / TypeConverter-backed enum | — | ☑ |
 | TASK-26 | 🟡 | Change all Room primary-key and foreign-key fields from `Int` to `Long` | — | ☐ |
 | TASK-27 | 🟡 | Decouple bottom-nav visibility from hardcoded `hideOn` set in `MainActivity` | — | ☑ |
 | TASK-28 | 🟡 | Consolidate time on existing `NowProvider`; remove direct `System.currentTimeMillis()` from entities and helpers; drop the parallel `() -> Long` clock in `WorkerModule` | — | ☑ |
@@ -1263,7 +1263,36 @@ are correct and should stay.)
 
 ---
 
-## 🟡 TASK-25 — Replace `chargeType: String` with a TypeConverter-backed enum
+## 🟡 TASK-25 — Replace `chargeType: String` with a TypeConverter-backed enum ☑ Done (2026-05-01)
+
+> **Outcome:** new `core/model/ChargeType` enum (`AC`, `DC_FAST`,
+> `DC_ULTRA`) with `isDc`, `displayLabel()`, and `parseLegacy(s)`.
+> Stored on disk via `data/local/db/ChargeTypeConverter` (Room
+> `@TypeConverter`); on the backup wire via
+> `domain/service/ChargeTypeJsonAdapter` (Gson). `ChargeEventEntity`,
+> `ChargeEditUiState`, `SaveChargeEventInput`, and
+> `BackupData.ChargeEventDto` all flip to `ChargeType`. AppDatabase
+> bumped from `version = 3` to `version = 4`; `MIGRATION_3_4` rewrites
+> legacy `'DC'` cells to `'DC_FAST'`. `BackupData.CURRENT_VERSION` →
+> 4 with `BackupSerializer.fromJson` accepting `{3, 4}` so backups in
+> the wild still restore (legacy `"DC"` decoded to `DC_FAST` via the
+> Gson adapter). `StatsCalculator`, `ObserveDashboardStatsUseCase`,
+> `HistoryViewModel` filter via `ChargeType.AC` / `ChargeType.isDc`;
+> `ChargeEditFragment` toggle buttons emit `ChargeType.AC` /
+> `ChargeType.DC_FAST`; `HistoryAdapter` badge uses
+> `chargeType.displayLabel()`. `ExportCsvUseCase` writes the enum
+> `name`. New JVM tests cover the enum (3 cases), the converter (3
+> cases), and the v3-backup compat path on the serializer (2 cases);
+> ~74 stringly-typed `"AC"` / `"DC"` literals across 19 test files
+> were flipped to enum literals. Instrumented `MigrationTest` gains
+> `migrate_3_to_4_rewritesLegacyDcRows` and the existing
+> `migrate_1_to_3_validatesSchema` becomes `migrate_1_to_4_validatesSchema`
+> with `chargeType` asserted as `ChargeType.AC`. JVM unit-test count:
+> 257 → 265. Spec:
+> `superpowers/specs/2026-05-01-task25-charge-type-enum-design.md`.
+> Plan: `superpowers/plans/2026-05-01-task25-charge-type-enum.md`.
+> The original task text is preserved below for historical context.
+
 
 `ChargeEventEntity.kt:30` has `val chargeType: String = "AC"`. Nothing prevents
 the values `"ac"`, `"DC"`, `"dc_fast"`, or any arbitrary string from being

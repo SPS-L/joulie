@@ -15,6 +15,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.spsl.evtracker.core.model.ChargeType
 import org.spsl.evtracker.core.model.ChargeTypeFilter
 import org.spsl.evtracker.core.model.DashboardEvent
 import org.spsl.evtracker.core.model.DashboardPeriod
@@ -99,8 +100,8 @@ class DashboardViewModelTest {
         val car = CarEntity(id = 1, name = "Tesla", createdAt = 0L)
         val now = System.currentTimeMillis()
         val events = listOf(
-            ChargeEventEntity(id = 1, carId = 1, eventDate = now - 86_400_000, odometerKm = 100.0, kwhAdded = 20.0, chargeType = "AC", createdAt = 0L),
-            ChargeEventEntity(id = 2, carId = 1, eventDate = now, odometerKm = 200.0, kwhAdded = 25.0, chargeType = "AC", createdAt = 0L),
+            ChargeEventEntity(id = 1, carId = 1, eventDate = now - 86_400_000, odometerKm = 100.0, kwhAdded = 20.0, chargeType = ChargeType.AC, createdAt = 0L),
+            ChargeEventEntity(id = 2, carId = 1, eventDate = now, odometerKm = 200.0, kwhAdded = 25.0, chargeType = ChargeType.AC, createdAt = 0L),
         )
         val (vm, _) = build(cars = listOf(car), events = events, activeCarId = 1)
         val state = vm.uiState.first { it.dashboard.stats != null }
@@ -114,8 +115,8 @@ class DashboardViewModelTest {
         val car = CarEntity(id = 1, name = "Tesla", createdAt = 0L)
         val now = System.currentTimeMillis()
         val events = listOf(
-            ChargeEventEntity(id = 1, carId = 1, eventDate = now - 86_400_000, odometerKm = 100.0, kwhAdded = 20.0, chargeType = "AC", createdAt = 0L),
-            ChargeEventEntity(id = 2, carId = 1, eventDate = now, odometerKm = 200.0, kwhAdded = 25.0, chargeType = "DC", createdAt = 0L),
+            ChargeEventEntity(id = 1, carId = 1, eventDate = now - 86_400_000, odometerKm = 100.0, kwhAdded = 20.0, chargeType = ChargeType.AC, createdAt = 0L),
+            ChargeEventEntity(id = 2, carId = 1, eventDate = now, odometerKm = 200.0, kwhAdded = 25.0, chargeType = ChargeType.DC_FAST, createdAt = 0L),
         )
         val (vm, _) = build(cars = listOf(car), events = events, activeCarId = 1)
         vm.selectFilter(ChargeTypeFilter.AC)
@@ -129,8 +130,8 @@ class DashboardViewModelTest {
         val now = System.currentTimeMillis()
         val daysAgo = { d: Int -> now - d * 86_400_000L }
         val events = listOf(
-            ChargeEventEntity(id = 1, carId = 1, eventDate = daysAgo(20), odometerKm = 100.0, kwhAdded = 20.0, chargeType = "AC", createdAt = 0L),
-            ChargeEventEntity(id = 2, carId = 1, eventDate = daysAgo(2), odometerKm = 200.0, kwhAdded = 25.0, chargeType = "AC", createdAt = 0L),
+            ChargeEventEntity(id = 1, carId = 1, eventDate = daysAgo(20), odometerKm = 100.0, kwhAdded = 20.0, chargeType = ChargeType.AC, createdAt = 0L),
+            ChargeEventEntity(id = 2, carId = 1, eventDate = daysAgo(2), odometerKm = 200.0, kwhAdded = 25.0, chargeType = ChargeType.AC, createdAt = 0L),
         )
         val (vm, _) = build(cars = listOf(car), events = events, activeCarId = 1)
         vm.uiState.first { it.dashboard.stats?.chargeCount == 2 }
@@ -144,8 +145,8 @@ class DashboardViewModelTest {
         val car = CarEntity(id = 1, name = "Tesla", createdAt = 0L)
         val now = System.currentTimeMillis()
         val events = listOf(
-            ChargeEventEntity(id = 1, carId = 1, eventDate = now - 86_400_000, odometerKm = 100.0, kwhAdded = 20.0, chargeType = "AC", costTotal = 5.0, costPerKwh = 0.25, currency = "EUR", createdAt = 0L),
-            ChargeEventEntity(id = 2, carId = 1, eventDate = now, odometerKm = 200.0, kwhAdded = 25.0, chargeType = "AC", costTotal = 7.0, costPerKwh = 0.28, currency = "USD", createdAt = 0L),
+            ChargeEventEntity(id = 1, carId = 1, eventDate = now - 86_400_000, odometerKm = 100.0, kwhAdded = 20.0, chargeType = ChargeType.AC, costTotal = 5.0, costPerKwh = 0.25, currency = "EUR", createdAt = 0L),
+            ChargeEventEntity(id = 2, carId = 1, eventDate = now, odometerKm = 200.0, kwhAdded = 25.0, chargeType = ChargeType.AC, costTotal = 7.0, costPerKwh = 0.28, currency = "USD", createdAt = 0L),
         )
         val (vm, _) = build(cars = listOf(car), events = events, activeCarId = 1)
         val state = vm.uiState.first { it.dashboard.showMultiCurrencyBanner }

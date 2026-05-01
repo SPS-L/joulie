@@ -12,6 +12,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.spsl.evtracker.core.model.ChargeType
 import org.spsl.evtracker.data.local.db.AppDatabase
 import org.spsl.evtracker.data.local.entity.CarEntity
 import org.spsl.evtracker.data.local.entity.ChargeEventEntity
@@ -45,7 +46,7 @@ class RoomDataResetTransactionRunnerTest {
                 eventDate = 1_700_000_000_000L,
                 odometerKm = 100.0,
                 kwhAdded = 20.0,
-                chargeType = "AC",
+                chargeType = ChargeType.AC,
                 createdAt = 0L,
             ),
         )
@@ -75,7 +76,7 @@ class RoomDataResetTransactionRunnerTest {
                 eventDate = 1_700_000_000_000L,
                 odometerKm = 100.0,
                 kwhAdded = 20.0,
-                chargeType = "AC",
+                chargeType = ChargeType.AC,
                 createdAt = 0L,
             ),
         )

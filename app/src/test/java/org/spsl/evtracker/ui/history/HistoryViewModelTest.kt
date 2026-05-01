@@ -21,6 +21,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.spsl.evtracker.core.model.ChargeType
 import org.spsl.evtracker.core.model.ChargeTypeFilter
 import org.spsl.evtracker.core.model.HistoryEvent
 import org.spsl.evtracker.data.local.entity.ChargeEventEntity
@@ -67,7 +68,7 @@ class HistoryViewModelTest {
         val store: MutableStateFlow<List<ChargeEventEntity>>,
     )
 
-    private fun event(id: Int, date: Long, type: String = "AC", carId: Int = 1) = ChargeEventEntity(
+    private fun event(id: Int, date: Long, type: ChargeType = ChargeType.AC, carId: Int = 1) = ChargeEventEntity(
         id = id,
         carId = carId,
         eventDate = date,
@@ -101,30 +102,30 @@ class HistoryViewModelTest {
     fun filterAc_filtersDcOut() = runTest {
         val (vm, _, _, _, _) = build(
             events = listOf(
-                event(1, 100L, "AC"),
-                event(2, 200L, "DC"),
-                event(3, 300L, "AC"),
+                event(1, 100L, ChargeType.AC),
+                event(2, 200L, ChargeType.DC_FAST),
+                event(3, 300L, ChargeType.AC),
             ),
         )
         vm.uiState.first { it.rows.size == 3 }
         vm.setFilter(ChargeTypeFilter.AC)
         val state = vm.uiState.first { it.filter == ChargeTypeFilter.AC && it.rows.size == 2 }
-        assertTrue(state.rows.all { it.event.chargeType == "AC" })
+        assertTrue(state.rows.all { it.event.chargeType == ChargeType.AC })
     }
 
     @Test
     fun filterDc_filtersAcOut() = runTest {
         val (vm, _, _, _, _) = build(
             events = listOf(
-                event(1, 100L, "AC"),
-                event(2, 200L, "DC"),
-                event(3, 300L, "AC"),
+                event(1, 100L, ChargeType.AC),
+                event(2, 200L, ChargeType.DC_FAST),
+                event(3, 300L, ChargeType.AC),
             ),
         )
         vm.uiState.first { it.rows.size == 3 }
         vm.setFilter(ChargeTypeFilter.DC)
         val state = vm.uiState.first { it.filter == ChargeTypeFilter.DC && it.rows.size == 1 }
-        assertEquals("DC", state.rows.single().event.chargeType)
+        assertEquals(ChargeType.DC_FAST, state.rows.single().event.chargeType)
     }
 
     @Test

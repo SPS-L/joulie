@@ -3,6 +3,7 @@ package org.spsl.evtracker.domain.service
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.spsl.evtracker.core.model.ChargeType
 import org.spsl.evtracker.data.local.entity.ChargeEventEntity
 
 class StatsCalculatorMixedCurrencyTest {
@@ -12,7 +13,7 @@ class StatsCalculatorMixedCurrencyTest {
     private fun ev(currency: String? = null, costTotal: Double? = null): ChargeEventEntity =
         ChargeEventEntity(
             id = 0, carId = 1, eventDate = 0L, odometerKm = 0.0, kwhAdded = 1.0,
-            chargeType = "AC", costTotal = costTotal, costPerKwh = null,
+            chargeType = ChargeType.AC, costTotal = costTotal, costPerKwh = null,
             currency = currency, location = null, note = "", createdAt = 0L,
         )
 

@@ -4,6 +4,7 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import org.spsl.evtracker.core.model.ChargeType
 
 @Entity(
     tableName = "charge_events",
@@ -27,7 +28,7 @@ data class ChargeEventEntity(
     val eventDate: Long,
     val odometerKm: Double,
     val kwhAdded: Double,
-    val chargeType: String = "AC",
+    val chargeType: ChargeType = ChargeType.AC,
     val costTotal: Double? = null,
     val costPerKwh: Double? = null,
     val currency: String? = null,

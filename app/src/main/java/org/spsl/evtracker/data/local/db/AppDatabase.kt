@@ -2,6 +2,7 @@ package org.spsl.evtracker.data.local.db
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import org.spsl.evtracker.data.local.dao.CarDao
@@ -17,9 +18,10 @@ import org.spsl.evtracker.data.local.entity.CustomLocationEntity
         ChargeEventEntity::class,
         CustomLocationEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
+@TypeConverters(ChargeTypeConverter::class)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun carDao(): CarDao
@@ -77,6 +79,21 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL(
                     "CREATE INDEX IF NOT EXISTS index_charge_events_location " +
                         "ON charge_events(location)",
+                )
+            }
+        }
+
+        /**
+         * TASK-25: rewrite legacy `'DC'` chargeType cells to `'DC_FAST'` so the
+         * Room TypeConverter (and the [org.spsl.evtracker.core.model.ChargeType]
+         * enum it produces) sees only canonical values for fresh reads. The
+         * column type stays TEXT NOT NULL — only the cell values mutate, so
+         * Room's v4 schema check passes without schema-DDL changes.
+         */
+        val MIGRATION_3_4: Migration = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "UPDATE charge_events SET chargeType = 'DC_FAST' WHERE chargeType = 'DC'",
                 )
             }
         }

@@ -49,7 +49,7 @@ class HistoryAdapter(
                 width = ViewGroup.LayoutParams.MATCH_PARENT
             }
             binding.itemChargeDate.text = DateFormat.formatEpochMs(row.event.eventDate)
-            binding.itemChargeTypeBadge.text = row.event.chargeType
+            binding.itemChargeTypeBadge.text = row.event.chargeType.displayLabel()
             val unitSuffix = if (unit == "miles") "mi" else "km"
             binding.itemChargeSummary.text = "%.1f %s · %.2f kWh".format(row.displayOdometer, unitSuffix, row.event.kwhAdded)
             binding.itemChargeLocation.isVisible = !row.event.location.isNullOrBlank()

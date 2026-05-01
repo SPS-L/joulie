@@ -8,6 +8,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.fail
 import org.junit.Test
 import org.spsl.evtracker.core.model.BackupData
+import org.spsl.evtracker.core.model.ChargeType
 import org.spsl.evtracker.data.local.entity.CarEntity
 import org.spsl.evtracker.data.local.entity.ChargeEventEntity
 import org.spsl.evtracker.data.local.entity.CustomLocationEntity
@@ -79,7 +80,7 @@ class DriveBackupRepositoryTest {
         val car = CarEntity(id = 1, name = "T", createdAt = 5L)
         val event = ChargeEventEntity(
             id = 7, carId = 1, eventDate = 1L,
-            odometerKm = 100.0, kwhAdded = 10.0, chargeType = "DC",
+            odometerKm = 100.0, kwhAdded = 10.0, chargeType = ChargeType.DC_FAST,
             costTotal = 5.0, costPerKwh = 0.5, currency = "EUR",
             location = "Home", note = "n", createdAt = 0L,
         )

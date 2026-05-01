@@ -22,6 +22,7 @@ import org.junit.Test
 import org.spsl.evtracker.R
 import org.spsl.evtracker.core.model.ChargeEditEvent
 import org.spsl.evtracker.core.model.ChargeEditUiState
+import org.spsl.evtracker.core.model.ChargeType
 import org.spsl.evtracker.data.local.entity.ChargeEventEntity
 import org.spsl.evtracker.data.local.entity.CustomLocationEntity
 import org.spsl.evtracker.domain.service.CostMode
@@ -84,7 +85,7 @@ class ChargeEditViewModelTest {
             listOf(
                 ChargeEventEntity(
                     id = 7, carId = 3, eventDate = 1_000L, odometerKm = 100.0, kwhAdded = 20.0,
-                    chargeType = "DC", costTotal = 5.0, costPerKwh = 0.25, currency = "EUR",
+                    chargeType = ChargeType.DC_FAST, costTotal = 5.0, costPerKwh = 0.25, currency = "EUR",
                     location = "Home", note = "test", createdAt = 0L,
                 ),
             ),
@@ -94,7 +95,7 @@ class ChargeEditViewModelTest {
         assertEquals(3, state.carId)
         assertEquals("100.0", state.odometer)
         assertEquals("20.0", state.kwh)
-        assertEquals("DC", state.chargeType)
+        assertEquals(ChargeType.DC_FAST, state.chargeType)
         assertTrue(state.costExpanded)
         assertEquals("5.0", state.costValue)
         assertEquals("Home", state.location)

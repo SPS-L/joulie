@@ -3,6 +3,7 @@ package org.spsl.evtracker.domain.usecase
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.spsl.evtracker.core.model.ChargeType
 import org.spsl.evtracker.data.local.entity.ChargeEventEntity
 import java.io.StringWriter
 
@@ -18,8 +19,8 @@ class ExportCsvUseCaseTest {
     )
 
     private val sampleEvents = listOf(
-        ChargeEventEntity(id = 1, carId = 1, eventDate = 1714044000000L, odometerKm = 1000.0, kwhAdded = 10.0, chargeType = "AC", costTotal = 5.0, currency = "EUR", note = "n", createdAt = 0L),
-        ChargeEventEntity(id = 2, carId = 1, eventDate = 1714130400000L, odometerKm = 1100.0, kwhAdded = 12.0, chargeType = "DC", createdAt = 0L),
+        ChargeEventEntity(id = 1, carId = 1, eventDate = 1714044000000L, odometerKm = 1000.0, kwhAdded = 10.0, chargeType = ChargeType.AC, costTotal = 5.0, currency = "EUR", note = "n", createdAt = 0L),
+        ChargeEventEntity(id = 2, carId = 1, eventDate = 1714130400000L, odometerKm = 1100.0, kwhAdded = 12.0, chargeType = ChargeType.DC_FAST, createdAt = 0L),
     )
 
     @Test

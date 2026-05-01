@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import org.spsl.evtracker.core.model.ChargeType
 import org.spsl.evtracker.core.model.ChargeTypeFilter
 import org.spsl.evtracker.core.model.DashboardPeriod
 import org.spsl.evtracker.core.model.DashboardUiState
@@ -56,8 +57,8 @@ class ObserveDashboardStatsUseCase @Inject constructor(
         }
         val filtered = when (filter) {
             ChargeTypeFilter.ALL -> periodEvents
-            ChargeTypeFilter.AC -> periodEvents.filter { it.chargeType == "AC" }
-            ChargeTypeFilter.DC -> periodEvents.filter { it.chargeType == "DC" }
+            ChargeTypeFilter.AC -> periodEvents.filter { it.chargeType == ChargeType.AC }
+            ChargeTypeFilter.DC -> periodEvents.filter { it.chargeType.isDc }
         }
         return if (filtered.isEmpty()) {
             DashboardUiState(emptyState = EmptyState.NoEvents)

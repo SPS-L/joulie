@@ -7,6 +7,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.spsl.evtracker.core.model.BackupData
+import org.spsl.evtracker.core.model.ChargeType
 import org.spsl.evtracker.core.model.RestoreResult
 import org.spsl.evtracker.data.local.entity.CarEntity
 import org.spsl.evtracker.data.local.entity.ChargeEventEntity
@@ -133,7 +134,7 @@ class RestoreBackupUseCaseTest {
         val events = listOf(
             ChargeEventEntity(
                 id = 7, carId = 1, eventDate = 2L, odometerKm = 100.0, kwhAdded = 10.0,
-                chargeType = "DC", costTotal = 5.0, costPerKwh = 0.5, currency = "EUR",
+                chargeType = ChargeType.DC_FAST, costTotal = 5.0, costPerKwh = 0.5, currency = "EUR",
                 location = "Home", note = "n", createdAt = 0L,
             ),
         )
