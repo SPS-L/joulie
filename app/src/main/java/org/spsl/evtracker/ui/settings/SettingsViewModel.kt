@@ -19,6 +19,7 @@ import org.spsl.evtracker.core.model.RestoreResult
 import org.spsl.evtracker.core.model.SettingsEvent
 import org.spsl.evtracker.core.model.SettingsUiState
 import org.spsl.evtracker.domain.backup.BackupRepository
+import org.spsl.evtracker.domain.backup.BackupResult
 import org.spsl.evtracker.domain.backup.BackupScheduler
 import org.spsl.evtracker.domain.backup.DriveAuthRequiredException
 import org.spsl.evtracker.domain.repository.CarReader
@@ -26,9 +27,11 @@ import org.spsl.evtracker.domain.repository.LocationReader
 import org.spsl.evtracker.domain.repository.SettingsReader
 import org.spsl.evtracker.domain.repository.SettingsWriter
 import org.spsl.evtracker.domain.usecase.ExportCsvUseCase
+import org.spsl.evtracker.domain.usecase.PushBackupNowUseCase
 import org.spsl.evtracker.domain.usecase.ResetActiveCarDataUseCase
 import org.spsl.evtracker.domain.usecase.ResetAllDataUseCase
 import org.spsl.evtracker.domain.usecase.RestoreBackupUseCase
+import org.spsl.evtracker.domain.usecase.WipeRemoteBackupUseCase
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.time.Instant
@@ -49,6 +52,8 @@ class SettingsViewModel @Inject constructor(
     private val resetActiveCarDataUseCase: ResetActiveCarDataUseCase,
     private val resetAllDataUseCase: ResetAllDataUseCase,
     private val exportCsvUseCase: ExportCsvUseCase,
+    private val pushBackupNowUseCase: PushBackupNowUseCase,
+    private val wipeRemoteBackupUseCase: WipeRemoteBackupUseCase,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -160,6 +165,60 @@ class SettingsViewModel @Inject constructor(
             settingsWriter.setDriveEnabled(false)
             workManager.cancelUniqueWork(BackupScheduler.UNIQUE_WORK_NAME)
         }
+    }
+
+    // -- TASK-31: manual Drive controls ----------------------------------------
+
+    /**
+     * "Back up now" tap. No-op if any manual operation is already running —
+     * push and wipe are mutually exclusive, and a duplicate tap on push is
+     * a no-op (we don't stack uploads).
+     */
+    fun onPushBackupClicked() {
+        if (_uiState.value.isManualBackupRunning || _uiState.value.isManualWipeRunning) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isManualBackupRunning = true) }
+            try {
+                val event = when (val r = pushBackupNowUseCase()) {
+                    BackupResult.Success -> SettingsEvent.BackupNowSucceeded
+                    BackupResult.AuthRequired -> SettingsEvent.BackupNowFailed(R.string.drive_auth_failed)
+                    is BackupResult.Failure -> SettingsEvent.BackupNowFailed(pushFailureMessage(r))
+                }
+                _events.tryEmit(event)
+            } finally {
+                _uiState.update { it.copy(isManualBackupRunning = false) }
+            }
+        }
+    }
+
+    /**
+     * "Wipe remote backup" → Confirm. Same mutual-exclusion contract as push.
+     */
+    fun onConfirmWipeClicked() {
+        if (_uiState.value.isManualBackupRunning || _uiState.value.isManualWipeRunning) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isManualWipeRunning = true) }
+            try {
+                val event = when (val r = wipeRemoteBackupUseCase()) {
+                    BackupResult.Success -> SettingsEvent.WipeSucceeded
+                    BackupResult.AuthRequired -> SettingsEvent.WipeFailed(R.string.drive_auth_failed)
+                    is BackupResult.Failure -> SettingsEvent.WipeFailed(wipeFailureMessage(r))
+                }
+                _events.tryEmit(event)
+            } finally {
+                _uiState.update { it.copy(isManualWipeRunning = false) }
+            }
+        }
+    }
+
+    private fun pushFailureMessage(r: BackupResult.Failure): Int = when (r.reason) {
+        "Drive storage full" -> R.string.drive_storage_full
+        else -> R.string.drive_backup_now_failure
+    }
+
+    private fun wipeFailureMessage(r: BackupResult.Failure): Int = when (r.reason) {
+        "Drive storage full" -> R.string.drive_storage_full
+        else -> R.string.drive_wipe_failure
     }
 
     // -- F1 ---------------------------------------------------------------------

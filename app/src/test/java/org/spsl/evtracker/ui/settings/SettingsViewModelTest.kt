@@ -28,9 +28,11 @@ import org.spsl.evtracker.data.local.entity.CarEntity
 import org.spsl.evtracker.data.local.entity.CustomLocationEntity
 import org.spsl.evtracker.domain.backup.DriveAuthRequiredException
 import org.spsl.evtracker.domain.usecase.ExportCsvUseCase
+import org.spsl.evtracker.domain.usecase.PushBackupNowUseCase
 import org.spsl.evtracker.domain.usecase.ResetActiveCarDataUseCase
 import org.spsl.evtracker.domain.usecase.ResetAllDataUseCase
 import org.spsl.evtracker.domain.usecase.RestoreBackupUseCase
+import org.spsl.evtracker.domain.usecase.WipeRemoteBackupUseCase
 import org.spsl.evtracker.testing.FakeBackupScheduler
 import org.spsl.evtracker.testing.FakeCarReader
 import org.spsl.evtracker.testing.FakeChargeEventQueries
@@ -92,10 +94,13 @@ class SettingsViewModelTest {
         val resetRunner = FakeDataResetTransactionRunner()
         val resetAll = ResetAllDataUseCase(resetRunner, writer, scheduler)
         val exportCsv = ExportCsvUseCase(carReader, chargeEventQueries, csvSink)
+        val pushBackupNow = PushBackupNowUseCase(backupRepo, writer, org.spsl.evtracker.testing.FakeNowProvider(time = 1_700_000_000_000L))
+        val wipeRemoteBackup = WipeRemoteBackupUseCase(backupRepo, writer)
         val vm = SettingsViewModel(
             reader, writer, locationReader, carReader,
             backupRepo, scheduler, workManager, restoreUseCase,
             resetActive, resetAll, exportCsv,
+            pushBackupNow, wipeRemoteBackup,
         )
         return Setup(
             vm, reader, writer, backupRepo, scheduler, workManager,
@@ -120,12 +125,31 @@ class SettingsViewModelTest {
     private class ThrowingBackupRepository(
         var remoteJson: String? = null,
         var throwOnRead: Throwable? = null,
+        var nextBackupResult: org.spsl.evtracker.domain.backup.BackupResult =
+            org.spsl.evtracker.domain.backup.BackupResult.Success,
+        var nextDeleteResult: org.spsl.evtracker.domain.backup.BackupResult =
+            org.spsl.evtracker.domain.backup.BackupResult.Success,
     ) : org.spsl.evtracker.domain.backup.BackupRepository {
-        override suspend fun backupCurrentData(): org.spsl.evtracker.domain.backup.BackupResult =
-            org.spsl.evtracker.domain.backup.BackupResult.Success
+        var backupCurrentDataCount: Int = 0
+            private set
+        var deleteCount: Int = 0
+            private set
+
+        /** When non-null, the next [backupCurrentData] call delays this many ms before returning. */
+        var backupDelayMs: Long? = null
+
+        override suspend fun backupCurrentData(): org.spsl.evtracker.domain.backup.BackupResult {
+            backupCurrentDataCount++
+            backupDelayMs?.let { kotlinx.coroutines.delay(it) }
+            return nextBackupResult
+        }
         override suspend fun readRemoteBackup(): String? {
             throwOnRead?.let { throw it }
             return remoteJson
+        }
+        override suspend fun deleteRemoteBackup(): org.spsl.evtracker.domain.backup.BackupResult {
+            deleteCount++
+            return nextDeleteResult
         }
     }
 
@@ -450,5 +474,118 @@ class SettingsViewModelTest {
         val s = build(seededLocations = locations)
         advanceUntilIdle()
         assertEquals(2, s.vm.uiState.value.customLocationCount)
+    }
+
+    // -------------------------------------------------------------------------
+    // TASK-31 — manual Drive controls
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun onPushBackupClicked_success_emitsBackupNowSucceeded_andTogglesRunningFlag() = runTest {
+        val s = build()
+        s.backupRepo.nextBackupResult = org.spsl.evtracker.domain.backup.BackupResult.Success
+        // Slow the upload by a tick so we can observe isManualBackupRunning = true mid-flight.
+        s.backupRepo.backupDelayMs = 1L
+
+        val received = mutableListOf<SettingsEvent>()
+        val job = launch(start = CoroutineStart.UNDISPATCHED) { s.vm.events.collect { received += it } }
+        s.vm.onPushBackupClicked()
+        // Drain just enough work to start the launched coroutine and flip the flag,
+        // but stop before the delayed backupCurrentData() returns.
+        dispatcher.scheduler.runCurrent()
+        assertTrue("flag must flip true while upload is in flight", s.vm.uiState.value.isManualBackupRunning)
+        advanceUntilIdle()
+
+        assertEquals(1, s.backupRepo.backupCurrentDataCount)
+        assertEquals(SettingsEvent.BackupNowSucceeded, received.lastOrNull())
+        assertFalse(s.vm.uiState.value.isManualBackupRunning)
+        assertEquals(1_700_000_000_000L, s.writer.lastBackupAt)
+        job.cancel()
+    }
+
+    @Test
+    fun onPushBackupClicked_authRequired_emitsBackupNowFailed_withAuthString() = runTest {
+        val s = build()
+        s.backupRepo.nextBackupResult = org.spsl.evtracker.domain.backup.BackupResult.AuthRequired
+
+        val received = mutableListOf<SettingsEvent>()
+        val job = launch(start = CoroutineStart.UNDISPATCHED) { s.vm.events.collect { received += it } }
+        s.vm.onPushBackupClicked()
+        advanceUntilIdle()
+
+        val ev = received.last()
+        assertTrue("expected BackupNowFailed but was $ev", ev is SettingsEvent.BackupNowFailed)
+        assertEquals(R.string.drive_auth_failed, (ev as SettingsEvent.BackupNowFailed).msgRes)
+        assertNull("lastBackupAt must stay null after AuthRequired", s.writer.lastBackupAt)
+        job.cancel()
+    }
+
+    @Test
+    fun onPushBackupClicked_failure_emitsBackupNowFailed() = runTest {
+        val s = build()
+        s.backupRepo.nextBackupResult = org.spsl.evtracker.domain.backup.BackupResult.Failure("HTTP 500")
+
+        val received = mutableListOf<SettingsEvent>()
+        val job = launch(start = CoroutineStart.UNDISPATCHED) { s.vm.events.collect { received += it } }
+        s.vm.onPushBackupClicked()
+        advanceUntilIdle()
+
+        assertTrue(received.last() is SettingsEvent.BackupNowFailed)
+        assertNull(s.writer.lastBackupAt)
+        job.cancel()
+    }
+
+    @Test
+    fun onConfirmWipeClicked_success_emitsWipeSucceeded_andClearsLastBackupAt() = runTest {
+        val s = build()
+        s.writer.setLastBackupAt(1_700_000_000_000L)
+        s.backupRepo.nextDeleteResult = org.spsl.evtracker.domain.backup.BackupResult.Success
+
+        val received = mutableListOf<SettingsEvent>()
+        val job = launch(start = CoroutineStart.UNDISPATCHED) { s.vm.events.collect { received += it } }
+        s.vm.onConfirmWipeClicked()
+        advanceUntilIdle()
+
+        assertEquals(1, s.backupRepo.deleteCount)
+        assertEquals(SettingsEvent.WipeSucceeded, received.last())
+        assertEquals(0L, s.writer.lastBackupAt)
+        assertFalse(s.vm.uiState.value.isManualWipeRunning)
+        job.cancel()
+    }
+
+    @Test
+    fun onConfirmWipeClicked_failure_emitsWipeFailed_andDoesNotClearLastBackupAt() = runTest {
+        val s = build()
+        s.writer.setLastBackupAt(1_700_000_000_000L)
+        s.backupRepo.nextDeleteResult = org.spsl.evtracker.domain.backup.BackupResult.Failure("HTTP 500")
+
+        val received = mutableListOf<SettingsEvent>()
+        val job = launch(start = CoroutineStart.UNDISPATCHED) { s.vm.events.collect { received += it } }
+        s.vm.onConfirmWipeClicked()
+        advanceUntilIdle()
+
+        assertTrue(received.last() is SettingsEvent.WipeFailed)
+        assertEquals(1_700_000_000_000L, s.writer.lastBackupAt)
+        job.cancel()
+    }
+
+    @Test
+    fun onConfirmWipeClicked_whilePushInFlight_isNoOp() = runTest {
+        val s = build()
+        // Slow the in-flight push so we can attempt the wipe while it's running.
+        s.backupRepo.backupDelayMs = 1_000L
+        s.backupRepo.nextBackupResult = org.spsl.evtracker.domain.backup.BackupResult.Success
+
+        s.vm.onPushBackupClicked()
+        dispatcher.scheduler.runCurrent()
+        assertTrue(s.vm.uiState.value.isManualBackupRunning)
+        // Wipe must be ignored entirely — no deleteRemoteBackup call.
+        s.vm.onConfirmWipeClicked()
+        dispatcher.scheduler.runCurrent()
+        assertEquals(0, s.backupRepo.deleteCount)
+        assertFalse(s.vm.uiState.value.isManualWipeRunning)
+
+        // Let the slow push finish so runTest doesn't complain about pending coroutines.
+        advanceUntilIdle()
     }
 }

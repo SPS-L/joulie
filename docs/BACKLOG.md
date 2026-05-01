@@ -38,7 +38,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-28 | 🟡 | Consolidate time on existing `NowProvider`; remove direct `System.currentTimeMillis()` from entities and helpers; drop the parallel `() -> Long` clock in `WorkerModule` | — | ☑ |
 | TASK-29 | 🟢 | Add explicit `debug` build type with `applicationIdSuffix` and `BuildConfig` flags | — | ☑ |
 | TASK-30 | 🟢 | Migrate from MPAndroidChart to Vico (line/bar) + custom `Canvas` `PieChartView` (pie tabs) | — | ☐ |
-| TASK-31 | 🟡 | Manual Drive controls in Settings: "Back up now" (force overwrite) and "Wipe remote backup" (delete the App Data file) | — | ☐ |
+| TASK-31 | 🟡 | Manual Drive controls in Settings: "Back up now" (force overwrite) and "Wipe remote backup" (delete the App Data file) | — | ☑ |
 | TASK-32 | 🟡 | Bump AGP (and Gradle wrapper) to a version that officially supports `compileSdk = 35`; remove the `android.suppressUnsupportedCompileSdk` workaround | — | ☑ |
 | TASK-33 | 🟢 | Audit Kotlin 2.x / K2 + KSP + Hilt compatibility now that AGP 8.7.3 is in place | TASK-32 | ☐ |
 | TASK-34 | 🟡 | Nightly managed-AVD job for `connectedAndroidTest` — keep off the PR gate | TASK-16 | ☑ |
@@ -1879,7 +1879,71 @@ Once all six tabs render correctly with the new implementations:
 
 ---
 
-## 🟡 TASK-31 — Manual Drive controls: "Back up now" and "Wipe remote backup"
+## 🟡 TASK-31 — Manual Drive controls: "Back up now" and "Wipe remote backup" ☑ Done (2026-05-01)
+
+> **Outcome:** `BackupRepository` interface gains
+> `deleteRemoteBackup(): BackupResult`; `DriveBackupRepository`
+> implements via `findBackupFileId` + `remote.deleteBackup`, routed
+> through the same `withRetry` + `runTranslating` machinery as the
+> upload path so transient failures pick up TASK-07's retry budget for
+> free. The "no remote file" case short-circuits to
+> `BackupResult.Success` because the desired post-state ("no remote
+> snapshot") is already true. `DriveRemoteSource.deleteBackup(token,
+> fileId)` calls `client.files().delete(fileId).execute()`. New use
+> cases `PushBackupNowUseCase` (deliberately bypasses
+> `BackupScheduler` for synchronous-feeling feedback; only updates
+> `lastBackupAt` on `Success`) and `WipeRemoteBackupUseCase` (clears
+> `lastBackupAt = 0L` on `Success` so the UI's stale-timestamp hint
+> reverts). Both return `BackupResult` directly — the spec's
+> throw-based examples were pre-TASK-07. **Spec deviation noted**:
+> use cases return `BackupResult` instead of throwing per the
+> TASK-07 contract; otherwise faithful to the spec.
+>
+> `SettingsViewModel` gains the two use cases as constructor
+> dependencies, `isManualBackupRunning` / `isManualWipeRunning`
+> flags on `SettingsUiState`, four new `SettingsEvent` variants
+> (`BackupNowSucceeded` / `BackupNowFailed(@StringRes msgRes)` /
+> `WipeSucceeded` / `WipeFailed(@StringRes msgRes)`), and
+> `onPushBackupClicked` / `onConfirmWipeClicked` methods. The two
+> running flags are mutually-exclusive guards at the start of each
+> method — a duplicate tap on the same action is also a no-op.
+> Failure messages map per-action: `BackupResult.AuthRequired` →
+> `drive_auth_failed`; `Failure("Drive storage full")` →
+> `drive_storage_full`; other `Failure` reasons →
+> `drive_backup_now_failure` / `drive_wipe_failure`.
+>
+> `fragment_settings.xml` gains two `MaterialButton`s under
+> `text_last_backup` — primary tone "Back up now" and outlined
+> destructive-tone "Wipe remote backup" using `?attr/colorError` for
+> both `textColor` and `app:strokeColor`. Both rows hide via
+> `View.GONE` (not just disabled) when `driveEnabled = false`. Wipe
+> tap shows a `MaterialAlertDialog` (title / body / Cancel / Delete)
+> before invoking the use case. Snackbar feedback on every event.
+> `renderManualDriveControls` disables both buttons while either
+> running flag is true, so a slow push blocks wipe and vice versa.
+>
+> 10 new strings (`drive_backup_now_button`, `drive_wipe_button`,
+> `drive_wipe_confirm_title`, `drive_wipe_confirm_body`,
+> `drive_wipe_confirm_delete`, `drive_backup_now_success`,
+> `drive_wipe_success`, `drive_backup_now_failure`,
+> `drive_wipe_failure`, `drive_storage_full`) — all in
+> `values/strings.xml`, ready for TASK-15 i18n.
+>
+> 14 new JVM cases: 4 on `PushBackupNowUseCaseTest`, 4 on
+> `WipeRemoteBackupUseCaseTest`, 6 on the existing
+> `SettingsViewModelTest` (push success + auth + failure, wipe
+> success + failure, mutual-exclusion no-op). `FakeBackupRepository`
+> gains `nextDeleteResult` + `deleteCount`. `FakeDriveRemoteSource`
+> (both JVM and androidTest variants) implements the new
+> `deleteBackup` interface method. `ThrowingBackupRepository` inside
+> `SettingsViewModelTest` gains a `backupDelayMs` knob so the
+> mutual-exclusion test can hold the push in flight while the wipe
+> attempt should be ignored. New instrumented
+> `SettingsBackupControlsTest` (3 cases): both buttons GONE when
+> Drive disabled; both visible when enabled; tapping wipe shows the
+> confirmation dialog and Cancel dismisses without invoking the use
+> case. JVM unit-test count 299 → 313. The original task text is
+> preserved below.
 
 Drive auto-backup runs through WorkManager after every committed local change
 (`enqueueUniqueWork("drive_backup", REPLACE, …)`), but there is no way for the
@@ -2605,8 +2669,8 @@ UI change.
 ## Notes for Agents (TASK-22 to TASK-30 addendum)
 
 > Sequencing notes for **TASK-07, TASK-16, TASK-19, TASK-22, TASK-23,
-> TASK-24, TASK-25, TASK-28, TASK-29, TASK-34, TASK-36** are obsolete
-> — all eleven landed. The static-analysis CI gate (TASK-16) is in place; the SDK
+> TASK-24, TASK-25, TASK-28, TASK-29, TASK-31, TASK-34, TASK-36** are
+> obsolete — all twelve landed. The static-analysis CI gate (TASK-16) is in place; the SDK
 > bump to 35 (TASK-22) merged with no `connectedAndroidTest` matrix to
 > coordinate; TASK-23 → TASK-24 ran in the prescribed order; TASK-25
 > claimed Room v3 → v4 + `MIGRATION_3_4` and bumped `backup_version`

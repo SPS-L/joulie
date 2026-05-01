@@ -70,6 +70,10 @@ class SettingsFragment : Fragment() {
             if (isChecked) onUserToggledOn() else viewModel.onToggleDriveOff()
         }
 
+        // TASK-31: manual Drive controls
+        binding.buttonBackupNow.setOnClickListener { viewModel.onPushBackupClicked() }
+        binding.buttonWipeRemote.setOnClickListener { showWipeConfirmDialog() }
+
         // F1 row clicks
         binding.rowPrimaryMetric.setOnClickListener { showPrimaryMetricDialog() }
         binding.rowDistanceUnit.setOnClickListener { showDistanceUnitDialog() }
@@ -100,6 +104,7 @@ class SettingsFragment : Fragment() {
                         }
                         binding.switchDrive.isEnabled = !state.isAuthInFlight
                         binding.textLastBackup.text = formatLastBackup(state.lastBackupAt)
+                        renderManualDriveControls(state)
 
                         // F1 — render row summaries + enabled/disabled state
                         renderF1Rows(state)
@@ -118,11 +123,43 @@ class SettingsFragment : Fragment() {
                             is SettingsEvent.LaunchCsvShareIntent -> launchCsvShareIntent(ev.uri)
                             SettingsEvent.NavigateToWizard ->
                                 findNavController().navigate(R.id.action_settings_to_wizard)
+                            SettingsEvent.BackupNowSucceeded ->
+                                Snackbar.make(binding.root, R.string.drive_backup_now_success, Snackbar.LENGTH_SHORT).show()
+                            is SettingsEvent.BackupNowFailed ->
+                                Snackbar.make(binding.root, ev.msgRes, Snackbar.LENGTH_LONG).show()
+                            SettingsEvent.WipeSucceeded ->
+                                Snackbar.make(binding.root, R.string.drive_wipe_success, Snackbar.LENGTH_SHORT).show()
+                            is SettingsEvent.WipeFailed ->
+                                Snackbar.make(binding.root, ev.msgRes, Snackbar.LENGTH_LONG).show()
                         }
                     }
                 }
             }
         }
+    }
+
+    private fun renderManualDriveControls(state: SettingsUiState) {
+        val visibility = if (state.driveEnabled) View.VISIBLE else View.GONE
+        binding.buttonBackupNow.visibility = visibility
+        binding.buttonWipeRemote.visibility = visibility
+
+        // Mutual exclusion: a running operation disables the *other* button so a
+        // second tap can't stack a wipe on top of an in-flight push (or vice versa).
+        // The running button itself shows the spinner+disabled state.
+        val anyRunning = state.isManualBackupRunning || state.isManualWipeRunning
+        binding.buttonBackupNow.isEnabled = !anyRunning
+        binding.buttonWipeRemote.isEnabled = !anyRunning
+    }
+
+    private fun showWipeConfirmDialog() {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.drive_wipe_confirm_title)
+            .setMessage(R.string.drive_wipe_confirm_body)
+            .setPositiveButton(R.string.drive_wipe_confirm_delete) { _, _ ->
+                viewModel.onConfirmWipeClicked()
+            }
+            .setNegativeButton(R.string.common_cancel, null)
+            .show()
     }
 
     private fun renderF1Rows(state: SettingsUiState) {

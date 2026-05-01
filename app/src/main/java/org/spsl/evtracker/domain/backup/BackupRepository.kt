@@ -15,4 +15,15 @@ interface BackupRepository {
 
     /** Download evtracker_backup.json from the App Data folder. Returns null if no remote file. */
     suspend fun readRemoteBackup(): String?
+
+    /**
+     * Deletes the remote `evtracker_backup.json` snapshot from the App Data folder.
+     * Returns [BackupResult.Success] on completion (including when no file existed —
+     * the desired post-state is "no remote file", which is already true), and the
+     * usual auth / failure variants per the [backupCurrentData] contract.
+     *
+     * Drive must be authorised; the caller normally gates on
+     * [SettingsReader.driveEnabled] before invoking. (TASK-31)
+     */
+    suspend fun deleteRemoteBackup(): BackupResult
 }

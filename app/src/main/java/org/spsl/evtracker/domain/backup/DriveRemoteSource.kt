@@ -19,4 +19,7 @@ interface DriveRemoteSource {
 
     /** Downloads the body of fileId. */
     suspend fun downloadBackup(accessToken: String, fileId: String): ByteArray
+
+    /** Deletes [fileId] from the App Data folder. (TASK-31) */
+    suspend fun deleteBackup(accessToken: String, fileId: String)
 }

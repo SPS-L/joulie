@@ -313,14 +313,22 @@ class FakeBackupRepository(
     var remoteJson: String? = null,
     var nextBackupResult: org.spsl.evtracker.domain.backup.BackupResult =
         org.spsl.evtracker.domain.backup.BackupResult.Success,
+    var nextDeleteResult: org.spsl.evtracker.domain.backup.BackupResult =
+        org.spsl.evtracker.domain.backup.BackupResult.Success,
 ) : BackupRepository {
     var backupCurrentDataCount: Int = 0
+        private set
+    var deleteCount: Int = 0
         private set
     override suspend fun backupCurrentData(): org.spsl.evtracker.domain.backup.BackupResult {
         backupCurrentDataCount++
         return nextBackupResult
     }
     override suspend fun readRemoteBackup(): String? = remoteJson
+    override suspend fun deleteRemoteBackup(): org.spsl.evtracker.domain.backup.BackupResult {
+        deleteCount++
+        return nextDeleteResult
+    }
 }
 
 class FakeRestoreTransactionRunner(
@@ -473,6 +481,13 @@ class FakeDriveRemoteSource : DriveRemoteSource {
     override suspend fun downloadBackup(accessToken: String, fileId: String): ByteArray {
         consumeFailure()
         return body ?: throw IOException("no body for $fileId")
+    }
+
+    override suspend fun deleteBackup(accessToken: String, fileId: String) {
+        consumeFailure()
+        check(this.fileId == fileId) { "fileId mismatch: had=${this.fileId} got=$fileId" }
+        this.fileId = null
+        this.body = null
     }
 
     fun seed(jsonBytes: ByteArray) {

@@ -94,6 +94,28 @@ Locks in the TASK-19 orchestration: `BackupOutcomeReporter` translates each `Bac
 | `successAfterStreak_resetsCounter_andClearsBothChannels` | Counter 5 → 0; clearAll fires once |
 | `authRequired_doesNotFireChronicEvenAtThreshold` | `AuthRequired` increments counter past threshold but only fires the auth surface, never chronic |
 
+### 1.8 PushBackupNowUseCaseTest.kt
+
+Locks in the TASK-31 manual-push contract: `PushBackupNowUseCase` calls `BackupRepository.backupCurrentData()` and only updates `lastBackupAt` to the `NowProvider` value on `BackupResult.Success`. Failure paths leave the timestamp untouched so the UI's "Last backup at …" hint stays truthful.
+
+| Test | Description |
+|------|-------------|
+| `success_callsBackupOnce_andUpdatesLastBackupAt` | `Success` → backup called exactly once + `lastBackupAt = now` |
+| `authRequired_propagates_andDoesNotUpdateLastBackupAt` | `AuthRequired` returned + `lastBackupAt` stays null |
+| `failure_propagates_andDoesNotUpdateLastBackupAt` | `Failure("Drive storage full")` returned + `lastBackupAt` stays null |
+| `success_atDifferentNow_writesThatExactValue` | The exact `NowProvider.nowMillis()` value lands in `lastBackupAt` |
+
+### 1.9 WipeRemoteBackupUseCaseTest.kt
+
+Locks in the TASK-31 manual-wipe contract: `WipeRemoteBackupUseCase` calls `BackupRepository.deleteRemoteBackup()` and only clears `lastBackupAt` to `0L` on `BackupResult.Success`. Failure paths leave the timestamp at its previous value.
+
+| Test | Description |
+|------|-------------|
+| `success_callsDeleteOnce_andClearsLastBackupAt` | `Success` → delete called exactly once + `lastBackupAt = 0L` |
+| `authRequired_propagates_andDoesNotClearLastBackupAt` | `AuthRequired` returned + previous `lastBackupAt` preserved |
+| `failure_propagates_andDoesNotClearLastBackupAt` | `Failure("HTTP 500")` returned + previous `lastBackupAt` preserved |
+| `success_whenNoPriorTimestamp_writesZero` | Even with a null pre-state, `Success` normalises to `0L` so the empty-state hint reverts |
+
 ---
 
 ## 2. Room Integration Tests (in-memory DB)
@@ -344,6 +366,8 @@ adb install -r app/build/outputs/apk/release/app-release.apk
 | 11 | Settings → Export CSV | Share-sheet opens; chosen target receives a non-empty `.csv` with the correct header for the active distance unit |
 | 12 | Settings → About | About screen renders with version (e.g. `1.0.1`), SPS-Lab card with tappable links, MIT license, and the open-source-libraries card |
 | 13 | **TASK-19 backup notifications.** Settings → enable Drive backup, then put the device into airplane mode and trigger 3 charge-event saves to drive 3 backup failures in a row | On the 3rd failure, when the app is opened, the rationale dialog appears (Android 13+). Tap **Allow**, then **Allow** on the system prompt → channel `backup_status` shows the sticky "Drive backup failed — Tap to open Settings" notification. Tap it → app opens to Settings. Disable airplane mode and trigger another save → next backup succeeds → the chronic notification is cancelled. To verify the **Not now** path, repeat with a fresh install / re-grant cycle and decline; the rationale must never re-fire and notifications stay silent. Pre-13 devices skip the rationale (channel exists, permission implicit). |
+| 14 | **TASK-31 manual Drive controls.** Settings → with Drive enabled, observe two buttons under "Last backup": "Back up now" (primary) and "Wipe remote backup" (destructive outlined). Tap **Back up now** | Snackbar "Backup uploaded" appears within a few seconds; the "Last backup" timestamp advances. Verifying via Drive `files.list?spaces=appDataFolder` shows the file's `modifiedTime` updated. While the upload is in flight, the wipe button is disabled (mutual exclusion). |
+| 15 | **TASK-31 wipe.** Tap **Wipe remote backup** → confirmation dialog appears with title "Delete remote backup?" and the body explaining local data is unaffected. Tap **Delete** | Snackbar "Remote backup deleted" appears. Verifying via Drive `files.list?spaces=appDataFolder` returns no `evtracker_backup.json`. The "Last backup" timestamp reverts to its empty state ("Never"). Trigger any new charge save → the auto-backup worker re-creates the remote file (regression check). With Drive disabled (toggle off), both buttons disappear (View.GONE, not just disabled). |
 
 **On any failure:** capture `adb logcat *:E` from the moment of the crash,
 file an issue, and **do not publish the GitHub Release** — keep it in draft

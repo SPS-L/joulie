@@ -573,6 +573,28 @@ Restore notes:
 - Restore and skip are the only two outcomes when a remote snapshot exists. Merge is not supported.
 - After a successful restore, local data becomes the source of truth for all subsequent edits and backups.
 
+### Manual controls (TASK-31)
+
+In addition to the WorkManager-driven auto-backup, Settings exposes two
+manual actions, both visible only when `driveEnabled = true`:
+
+| Action | Use case | Bypasses WorkManager? | Side effect on `lastBackupAt` |
+|--------|----------|------------------------|-------------------------------|
+| **Back up now** | `PushBackupNowUseCase` | Yes — invokes `BackupRepository.backupCurrentData()` directly so the user gets synchronous-feeling feedback | Updates to `now` on `Success`; untouched otherwise |
+| **Wipe remote backup** | `WipeRemoteBackupUseCase` | Yes — invokes `BackupRepository.deleteRemoteBackup()` | Cleared to `0L` on `Success`; untouched otherwise |
+
+Both wrap the same `BackupResult` contract from §Error model. Failure mapping in `SettingsViewModel`:
+
+- `BackupResult.AuthRequired` → `R.string.drive_auth_failed`
+- `BackupResult.Failure("Drive storage full")` → `R.string.drive_storage_full`
+- Other `BackupResult.Failure` reasons → `R.string.drive_backup_now_failure` or `R.string.drive_wipe_failure` depending on the action
+
+The auto-backup worker contract is **unchanged** — manual push is one extra path, not a replacement; WorkManager still triggers on every committed local change. Wipe is a point-in-time delete, not an opt-out: the next committed local change re-enqueues the worker, which creates a fresh remote snapshot.
+
+`BackupRepository.deleteRemoteBackup()` short-circuits to `BackupResult.Success` when no remote file exists — the desired post-state ("no remote snapshot") is already true and a noisy error here would mask a clean outcome the user just asked for. Otherwise, it routes through the same `withRetry` + `runTranslating` machinery as the upload path, so transient failures on delete pick up TASK-07's retry budget.
+
+The wipe button is gated behind a `MaterialAlertDialog` confirmation. The two operations are mutually exclusive — `isManualBackupRunning` and `isManualWipeRunning` flags on `SettingsUiState` disable the *other* button while one is in flight, and a duplicate tap on the same action is also a no-op (we don't stack uploads or deletes).
+
 ### Auto-backup trigger
 - Queue a backup after every persisted change that affects the backup payload:
   - charge event create, edit, or committed delete
