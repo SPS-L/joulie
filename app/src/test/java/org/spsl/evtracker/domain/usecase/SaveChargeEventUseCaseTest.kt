@@ -17,6 +17,7 @@ import org.spsl.evtracker.testing.FakeChargeEventQueries
 import org.spsl.evtracker.testing.FakeChargeEventWriter
 import org.spsl.evtracker.testing.FakeLocationWriter
 import org.spsl.evtracker.testing.FakeNowProvider
+import org.spsl.evtracker.testing.FakeWidgetRefresher
 
 class SaveChargeEventUseCaseTest {
 
@@ -29,9 +30,10 @@ class SaveChargeEventUseCaseTest {
         val writer = FakeChargeEventWriter(queries.shareStore())
         val locationWriter = FakeLocationWriter()
         val scheduler = FakeBackupScheduler()
+        val widgetRefresher = FakeWidgetRefresher()
         val now = FakeNowProvider(nowMs)
-        val useCase = SaveChargeEventUseCase(queries, writer, locationWriter, scheduler, CostParser(), now)
-        return SaveSetup(useCase, queries, locationWriter, scheduler, now)
+        val useCase = SaveChargeEventUseCase(queries, writer, locationWriter, scheduler, widgetRefresher, CostParser(), now)
+        return SaveSetup(useCase, queries, locationWriter, scheduler, widgetRefresher, now)
     }
 
     private data class SaveSetup(
@@ -39,6 +41,7 @@ class SaveChargeEventUseCaseTest {
         val queries: FakeChargeEventQueries,
         val locationWriter: FakeLocationWriter,
         val scheduler: FakeBackupScheduler,
+        val widgetRefresher: FakeWidgetRefresher,
         val now: FakeNowProvider,
     )
 
@@ -59,6 +62,7 @@ class SaveChargeEventUseCaseTest {
         assertEquals(1, s.queries.current().size)
         assertEquals("Home", s.locationWriter.current().single().label)
         assertEquals(1, s.scheduler.enqueueCount)
+        assertEquals(1, s.widgetRefresher.refreshCount)
     }
 
     @Test

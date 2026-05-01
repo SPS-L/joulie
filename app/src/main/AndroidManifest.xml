@@ -51,5 +51,18 @@
             android:name="com.google.android.gms.version"
             android:value="@integer/google_play_services_version" />
 
+        <!-- TASK-12: home-screen widget showing the most recent charge for the active car. -->
+        <receiver
+            android:name=".widget.LastChargeWidget"
+            android:exported="false"
+            android:label="@string/widget_last_charge_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_last_charge_info" />
+        </receiver>
+
     </application>
 </manifest>

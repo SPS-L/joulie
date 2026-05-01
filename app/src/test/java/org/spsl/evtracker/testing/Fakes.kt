@@ -22,6 +22,7 @@ import org.spsl.evtracker.domain.repository.LocationWriter
 import org.spsl.evtracker.domain.repository.SettingsReader
 import org.spsl.evtracker.domain.repository.SettingsWriter
 import org.spsl.evtracker.domain.usecase.NowProvider
+import org.spsl.evtracker.domain.widget.WidgetRefresher
 import java.io.IOException
 
 /**
@@ -291,6 +292,14 @@ class FakeBackupScheduler : BackupScheduler {
     }
 }
 
+class FakeWidgetRefresher : WidgetRefresher {
+    var refreshCount: Int = 0
+        private set
+    override fun refresh() {
+        refreshCount++
+    }
+}
+
 class FakeBackupNotifier : BackupNotifier {
     var chronicCount: Int = 0
         private set
@@ -370,6 +379,7 @@ class FakeSaveChargeEventGateway {
     val locationWriter = FakeLocationWriter()
     val locationReader = FakeLocationReader()
     val backupScheduler = FakeBackupScheduler()
+    val widgetRefresher = FakeWidgetRefresher()
     val costParser = org.spsl.evtracker.domain.service.CostParser()
     val nowProvider = FakeNowProvider()
 
@@ -379,6 +389,7 @@ class FakeSaveChargeEventGateway {
             chargeEventWriter = writer,
             locationWriter = locationWriter,
             backupScheduler = backupScheduler,
+            widgetRefresher = widgetRefresher,
             costParser = costParser,
             now = nowProvider,
         )

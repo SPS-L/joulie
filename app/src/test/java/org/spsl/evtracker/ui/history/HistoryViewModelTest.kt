@@ -55,7 +55,7 @@ class HistoryViewModelTest {
         val writer = FakeChargeEventWriter(store)
         val scheduler = FakeBackupScheduler()
         val reader = FakeSettingsReader(activeCarIdInit = activeCarId, distanceUnitInit = distanceUnit)
-        val delete = DeleteChargeEventUseCase(writer, scheduler)
+        val delete = DeleteChargeEventUseCase(writer, scheduler, org.spsl.evtracker.testing.FakeWidgetRefresher())
         val vm = HistoryViewModel(queries, delete, reader)
         return VmFixture(vm, queries, writer, scheduler, store)
     }

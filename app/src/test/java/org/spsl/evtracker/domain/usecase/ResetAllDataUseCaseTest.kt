@@ -35,7 +35,7 @@ class ResetAllDataUseCaseTest {
             locStore.value = emptyList()
             carRepo.seed(emptyList())
         }
-        val useCase = ResetAllDataUseCase(runner, settings, scheduler)
+        val useCase = ResetAllDataUseCase(runner, settings, scheduler, org.spsl.evtracker.testing.FakeWidgetRefresher())
         return TestRig(useCase, runner, settings, recorder, eventStore, locStore, carRepo, scheduler)
     }
 

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    TASK-12: AppWidget metadata.
+    updatePeriodMillis="0" — no polling. The provider re-renders on demand
+    via WidgetRefresher.refresh() called from the snapshot-affecting use
+    cases (Save/Delete charge event, Add/Delete/Rename car, Restore, Reset).
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="110dp"
+    android:minHeight="110dp"
+    android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="0"
+    android:initialLayout="@layout/widget_last_charge"
+    android:widgetCategory="home_screen"
+    android:targetCellWidth="2"
+    android:targetCellHeight="2"
+    android:previewLayout="@layout/widget_last_charge"/>

@@ -34,6 +34,7 @@ Log every charge — odometer, kWh added, AC/DC, location, optional cost — and
 - **Charts** — efficiency trend, monthly kWh and cost, AC vs DC split, top locations.
 - **Google Drive backup** — optional, opt-in. Stored in the hidden App Data folder. Replace-or-skip restore on first enable; auto-backup after every committed local change. Surfaces failures via two notification channels (chronic-failure sticky after 3 consecutive misses; auth-required higher-importance card) — `POST_NOTIFICATIONS` is requested only after a real failure, never on launch. Settings exposes manual **Back up now** and **Wipe remote backup** buttons for when you want to force a sync or scrub the cloud copy.
 - **CSV export** — share via the Android share sheet.
+- **Home-screen widget** — 2×2 tile shows the active car's most recent charge: car name, relative date, kWh, efficiency, optional cost. Tap to open the dashboard.
 - **Material 3 theming** — Light / Dark / System; full M3 token system seeded from `#1565C0` with a `#FB8C00` "DC orange" tertiary ramp.
 - **Smart cost handling** — cost left at 0 or blank is stored as `NULL` and excluded from every cost statistic; mixed-currency periods hide cost stats with an explicit banner.
 
@@ -83,7 +84,7 @@ The debug APK lands at `app/build/outputs/apk/debug/app-debug.apk`.
 ### Tests
 
 ```bash
-./gradlew test                  # JVM unit tests (~313)
+./gradlew test                  # JVM unit tests (~332)
 ./gradlew connectedAndroidTest  # Espresso / Room — needs API 26+ device or emulator
 ```
 

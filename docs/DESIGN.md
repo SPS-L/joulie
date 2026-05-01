@@ -41,6 +41,7 @@
 | F14 | CSV export | All fields included, sharing via FileProvider |
 | F15 | Dark/Light/System theme | Material 3 DayNight |
 | F16 | Custom period analysis | Date-range picker (MaterialDatePicker) |
+| F17 | Home-screen widget | 2×2 tile showing the active car's most recent charge (TASK-12) |
 
 ---
 
@@ -657,6 +658,32 @@ Both notifications carry a `PendingIntent` built via `NavDeepLinkBuilder` that l
 Tapping **Allow** launches the system permission request. Tapping **Not now**, dismissing the dialog, or denying the system request all set the sticky `notificationPermissionDenied` flag — we **never** re-prompt. (If the user later enables notifications via system settings, the runtime check passes and notifications work; the in-app prompt just stays silent.)
 
 The 8 JVM cases on `BackupOutcomeReporterTest` cover: success resets the counter and clears notifications; first/second failures don't fire chronic; third fires; fourth keeps firing; AuthRequired fires the auth surface every time and increments the counter without triggering chronic; success after a streak resets; AuthRequired at the threshold doesn't trigger the chronic surface.
+
+---
+
+## 8a. Home-screen widget (TASK-12)
+
+A 2×2 `AppWidgetProvider`-based tile (`widget/LastChargeWidget`) renders the most recent charge event for the active car at a glance. Layout uses `RemoteViews`-only views — no Glance / Compose-runtime dependency was introduced.
+
+**Content (`Loaded` state):**
+
+- **Car name** — top line, ⚡ icon prefix, single-line ellipsised.
+- **Relative date** — "Today" / "Yesterday" / "N days ago" (2..6) / "N week(s) ago" (1 / 2..3) / `MMM d, yyyy` for events older than 28 days, via the platform formatter in the user's default locale.
+- **kWh added** — pulled directly from the latest event.
+- **Efficiency** — converted from canonical km/kWh (computed on the latest two events' odometer-delta, same convention as `StatsCalculator` in §7) to the user's `primaryMetric`: `km/kWh` / `kWh/100 km` / `mi/kWh`. Renders an em-dash when efficiency cannot be computed (single event, non-positive odometer delta, or zero kWh on the latest event).
+- **Cost** — `NumberFormat.getCurrencyInstance` formatted, hidden when `costTotal` or `currency` is null.
+
+**Empty state.** Active car unset OR no events for the active car → single centered TextView with `widget_empty_state`.
+
+**Tap target.** `PendingIntent.getActivity(MainActivity)` with `FLAG_ACTIVITY_NEW_TASK | FLAG_ACTIVITY_CLEAR_TOP` so the widget always lands on the dashboard from the user's perspective.
+
+**Refresh trigger.** A new narrow `domain/widget/WidgetRefresher` interface, bound to `data/widget/AndroidWidgetRefresher` in `WidgetModule`, is called from every snapshot-affecting use case alongside the existing `BackupScheduler.enqueueBackup()` call: `SaveChargeEventUseCase`, `DeleteChargeEventUseCase`, `AddCarUseCase`, `DeleteCarUseCase`, `RenameCarUseCase`, `ResetActiveCarDataUseCase`, `ResetAllDataUseCase` (`runCatching` isolated, so a failure can't stick the reset-in-progress flag), and `RestoreBackupUseCase` (both branches). The Android impl re-enters `onUpdate` via a self-broadcast (`ACTION_APPWIDGET_UPDATE` with `EXTRA_APPWIDGET_IDS`) instead of calling `updateAppWidget` directly so the platform's normal lifecycle still applies.
+
+**Hilt injection.** `AppWidgetProvider` is created by reflection by the platform and is not `@AndroidEntryPoint`-able. The provider grabs its `SettingsReader` / `CarReader` / `ChargeEventQueries` / `NowProvider` deps via `EntryPointAccessors.fromApplication(...)` from a new `LastChargeWidgetEntryPoint` interface.
+
+**Manifest.** A `<receiver android:name=".widget.LastChargeWidget" android:exported="false">` with the `APPWIDGET_UPDATE` intent filter and metadata pointing at `res/xml/widget_last_charge_info.xml` (110×110 dp min, 2×2 cells, `updatePeriodMillis="0"` since refreshes are push-based, not polling).
+
+**Pure-domain helper.** All math + relative-date bucketing lives in `domain/widget/LastChargeWidgetSnapshot.compute(activeCar, events, primaryMetric, nowMillis)`, kept JVM-testable. 18 cases on `LastChargeWidgetSnapshotTest` cover empty / single-event / two-event efficiency in all three metrics, negative-odometer / zero-kWh fallbacks, unsorted-input sorting, cost pass-through, every relative-date bucket, and `ChargeType` propagation.
 
 ---
 

@@ -19,7 +19,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-09 | 🟢 | CSV export of charge events with efficiency column, date-range picker | — | ☐ |
 | TASK-10 | 🟢 | In-app About / Info screen with SPS-Lab acknowledgment | — | ☑ |
 | TASK-11 | 🟡 | Odometer regression detection UX improvement | — | ☑ |
-| TASK-12 | 🟡 | Widget: last-charge summary on home screen | — | ☐ |
+| TASK-12 | 🟡 | Widget: last-charge summary on home screen | — | ☑ |
 | TASK-13 | 🟢 | Charging session timer / live session mode | — | ☐ |
 | TASK-14 | 🟡 | Battery capacity degradation tracker | — | ☑ |
 | TASK-15 | 🟢 | Localisation (i18n) foundation | TASK-16 | ☐ |
@@ -644,7 +644,63 @@ attempts to save.
 
 ---
 
-## 🟡 TASK-12 — Home Screen Widget: Last Charge Summary
+## 🟡 TASK-12 — Home Screen Widget: Last Charge Summary ☑ Done (2026-05-01)
+
+> **Outcome:** new `widget/LastChargeWidget` `AppWidgetProvider` shows
+> car name, relative event date ("Today" / "Yesterday" / "N days ago"
+> / "N week(s) ago" / absolute "MMM d, yyyy" past 28 days), kWh added,
+> efficiency in the user's preferred metric (km/kWh, kWh/100 km, or
+> mi/kWh — converted from the canonical km/kWh on the latest event's
+> odometer-delta), cost (formatted via `NumberFormat.getCurrencyInstance`
+> when `costTotal` and `currency` are both set, otherwise hidden), and
+> a generic ⚡ icon. Empty state shows the
+> `widget_empty_state` string when the active car is unset or has no
+> charge events. Layout is `RemoteViews`-only; tap intent uses
+> `PendingIntent.getActivity(MainActivity)` so the widget lands on the
+> Dashboard.
+>
+> Pure-domain `LastChargeWidgetSnapshot.compute(...)` does the heavy
+> lifting (sort, latest-event pick, efficiency conversion, relative
+> date bucketing) and stays JVM-testable — no `Calendar` or
+> `RemoteViews` reach into the helper. Inputs are an optional
+> `CarEntity?`, the unsorted events list, the user's `primaryMetric`
+> token, and `nowMillis`. 18 new JVM cases on
+> `LastChargeWidgetSnapshotTest`.
+>
+> Update plumbing follows the existing `BackupScheduler` pattern: new
+> narrow `domain/widget/WidgetRefresher` interface; bound to
+> `data/widget/AndroidWidgetRefresher` in a new `WidgetModule`.
+> Refresh is called from every snapshot-affecting use case —
+> `SaveChargeEventUseCase`, `DeleteChargeEventUseCase`,
+> `AddCarUseCase`, `DeleteCarUseCase`, `RenameCarUseCase`,
+> `ResetActiveCarDataUseCase`, `ResetAllDataUseCase` (`runCatching`
+> isolated like the post-reset backup enqueue), and
+> `RestoreBackupUseCase` (both the `null` remote and successful
+> replace branches). The Android impl re-enters `onUpdate` via a
+> self-broadcast to `LastChargeWidget` (instead of calling
+> `updateAppWidget` directly) so the platform's normal lifecycle
+> still applies. Hilt entry point
+> (`LastChargeWidgetEntryPoint`) gives the provider its
+> `SettingsReader` / `CarReader` / `ChargeEventQueries` /
+> `NowProvider` deps via `EntryPointAccessors.fromApplication` since
+> `AppWidgetProvider` isn't `@AndroidEntryPoint`-able.
+>
+> Manifest gains a `<receiver android:name=".widget.LastChargeWidget">`
+> with `APPWIDGET_UPDATE` intent filter and metadata pointing at
+> `res/xml/widget_last_charge_info.xml` (110×110 dp min, 2×2 target
+> cells, `updatePeriodMillis="0"` since refreshes are push-based).
+>
+> 6 new strings under the `widget_*` prefix (i18n-ready for TASK-15).
+> `Fakes.kt` gains `FakeWidgetRefresher`. Use case tests updated to
+> verify `widgetRefresher.refresh()` fires once per commit alongside
+> the existing backup-scheduler assertions. The instrumented test
+> from the spec (verify `RemoteViews` populated correctly) is
+> deferred — `RemoteViews` content assertion needs `LayoutInflater`
+> reflection that's brittle to API changes; the snapshot helper is
+> already exhaustively unit-tested. Plain Espresso wouldn't add
+> coverage. Empirical verification lives in `docs/TEST_PLAN.md §5b`
+> (release-APK smoke step). JVM unit-test count 313 → 332. The
+> original task text is preserved below.
 
 Add a `AppWidgetProvider`-based Android home screen widget that displays
 a compact summary of the most recent charge event for the active car.
@@ -2676,9 +2732,9 @@ UI change.
 
 ## Notes for Agents (TASK-22 to TASK-30 addendum)
 
-> Sequencing notes for **TASK-07, TASK-16, TASK-19, TASK-22, TASK-23,
-> TASK-24, TASK-25, TASK-28, TASK-29, TASK-31, TASK-34, TASK-36** are
-> obsolete — all twelve landed. The static-analysis CI gate (TASK-16) is in place; the SDK
+> Sequencing notes for **TASK-07, TASK-12, TASK-16, TASK-19, TASK-22,
+> TASK-23, TASK-24, TASK-25, TASK-28, TASK-29, TASK-31, TASK-34,
+> TASK-36** are obsolete — all thirteen landed. The static-analysis CI gate (TASK-16) is in place; the SDK
 > bump to 35 (TASK-22) merged with no `connectedAndroidTest` matrix to
 > coordinate; TASK-23 → TASK-24 ran in the prescribed order; TASK-25
 > claimed Room v3 → v4 + `MIGRATION_3_4` and bumped `backup_version`

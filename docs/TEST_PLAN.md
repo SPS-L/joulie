@@ -116,6 +116,31 @@ Locks in the TASK-31 manual-wipe contract: `WipeRemoteBackupUseCase` calls `Back
 | `failure_propagates_andDoesNotClearLastBackupAt` | `Failure("HTTP 500")` returned + previous `lastBackupAt` preserved |
 | `success_whenNoPriorTimestamp_writesZero` | Even with a null pre-state, `Success` normalises to `0L` so the empty-state hint reverts |
 
+### 1.10 LastChargeWidgetSnapshotTest.kt
+
+Locks in the TASK-12 widget snapshot helper. The helper picks the latest event by `eventDate` (sorts the input — caller may pass unsorted), computes efficiency from the latest event's odometer-delta vs the previous one (consistent with `StatsCalculator`'s convention from `docs/DESIGN.md §7`), converts to the user's primary metric, and buckets the relative date.
+
+| Test | Description |
+|------|-------------|
+| `nullCar_returnsEmpty` | `activeCar = null` → `Empty` regardless of events |
+| `emptyEvents_returnsEmpty` | non-null car + empty list → `Empty` |
+| `singleEvent_loadedButEfficiencyNull` | 1 event renders, but efficiency is null (need ≥ 2 events for an odometer-delta) |
+| `twoEvents_kmPerKwh_correct` | 6.2 km/kWh from a 310 km / 50 kWh delta |
+| `twoEvents_kwhPer100km_convertsCorrectly` | 6.2 km/kWh → 16.13 kWh/100 km |
+| `twoEvents_miPerKwh_convertsCorrectly` | 6.2 km/kWh → 3.85 mi/kWh via `UnitConverter` |
+| `twoEvents_negativeOdometerDelta_efficiencyNull` | Odometer goes backwards → efficiency null |
+| `twoEvents_zeroKwhAdded_efficiencyNull` | Latest event with `kwhAdded = 0` → efficiency null (no division) |
+| `unsortedEvents_picksLatestByEventDate` | Caller may pass events in any order; helper sorts internally |
+| `cost_passesThrough_whenSet` | `costTotal` + `currency` both round-trip into the snapshot |
+| `cost_null_whenNotSet` | Missing cost → null in snapshot, widget hides the row |
+| `relativeDate_today` | Same calendar day → "Today" |
+| `relativeDate_yesterday` | 1 day delta → "Yesterday" |
+| `relativeDate_threeDaysAgo` | 3 days → "3 days ago" |
+| `relativeDate_oneWeekAgo_singular` | Exactly 7 days → "1 week ago" (singular) |
+| `relativeDate_threeWeeksAgo` | 21 days → "3 weeks ago" |
+| `relativeDate_overFourWeeks_fallsBackToAbsoluteDate` | > 28 days → absolute "MMM d, yyyy" via locale formatter |
+| `chargeType_AC_propagates`, `chargeType_DC_FAST_propagates` | Latest event's `ChargeType` round-trips through |
+
 ---
 
 ## 2. Room Integration Tests (in-memory DB)
@@ -368,6 +393,7 @@ adb install -r app/build/outputs/apk/release/app-release.apk
 | 13 | **TASK-19 backup notifications.** Settings → enable Drive backup, then put the device into airplane mode and trigger 3 charge-event saves to drive 3 backup failures in a row | On the 3rd failure, when the app is opened, the rationale dialog appears (Android 13+). Tap **Allow**, then **Allow** on the system prompt → channel `backup_status` shows the sticky "Drive backup failed — Tap to open Settings" notification. Tap it → app opens to Settings. Disable airplane mode and trigger another save → next backup succeeds → the chronic notification is cancelled. To verify the **Not now** path, repeat with a fresh install / re-grant cycle and decline; the rationale must never re-fire and notifications stay silent. Pre-13 devices skip the rationale (channel exists, permission implicit). |
 | 14 | **TASK-31 manual Drive controls.** Settings → with Drive enabled, observe two buttons under "Last backup": "Back up now" (primary) and "Wipe remote backup" (destructive outlined). Tap **Back up now** | Snackbar "Backup uploaded" appears within a few seconds; the "Last backup" timestamp advances. Verifying via Drive `files.list?spaces=appDataFolder` shows the file's `modifiedTime` updated. While the upload is in flight, the wipe button is disabled (mutual exclusion). |
 | 15 | **TASK-31 wipe.** Tap **Wipe remote backup** → confirmation dialog appears with title "Delete remote backup?" and the body explaining local data is unaffected. Tap **Delete** | Snackbar "Remote backup deleted" appears. Verifying via Drive `files.list?spaces=appDataFolder` returns no `evtracker_backup.json`. The "Last backup" timestamp reverts to its empty state ("Never"). Trigger any new charge save → the auto-backup worker re-creates the remote file (regression check). With Drive disabled (toggle off), both buttons disappear (View.GONE, not just disabled). |
+| 16 | **TASK-12 widget.** Long-press the home screen → Widgets → search "EV Tracker" → drag the **Last charge** 2×2 widget to the home screen. With no charge events: empty state renders ("No charges logged yet."). Save a charge event in the app → switch back to the home screen | The widget refreshes within a second showing the active car name, "Today", kWh, efficiency in the configured primary metric, and (if cost was entered) the formatted currency line. Tap the widget → the app opens to the dashboard. Add a second charge event with the odometer advanced → efficiency value updates to a real number. Wipe all data via **Settings → Reset all** → the widget reverts to the empty state. Switch the primary metric in Settings → the widget's efficiency unit follows on the next refresh. |
 
 **On any failure:** capture `adb logcat *:E` from the moment of the crash,
 file an issue, and **do not publish the GitHub Release** — keep it in draft

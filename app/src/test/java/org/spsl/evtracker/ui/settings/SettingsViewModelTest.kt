@@ -71,6 +71,7 @@ class SettingsViewModelTest {
         val backupRepo = ThrowingBackupRepository(remoteJson, readThrows)
         val scheduler = FakeBackupScheduler()
         val workManager = mock<WorkManager>()
+        val widgetRefresher = org.spsl.evtracker.testing.FakeWidgetRefresher()
         val restoreUseCase = RestoreBackupUseCase(
             backupRepository = backupRepo,
             backupSerializer = org.spsl.evtracker.domain.service.BackupSerializer(),
@@ -81,6 +82,7 @@ class SettingsViewModelTest {
             locationReader = FakeLocationReader(),
             settingsWriter = writer,
             backupScheduler = scheduler,
+            widgetRefresher = widgetRefresher,
             now = org.spsl.evtracker.testing.FakeNowProvider(),
         )
         val locationReader = FakeLocationReader(seededLocations)
@@ -90,9 +92,9 @@ class SettingsViewModelTest {
         val chargeEventQueries = FakeChargeEventQueries(chargeEventStore)
         val chargeEventWriter = FakeChargeEventWriter(chargeEventStore)
         val csvSink = FakeCsvFileSink()
-        val resetActive = ResetActiveCarDataUseCase(chargeEventWriter, scheduler)
+        val resetActive = ResetActiveCarDataUseCase(chargeEventWriter, scheduler, widgetRefresher)
         val resetRunner = FakeDataResetTransactionRunner()
-        val resetAll = ResetAllDataUseCase(resetRunner, writer, scheduler)
+        val resetAll = ResetAllDataUseCase(resetRunner, writer, scheduler, widgetRefresher)
         val exportCsv = ExportCsvUseCase(carReader, chargeEventQueries, csvSink)
         val pushBackupNow = PushBackupNowUseCase(backupRepo, writer, org.spsl.evtracker.testing.FakeNowProvider(time = 1_700_000_000_000L))
         val wipeRemoteBackup = WipeRemoteBackupUseCase(backupRepo, writer)

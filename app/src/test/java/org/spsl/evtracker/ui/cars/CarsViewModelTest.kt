@@ -49,9 +49,10 @@ class CarsViewModelTest {
         val reader = FakeSettingsReader(activeCarIdInit = activeCarId)
         val writer = FakeSettingsWriter()
         val scheduler = FakeBackupScheduler()
-        val add = AddCarUseCase(repo, reader, writer, scheduler, FakeNowProvider())
-        val rename = RenameCarUseCase(repo, scheduler)
-        val delete = DeleteCarUseCase(repo, repo, reader, writer, scheduler)
+        val widgetRefresher = org.spsl.evtracker.testing.FakeWidgetRefresher()
+        val add = AddCarUseCase(repo, reader, writer, scheduler, widgetRefresher, FakeNowProvider())
+        val rename = RenameCarUseCase(repo, scheduler, widgetRefresher)
+        val delete = DeleteCarUseCase(repo, repo, reader, writer, scheduler, widgetRefresher)
         val vm = CarsViewModel(repo, reader, writer, add, rename, delete)
         return VmFixture(vm, repo, writer, scheduler)
     }

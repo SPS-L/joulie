@@ -14,7 +14,7 @@ class RenameCarUseCaseTest {
     fun nameBlank_returnsError() = runTest {
         val cars = FakeCarRepository(initial = listOf(CarEntity(id = 1L, name = "Old", createdAt = 0L)))
         val scheduler = FakeBackupScheduler()
-        val useCase = RenameCarUseCase(cars, scheduler)
+        val useCase = RenameCarUseCase(cars, scheduler, org.spsl.evtracker.testing.FakeWidgetRefresher())
         val result = useCase(carId = 1L, newName = "")
         assertTrue(result is RenameCarUseCase.Result.NameBlank)
         assertEquals("Old", cars.current().single().name)
@@ -25,7 +25,7 @@ class RenameCarUseCaseTest {
     fun success_renamesAndEnqueues() = runTest {
         val cars = FakeCarRepository(initial = listOf(CarEntity(id = 1L, name = "Old", createdAt = 0L)))
         val scheduler = FakeBackupScheduler()
-        val useCase = RenameCarUseCase(cars, scheduler)
+        val useCase = RenameCarUseCase(cars, scheduler, org.spsl.evtracker.testing.FakeWidgetRefresher())
         val result = useCase(carId = 1L, newName = "New")
         assertTrue(result is RenameCarUseCase.Result.Success)
         assertEquals("New", cars.current().single().name)
@@ -35,7 +35,7 @@ class RenameCarUseCaseTest {
     @Test
     fun nameTrimmed() = runTest {
         val cars = FakeCarRepository(initial = listOf(CarEntity(id = 1L, name = "Old", createdAt = 0L)))
-        val useCase = RenameCarUseCase(cars, FakeBackupScheduler())
+        val useCase = RenameCarUseCase(cars, FakeBackupScheduler(), org.spsl.evtracker.testing.FakeWidgetRefresher())
         useCase(carId = 1L, newName = "  Trimmed  ")
         assertEquals("Trimmed", cars.current().single().name)
     }
