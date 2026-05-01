@@ -151,8 +151,21 @@ class ChartsTabFragment : Fragment() {
 
         chart.xAxis.valueFormatter = ChartStyling.dateLabelFormatter(windowStart, state.period)
         chart.data = LineData(capacitySet)
-        chart.invalidate()
-        container.addView(chart)
+        if (!firstRenderConsumed) {
+            chart.animateY(400)
+            firstRenderConsumed = true
+        }
+        // Pre-fix: this called `addView(chart)` with no LayoutParams, which
+        // left the chart at WRAP_CONTENT inside a FrameLayout container and
+        // crashed during measure when the data list had > 0 entries. Match
+        // the MATCH_PARENT pattern used by every other render method.
+        container.addView(
+            chart,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT,
+            ),
+        )
     }
 
     private fun renderTrend(
@@ -340,6 +353,9 @@ class ChartsTabFragment : Fragment() {
         chart.centerText = resources.getQuantityString(
             R.plurals.charts_acdc_count_center, total, total,
         )
+        // Theme-aware centerText must run AFTER `centerText = ...` so the
+        // PieChartRenderer's paint cache is in a steady state.
+        ChartStyling.applyPieCenterTextColor(chart)
         subtitle.text = getString(
             R.string.charts_acdc_kwh_subtitle, charts.acDc.acKwh, charts.acDc.dcKwh,
         )

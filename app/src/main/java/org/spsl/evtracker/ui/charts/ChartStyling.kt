@@ -72,24 +72,28 @@ object ChartStyling {
     }
 
     /**
-     * Apply theme-aware axis and legend colors to any MPAndroidChart so its
-     * labels stay readable under both Light and Dark M3 themes. Called by
-     * each `configureXxxChart` helper after the basic chart shape is set.
+     * Apply theme-aware axis and legend colors to a `BarLineChartBase`
+     * (LineChart, BarChart, etc.) so labels and gridlines stay readable
+     * under both Light and Dark M3 themes. Called by `configureLineChart`
+     * and `configureBarChart` after the basic chart shape is set.
+     *
+     * **Not for PieChart**: pie charts have no functional x/y axes — even
+     * though the base `Chart` class allocates a default `XAxis` instance,
+     * touching it on the pie path triggered crashes in some MPAndroidChart
+     * code paths. Pies handle their own theming inside `configurePieChart`.
      */
-    private fun applyThemeAwareAxisColors(chart: com.github.mikephil.charting.charts.Chart<*>) {
+    private fun applyThemeAwareAxisColors(chart: com.github.mikephil.charting.charts.BarLineChartBase<*>) {
         val colors = resolveAxisColors(chart.context)
         chart.legend.textColor = colors.text
         chart.xAxis.textColor = colors.text
         chart.xAxis.gridColor = colors.grid
         chart.xAxis.axisLineColor = colors.grid
-        if (chart is com.github.mikephil.charting.charts.BarLineChartBase<*>) {
-            chart.axisLeft.textColor = colors.text
-            chart.axisLeft.gridColor = colors.grid
-            chart.axisLeft.axisLineColor = colors.grid
-            chart.axisRight.textColor = colors.text
-            chart.axisRight.gridColor = colors.grid
-            chart.axisRight.axisLineColor = colors.grid
-        }
+        chart.axisLeft.textColor = colors.text
+        chart.axisLeft.gridColor = colors.grid
+        chart.axisLeft.axisLineColor = colors.grid
+        chart.axisRight.textColor = colors.text
+        chart.axisRight.gridColor = colors.grid
+        chart.axisRight.axisLineColor = colors.grid
     }
 
     fun configureLineChart(chart: LineChart) {
@@ -132,10 +136,20 @@ object ChartStyling {
         chart.setEntryLabelColor(Color.WHITE)
         chart.isRotationEnabled = false
         chart.setHoleColor(Color.TRANSPARENT)
-        // Hole-text (PieChart.centerText) sits on the surface, not on a slice
-        // — must follow the theme so it's readable in dark mode.
+        // PieChart has no x/y axes to retint — only the legend text needs to
+        // follow the theme. centerText (when set by the caller) is retinted
+        // via `applyPieCenterTextColor` after `chart.centerText = ...`.
+        chart.legend.textColor = resolveAxisColors(chart.context).text
+    }
+
+    /**
+     * Apply the theme-aware on-surface color to a PieChart's center-text
+     * paint. Call this **after** `chart.centerText = ...` so the renderer
+     * is in a steady state. Calling it on a PieChart whose centerText is
+     * blank is a harmless no-op visually.
+     */
+    fun applyPieCenterTextColor(chart: PieChart) {
         chart.setCenterTextColor(resolveAxisColors(chart.context).text)
-        applyThemeAwareAxisColors(chart)
     }
 
     /** Formatter for monthly bar charts. Bars store the bucket *index* in
