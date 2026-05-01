@@ -121,7 +121,8 @@ class SettingsViewModelTest {
         var remoteJson: String? = null,
         var throwOnRead: Throwable? = null,
     ) : org.spsl.evtracker.domain.backup.BackupRepository {
-        override suspend fun backupCurrentData() {}
+        override suspend fun backupCurrentData(): org.spsl.evtracker.domain.backup.BackupResult =
+            org.spsl.evtracker.domain.backup.BackupResult.Success
         override suspend fun readRemoteBackup(): String? {
             throwOnRead?.let { throw it }
             return remoteJson

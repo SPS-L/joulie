@@ -64,6 +64,14 @@ android {
         buildConfig = true
     }
 
+    testOptions {
+        // Let JVM unit tests call android.util.Log without throwing
+        // "Method e in android.util.Log not mocked" — TASK-07's
+        // DriveBackupRepository logs ERROR-level for non-recoverable
+        // failures, and the JVM tests exercise those branches.
+        unitTests.isReturnDefaultValues = true
+    }
+
     lint {
         abortOnError = true
         checkReleaseBuilds = true
