@@ -39,6 +39,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-29 | 🟢 | Add explicit `debug` build type with `applicationIdSuffix` and `BuildConfig` flags | — | ☑ |
 | TASK-30 | 🟢 | Migrate from MPAndroidChart to Vico (line/bar) + custom `Canvas` `PieChartView` (pie tabs) | — | ☐ |
 | TASK-31 | 🟡 | Manual Drive controls in Settings: "Back up now" (force overwrite) and "Wipe remote backup" (delete the App Data file) | — | ☐ |
+| TASK-32 | 🟡 | Bump AGP (and Gradle wrapper) to a version that officially supports `compileSdk = 35`; remove the `android.suppressUnsupportedCompileSdk` workaround | — | ☐ |
 
 **Priority legend:** 🔴 High (architecture/data safety) · 🟡 Medium (robustness/UX) · 🟢 Low (new feature)  
 **Status legend:** ☐ open · ☑ done · ☒ closed (premise no longer holds)  
@@ -1816,6 +1817,80 @@ The change is complete when **all** of the following hold:
    auto-backup worker, recreating the file (regression check).
 7. Mutual-exclusion holds: kicking off a slow push and then tapping wipe
    leaves wipe disabled until push completes.
+
+---
+
+## 🟡 TASK-32 — Bump AGP + Gradle wrapper for official `compileSdk = 35` support
+
+After TASK-22 merged (`compileSdk` and `targetSdk` set to 35), AGP 8.2.0
+emits two warnings on every build:
+
+```
+Warning: SDK processing. This version only understands SDK XML versions
+up to 3 but an SDK XML file of version 4 was encountered. …
+
+WARNING: We recommend using a newer Android Gradle plugin to use
+compileSdk = 35
+
+This Android Gradle plugin (8.2.0) was tested up to compileSdk = 34.
+```
+
+Both are silenced today by `android.suppressUnsupportedCompileSdk=35` in
+`gradle.properties` (added 2026-05-01). The build is functionally fine —
+TASK-22's empirical probe verified `:app:assembleDebug`,
+`:app:assembleRelease`, R8 minification, and `lintVitalRelease` all
+succeed. The SDK XML v4 warning is parser noise; AGP falls back gracefully.
+
+This task is the *proper* fix: bump AGP (and Gradle wrapper) to a version
+that officially supports `compileSdk = 35` and remove the workaround.
+
+### Scope
+
+1. **`gradle/libs.versions.toml`:** bump `agp = "8.2.0"` to a version
+   ≥ 8.6.0. AGP 8.7.x is the latest stable 8.7 line at time of writing;
+   confirm Hilt 2.50, KSP 1.9.21-1.0.16, and Kotlin 1.9.21 compatibility
+   before picking the exact version. AGP 8.6 needs Gradle 8.7+;
+   AGP 8.7 needs Gradle 8.9+. The Android docs' AGP↔Gradle compatibility
+   table is the source of truth.
+2. **`gradle/wrapper/gradle-wrapper.properties`:** bump `distributionUrl`
+   from `gradle-8.4-bin.zip` to a wrapper version that satisfies the AGP
+   requirement (8.7 or 8.9 depending on AGP choice).
+3. **`gradle.properties`:** remove the
+   `android.suppressUnsupportedCompileSdk=35` line and the comment block
+   above it; verify the build no longer emits either warning.
+4. **CI smoke:** push the branch and confirm
+   `.github/workflows/ci.yml` still passes (ktlintCheck, `:app:lint`,
+   `:app:testDebugUnitTest`, `:app:assembleRelease`).
+5. **Hilt / KSP regression check:** Hilt 2.50 + KSP 1.9.21-1.0.16 are
+   known-good with AGP 8.2.0; AGP 8.6+ may surface KSP plugin order
+   warnings or new lint rules. Triage anything that fires.
+6. **Kotlin/KSP version coordination:** AGP 8.7+ may want Kotlin 1.9.24+
+   or 2.0.x. Bumping Kotlin is its own risk surface — prefer staying on
+   1.9.21 if the chosen AGP version permits it; otherwise bump together
+   in this task and document the new Kotlin/KSP versions.
+7. **Lint baseline:** if AGP's bundled Lint version changes, new lint
+   issues may surface. Add to `app/lint-baseline.xml` only if they're
+   pre-existing offenses unrelated to the AGP bump; fix anything new
+   that the AGP bump itself introduced.
+
+### Out of scope
+
+- **Kotlin 2.x migration.** Even if AGP 8.7+ accepts Kotlin 2.x, the K2
+  compiler is its own multi-day investigation. Stay on Kotlin 1.9.x for
+  this task.
+- **Removing the `android.useAndroidX=true` / `nonTransitiveRClass=true`
+  flags.** Those are unrelated.
+
+### Acceptance
+
+- `./gradlew :app:assembleDebug :app:assembleRelease` runs with
+  **zero** AGP-version warnings.
+- `gradle.properties` no longer contains
+  `android.suppressUnsupportedCompileSdk`.
+- The 245 JVM unit tests still pass; `:app:assembleDebugAndroidTest`
+  still compiles; CI workflow stays green.
+- `CLAUDE.md` Build & Test section updates the AGP/Gradle versions in
+  the same paragraph that mentions Build Tools 35.
 
 ---
 
