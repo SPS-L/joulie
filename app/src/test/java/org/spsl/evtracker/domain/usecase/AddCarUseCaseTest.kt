@@ -11,6 +11,7 @@ import org.spsl.evtracker.testing.FakeCarRepository
 import org.spsl.evtracker.testing.FakeNowProvider
 import org.spsl.evtracker.testing.FakeSettingsReader
 import org.spsl.evtracker.testing.FakeSettingsWriter
+import org.spsl.evtracker.testing.FakeWidgetRefresher
 
 class AddCarUseCaseTest {
 
@@ -23,7 +24,7 @@ class AddCarUseCaseTest {
         val settingsReader = FakeSettingsReader(activeCarIdInit = activeCarId)
         val settingsWriter = FakeSettingsWriter()
         val scheduler = FakeBackupScheduler()
-        val useCase = AddCarUseCase(cars, settingsReader, settingsWriter, scheduler, FakeNowProvider(nowMs))
+        val useCase = AddCarUseCase(cars, settingsReader, settingsWriter, scheduler, FakeWidgetRefresher(), FakeNowProvider(nowMs))
         return Quadruple(useCase, cars, settingsWriter, scheduler)
     }
 

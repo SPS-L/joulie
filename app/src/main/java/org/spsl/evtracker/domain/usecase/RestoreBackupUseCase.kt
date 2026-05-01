@@ -13,6 +13,7 @@ import org.spsl.evtracker.domain.repository.ChargeEventQueries
 import org.spsl.evtracker.domain.repository.LocationReader
 import org.spsl.evtracker.domain.repository.SettingsWriter
 import org.spsl.evtracker.domain.service.BackupSerializer
+import org.spsl.evtracker.domain.widget.WidgetRefresher
 import javax.inject.Inject
 
 class RestoreBackupUseCase @Inject constructor(
@@ -25,6 +26,7 @@ class RestoreBackupUseCase @Inject constructor(
     private val locationReader: LocationReader,
     private val settingsWriter: SettingsWriter,
     private val backupScheduler: BackupScheduler,
+    private val widgetRefresher: WidgetRefresher,
     private val now: NowProvider,
 ) {
     suspend operator fun invoke(): RestoreResult {
@@ -32,6 +34,7 @@ class RestoreBackupUseCase @Inject constructor(
         if (json == null) {
             settingsWriter.setDriveEnabled(true)
             backupScheduler.enqueueBackup()
+            widgetRefresher.refresh()
             return RestoreResult.NoRemoteBackup
         }
 
@@ -52,6 +55,7 @@ class RestoreBackupUseCase @Inject constructor(
 
         settingsWriter.setDriveEnabled(true)
         backupScheduler.enqueueBackup()
+        widgetRefresher.refresh()
 
         return RestoreResult.Success(
             carCount = newCars.size,

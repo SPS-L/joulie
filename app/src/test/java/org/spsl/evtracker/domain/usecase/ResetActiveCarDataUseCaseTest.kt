@@ -11,6 +11,7 @@ import org.spsl.evtracker.data.local.entity.ChargeEventEntity
 import org.spsl.evtracker.testing.FakeBackupScheduler
 import org.spsl.evtracker.testing.FakeChargeEventQueries
 import org.spsl.evtracker.testing.FakeChargeEventWriter
+import org.spsl.evtracker.testing.FakeWidgetRefresher
 
 class ResetActiveCarDataUseCaseTest {
 
@@ -29,7 +30,7 @@ class ResetActiveCarDataUseCaseTest {
         val queries = FakeChargeEventQueries(store)
         val writer = FakeChargeEventWriter(store)
         val scheduler = FakeBackupScheduler()
-        return Triple(ResetActiveCarDataUseCase(writer, scheduler), queries, scheduler)
+        return Triple(ResetActiveCarDataUseCase(writer, scheduler, FakeWidgetRefresher()), queries, scheduler)
     }
 
     @Test fun invoke_deletesEventsForGivenCarOnly() = runTest {

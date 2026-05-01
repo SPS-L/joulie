@@ -94,6 +94,14 @@
     <string name="drive_wipe_failure">Couldn’t delete remote backup. Try again.</string>
     <string name="drive_storage_full">Drive storage full. Free up space and retry.</string>
 
+    <!-- Home-screen widget (TASK-12) -->
+    <string name="widget_last_charge_label">Last charge</string>
+    <string name="widget_empty_state">No charges logged yet.</string>
+    <string name="widget_kwh_added_format">%1$s kWh added</string>
+    <string name="widget_efficiency_format">%1$s %2$s</string>
+    <string name="widget_efficiency_dash">—</string>
+    <string name="widget_charge_type_content_description">Last charge type</string>
+
     <!-- Backup notifications (TASK-19) -->
     <string name="backup_notif_channel_status_name">Backup status</string>
     <string name="backup_notif_channel_status_description">Low-priority alerts when Drive backup has failed multiple times in a row.</string>

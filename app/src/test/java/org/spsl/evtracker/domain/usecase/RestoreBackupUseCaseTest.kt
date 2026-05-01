@@ -46,6 +46,7 @@ class RestoreBackupUseCaseTest {
         val useCase = RestoreBackupUseCase(
             backupRepo, serializer, transactionRunner, snapshotWriter,
             carReader, queries, locationReader, settingsWriter, scheduler,
+            org.spsl.evtracker.testing.FakeWidgetRefresher(),
             FakeNowProvider(),
         )
         return RestoreSetup(useCase, transactionRunner, snapshotWriter, settingsWriter, scheduler)

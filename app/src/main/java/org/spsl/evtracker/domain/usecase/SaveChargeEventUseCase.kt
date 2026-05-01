@@ -8,6 +8,7 @@ import org.spsl.evtracker.domain.repository.ChargeEventQueries
 import org.spsl.evtracker.domain.repository.ChargeEventWriter
 import org.spsl.evtracker.domain.repository.LocationWriter
 import org.spsl.evtracker.domain.service.CostParser
+import org.spsl.evtracker.domain.widget.WidgetRefresher
 import javax.inject.Inject
 
 class SaveChargeEventUseCase @Inject constructor(
@@ -15,6 +16,7 @@ class SaveChargeEventUseCase @Inject constructor(
     private val chargeEventWriter: ChargeEventWriter,
     private val locationWriter: LocationWriter,
     private val backupScheduler: BackupScheduler,
+    private val widgetRefresher: WidgetRefresher,
     private val costParser: CostParser,
     private val now: NowProvider,
 ) {
@@ -61,8 +63,9 @@ class SaveChargeEventUseCase @Inject constructor(
         // 4. Record location usage if non-blank.
         input.location?.takeIf { it.isNotBlank() }?.let { locationWriter.recordUsage(it, nowMs) }
 
-        // 5. Enqueue backup.
+        // 5. Enqueue backup + refresh the home-screen widget.
         backupScheduler.enqueueBackup()
+        widgetRefresher.refresh()
 
         return SaveChargeEventResult.Success(savedId)
     }

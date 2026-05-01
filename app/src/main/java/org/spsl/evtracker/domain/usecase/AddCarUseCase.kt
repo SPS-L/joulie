@@ -7,6 +7,7 @@ import org.spsl.evtracker.domain.backup.BackupScheduler
 import org.spsl.evtracker.domain.repository.CarWriter
 import org.spsl.evtracker.domain.repository.SettingsReader
 import org.spsl.evtracker.domain.repository.SettingsWriter
+import org.spsl.evtracker.domain.widget.WidgetRefresher
 import javax.inject.Inject
 
 class AddCarUseCase @Inject constructor(
@@ -14,6 +15,7 @@ class AddCarUseCase @Inject constructor(
     private val settingsReader: SettingsReader,
     private val settingsWriter: SettingsWriter,
     private val backupScheduler: BackupScheduler,
+    private val widgetRefresher: WidgetRefresher,
     private val now: NowProvider,
 ) {
     suspend operator fun invoke(form: CarFormState): Result {
@@ -32,6 +34,7 @@ class AddCarUseCase @Inject constructor(
             settingsWriter.setActiveCarId(newId)
         }
         backupScheduler.enqueueBackup()
+        widgetRefresher.refresh()
         return Result.Success(newId)
     }
 
