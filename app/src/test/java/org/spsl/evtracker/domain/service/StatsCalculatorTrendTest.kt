@@ -3,6 +3,7 @@ package org.spsl.evtracker.domain.service
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.spsl.evtracker.core.model.ChargeType
 import org.spsl.evtracker.data.local.entity.ChargeEventEntity
 
 class StatsCalculatorTrendTest {
@@ -13,7 +14,7 @@ class StatsCalculatorTrendTest {
         date: Long,
         odometerKm: Double,
         kwhAdded: Double = 10.0,
-        chargeType: String = "AC",
+        chargeType: ChargeType = ChargeType.AC,
     ) = ChargeEventEntity(
         id = 0, carId = 1, eventDate = date, odometerKm = odometerKm,
         kwhAdded = kwhAdded, chargeType = chargeType, costTotal = null,
@@ -28,7 +29,7 @@ class StatsCalculatorTrendTest {
     }
 
     @Test fun singleAcEvent_emptySeries() {
-        val s = calc.computeEfficiencyTrend(listOf(ev(100L, 0.0, chargeType = "AC")))
+        val s = calc.computeEfficiencyTrend(listOf(ev(100L, 0.0, chargeType = ChargeType.AC)))
         assertTrue(s.acPoints.isEmpty())
         assertTrue(s.dcPoints.isEmpty())
     }
@@ -36,12 +37,12 @@ class StatsCalculatorTrendTest {
     @Test fun acAndDcEvents_partitionedCorrectly() {
         val s = calc.computeEfficiencyTrend(
             listOf(
-                ev(100L, 0.0, 10.0, "AC"),
+                ev(100L, 0.0, 10.0, ChargeType.AC),
                 // 50 km / 10 kWh = 5.0
-                ev(200L, 50.0, 10.0, "AC"),
-                ev(150L, 0.0, 10.0, "DC"),
+                ev(200L, 50.0, 10.0, ChargeType.AC),
+                ev(150L, 0.0, 10.0, ChargeType.DC_FAST),
                 // 80 km / 10 kWh = 8.0
-                ev(300L, 80.0, 10.0, "DC"),
+                ev(300L, 80.0, 10.0, ChargeType.DC_FAST),
             ),
         )
         assertEquals(1, s.acPoints.size)
@@ -55,9 +56,9 @@ class StatsCalculatorTrendTest {
     @Test fun negativeOdometerDelta_skipped() {
         val s = calc.computeEfficiencyTrend(
             listOf(
-                ev(100L, 100.0, 10.0, "AC"),
+                ev(100L, 100.0, 10.0, ChargeType.AC),
                 // odo went backwards → skip
-                ev(200L, 50.0, 10.0, "AC"),
+                ev(200L, 50.0, 10.0, ChargeType.AC),
             ),
         )
         assertTrue(s.acPoints.isEmpty())
@@ -66,9 +67,9 @@ class StatsCalculatorTrendTest {
     @Test fun zeroKwh_skipped() {
         val s = calc.computeEfficiencyTrend(
             listOf(
-                ev(100L, 0.0, 10.0, "AC"),
+                ev(100L, 0.0, 10.0, ChargeType.AC),
                 // kwh=0 → skip
-                ev(200L, 50.0, 0.0, "AC"),
+                ev(200L, 50.0, 0.0, ChargeType.AC),
             ),
         )
         assertTrue(s.acPoints.isEmpty())
@@ -79,11 +80,11 @@ class StatsCalculatorTrendTest {
         // its own dates before computing deltas.
         val s = calc.computeEfficiencyTrend(
             listOf(
-                ev(300L, 60.0, 10.0, "AC"),
-                ev(100L, 0.0, 10.0, "AC"),
-                ev(200L, 20.0, 10.0, "AC"),
-                ev(150L, 0.0, 10.0, "DC"),
-                ev(250L, 30.0, 10.0, "DC"),
+                ev(300L, 60.0, 10.0, ChargeType.AC),
+                ev(100L, 0.0, 10.0, ChargeType.AC),
+                ev(200L, 20.0, 10.0, ChargeType.AC),
+                ev(150L, 0.0, 10.0, ChargeType.DC_FAST),
+                ev(250L, 30.0, 10.0, ChargeType.DC_FAST),
             ),
         )
         assertEquals(2, s.acPoints.size)

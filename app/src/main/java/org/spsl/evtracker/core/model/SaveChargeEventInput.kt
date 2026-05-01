@@ -8,7 +8,7 @@ data class SaveChargeEventInput(
     val eventDate: Long,
     val odometerKm: Double,
     val kwhAdded: Double,
-    val chargeType: String,
+    val chargeType: ChargeType,
     val costInput: CostInput? = null,
     val location: String? = null,
     val note: String = "",

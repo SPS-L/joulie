@@ -27,6 +27,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.spsl.evtracker.R
+import org.spsl.evtracker.core.model.ChargeType
 import org.spsl.evtracker.data.local.dao.CarDao
 import org.spsl.evtracker.data.local.dao.ChargeEventDao
 import org.spsl.evtracker.data.local.entity.CarEntity
@@ -70,7 +71,7 @@ class ChartsFragmentTest {
     private fun ev(
         date: Long,
         odo: Double,
-        type: String = "AC",
+        type: ChargeType = ChargeType.AC,
         cost: Double? = null,
         currency: String? = null,
     ) = ChargeEventEntity(
@@ -127,9 +128,9 @@ class ChartsFragmentTest {
         val d = 24L * 60 * 60 * 1000
         seedDb(
             listOf(
-                ev(now - 60 * d, 0.0, "AC", cost = 5.0, currency = "EUR"),
-                ev(now - 30 * d, 100.0, "AC", cost = 7.5, currency = "EUR"),
-                ev(now - 5 * d, 200.0, "DC", cost = 4.0, currency = "EUR"),
+                ev(now - 60 * d, 0.0, ChargeType.AC, cost = 5.0, currency = "EUR"),
+                ev(now - 30 * d, 100.0, ChargeType.AC, cost = 7.5, currency = "EUR"),
+                ev(now - 5 * d, 200.0, ChargeType.DC_FAST, cost = 4.0, currency = "EUR"),
             ),
         )
         launchFragmentInContainer<ChartsFragment>(themeResId = R.style.Theme_EVTracker)
@@ -220,8 +221,8 @@ class ChartsFragmentTest {
         val d = 24L * 60 * 60 * 1000
         seedDb(
             listOf(
-                ev(now - 60 * d, 0.0, "AC", cost = 5.0, currency = "EUR"),
-                ev(now - 30 * d, 100.0, "AC", cost = 7.5, currency = "USD"),
+                ev(now - 60 * d, 0.0, ChargeType.AC, cost = 5.0, currency = "EUR"),
+                ev(now - 30 * d, 100.0, ChargeType.AC, cost = 7.5, currency = "USD"),
             ),
         )
         launchFragmentInContainer<ChartsFragment>(themeResId = R.style.Theme_EVTracker)

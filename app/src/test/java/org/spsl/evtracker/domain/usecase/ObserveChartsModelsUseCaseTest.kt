@@ -8,6 +8,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.spsl.evtracker.core.model.ChargeType
 import org.spsl.evtracker.core.model.ChartsPeriod
 import org.spsl.evtracker.core.model.ChartsUiState
 import org.spsl.evtracker.data.local.entity.CarEntity
@@ -49,7 +50,7 @@ class ObserveChartsModelsUseCaseTest {
         date: Long,
         odo: Double,
         kwh: Double = 10.0,
-        type: String = "AC",
+        type: ChargeType = ChargeType.AC,
         cost: Double? = null,
         currency: String? = null,
         location: String? = null,
@@ -95,8 +96,8 @@ class ObserveChartsModelsUseCaseTest {
         val ms30d = 30L * 24 * 60 * 60 * 1000
         val state = setup(
             events = listOf(
-                ev(nowMs - 2 * ms30d, 0.0, 10.0, "AC", cost = 5.0, currency = "EUR", location = "Home"),
-                ev(nowMs - 1 * ms30d, 100.0, 10.0, "AC", cost = 7.5, currency = "EUR", location = "Home"),
+                ev(nowMs - 2 * ms30d, 0.0, 10.0, ChargeType.AC, cost = 5.0, currency = "EUR", location = "Home"),
+                ev(nowMs - 1 * ms30d, 100.0, 10.0, ChargeType.AC, cost = 7.5, currency = "EUR", location = "Home"),
             ),
         ).observe(ChartsPeriod.Last12Months).first()
         assertTrue(state is ChartsUiState.Loaded)
@@ -116,8 +117,8 @@ class ObserveChartsModelsUseCaseTest {
         val ms30d = 30L * 24 * 60 * 60 * 1000
         val state = setup(
             events = listOf(
-                ev(nowMs - 2 * ms30d, 0.0, 10.0, "AC", cost = 5.0, currency = "EUR"),
-                ev(nowMs - 1 * ms30d, 100.0, 10.0, "AC", cost = 7.5, currency = "USD"),
+                ev(nowMs - 2 * ms30d, 0.0, 10.0, ChargeType.AC, cost = 5.0, currency = "EUR"),
+                ev(nowMs - 1 * ms30d, 100.0, 10.0, ChargeType.AC, cost = 7.5, currency = "USD"),
             ),
         ).observe(ChartsPeriod.Last12Months).first()
         assertTrue(state is ChartsUiState.Loaded)

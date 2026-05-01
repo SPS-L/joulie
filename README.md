@@ -59,7 +59,7 @@ UI (Fragments + ViewModels)  →  Domain (use cases + services)  →  Repositori
 
 - Single-Activity host with the **Navigation Component**; ViewBinding for views.
 - **Hilt** for dependency injection. **KSP** (not kapt) for Room and Hilt code generation.
-- **Room v3** with explicit migrations for the local database; **DataStore Preferences** for user settings.
+- **Room v4** with explicit migrations for the local database; **DataStore Preferences** for user settings.
 - **MPAndroidChart** for the charts tab.
 - **WorkManager** for Drive backup scheduling (uniqueness via `enqueueUniqueWork`).
 - **Material 3** with light/dark token palettes.
@@ -83,7 +83,7 @@ The debug APK lands at `app/build/outputs/apk/debug/app-debug.apk`.
 ### Tests
 
 ```bash
-./gradlew test                  # JVM unit tests (~257)
+./gradlew test                  # JVM unit tests (~265)
 ./gradlew connectedAndroidTest  # Espresso / Room — needs API 26+ device or emulator
 ```
 

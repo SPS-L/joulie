@@ -1,6 +1,7 @@
 package org.spsl.evtracker.domain.service
 
 import org.spsl.evtracker.core.model.AcDcSplit
+import org.spsl.evtracker.core.model.ChargeType
 import org.spsl.evtracker.core.model.EfficiencyPoint
 import org.spsl.evtracker.core.model.EfficiencySeries
 import org.spsl.evtracker.core.model.LocationSlice
@@ -110,8 +111,8 @@ class StatsCalculator @Inject constructor() {
         events.mapNotNull { e -> e.costTotal?.let { e.currency } }.distinct().size > 1
 
     fun computeEfficiencyTrend(events: List<ChargeEventEntity>): EfficiencySeries {
-        fun seriesFor(type: String): List<EfficiencyPoint> {
-            val sorted = events.filter { it.chargeType == type }.sortedBy { it.eventDate }
+        fun seriesFor(predicate: (ChargeEventEntity) -> Boolean): List<EfficiencyPoint> {
+            val sorted = events.filter(predicate).sortedBy { it.eventDate }
             val out = ArrayList<EfficiencyPoint>(sorted.size)
             for (i in 1 until sorted.size) {
                 val dist = sorted[i].odometerKm - sorted[i - 1].odometerKm
@@ -125,14 +126,14 @@ class StatsCalculator @Inject constructor() {
             return out
         }
         return EfficiencySeries(
-            acPoints = seriesFor("AC"),
-            dcPoints = seriesFor("DC"),
+            acPoints = seriesFor { it.chargeType == ChargeType.AC },
+            dcPoints = seriesFor { it.chargeType.isDc },
         )
     }
 
     fun computeAcDcSplit(events: List<ChargeEventEntity>): AcDcSplit {
-        val ac = events.filter { it.chargeType == "AC" }
-        val dc = events.filter { it.chargeType == "DC" }
+        val ac = events.filter { it.chargeType == ChargeType.AC }
+        val dc = events.filter { it.chargeType.isDc }
         return AcDcSplit(
             acCount = ac.size,
             dcCount = dc.size,

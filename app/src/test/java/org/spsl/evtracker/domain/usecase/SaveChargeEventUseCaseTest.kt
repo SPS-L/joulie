@@ -5,6 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.spsl.evtracker.core.model.ChargeType
 import org.spsl.evtracker.core.model.CostInput
 import org.spsl.evtracker.core.model.SaveChargeEventInput
 import org.spsl.evtracker.core.model.SaveChargeEventResult
@@ -50,7 +51,7 @@ class SaveChargeEventUseCaseTest {
                 eventDate = 1000L,
                 odometerKm = 100.0,
                 kwhAdded = 10.0,
-                chargeType = "AC",
+                chargeType = ChargeType.AC,
                 location = "Home",
             ),
         )
@@ -71,7 +72,7 @@ class SaveChargeEventUseCaseTest {
                 eventDate = 1000L,
                 odometerKm = 110.0,
                 kwhAdded = 12.0,
-                chargeType = "AC",
+                chargeType = ChargeType.AC,
             ),
         )
         assertEquals(SaveChargeEventResult.Success(eventId = 5L), result)
@@ -88,7 +89,7 @@ class SaveChargeEventUseCaseTest {
                 eventDate = 2000L,
                 odometerKm = 150.0,
                 kwhAdded = 10.0,
-                chargeType = "AC",
+                chargeType = ChargeType.AC,
             ),
         )
         assertEquals(SaveChargeEventResult.OdometerNotIncreasing, result)
@@ -108,7 +109,7 @@ class SaveChargeEventUseCaseTest {
                 eventDate = 2000L,
                 odometerKm = 210.0,
                 kwhAdded = 12.0,
-                chargeType = "AC",
+                chargeType = ChargeType.AC,
             ),
         )
         assertTrue(result is SaveChargeEventResult.Success)
@@ -123,7 +124,7 @@ class SaveChargeEventUseCaseTest {
                 eventDate = 1000L,
                 odometerKm = 100.0,
                 kwhAdded = 10.0,
-                chargeType = "AC",
+                chargeType = ChargeType.AC,
                 costInput = CostInput(value = 0.0, mode = CostMode.TOTAL, currency = "EUR"),
             ),
         )
@@ -142,7 +143,7 @@ class SaveChargeEventUseCaseTest {
                 eventDate = 1000L,
                 odometerKm = 100.0,
                 kwhAdded = 10.0,
-                chargeType = "AC",
+                chargeType = ChargeType.AC,
                 location = "Home",
             ),
         )

@@ -3,9 +3,11 @@ package org.spsl.evtracker.domain.service
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.spsl.evtracker.core.model.BackupData
 import org.spsl.evtracker.core.model.BackupVersionMismatch
+import org.spsl.evtracker.core.model.ChargeType
 import org.spsl.evtracker.data.local.entity.CarEntity
 import org.spsl.evtracker.data.local.entity.ChargeEventEntity
 import org.spsl.evtracker.data.local.entity.CustomLocationEntity
@@ -21,7 +23,7 @@ class BackupSerializerTest {
             events = listOf(
                 ChargeEventEntity(
                     id = 17, carId = 1, eventDate = 2000L, odometerKm = 12345.0, kwhAdded = 22.4,
-                    chargeType = "AC", costTotal = 5.5, costPerKwh = 0.245, currency = "EUR",
+                    chargeType = ChargeType.AC, costTotal = 5.5, costPerKwh = 0.245, currency = "EUR",
                     location = "Home", note = "first", createdAt = 3000L,
                 ),
             ),
@@ -69,5 +71,64 @@ class BackupSerializerTest {
             now = 1714044000000L,
         )
         assertEquals("2024-04-25T11:20:00Z", data.exportedAt)
+    }
+
+    /**
+     * TASK-25: backups written by pre-TASK-25 builds carry `backup_version = 3`
+     * and `charge_type = "DC"`. After this task, both must still restore on a
+     * v4-aware app: the version check accepts both 3 and 4, and the
+     * `ChargeType` Gson adapter routes legacy `"DC"` through
+     * `ChargeType.parseLegacy` to land at `DC_FAST`.
+     */
+    @Test
+    fun fromJson_acceptsV3Backup_andMapsLegacyDcToDcFast() {
+        val v3Json = """
+            {
+              "backup_version": 3,
+              "exported_at": "2025-01-01T00:00:00Z",
+              "cars": [],
+              "charge_events": [
+                {
+                  "id": 1, "car_id": 1, "event_date": 1000,
+                  "odometer_km": 100.0, "kwh_added": 10.0,
+                  "charge_type": "DC", "cost_total": null,
+                  "cost_per_kwh": null, "currency": null,
+                  "location": null, "note": "", "created_at": 0
+                }
+              ],
+              "custom_locations": []
+            }
+        """.trimIndent()
+
+        val parsed = serializer.fromJson(v3Json)
+
+        assertEquals(3, parsed.backupVersion)
+        assertEquals(1, parsed.chargeEvents.size)
+        assertEquals(ChargeType.DC_FAST, parsed.chargeEvents.single().chargeType)
+    }
+
+    @Test
+    fun toJson_serializesEnumAsName() {
+        val data = BackupData.fromEntities(
+            cars = emptyList(),
+            events = listOf(
+                ChargeEventEntity(
+                    id = 1,
+                    carId = 1,
+                    eventDate = 0L,
+                    odometerKm = 0.0,
+                    kwhAdded = 0.0,
+                    chargeType = ChargeType.DC_FAST,
+                    createdAt = 0L,
+                ),
+            ),
+            locations = emptyList(),
+            now = 0L,
+        )
+        val json = serializer.toJson(data)
+        assertTrue(
+            "expected the canonical enum name on the wire; got $json",
+            json.contains("\"charge_type\":\"DC_FAST\""),
+        )
     }
 }

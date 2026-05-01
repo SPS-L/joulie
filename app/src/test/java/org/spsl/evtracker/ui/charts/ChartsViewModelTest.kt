@@ -18,6 +18,7 @@ import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.spsl.evtracker.core.model.ChargeType
 import org.spsl.evtracker.core.model.ChartsEvent
 import org.spsl.evtracker.core.model.ChartsPeriod
 import org.spsl.evtracker.core.model.ChartsScreenState
@@ -80,7 +81,7 @@ class ChartsViewModelTest {
 
     private fun ev(date: Long, odo: Double) = ChargeEventEntity(
         id = 0, carId = 1, eventDate = date, odometerKm = odo, kwhAdded = 10.0,
-        chargeType = "AC", costTotal = null, costPerKwh = null,
+        chargeType = ChargeType.AC, costTotal = null, costPerKwh = null,
         currency = null, location = null, note = "", createdAt = 0L,
     )
 

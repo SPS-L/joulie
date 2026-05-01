@@ -29,7 +29,7 @@ class ExportCsvUseCase @Inject constructor(
             writer.append(Instant.ofEpochMilli(e.eventDate).toString()).append(',')
                 .append(odo.toString()).append(',')
                 .append(e.kwhAdded.toString()).append(',')
-                .append(e.chargeType).append(',')
+                .append(e.chargeType.name).append(',')
                 .append(csvEscape(e.location ?: "")).append(',')
                 .append(e.costTotal?.toString() ?: "").append(',')
                 .append(e.currency ?: "").append(',')

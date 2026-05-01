@@ -14,7 +14,7 @@ data class BackupData(
     @SerializedName("custom_locations") val customLocations: List<CustomLocationDto>,
 ) {
     companion object {
-        const val CURRENT_VERSION = 3
+        const val CURRENT_VERSION = 4
 
         fun fromEntities(
             cars: List<CarEntity>,
@@ -61,7 +61,7 @@ data class ChargeEventDto(
     @SerializedName("event_date") val eventDate: Long,
     @SerializedName("odometer_km") val odometerKm: Double,
     @SerializedName("kwh_added") val kwhAdded: Double,
-    @SerializedName("charge_type") val chargeType: String,
+    @SerializedName("charge_type") val chargeType: ChargeType,
     @SerializedName("cost_total") val costTotal: Double?,
     @SerializedName("cost_per_kwh") val costPerKwh: Double?,
     @SerializedName("currency") val currency: String?,

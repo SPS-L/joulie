@@ -6,6 +6,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.spsl.evtracker.core.model.ChargeType
 import org.spsl.evtracker.data.local.entity.ChargeEventEntity
 import org.spsl.evtracker.testing.FakeBackupScheduler
 import org.spsl.evtracker.testing.FakeChargeEventQueries
@@ -19,7 +20,7 @@ class ResetActiveCarDataUseCaseTest {
         eventDate = 1_700_000_000_000L + id,
         odometerKm = 100.0 + id,
         kwhAdded = 20.0,
-        chargeType = "AC",
+        chargeType = ChargeType.AC,
         createdAt = 0L,
     )
 

@@ -8,7 +8,7 @@ data class ChargeEditUiState(
     val eventDateMillis: Long,
     val odometer: String = "",
     val kwh: String = "",
-    val chargeType: String = "AC",
+    val chargeType: ChargeType = ChargeType.AC,
     val location: String = "",
     val locationChips: LocationChips = LocationChips(),
     val costExpanded: Boolean = false,

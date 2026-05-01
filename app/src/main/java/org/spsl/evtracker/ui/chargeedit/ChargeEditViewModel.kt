@@ -18,6 +18,7 @@ import kotlinx.coroutines.launch
 import org.spsl.evtracker.R
 import org.spsl.evtracker.core.model.ChargeEditEvent
 import org.spsl.evtracker.core.model.ChargeEditUiState
+import org.spsl.evtracker.core.model.ChargeType
 import org.spsl.evtracker.core.model.CostInput
 import org.spsl.evtracker.core.model.SaveChargeEventInput
 import org.spsl.evtracker.core.model.SaveChargeEventResult
@@ -137,7 +138,7 @@ class ChargeEditViewModel @Inject constructor(
         )
     }
     fun setKwh(text: String) = _uiState.update { it.copy(kwh = text, kwhError = null) }
-    fun setChargeType(type: String) = _uiState.update { it.copy(chargeType = type) }
+    fun setChargeType(type: ChargeType) = _uiState.update { it.copy(chargeType = type) }
     fun selectLocationChip(label: String) = _uiState.update { it.copy(location = label) }
     fun setLocation(text: String) = _uiState.update { it.copy(location = text) }
     fun toggleCostExpanded() = _uiState.update { it.copy(costExpanded = !it.costExpanded) }

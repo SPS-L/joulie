@@ -3,6 +3,7 @@ package org.spsl.evtracker.domain.service
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.spsl.evtracker.core.model.ChargeType
 import org.spsl.evtracker.data.local.entity.ChargeEventEntity
 
 class StatsCalculatorLocationDistTest {
@@ -11,7 +12,7 @@ class StatsCalculatorLocationDistTest {
 
     private fun ev(location: String?) = ChargeEventEntity(
         id = 0, carId = 1, eventDate = 0L, odometerKm = 0.0, kwhAdded = 1.0,
-        chargeType = "AC", costTotal = null, costPerKwh = null,
+        chargeType = ChargeType.AC, costTotal = null, costPerKwh = null,
         currency = null, location = location, note = "", createdAt = 0L,
     )
 
