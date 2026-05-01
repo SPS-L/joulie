@@ -129,6 +129,33 @@ Uses `TestCoroutineDispatcher` + in-memory Room.
 | `saveWithCost_storesBoth` | Submit form with cost=5.0, kwh=10; `costTotal=5.0`, `costPerKwh=0.5` |
 | `saveLocation_recordsUsage` | Submit with location="Home"; `custom_locations` has "Home" with count ≥ 1 |
 
+### 3.4 DriveBackupRepositoryTest.kt
+
+Locks in the `BackupResult` contract introduced in TASK-07: `Success` / `AuthRequired` / `Failure(reason, cause?)`. `FakeDriveRemoteSource` exposes `failNext: Throwable?` + `failTimes: Int` + `failuresRaised: Int` so tests drive multi-failure scenarios deterministically. Retry budget under test: `DriveBackupRepository.MAX_ATTEMPTS = 3`, exponential backoff `250 ms × 2^attempt` (virtualised by `runTest`'s test scheduler).
+
+| Test | Description |
+|------|-------------|
+| `backup_noExistingFile_callsCreate_andReturnsSuccess` | First-time backup creates the App Data file; result = `Success` |
+| `backup_existingFile_callsUpdate_andReturnsSuccess` | Subsequent backup overwrites in place; same `fileId` retained |
+| `backup_serializerRoundTripPreservesAllFields` | Car / charge event / location entities survive a `toJson` → `fromJson` round trip with full field fidelity |
+| `backup_silentTokenFailed_returnsAuthRequired` | `DriveAuthManager.silentToken()` returns `Failed` → `AuthRequired` |
+| `backup_drive401_returnsAuthRequired` | HTTP 401 from Drive → `AuthRequired` |
+| `backup_drive403UnknownReason_returnsAuthRequired` | HTTP 403 with unknown JSON `reason` → conservative `AuthRequired` |
+| `backup_drive403UnparseableBody_returnsAuthRequired` | HTTP 403 with non-JSON body → conservative `AuthRequired` |
+| `backup_drive403StorageFull_returnsFailureNotAuthRequired` | HTTP 403 `storageQuotaExceeded` → `Failure("Drive storage full", cause)` (NOT `AuthRequired`) |
+| `backup_drive403StorageFull_doesNotRetry` | Storage-full failure raises exactly once; `failuresRaised == 1` even with `failTimes = 99` |
+| `backup_drive429_retriesThenSucceeds` | First call HTTP 429, second succeeds → `Success`; `failuresRaised == 1` |
+| `backup_drive500_retriesThenSucceeds` | First call HTTP 500, second succeeds → `Success`; `failuresRaised == 1` |
+| `backup_drive403Quota_retriesThenSucceeds` | First call HTTP 403 `quotaExceeded`, second succeeds → `Success`; `failuresRaised == 1` |
+| `backup_unknownHostException_retriesThenSucceeds` | First call `UnknownHostException`, second succeeds → `Success`; `failuresRaised == 1` |
+| `backup_transient429_threeFailures_returnsFailure` | All three attempts return HTTP 429 → `Failure("HTTP 429", cause)`; `failuresRaised == MAX_ATTEMPTS` |
+| `backup_transientNetworkException_threeFailures_returnsFailure` | All three attempts throw `IOException("socket reset")` → `Failure("Network failure: IOException", cause)`; `failuresRaised == MAX_ATTEMPTS` |
+| `backup_authError_doesNotRetry` | HTTP 401 raises exactly once; `failuresRaised == 1` even with `failTimes = 99` |
+| `read_noFileId_returnsNull` | No remote file → `null` |
+| `read_existingFile_returnsBody` | Remote file present → body string |
+| `read_drive401_throwsDriveAuthRequired` | Read path keeps its exception contract — 401 → `DriveAuthRequiredException` (not `BackupResult`) |
+| `read_drive429_retriesThenSucceeds` | Read path also retries transient — 429 then success → returns body |
+
 ---
 
 ## 4. UI / Instrumented Tests (Espresso)
