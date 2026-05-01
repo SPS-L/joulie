@@ -61,13 +61,13 @@ lifecycleScope.launch {
 
 ### 3.2 Wizard Screens
 
-Implemented as a `WizardFragment` backed by `ViewPager2` with 3 pages. Back/Next/Finish buttons are in the host fragment, not per-page. Progress dots shown via `TabLayout` or a custom indicator.
+Implemented as a `WizardFragment` backed by `ViewPager2` with **4 pages**. Back/Next/Finish buttons are in the host fragment, not per-page. Progress dots shown via `TabLayout` or a custom indicator.
 
 ---
 
-> Back/Next buttons live on the **host fragment**, not on each page. Page 1 hides the Back button; pages 2 and 3 show both. The host's Next button labels are: page 1 → "Get Started", pages 2/3 → "Next →", page 3 final state → "Finish ✓".
+> Back/Next buttons live on the **host fragment**, not on each page. Page 1 hides the Back button; pages 2, 3, and 4 show both. The host's Next button labels are: page 1 → "Get Started", pages 2/3 → "Next →", page 4 → "Finish ✓". On page 4 the Finish button is **disabled** until the disclaimer-acceptance switch is toggled (see Screen 4).
 
-**Screen 1 of 3 — Welcome**
+**Screen 1 of 4 — Welcome**
 
 ```
 ┌────────────────────────────────┐
@@ -84,7 +84,7 @@ Implemented as a `WizardFragment` backed by `ViewPager2` with 3 pages. Back/Next
 
 ---
 
-**Screen 2 of 3 — Efficiency metric & units**
+**Screen 2 of 4 — Efficiency metric & units**
 
 ```
 ┌────────────────────────────────┐
@@ -107,7 +107,7 @@ Use a `RadioGroup` (or 3 `RadioButton`s) for metric; a `MaterialButtonToggleGrou
 
 ---
 
-**Screen 3 of 3 — Currency**
+**Screen 3 of 4 — Currency**
 
 ```
 ┌────────────────────────────────┐
@@ -123,13 +123,55 @@ Use a `RadioGroup` (or 3 `RadioButton`s) for metric; a `MaterialButtonToggleGrou
 │  ℹ  Cost entry is optional —  │
 │  leave 0 to skip tracking.     │
 │                                │
-│  [← Back]        [Finish ✓]   │
+│  [← Back]         [Next →]    │
 └────────────────────────────────┘
 ```
 
 Use an `AutoCompleteTextView` (ExposedDropdownMenu) populated from a `string-array` resource.
 
 > Adding a currency = edit `res/values/currencies.xml` only — no code changes required.
+
+---
+
+**Screen 4 of 4 — About + Disclaimer acceptance**
+
+```
+┌────────────────────────────────┐
+│  About this app & terms        │
+│                                │
+│  [ SPS-Lab badge ]             │
+│  Sustainable Power Systems Lab │
+│  Cyprus University of Tech.    │
+│  Limassol, Cyprus              │
+│                                │
+│  Disclaimer                    │
+│  This application is provided  │
+│  for research and personal use │
+│  only. Efficiency and cost     │
+│  estimates are based on user-  │
+│  entered data and do not …     │
+│  …no liability for decisions   │
+│  made based on data recorded   │
+│  or displayed by this app.     │
+│                                │
+│  [○ I have read and accept the │
+│      disclaimer]               │
+│                                │
+│  [← Back]      [Finish ✓ ⛔]  │
+└────────────────────────────────┘
+```
+
+Reuses the existing `about_acknowledgment_*` and `about_disclaimer_*`
+strings from the About screen (TASK-10) — single source of truth for
+the legal copy. The acceptance toggle is a `MaterialSwitch`
+(`wizard_page4_accept`); `WizardViewModel.UiState.disclaimerAccepted`
+mirrors its state. The host's Finish button observes the same flag and
+stays disabled until the switch is on.
+
+Reset preferences (Settings → Reset preferences) writes
+`setupComplete=false` and re-routes to the wizard, which forces the
+user to step through all four pages again — disclaimer acceptance is
+not persisted independently of `setupComplete`.
 
 ### 3.3 DataStore Keys (complete list)
 

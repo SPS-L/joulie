@@ -19,17 +19,23 @@ class WizardViewModel @Inject constructor(
         val metric: String = "kwh_per_100km",
         val unit: String = "km",
         val currency: String = "EUR",
+        /** Page 3 (About + Disclaimer) Finish gate — true when the user ticks the acceptance checkbox. */
+        val disclaimerAccepted: Boolean = false,
     )
 
     private val _state = MutableStateFlow(UiState())
     val state: StateFlow<UiState> = _state.asStateFlow()
 
     fun goNext() {
-        _state.update { it.copy(page = (it.page + 1).coerceAtMost(2)) }
+        _state.update { it.copy(page = (it.page + 1).coerceAtMost(3)) }
     }
 
     fun goBack() {
         _state.update { it.copy(page = (it.page - 1).coerceAtLeast(0)) }
+    }
+
+    fun setDisclaimerAccepted(accepted: Boolean) {
+        _state.update { it.copy(disclaimerAccepted = accepted) }
     }
 
     fun selectMetric(metric: String) {

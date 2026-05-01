@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="32dp">
+
+        <TextView
+            android:id="@+id/wizard_page4_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:text="@string/wizard_about_title"
+            android:textAppearance="?attr/textAppearanceHeadlineSmall"/>
+
+        <ImageView
+            android:layout_width="240dp"
+            android:layout_height="60dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="16dp"
+            android:contentDescription="@string/about_acknowledgment_lab"
+            android:src="@drawable/ic_spslab_badge"/>
+
+        <!-- Acknowledgment -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:gravity="center_horizontal"
+            android:text="@string/about_acknowledgment_lab"
+            android:textAppearance="?attr/textAppearanceBodyLarge"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
+            android:text="@string/about_acknowledgment_cut"
+            android:textAppearance="?attr/textAppearanceBodyMedium"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
+            android:text="@string/about_acknowledgment_location"
+            android:textAppearance="?attr/textAppearanceBodyMedium"/>
+
+        <!-- Disclaimer -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="@string/about_disclaimer_title"
+            android:textAppearance="?attr/textAppearanceTitleMedium"/>
+
+        <TextView
+            android:id="@+id/wizard_page4_disclaimer_body"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/about_disclaimer_body"
+            android:textAppearance="?attr/textAppearanceBodyMedium"/>
+
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/wizard_page4_accept"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:minHeight="56dp"
+            android:text="@string/wizard_disclaimer_accept"
+            android:textAppearance="?attr/textAppearanceBodyLarge"/>
+
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

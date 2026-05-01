@@ -65,7 +65,12 @@ class WizardFlowTest {
             onView(withId(R.id.wizard_button_next)).perform(click())
             // Page 2 → Next (default selections are valid)
             onView(withId(R.id.wizard_button_next)).perform(click())
-            // Page 3 → Finish
+            // Page 3 → Next (currency default is EUR)
+            onView(withId(R.id.wizard_button_next)).perform(click())
+            // Page 4 — disclaimer gate: Finish stays disabled until the
+            // acceptance switch is toggled. Tapping Next here would be a
+            // no-op (button is disabled), so tick the switch first.
+            onView(withId(R.id.wizard_page4_accept)).perform(click())
             onView(withId(R.id.wizard_button_next)).perform(click())
             // Dashboard FAB visible
             onView(withId(R.id.dashboard_fab)).check(matches(isDisplayed()))
