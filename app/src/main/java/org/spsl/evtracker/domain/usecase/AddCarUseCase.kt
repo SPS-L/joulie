@@ -14,6 +14,7 @@ class AddCarUseCase @Inject constructor(
     private val settingsReader: SettingsReader,
     private val settingsWriter: SettingsWriter,
     private val backupScheduler: BackupScheduler,
+    private val now: NowProvider,
 ) {
     suspend operator fun invoke(form: CarFormState): Result {
         if (form.name.isBlank()) return Result.NameBlank
@@ -23,6 +24,7 @@ class AddCarUseCase @Inject constructor(
             model = form.model.trim(),
             year = form.year.toIntOrNull(),
             batteryKwh = form.batteryKwh.toDoubleOrNull(),
+            createdAt = now.nowMillis(),
         )
         val rowId = carWriter.insert(entity)
         if (rowId <= 0L) return Result.PersistenceFailed

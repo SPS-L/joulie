@@ -26,6 +26,7 @@ import org.spsl.evtracker.domain.service.StatsCalculator
 import org.spsl.evtracker.domain.usecase.ObserveDashboardStatsUseCase
 import org.spsl.evtracker.testing.FakeCarReader
 import org.spsl.evtracker.testing.FakeChargeEventQueries
+import org.spsl.evtracker.testing.FakeNowProvider
 import org.spsl.evtracker.testing.FakeSettingsReader
 import org.spsl.evtracker.testing.FakeSettingsWriter
 
@@ -65,6 +66,7 @@ class DashboardViewModelTest {
             settingsReader = settingsReader,
             statsCalculator = StatsCalculator(),
             dateRangeResolver = DateRangeResolver(),
+            now = FakeNowProvider(System.currentTimeMillis()),
         )
         val vm = DashboardViewModel(
             observeDashboardStats = useCase,

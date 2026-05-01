@@ -59,6 +59,7 @@ class ChargeEditViewModelTest {
             locationReader = gateway.locationReader,
             chargeEventQueries = gateway.queries,
             settingsReader = freshReader,
+            now = gateway.nowProvider,
             savedStateHandle = savedStateHandle,
         )
         return VmFixture(vm, gateway)
@@ -193,9 +194,11 @@ class ChargeEditViewModelTest {
 
     @Test
     fun save_useCaseReturnsOdoNotIncreasing_setsError() = runTest {
-        val gateway = FakeSaveChargeEventGateway()
+        val gateway = FakeSaveChargeEventGateway().also { it.nowProvider.time = 1_000L }
         // Seed an existing event at odometer 200 so saving at 100 fails with OdometerNotIncreasing.
         // The previous event must have eventDate < the new event's eventDate to be considered "previous".
+        // The new event's eventDateMillis is the FakeNowProvider time (1_000L), so eventDate 0L
+        // is "before" it.
         gateway.seedEvents(
             listOf(
                 ChargeEventEntity(

@@ -26,6 +26,7 @@ import org.spsl.evtracker.domain.repository.LocationReader
 import org.spsl.evtracker.domain.repository.SettingsReader
 import org.spsl.evtracker.domain.service.CostMode
 import org.spsl.evtracker.domain.service.UnitConverter
+import org.spsl.evtracker.domain.usecase.NowProvider
 import org.spsl.evtracker.domain.usecase.SaveChargeEventUseCase
 import javax.inject.Inject
 
@@ -35,10 +36,11 @@ class ChargeEditViewModel @Inject constructor(
     locationReader: LocationReader,
     private val chargeEventQueries: ChargeEventQueries,
     private val settingsReader: SettingsReader,
+    private val now: NowProvider,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(ChargeEditUiState())
+    private val _uiState = MutableStateFlow(ChargeEditUiState(eventDateMillis = now.nowMillis()))
     val uiState: StateFlow<ChargeEditUiState> = _uiState.asStateFlow()
 
     private val _events = MutableSharedFlow<ChargeEditEvent>(
@@ -57,6 +59,7 @@ class ChargeEditViewModel @Inject constructor(
                 _uiState.value = ChargeEditUiState(
                     mode = ChargeEditUiState.Mode.Create,
                     carId = activeCarId,
+                    eventDateMillis = now.nowMillis(),
                     distanceUnit = unit,
                     currency = ccy,
                 )
@@ -66,6 +69,7 @@ class ChargeEditViewModel @Inject constructor(
                     _uiState.value = ChargeEditUiState(
                         mode = ChargeEditUiState.Mode.Create,
                         carId = activeCarId,
+                        eventDateMillis = now.nowMillis(),
                         distanceUnit = unit,
                         currency = ccy,
                     )

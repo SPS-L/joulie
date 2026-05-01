@@ -27,7 +27,7 @@ class ObserveChartsModelsUseCaseTest {
     private val now = NowProvider { nowMs }
 
     private fun setup(
-        cars: List<CarEntity> = listOf(CarEntity(id = 1, name = "C")),
+        cars: List<CarEntity> = listOf(CarEntity(id = 1, name = "C", createdAt = 0L)),
         activeCarId: Int = 1,
         events: List<ChargeEventEntity> = emptyList(),
     ): ObserveChartsModelsUseCase {
@@ -142,8 +142,8 @@ class ObserveChartsModelsUseCaseTest {
     @Test fun carSwitch_resetsState() = runTest {
         val carReader = FakeCarReader(
             listOf(
-                CarEntity(id = 1, name = "A"),
-                CarEntity(id = 2, name = "B"),
+                CarEntity(id = 1, name = "A", createdAt = 0L),
+                CarEntity(id = 2, name = "B", createdAt = 0L),
             ),
         )
         val queries = FakeChargeEventQueries().apply {

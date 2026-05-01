@@ -21,6 +21,7 @@ class StatsCalculatorTest {
         eventDate = eventDate,
         odometerKm = odometerKm,
         kwhAdded = kwhAdded,
+        createdAt = 0L,
     )
 
     @Test

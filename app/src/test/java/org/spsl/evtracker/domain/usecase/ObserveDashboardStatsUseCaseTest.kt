@@ -19,6 +19,7 @@ import org.spsl.evtracker.domain.service.StatsCalculator
 import org.spsl.evtracker.testing.FakeCarReader
 import org.spsl.evtracker.testing.FakeChargeEventQueries
 import org.spsl.evtracker.testing.FakeChargeEventWriter
+import org.spsl.evtracker.testing.FakeNowProvider
 import org.spsl.evtracker.testing.FakeSettingsReader
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -43,6 +44,7 @@ class ObserveDashboardStatsUseCaseTest {
             settingsReader = settings,
             statsCalculator = StatsCalculator(),
             dateRangeResolver = DateRangeResolver(),
+            now = FakeNowProvider(System.currentTimeMillis()),
         )
         return Triple(useCase, queries, settings)
     }
@@ -81,9 +83,9 @@ class ObserveDashboardStatsUseCaseTest {
         val (useCase, _, _) = build(
             cars = listOf(CarEntity(id = 1, name = "T", createdAt = 0L)),
             events = listOf(
-                ChargeEventEntity(carId = 1, eventDate = now - 5 * MS_PER_DAY, odometerKm = 0.0, kwhAdded = 0.0, costTotal = 5.0, currency = "EUR"),
-                ChargeEventEntity(carId = 1, eventDate = now - 3 * MS_PER_DAY, odometerKm = 100.0, kwhAdded = 20.0, costTotal = 6.0, currency = "USD"),
-                ChargeEventEntity(carId = 1, eventDate = now - 1 * MS_PER_DAY, odometerKm = 200.0, kwhAdded = 20.0, costTotal = 7.0, currency = "EUR"),
+                ChargeEventEntity(carId = 1, eventDate = now - 5 * MS_PER_DAY, odometerKm = 0.0, kwhAdded = 0.0, costTotal = 5.0, currency = "EUR", createdAt = 0L),
+                ChargeEventEntity(carId = 1, eventDate = now - 3 * MS_PER_DAY, odometerKm = 100.0, kwhAdded = 20.0, costTotal = 6.0, currency = "USD", createdAt = 0L),
+                ChargeEventEntity(carId = 1, eventDate = now - 1 * MS_PER_DAY, odometerKm = 200.0, kwhAdded = 20.0, costTotal = 7.0, currency = "EUR", createdAt = 0L),
             ),
             activeCarId = 1,
         )
@@ -98,7 +100,14 @@ class ObserveDashboardStatsUseCaseTest {
         val queries = FakeChargeEventQueries()
         val writer = FakeChargeEventWriter(queries.shareStore())
         val settings = FakeSettingsReader(activeCarIdInit = 1)
-        val useCase = ObserveDashboardStatsUseCase(carReader, queries, settings, StatsCalculator(), DateRangeResolver())
+        val useCase = ObserveDashboardStatsUseCase(
+            carReader,
+            queries,
+            settings,
+            StatsCalculator(),
+            DateRangeResolver(),
+            FakeNowProvider(System.currentTimeMillis()),
+        )
 
         val emissions = mutableListOf<org.spsl.evtracker.core.model.DashboardUiState>()
         val job = launch {
@@ -110,9 +119,9 @@ class ObserveDashboardStatsUseCaseTest {
 
         // Insert an event for the active car within the period window.
         val now = System.currentTimeMillis()
-        writer.insert(ChargeEventEntity(carId = 1, eventDate = now - 1 * MS_PER_DAY, odometerKm = 0.0, kwhAdded = 10.0))
+        writer.insert(ChargeEventEntity(carId = 1, eventDate = now - 1 * MS_PER_DAY, odometerKm = 0.0, kwhAdded = 10.0, createdAt = 0L))
         advanceUntilIdle()
-        writer.insert(ChargeEventEntity(carId = 1, eventDate = now, odometerKm = 100.0, kwhAdded = 20.0))
+        writer.insert(ChargeEventEntity(carId = 1, eventDate = now, odometerKm = 100.0, kwhAdded = 20.0, createdAt = 0L))
         advanceUntilIdle()
         // Latest emission should now have stats (two events => delta-odo computable).
         assertTrue("expected stats after insert; emissions=$emissions", emissions.last().stats != null)

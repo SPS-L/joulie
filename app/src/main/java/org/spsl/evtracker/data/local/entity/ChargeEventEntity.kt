@@ -33,5 +33,5 @@ data class ChargeEventEntity(
     val currency: String? = null,
     val location: String? = null,
     val note: String = "",
-    val createdAt: Long = System.currentTimeMillis(),
+    val createdAt: Long,
 )

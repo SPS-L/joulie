@@ -23,6 +23,7 @@ class StatsCalculatorCostTest {
         kwhAdded = kwhAdded,
         costTotal = costTotal,
         currency = currency,
+        createdAt = 0L,
     )
 
     @Test

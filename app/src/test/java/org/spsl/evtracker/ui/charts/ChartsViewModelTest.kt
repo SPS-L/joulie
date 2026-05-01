@@ -66,7 +66,7 @@ class ChartsViewModelTest {
 
     @Before fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
-        carReader = FakeCarReader(listOf(CarEntity(id = 1, name = "C")))
+        carReader = FakeCarReader(listOf(CarEntity(id = 1, name = "C", createdAt = 0L)))
         queries = FakeChargeEventQueries().apply {
             seed(listOf(ev(nowMs - 100, 0.0)))
         }

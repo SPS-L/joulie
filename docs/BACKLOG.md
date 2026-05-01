@@ -35,7 +35,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-25 | 🟡 | Replace `chargeType: String` with a sealed class / TypeConverter-backed enum | — | ☐ |
 | TASK-26 | 🟡 | Change all Room primary-key and foreign-key fields from `Int` to `Long` | — | ☐ |
 | TASK-27 | 🟡 | Decouple bottom-nav visibility from hardcoded `hideOn` set in `MainActivity` | — | ☑ |
-| TASK-28 | 🟡 | Consolidate time on existing `NowProvider`; remove direct `System.currentTimeMillis()` from entities and helpers; drop the parallel `() -> Long` clock in `WorkerModule` | — | ☐ |
+| TASK-28 | 🟡 | Consolidate time on existing `NowProvider`; remove direct `System.currentTimeMillis()` from entities and helpers; drop the parallel `() -> Long` clock in `WorkerModule` | — | ☑ |
 | TASK-29 | 🟢 | Add explicit `debug` build type with `applicationIdSuffix` and `BuildConfig` flags | — | ☑ |
 | TASK-30 | 🟢 | Migrate from MPAndroidChart to Vico (line/bar) + custom `Canvas` `PieChartView` (pie tabs) | — | ☐ |
 | TASK-31 | 🟡 | Manual Drive controls in Settings: "Back up now" (force overwrite) and "Wipe remote backup" (delete the App Data file) | — | ☐ |
@@ -1370,7 +1370,36 @@ Fragment IDs. This is easy to forget — the `manageLocationsFragment` and
 
 ---
 
-## 🟡 TASK-28 — Consolidate time on the existing `NowProvider` abstraction
+## 🟡 TASK-28 — Consolidate time on the existing `NowProvider` abstraction ☑ Done (2026-05-01)
+
+> **Outcome:** every production `System.currentTimeMillis()` call outside
+> the canonical `DispatcherModule.provideNowProvider` binding is gone.
+> `CarEntity.createdAt`, `ChargeEventEntity.createdAt`, and
+> `CustomLocationEntity.lastUsed` no longer have wall-clock-evaluating
+> defaults — call sites pass `now.nowMillis()` explicitly.
+> `BackupData.fromEntities`, `LocationWriter.recordUsage`,
+> `DateRangeResolver.resolve` / `resolveCharts`, and
+> `ChargeEditUiState.eventDateMillis` lost their `= System.currentTimeMillis()`
+> defaults too. `AddCarUseCase`, `SaveChargeEventUseCase`,
+> `ObserveDashboardStatsUseCase`, `DriveBackupRepository`,
+> `RestoreBackupUseCase`, `ChargeEditViewModel`, and
+> `ManageLocationsFragment` all inject `NowProvider` (the Fragment
+> forwards `nowProvider::nowMillis` to the adapter constructor — adapters
+> aren't Hilt entry points). `WorkerModule.provideClock(): () -> Long`
+> is deleted; `DriveBackupWorker` consumes `NowProvider` directly. New
+> JVM fake `FakeNowProvider` lives next to the existing fakes; the
+> deterministic-clock plumbing is exercised by two new behavioural cases
+> (`AddCarUseCaseTest.createdAt_reflectsNowProviderValue` and
+> `SaveChargeEventUseCaseTest.createdAtAndLocationLastUsed_reflectNowProviderValue`).
+> JVM unit-test count: 245 → 247. Acceptance grep
+> (`grep -rn "System.currentTimeMillis()" app/src/main/java | grep -v DispatcherModule.kt`)
+> returns only the `NowProvider.kt` KDoc comment — no production calls.
+> `:app:assembleDebug`, `:app:assembleRelease` (with R8), `:app:lint`,
+> `ktlintCheck`, and `:app:assembleDebugAndroidTest` all green. Spec:
+> `superpowers/specs/2026-05-01-task28-nowprovider-consolidation-design.md`.
+> Plan: `superpowers/plans/2026-05-01-task28-nowprovider-consolidation.md`.
+> The original task text is preserved below for historical context.
+
 
 > **Note on premise.** A `NowProvider` (`fun interface NowProvider { fun nowMillis(): Long }`)
 > already exists in `domain/usecase/NowProvider.kt` and is bound by

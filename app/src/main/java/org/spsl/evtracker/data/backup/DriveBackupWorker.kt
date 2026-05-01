@@ -10,6 +10,7 @@ import org.spsl.evtracker.core.model.BackupVersionMismatch
 import org.spsl.evtracker.domain.backup.BackupRepository
 import org.spsl.evtracker.domain.backup.DriveAuthRequiredException
 import org.spsl.evtracker.domain.repository.SettingsWriter
+import org.spsl.evtracker.domain.usecase.NowProvider
 import java.io.IOException
 
 @HiltWorker
@@ -18,12 +19,12 @@ class DriveBackupWorker @AssistedInject constructor(
     @Assisted params: WorkerParameters,
     private val backupRepository: BackupRepository,
     private val settingsWriter: SettingsWriter,
-    private val clock: () -> Long,
+    private val now: NowProvider,
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result = try {
         backupRepository.backupCurrentData()
-        settingsWriter.setLastBackupAt(clock())
+        settingsWriter.setLastBackupAt(now.nowMillis())
         Result.success()
     } catch (e: DriveAuthRequiredException) {
         Result.failure()

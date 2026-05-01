@@ -20,6 +20,7 @@ class ResetActiveCarDataUseCaseTest {
         odometerKm = 100.0 + id,
         kwhAdded = 20.0,
         chargeType = "AC",
+        createdAt = 0L,
     )
 
     private fun build(): Triple<ResetActiveCarDataUseCase, FakeChargeEventQueries, FakeBackupScheduler> {

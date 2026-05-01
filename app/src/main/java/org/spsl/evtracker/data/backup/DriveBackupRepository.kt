@@ -12,6 +12,7 @@ import org.spsl.evtracker.domain.repository.CarReader
 import org.spsl.evtracker.domain.repository.ChargeEventQueries
 import org.spsl.evtracker.domain.repository.LocationReader
 import org.spsl.evtracker.domain.service.BackupSerializer
+import org.spsl.evtracker.domain.usecase.NowProvider
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -23,6 +24,7 @@ class DriveBackupRepository @Inject constructor(
     private val carReader: CarReader,
     private val chargeEventQueries: ChargeEventQueries,
     private val locationReader: LocationReader,
+    private val now: NowProvider,
 ) : BackupRepository {
 
     override suspend fun backupCurrentData(): Unit = runTranslating {
@@ -30,7 +32,7 @@ class DriveBackupRepository @Inject constructor(
         val cars = carReader.observeAll().first()
         val events = cars.flatMap { chargeEventQueries.getAllForCarSorted(it.id) }
         val locations = locationReader.observeAll().first()
-        val json = serializer.toJson(BackupData.fromEntities(cars, events, locations))
+        val json = serializer.toJson(BackupData.fromEntities(cars, events, locations, now = now.nowMillis()))
         val bytes = json.toByteArray(Charsets.UTF_8)
         val existing = remote.findBackupFileId(token)
         if (existing == null) {

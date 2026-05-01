@@ -35,7 +35,15 @@ class DriveBackupRepositoryTest {
         val carReader = FakeCarReader(cars)
         val queries = FakeChargeEventQueries().also { it.seed(events) }
         val locReader = FakeLocationReader(locations)
-        val repo = DriveBackupRepository(auth, remote, serializer, carReader, queries, locReader)
+        val repo = DriveBackupRepository(
+            auth,
+            remote,
+            serializer,
+            carReader,
+            queries,
+            locReader,
+            org.spsl.evtracker.testing.FakeNowProvider(),
+        )
         return Setup(repo, auth, remote)
     }
 
@@ -73,7 +81,7 @@ class DriveBackupRepositoryTest {
             id = 7, carId = 1, eventDate = 1L,
             odometerKm = 100.0, kwhAdded = 10.0, chargeType = "DC",
             costTotal = 5.0, costPerKwh = 0.5, currency = "EUR",
-            location = "Home", note = "n",
+            location = "Home", note = "n", createdAt = 0L,
         )
         val loc = CustomLocationEntity(id = 1, label = "Home", useCount = 1, lastUsed = 9L)
         val s = build(cars = listOf(car), events = listOf(event), locations = listOf(loc))

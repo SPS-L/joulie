@@ -8,17 +8,22 @@ import org.junit.Test
 import org.spsl.evtracker.core.model.CarFormState
 import org.spsl.evtracker.testing.FakeBackupScheduler
 import org.spsl.evtracker.testing.FakeCarRepository
+import org.spsl.evtracker.testing.FakeNowProvider
 import org.spsl.evtracker.testing.FakeSettingsReader
 import org.spsl.evtracker.testing.FakeSettingsWriter
 
 class AddCarUseCaseTest {
 
-    private fun setup(activeCarId: Int = -1, initialCars: List<org.spsl.evtracker.data.local.entity.CarEntity> = emptyList()): Quadruple {
+    private fun setup(
+        activeCarId: Int = -1,
+        initialCars: List<org.spsl.evtracker.data.local.entity.CarEntity> = emptyList(),
+        nowMs: Long = 0L,
+    ): Quadruple {
         val cars = FakeCarRepository(initial = initialCars)
         val settingsReader = FakeSettingsReader(activeCarIdInit = activeCarId)
         val settingsWriter = FakeSettingsWriter()
         val scheduler = FakeBackupScheduler()
-        val useCase = AddCarUseCase(cars, settingsReader, settingsWriter, scheduler)
+        val useCase = AddCarUseCase(cars, settingsReader, settingsWriter, scheduler, FakeNowProvider(nowMs))
         return Quadruple(useCase, cars, settingsWriter, scheduler)
     }
 
@@ -75,5 +80,12 @@ class AddCarUseCaseTest {
         val inserted = cars.current().single()
         assertNull(inserted.year)
         assertNull(inserted.batteryKwh)
+    }
+
+    @Test
+    fun createdAt_reflectsNowProviderValue() = runTest {
+        val (useCase, cars, _, _) = setup(nowMs = 12_345L)
+        useCase(CarFormState(name = "Tesla"))
+        assertEquals(12_345L, cars.current().single().createdAt)
     }
 }

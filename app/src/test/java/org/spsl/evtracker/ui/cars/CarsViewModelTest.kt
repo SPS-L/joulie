@@ -26,6 +26,7 @@ import org.spsl.evtracker.domain.usecase.DeleteCarUseCase
 import org.spsl.evtracker.domain.usecase.RenameCarUseCase
 import org.spsl.evtracker.testing.FakeBackupScheduler
 import org.spsl.evtracker.testing.FakeCarRepository
+import org.spsl.evtracker.testing.FakeNowProvider
 import org.spsl.evtracker.testing.FakeSettingsReader
 import org.spsl.evtracker.testing.FakeSettingsWriter
 
@@ -48,7 +49,7 @@ class CarsViewModelTest {
         val reader = FakeSettingsReader(activeCarIdInit = activeCarId)
         val writer = FakeSettingsWriter()
         val scheduler = FakeBackupScheduler()
-        val add = AddCarUseCase(repo, reader, writer, scheduler)
+        val add = AddCarUseCase(repo, reader, writer, scheduler, FakeNowProvider())
         val rename = RenameCarUseCase(repo, scheduler)
         val delete = DeleteCarUseCase(repo, repo, reader, writer, scheduler)
         val vm = CarsViewModel(repo, reader, writer, add, rename, delete)

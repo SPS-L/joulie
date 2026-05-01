@@ -10,7 +10,9 @@ import org.spsl.evtracker.R
 import org.spsl.evtracker.data.local.entity.CustomLocationEntity
 import org.spsl.evtracker.databinding.ItemCustomLocationBinding
 
-class ManageLocationsAdapter : ListAdapter<CustomLocationEntity, ManageLocationsAdapter.VH>(DIFF) {
+class ManageLocationsAdapter(
+    private val nowProvider: () -> Long,
+) : ListAdapter<CustomLocationEntity, ManageLocationsAdapter.VH>(DIFF) {
 
     inner class VH(val b: ItemCustomLocationBinding) : RecyclerView.ViewHolder(b.root) {
         fun bind(item: CustomLocationEntity) {
@@ -18,7 +20,7 @@ class ManageLocationsAdapter : ListAdapter<CustomLocationEntity, ManageLocations
             val ctx = b.root.context
             val rel = DateUtils.getRelativeTimeSpanString(
                 item.lastUsed,
-                System.currentTimeMillis(),
+                nowProvider(),
                 DateUtils.DAY_IN_MILLIS,
                 DateUtils.FORMAT_ABBREV_RELATIVE,
             ).toString()
