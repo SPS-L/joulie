@@ -20,6 +20,21 @@ data class ChargeEditUiState(
     val odometerError: Int? = null,
     val kwhError: Int? = null,
     val saving: Boolean = false,
+    /**
+     * Previous event's odometer (km) for the inline regression check.
+     * Create mode: the latest entry's odometer for the active car (null when no history).
+     * Edit mode: the chronologically-immediately-prior entry (null when editing the first event).
+     */
+    val previousOdometerKm: Double? = null,
+    /**
+     * Next event's odometer (km) for the edit-mode upper-bound check.
+     * Set only when editing a non-latest event. Null in Create mode and when editing the latest entry.
+     */
+    val nextOdometerKm: Double? = null,
+    /** True when the typed odometer (converted to km) is ≤ [previousOdometerKm]. Drives inline error + Save gate. */
+    val odometerBelowPrevious: Boolean = false,
+    /** True when the typed odometer (converted to km) is ≥ [nextOdometerKm]. Drives inline error + Save gate. */
+    val odometerAboveNext: Boolean = false,
 ) {
     sealed class Mode {
         object Create : Mode()

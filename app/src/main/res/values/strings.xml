@@ -196,6 +196,8 @@
     <!-- Charge edit error messages (full ChargeEdit string set lands in Task 12) -->
     <string name="error_odometer_required">Enter a valid odometer reading</string>
     <string name="error_odometer_must_be_higher">Odometer must be greater than the previous entry</string>
+    <string name="error_odometer_must_be_greater_than">Must be greater than last entry (%1$s %2$s)</string>
+    <string name="error_odometer_must_be_less_than">Must be less than next entry (%1$s %2$s)</string>
     <string name="error_kwh_required">Enter a valid kWh value</string>
 
     <!-- Charge edit -->

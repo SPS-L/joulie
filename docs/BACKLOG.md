@@ -18,7 +18,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-08 | 🟢 | Replace `CarEditDialog` with a Compose `AlertDialog` (requires adding Compose) | — | ☐ |
 | TASK-09 | 🟢 | CSV export of charge events with efficiency column, date-range picker | — | ☐ |
 | TASK-10 | 🟢 | In-app About / Info screen with SPS-Lab acknowledgment | — | ☑ |
-| TASK-11 | 🟡 | Odometer regression detection UX improvement | — | ☐ |
+| TASK-11 | 🟡 | Odometer regression detection UX improvement | — | ☑ |
 | TASK-12 | 🟡 | Widget: last-charge summary on home screen | — | ☐ |
 | TASK-13 | 🟢 | Charging session timer / live session mode | — | ☐ |
 | TASK-14 | 🟡 | Battery capacity degradation tracker | — | ☐ |
@@ -537,7 +537,32 @@ Each density folder contains **4 files**:
 
 ---
 
-## 🟡 TASK-11 — Odometer Regression UX Improvement
+## 🟡 TASK-11 — Odometer Regression UX Improvement ☑ Done (2026-05-01)
+
+> **Outcome:** `ChargeEditUiState` gained four fields —
+> `previousOdometerKm`, `nextOdometerKm`, `odometerBelowPrevious`,
+> `odometerAboveNext` — populated by `ChargeEditViewModel.init` from a
+> single `getAllForCarSorted(carId)` call (Create mode looks up the
+> latest entry; Edit mode locates the chronological neighbours of the
+> event being edited). Create mode pre-fills `odometer` with
+> `(previousOdometerKm + 1.0).toDisplayUnit()` so the field starts in a
+> known-valid state when the car has history. `setOdometer(text)` parses
+> the input, converts miles → km when needed, and toggles the regression
+> flags on every keystroke; the flags clear on blank/unparseable input.
+> `ChargeEditFragment.render` formats the inline `TextInputLayout.error`
+> from the new parameterised strings
+> `error_odometer_must_be_greater_than` /
+> `error_odometer_must_be_less_than` and gates `chargeEditSave.isEnabled`
+> on `!odometerBelowPrevious && !odometerAboveNext` (in addition to the
+> existing `!saving`). The use case still owns the
+> `OdometerNotIncreasing` fallback for same-`eventDate` races.
+> Ten new JVM cases in `ChargeEditViewModelTest` cover prefill (km +
+> miles), neighbour wiring (middle/first/last), and flag transitions on
+> `setOdometer`. JVM unit-test count: 247 → 257. Spec:
+> `superpowers/specs/2026-05-01-task11-odometer-regression-ux-design.md`.
+> Plan: `superpowers/plans/2026-05-01-task11-odometer-regression-ux.md`.
+> The original task text is preserved below for historical context.
+
 
 The app currently validates that each new charge event's odometer is greater
 than the previous one, but the error experience can be improved.

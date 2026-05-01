@@ -13,6 +13,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -269,5 +270,200 @@ class ChargeEditViewModelTest {
         val (vm, _) = build(customLocations = locations)
         val state = vm.uiState.first { it.locationChips.custom.isNotEmpty() }
         assertEquals(listOf("A", "B"), state.locationChips.custom)
+    }
+
+    // -------------------------------------------------------------------------
+    // TASK-11: odometer regression UX (prefill + inline error + Save gate)
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun createMode_noPreviousEvent_doesNotPrefillOdometer() = runTest {
+        val (vm, _) = build()
+        val state = vm.uiState.first { it.mode is ChargeEditUiState.Mode.Create }
+        assertEquals("", state.odometer)
+        assertNull(state.previousOdometerKm)
+        assertNull(state.nextOdometerKm)
+        assertFalse(state.odometerBelowPrevious)
+        assertFalse(state.odometerAboveNext)
+    }
+
+    @Test
+    fun createMode_withPreviousEvent_kmUnit_prefillsPrevPlusOne() = runTest {
+        val gateway = FakeSaveChargeEventGateway()
+        gateway.seedEvents(
+            listOf(
+                ChargeEventEntity(
+                    id = 1,
+                    carId = 1,
+                    eventDate = 1_000L,
+                    odometerKm = 12_345.0,
+                    kwhAdded = 20.0,
+                    createdAt = 0L,
+                ),
+            ),
+        )
+        val (vm, _) = build(eventId = -1, gateway = gateway)
+        val state = vm.uiState.first { it.mode is ChargeEditUiState.Mode.Create && it.odometer.isNotEmpty() }
+        assertEquals("12346.0", state.odometer)
+        assertEquals(12_345.0, state.previousOdometerKm!!, 0.0)
+        assertNull(state.nextOdometerKm)
+        assertFalse(
+            "prefill (prev + 1 km) must be strictly greater, so flag stays false",
+            state.odometerBelowPrevious,
+        )
+    }
+
+    @Test
+    fun createMode_withPreviousEvent_milesUnit_prefillsConverted() = runTest {
+        val gateway = FakeSaveChargeEventGateway()
+        gateway.seedEvents(
+            listOf(
+                ChargeEventEntity(
+                    id = 1,
+                    carId = 1,
+                    eventDate = 1_000L,
+                    odometerKm = 100.0,
+                    kwhAdded = 20.0,
+                    createdAt = 0L,
+                ),
+            ),
+        )
+        val (vm, _) = build(eventId = -1, gateway = gateway, distanceUnit = "miles")
+        val state = vm.uiState.first { it.mode is ChargeEditUiState.Mode.Create && it.odometer.isNotEmpty() }
+        // (100 + 1) km = 101 km ≈ 62.7558 mi
+        val expected = 101.0 / 1.609344
+        assertEquals(expected, state.odometer.toDouble(), 0.001)
+        assertEquals(100.0, state.previousOdometerKm!!, 0.0)
+    }
+
+    @Test
+    fun editMode_middleEvent_populatesPreviousAndNextOdometer() = runTest {
+        val gateway = FakeSaveChargeEventGateway()
+        gateway.seedEvents(
+            listOf(
+                ChargeEventEntity(id = 1, carId = 1, eventDate = 1_000L, odometerKm = 100.0, kwhAdded = 10.0, createdAt = 0L),
+                ChargeEventEntity(id = 2, carId = 1, eventDate = 2_000L, odometerKm = 200.0, kwhAdded = 10.0, createdAt = 0L),
+                ChargeEventEntity(id = 3, carId = 1, eventDate = 3_000L, odometerKm = 300.0, kwhAdded = 10.0, createdAt = 0L),
+            ),
+        )
+        val (vm, _) = build(eventId = 2, gateway = gateway)
+        val state = vm.uiState.first { it.mode is ChargeEditUiState.Mode.Edit }
+        assertEquals(100.0, state.previousOdometerKm!!, 0.0)
+        assertEquals(300.0, state.nextOdometerKm!!, 0.0)
+        assertFalse(state.odometerBelowPrevious)
+        assertFalse(state.odometerAboveNext)
+    }
+
+    @Test
+    fun editMode_firstEvent_hasNoPrevious() = runTest {
+        val gateway = FakeSaveChargeEventGateway()
+        gateway.seedEvents(
+            listOf(
+                ChargeEventEntity(id = 1, carId = 1, eventDate = 1_000L, odometerKm = 100.0, kwhAdded = 10.0, createdAt = 0L),
+                ChargeEventEntity(id = 2, carId = 1, eventDate = 2_000L, odometerKm = 200.0, kwhAdded = 10.0, createdAt = 0L),
+            ),
+        )
+        val (vm, _) = build(eventId = 1, gateway = gateway)
+        val state = vm.uiState.first { it.mode is ChargeEditUiState.Mode.Edit }
+        assertNull(state.previousOdometerKm)
+        assertEquals(200.0, state.nextOdometerKm!!, 0.0)
+    }
+
+    @Test
+    fun editMode_lastEvent_hasNoNext() = runTest {
+        val gateway = FakeSaveChargeEventGateway()
+        gateway.seedEvents(
+            listOf(
+                ChargeEventEntity(id = 1, carId = 1, eventDate = 1_000L, odometerKm = 100.0, kwhAdded = 10.0, createdAt = 0L),
+                ChargeEventEntity(id = 2, carId = 1, eventDate = 2_000L, odometerKm = 200.0, kwhAdded = 10.0, createdAt = 0L),
+            ),
+        )
+        val (vm, _) = build(eventId = 2, gateway = gateway)
+        val state = vm.uiState.first { it.mode is ChargeEditUiState.Mode.Edit }
+        assertEquals(100.0, state.previousOdometerKm!!, 0.0)
+        assertNull(state.nextOdometerKm)
+    }
+
+    @Test
+    fun setOdometer_belowPrevious_setsBelowPreviousFlag() = runTest {
+        val gateway = FakeSaveChargeEventGateway()
+        gateway.seedEvents(
+            listOf(
+                ChargeEventEntity(
+                    id = 1,
+                    carId = 1,
+                    eventDate = 1_000L,
+                    odometerKm = 200.0,
+                    kwhAdded = 10.0,
+                    createdAt = 0L,
+                ),
+            ),
+        )
+        val (vm, _) = build(eventId = -1, gateway = gateway)
+        vm.uiState.first { it.previousOdometerKm == 200.0 }
+        vm.setOdometer("150")
+        val state = vm.uiState.first { it.odometer == "150" }
+        assertTrue(state.odometerBelowPrevious)
+    }
+
+    @Test
+    fun setOdometer_abovePrevious_clearsBelowPreviousFlag() = runTest {
+        val gateway = FakeSaveChargeEventGateway()
+        gateway.seedEvents(
+            listOf(
+                ChargeEventEntity(
+                    id = 1,
+                    carId = 1,
+                    eventDate = 1_000L,
+                    odometerKm = 200.0,
+                    kwhAdded = 10.0,
+                    createdAt = 0L,
+                ),
+            ),
+        )
+        val (vm, _) = build(eventId = -1, gateway = gateway)
+        vm.uiState.first { it.previousOdometerKm == 200.0 }
+        vm.setOdometer("150")
+        vm.uiState.first { it.odometerBelowPrevious }
+        vm.setOdometer("250")
+        val state = vm.uiState.first { it.odometer == "250" }
+        assertFalse(state.odometerBelowPrevious)
+    }
+
+    @Test
+    fun setOdometer_aboveNext_inEditMode_setsAboveNextFlag() = runTest {
+        val gateway = FakeSaveChargeEventGateway()
+        gateway.seedEvents(
+            listOf(
+                ChargeEventEntity(id = 1, carId = 1, eventDate = 1_000L, odometerKm = 100.0, kwhAdded = 10.0, createdAt = 0L),
+                ChargeEventEntity(id = 2, carId = 1, eventDate = 2_000L, odometerKm = 200.0, kwhAdded = 10.0, createdAt = 0L),
+                ChargeEventEntity(id = 3, carId = 1, eventDate = 3_000L, odometerKm = 300.0, kwhAdded = 10.0, createdAt = 0L),
+            ),
+        )
+        val (vm, _) = build(eventId = 2, gateway = gateway)
+        vm.uiState.first { it.nextOdometerKm == 300.0 }
+        vm.setOdometer("350")
+        val state = vm.uiState.first { it.odometer == "350" }
+        assertTrue(state.odometerAboveNext)
+    }
+
+    @Test
+    fun setOdometer_blank_clearsBothRegressionFlags() = runTest {
+        val gateway = FakeSaveChargeEventGateway()
+        gateway.seedEvents(
+            listOf(
+                ChargeEventEntity(id = 1, carId = 1, eventDate = 1_000L, odometerKm = 100.0, kwhAdded = 10.0, createdAt = 0L),
+                ChargeEventEntity(id = 2, carId = 1, eventDate = 2_000L, odometerKm = 200.0, kwhAdded = 10.0, createdAt = 0L),
+                ChargeEventEntity(id = 3, carId = 1, eventDate = 3_000L, odometerKm = 300.0, kwhAdded = 10.0, createdAt = 0L),
+            ),
+        )
+        val (vm, _) = build(eventId = 2, gateway = gateway)
+        vm.uiState.first { it.previousOdometerKm == 100.0 }
+        vm.setOdometer("99")
+        vm.uiState.first { it.odometerBelowPrevious }
+        vm.setOdometer("")
+        val state = vm.uiState.first { it.odometer == "" }
+        assertFalse(state.odometerBelowPrevious)
+        assertFalse(state.odometerAboveNext)
     }
 }
