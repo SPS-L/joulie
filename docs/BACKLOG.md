@@ -41,7 +41,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-31 | 🟡 | Manual Drive controls in Settings: "Back up now" (force overwrite) and "Wipe remote backup" (delete the App Data file) | — | ☐ |
 | TASK-32 | 🟡 | Bump AGP (and Gradle wrapper) to a version that officially supports `compileSdk = 35`; remove the `android.suppressUnsupportedCompileSdk` workaround | — | ☑ |
 | TASK-33 | 🟢 | Audit Kotlin 2.x / K2 + KSP + Hilt compatibility now that AGP 8.7.3 is in place | TASK-32 | ☐ |
-| TASK-34 | 🟡 | Nightly managed-AVD job for `connectedAndroidTest` — keep off the PR gate | TASK-16 | ☐ |
+| TASK-34 | 🟡 | Nightly managed-AVD job for `connectedAndroidTest` — keep off the PR gate | TASK-16 | ☑ |
 | TASK-35 | 🟢 | Roborazzi screenshot tests for Dashboard + Charts (must land before TASK-30) | — | ☐ |
 | TASK-36 | 🟡 | Inline-comment the "no `Result.retry()`" invariant in `DriveBackupWorker.doWork()` | — | ☑ |
 | TASK-37 | 🔴 | Replace Google Drive backup with a Storage Access Framework (SAF) implementation (F-Droid blocker) | — | ⏸ |
@@ -2266,7 +2266,36 @@ The audit branch is then deleted; no production change lands in this task.
 
 ---
 
-## 🟡 TASK-34 — Nightly managed-AVD job for `connectedAndroidTest`
+## 🟡 TASK-34 — Nightly managed-AVD job for `connectedAndroidTest` ☑ Done (2026-05-01)
+
+> **Outcome:** new `.github/workflows/nightly-instrumented.yml` runs
+> `:app:connectedDebugAndroidTest --no-daemon --stacktrace` on a
+> `reactivecircus/android-emulator-runner@v2` matrix covering API 26
+> (matches `minSdk`) and API 35 (matches `targetSdk`), `default`
+> system image with `arch: x86_64`. Triggers are `schedule: cron '0
+> 2 * * *'` (02:00 UTC) and `workflow_dispatch` only — explicitly no
+> `pull_request` / `push` triggers, so the PR gate's runtime stays
+> unchanged. KVM permissions are unlocked at the start of each job
+> via the standard `udev` rule incantation so the emulator boots
+> hardware-accelerated rather than falling back to software emulation
+> (which routinely times out the 60-minute job budget). The AVD is
+> cached via `actions/cache@v4` keyed on
+> `avd-${api-level}-default-x86_64-v1` and pre-warmed in a
+> snapshot-generating step that runs only on cache miss; the actual
+> test step launches with `-no-snapshot-save` so the cache stays
+> stable across runs. Both reports — HTML at
+> `app/build/reports/androidTests/connected/` and raw XML at
+> `app/build/outputs/androidTest-results/connected/` — upload as
+> Actions artifacts on every run (`if: always()`) for triage. Failure
+> is informational; the workflow does not block PR merges.
+> `fail-fast: false` on the matrix so an API-26 regression doesn't
+> mask an API-35 one. `concurrency.cancel-in-progress: true` keeps
+> long-failing builds from queueing across midnight cron firings. The
+> optional commit-comment step from the spec is intentionally
+> deferred — the spec calls it out as "can be deferred if the matrix
+> proves too noisy initially," and GitHub Actions' default email
+> notifications already cover the maintainer until the matrix
+> stabilises. The original task text is preserved below.
 
 The repository has accumulated 10+ instrumented test files that the PR
 gate (`.github/workflows/ci.yml`) never executes. The current set
@@ -2576,8 +2605,8 @@ UI change.
 ## Notes for Agents (TASK-22 to TASK-30 addendum)
 
 > Sequencing notes for **TASK-07, TASK-16, TASK-19, TASK-22, TASK-23,
-> TASK-24, TASK-25, TASK-28, TASK-29, TASK-36** are obsolete — all ten
-> landed. The static-analysis CI gate (TASK-16) is in place; the SDK
+> TASK-24, TASK-25, TASK-28, TASK-29, TASK-34, TASK-36** are obsolete
+> — all eleven landed. The static-analysis CI gate (TASK-16) is in place; the SDK
 > bump to 35 (TASK-22) merged with no `connectedAndroidTest` matrix to
 > coordinate; TASK-23 → TASK-24 ran in the prescribed order; TASK-25
 > claimed Room v3 → v4 + `MIGRATION_3_4` and bumped `backup_version`
