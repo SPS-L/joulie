@@ -1738,6 +1738,16 @@ six tabs map to Vico like this:
 | Locations | `PieChart` | **Custom `Canvas` `PieChartView`** | Same |
 | Degradation | `LineChart` + `LimitLine` | Vico `CartesianChartView` + `LineCartesianLayer` + Vico `HorizontalAxis.Line` for the dashed nominal-capacity reference | TASK-14; the dashed nominal-`battery_kwh` reference line maps to a Vico decoration |
 
+> **Theme-awareness must be preserved.** The current MPAndroidChart wiring
+> resolves `?attr/colorOnSurface` (axis labels, legend text, pie center-text)
+> and `?attr/colorOutlineVariant` (gridlines, axis lines) from the active M3
+> theme so charts stay readable in dark mode (introduced by `c677a2b` after
+> a user report of unreadable dark-mode text). Vico's API has equivalent
+> hooks (`Axis.label.color`, `Axis.line.color`, `LineLayer` line colors) and
+> the custom `PieChartView` slice-label paint must do the same lookup. Any
+> replacement that ships with hardcoded greys is a regression — the
+> `docs/TEST_PLAN.md §5b` smoke matrix step 6b is the gate.
+
 ### Implementation
 
 **Step 1 — Add Vico; keep MPAndroidChart in place during the migration.**
