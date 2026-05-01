@@ -68,7 +68,7 @@ class MainViewModelTest {
         runner.failNext = failNext
         val scheduler = FakeBackupScheduler()
         val useCase = ResetAllDataUseCase(runner, writer, scheduler)
-        val vm = MainViewModel(reader, useCase)
+        val vm = MainViewModel(reader, writer, useCase)
         return Rig(vm, reader, writer, runner, scheduler)
     }
 

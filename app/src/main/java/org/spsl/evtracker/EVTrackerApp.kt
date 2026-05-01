@@ -9,6 +9,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import org.spsl.evtracker.data.notification.AndroidBackupNotifier
 import org.spsl.evtracker.domain.repository.SettingsReader
 import javax.inject.Inject
 
@@ -27,6 +28,7 @@ class EVTrackerApp : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
+        AndroidBackupNotifier.ensureChannels(this)
         // Default to follow-system synchronously; update once DataStore yields the persisted value.
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
         CoroutineScope(Dispatchers.Main).launch {

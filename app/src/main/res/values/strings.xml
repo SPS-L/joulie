@@ -82,6 +82,20 @@
     <string name="drive_remote_backup_too_new">This backup was created by a newer version. Update the app to restore.</string>
     <string name="drive_restore_failed">Couldn’t restore backup. Local data is unchanged.</string>
 
+    <!-- Backup notifications (TASK-19) -->
+    <string name="backup_notif_channel_status_name">Backup status</string>
+    <string name="backup_notif_channel_status_description">Low-priority alerts when Drive backup has failed multiple times in a row.</string>
+    <string name="backup_notif_channel_auth_name">Backup sign-in required</string>
+    <string name="backup_notif_channel_auth_description">Higher-priority alerts when Drive sign-in needs renewal.</string>
+    <string name="backup_notif_chronic_failure_title">Drive backup failed</string>
+    <string name="backup_notif_chronic_failure_body">Tap to open Settings.</string>
+    <string name="backup_notif_auth_required_title">Drive sign-in required</string>
+    <string name="backup_notif_auth_required_body">Tap to reconnect.</string>
+    <string name="backup_notif_permission_rationale_title">Allow backup notifications?</string>
+    <string name="backup_notif_permission_rationale_body">EV Tracker uses notifications only to tell you when a Drive backup has failed. Nothing else.</string>
+    <string name="backup_notif_permission_rationale_allow">Allow</string>
+    <string name="backup_notif_permission_rationale_deny">Not now</string>
+
     <!-- Settings (F1) -->
     <string name="settings_unit_flipped_to_km">Distance unit also changed to km.</string>
     <string name="settings_unit_flipped_to_miles">Distance unit also changed to miles.</string>

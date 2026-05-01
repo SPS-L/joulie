@@ -1,10 +1,15 @@
 package org.spsl.evtracker
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.annotation.VisibleForTesting
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -34,6 +39,12 @@ class MainActivity : AppCompatActivity() {
     private lateinit var navGraph: NavGraph
     private var navMounted = false
     private var recoveryDialogShowing = false
+    private var notificationRationaleShowing = false
+
+    private val notificationPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            if (!granted) mainViewModel.markNotificationPermissionDenied()
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -83,6 +94,44 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                mainViewModel.shouldOfferNotificationPermission.collect { offer ->
+                    if (offer) maybeShowNotificationRationale()
+                }
+            }
+        }
+    }
+
+    private fun maybeShowNotificationRationale() {
+        // Pre-13 doesn't gate notifications behind a runtime permission, and
+        // the channel is already created at startup — nothing to ask.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        if (notificationRationaleShowing) return
+        val granted = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.POST_NOTIFICATIONS,
+        ) == PackageManager.PERMISSION_GRANTED
+        if (granted) return
+
+        notificationRationaleShowing = true
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.backup_notif_permission_rationale_title)
+            .setMessage(R.string.backup_notif_permission_rationale_body)
+            .setPositiveButton(R.string.backup_notif_permission_rationale_allow) { _, _ ->
+                notificationRationaleShowing = false
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+            .setNegativeButton(R.string.backup_notif_permission_rationale_deny) { _, _ ->
+                notificationRationaleShowing = false
+                mainViewModel.markNotificationPermissionDenied()
+            }
+            .setOnCancelListener {
+                notificationRationaleShowing = false
+                mainViewModel.markNotificationPermissionDenied()
+            }
+            .show()
     }
 
     private fun showRecoveryFailureDialog(cause: Throwable?) {

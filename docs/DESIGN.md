@@ -185,6 +185,10 @@ not persisted independently of `setupComplete`.
 | `activeCarId` | Int | `-1` | Car selector |
 | `driveEnabled` | Boolean | `false` | Settings |
 | `theme` | String | `"system"` | Settings only — **not** part of the wizard |
+| `lastBackupAt` | Long? | absent | `DriveBackupWorker` on `Result.success()` |
+| `resetInProgress` | Boolean | `false` | `ResetAllDataUseCase` (durable interrupted-reset flag) |
+| `consecutiveBackupFailures` | Int | `0` | `BackupOutcomeReporter` (TASK-19) — reset to 0 on backup `Success`, +1 on `AuthRequired` / `Failure` |
+| `notificationPermissionDenied` | Boolean | `false` | `MainViewModel.markNotificationPermissionDenied` (TASK-19) — sticky once true |
 
 All keys declared as `Preferences.Key<T>` constants in a `PreferenceKeys` object. `theme` accepts `"system"`, `"light"`, `"dark"`.
 
@@ -589,8 +593,8 @@ Restore notes:
 | Variant | Trigger | UI / Worker reaction |
 |---------|---------|----------------------|
 | `Success` | upload completed | `Worker → Result.success()`; `lastBackupAt` written |
-| `AuthRequired` | `silentToken()` failed, HTTP 401, HTTP 403 with auth-class reason (`appNotAuthorized`, `insufficientFilePermissions`, `insufficientPermissions`, `forbidden`), or HTTP 403 with unknown / unparseable body (conservative fallback) | `Worker → Result.failure()`; future TASK-19 surface posts a re-auth notification |
-| `Failure(reason, cause?)` | non-recoverable terminal outcome — currently `"Drive storage full"` (HTTP 403 `storageQuotaExceeded`), `"HTTP <n>"` if the retry budget exhausted on a 4xx/5xx, or `"Network failure: <ExceptionClass>"` if it exhausted on a transport `IOException` | `Worker → Result.failure()`; reason carries through to logs and (TASK-19) notifications |
+| `AuthRequired` | `silentToken()` failed, HTTP 401, HTTP 403 with auth-class reason (`appNotAuthorized`, `insufficientFilePermissions`, `insufficientPermissions`, `forbidden`), or HTTP 403 with unknown / unparseable body (conservative fallback) | `Worker → Result.failure()`; **TASK-19**: also fires `BackupNotifier.notifyAuthRequired()` (channel `backup_auth`, IMPORTANCE_DEFAULT) |
+| `Failure(reason, cause?)` | non-recoverable terminal outcome — currently `"Drive storage full"` (HTTP 403 `storageQuotaExceeded`), `"HTTP <n>"` if the retry budget exhausted on a 4xx/5xx, or `"Network failure: <ExceptionClass>"` if it exhausted on a transport `IOException` | `Worker → Result.failure()`; reason carries through to logs and (**TASK-19**) `BackupNotifier.notifyChronicFailure()` once `consecutiveBackupFailures` ≥ 3 |
 
 `DriveBackupRepository` runs its own bounded retry loop inside `backupCurrentData()` and `readRemoteBackup()`:
 
@@ -603,6 +607,34 @@ The Worker's `doWork()` is therefore a thin `when (result)` translator that neve
 All non-recoverable paths log via `android.util.Log.e("DriveBackupRepository", reason, cause)`. JVM unit tests stub Android logging via `testOptions.unitTests.isReturnDefaultValues = true` in `app/build.gradle.kts`.
 
 `readRemoteBackup()` keeps its existing exception contract (returns `String?`, throws `DriveAuthRequiredException` / `IOException`) because `SettingsViewModel.onDriveAuthGranted` and `RestoreBackupUseCase` already handle those — but it goes through the same `withRetry` wrapper, so transient blips on the read path retry too.
+
+### Backup failure notifications (TASK-19)
+
+`BackupOutcomeReporter` (in `domain/notification/`) is a thin orchestrator the worker forwards each `BackupResult` through before translating to the WorkManager `Result` surface. It owns the persistent failure-streak counter and the threshold logic so both stay JVM-testable:
+
+- **Counter:** `SettingsReader.consecutiveBackupFailures` (DataStore Int, default `0`). Reset to `0` on `Success`; incremented by `+1` on `AuthRequired` and `Failure`.
+- **Threshold:** `BackupOutcomeReporter.CHRONIC_FAILURE_THRESHOLD = 3`. The first `Failure` that brings the counter to ≥ 3 (and every subsequent `Failure`) fires `notifyChronicFailure()`. `AuthRequired` is its own surface — it fires `notifyAuthRequired()` on every occurrence regardless of the counter.
+
+`BackupNotifier` is a domain interface implemented by `AndroidBackupNotifier` (in `data/notification/`). It exposes three calls (`notifyChronicFailure`, `notifyAuthRequired`, `clearAll`) and posts via `NotificationManagerCompat.notify` wrapped in a `safeNotify` helper that gates on `areNotificationsEnabled()` (silent no-op when permission missing — also satisfies lint's `MissingPermission`).
+
+Two channels are registered idempotently from `EVTrackerApp.onCreate` via `AndroidBackupNotifier.ensureChannels(this)`:
+
+| Channel id | Importance | Purpose |
+|------------|------------|---------|
+| `backup_status` | LOW | Sticky chronic-failure card — failures ≥ 3 in a row. Cleared by `clearAll()` on the next successful backup. |
+| `backup_auth` | DEFAULT | Auth-required card — fired whenever the worker returns `AuthRequired`. Higher importance because the user must actively re-consent; the auto-backup loop cannot recover on its own. |
+
+Both notifications carry a `PendingIntent` built via `NavDeepLinkBuilder` that lands on `settingsFragment` so the user can tap directly into the Drive-status row.
+
+**Permission flow (Android 13+).** The manifest declares `<uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>`. `MainViewModel.shouldOfferNotificationPermission` is a `StateFlow<Boolean>` derived from `consecutiveBackupFailures >= CHRONIC_FAILURE_THRESHOLD && !notificationPermissionDenied`. `MainActivity` collects it and fires the rationale dialog only when:
+
+1. `Build.VERSION.SDK_INT >= TIRAMISU` (pre-13 has no runtime gate); AND
+2. `ContextCompat.checkSelfPermission(POST_NOTIFICATIONS) != GRANTED`; AND
+3. The dialog isn't already showing (`notificationRationaleShowing` re-entrancy guard).
+
+Tapping **Allow** launches the system permission request. Tapping **Not now**, dismissing the dialog, or denying the system request all set the sticky `notificationPermissionDenied` flag — we **never** re-prompt. (If the user later enables notifications via system settings, the runtime check passes and notifications work; the in-app prompt just stays silent.)
+
+The 8 JVM cases on `BackupOutcomeReporterTest` cover: success resets the counter and clears notifications; first/second failures don't fire chronic; third fires; fourth keeps firing; AuthRequired fires the auth surface every time and increments the counter without triggering chronic; success after a streak resets; AuthRequired at the threshold doesn't trigger the chronic surface.
 
 ---
 
