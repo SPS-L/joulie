@@ -64,7 +64,7 @@ UI (Fragments + ViewModels)  →  Domain (use cases + services)  →  Repositori
 - **WorkManager** for Drive backup scheduling (uniqueness via `enqueueUniqueWork`).
 - **Material 3** with light/dark token palettes.
 
-Min SDK 26 · target / compile SDK 35 · JDK 17 · Gradle 8.4 · AGP 8.2.0 · Kotlin 1.9.21.
+Min SDK 26 · target / compile SDK 35 · JDK 17 · Gradle 8.9 · AGP 8.7.3 · Kotlin 1.9.21.
 
 The full technical design lives in [`docs/DESIGN.md`](docs/DESIGN.md).
 

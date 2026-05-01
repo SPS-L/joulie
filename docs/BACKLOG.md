@@ -39,7 +39,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-29 | 🟢 | Add explicit `debug` build type with `applicationIdSuffix` and `BuildConfig` flags | — | ☑ |
 | TASK-30 | 🟢 | Migrate from MPAndroidChart to Vico (line/bar) + custom `Canvas` `PieChartView` (pie tabs) | — | ☐ |
 | TASK-31 | 🟡 | Manual Drive controls in Settings: "Back up now" (force overwrite) and "Wipe remote backup" (delete the App Data file) | — | ☐ |
-| TASK-32 | 🟡 | Bump AGP (and Gradle wrapper) to a version that officially supports `compileSdk = 35`; remove the `android.suppressUnsupportedCompileSdk` workaround | — | ☐ |
+| TASK-32 | 🟡 | Bump AGP (and Gradle wrapper) to a version that officially supports `compileSdk = 35`; remove the `android.suppressUnsupportedCompileSdk` workaround | — | ☑ |
 
 **Priority legend:** 🔴 High (architecture/data safety) · 🟡 Medium (robustness/UX) · 🟢 Low (new feature)  
 **Status legend:** ☐ open · ☑ done · ☒ closed (premise no longer holds)  
@@ -1926,7 +1926,31 @@ The change is complete when **all** of the following hold:
 
 ---
 
-## 🟡 TASK-32 — Bump AGP + Gradle wrapper for official `compileSdk = 35` support
+## 🟡 TASK-32 — Bump AGP + Gradle wrapper for official `compileSdk = 35` support ☑ Done (2026-05-01)
+
+> **Outcome:** AGP bumped `8.2.0` → `8.7.3` in
+> `gradle/libs.versions.toml`; Gradle wrapper bumped `8.4-bin` → `8.9-bin`
+> in `gradle/wrapper/gradle-wrapper.properties` (AGP 8.7.x officially
+> requires Gradle 8.9+ per the AGP↔Gradle compatibility table). The
+> workaround block in `gradle.properties` —
+> `android.suppressUnsupportedCompileSdk=35` plus its explanatory
+> comment — was deleted; AGP 8.7.3 officially supports `compileSdk = 35`
+> so neither the "tested up to compileSdk = 34" advisory nor the
+> "SDK XML version 4" parser warning fires anymore (verified by
+> `./gradlew :app:assembleDebug --warning-mode all 2>&1 | grep -iE
+> "(warning|tested up to|SDK XML)"` returning empty). Kotlin 1.9.21 +
+> KSP 1.9.21-1.0.16 + Hilt 2.50 are all compatible with AGP 8.7.3 — no
+> language-version bump required, and the K2 / Kotlin 2.x migration
+> stays out of scope as planned. After a `clean` rebuild on the new
+> toolchain, all gates green: `:app:assembleDebug`,
+> `:app:assembleRelease` (R8 minification), `:app:assembleDebugAndroidTest`
+> (instrumented compile), `ktlintCheck`, `:app:lint` (no new lint
+> issues; existing baseline still respected), and `:app:testDebugUnitTest`
+> (265 cases). `README.md` toolchain line updated to "Gradle 8.9 · AGP
+> 8.7.3 · Kotlin 1.9.21". Historical specs/plans under
+> `docs/superpowers/` keep their original AGP 8.2.0 / Gradle 8.4
+> references — those are snapshots in time, not live docs. The
+> original task text is preserved below.
 
 After TASK-22 merged (`compileSdk` and `targetSdk` set to 35), AGP 8.2.0
 emits two warnings on every build:
