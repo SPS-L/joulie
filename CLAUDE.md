@@ -88,7 +88,7 @@ UI:       Fragments + ViewModels (Wizard ✓, Dashboard ✓, ChargeEdit ✓, Car
           core/model/ states DashboardScreenState · ChargeEditUiState · CarsUiState · CarFormState · HistoryUiState
 Domain:   Use cases  SaveChargeEvent · DeleteChargeEvent · ObserveDashboardStats · RestoreBackup · ExportCsv
                      AddCar · RenameCar · DeleteCar (D)
-          Services   StatsCalculator · CostParser · UnitConverter · DateRangeResolver · BackupSerializer
+          Services   StatsCalculator · CostParser · UnitConverter · DateRangeResolver · BackupSerializer · CapacityEstimator (TASK-14)
           Narrow IFs CarReader · CarWriter (D) · ChargeEventQueries · ChargeEventWriter · LocationReader · LocationWriter · SettingsReader · SettingsWriter
           Backup IFs BackupScheduler · BackupRepository · RestoreTransactionRunner · RestoreSnapshotWriter · CsvFileSink
 Repo:     CarRepository (CarReader + CarWriter) · ChargeEventRepository · LocationRepository · SettingsRepository · BackupRepository

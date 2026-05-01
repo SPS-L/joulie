@@ -974,7 +974,7 @@ reflection, and the backup DTOs (`BackupData`, `CarDto`, `ChargeEventDto`,
    - Walk the smoke matrix:
      a. Wizard completes successfully (writes `setupComplete=true`).
      b. Add a car, add a charge event with cost; verify Dashboard stats render.
-     c. Open Charts; verify all five tabs (Trend / Monthly kWh / Monthly cost / AC vs DC / Locations) render without crash.
+     c. Open Charts; verify all six tabs (Trend / Monthly kWh / Monthly cost / AC vs DC / Locations / Degradation) render without crash.
      d. Settings → enable Drive backup; sign in; trigger a backup; verify `evtracker_backup.json` lands in the App Data folder via `files.list?spaces=appDataFolder`.
      e. Reset preferences; verify wizard re-routes.
      f. CSV export from Settings; verify the share sheet opens.
@@ -1717,7 +1717,7 @@ since AGP 8.0 disabled it by default).
 
 A `grep -rln "com.github.mikephil.charting"` confirmed exactly three importer
 files: `ChartsMarkerView.kt`, `ChartStyling.kt`, `ChartsTabFragment.kt`. The
-five tabs map to Vico like this:
+six tabs map to Vico like this:
 
 | Tab | MPAndroidChart type | Replacement | Notes |
 |---|---|---|---|
@@ -1726,6 +1726,7 @@ five tabs map to Vico like this:
 | Monthly cost | `BarChart` | Vico `CartesianChartView` + `ColumnCartesianLayer` | Same |
 | AC vs DC split | `PieChart` | **Custom `Canvas` `PieChartView`** | Vico has no pie chart |
 | Locations | `PieChart` | **Custom `Canvas` `PieChartView`** | Same |
+| Degradation | `LineChart` + `LimitLine` | Vico `CartesianChartView` + `LineCartesianLayer` + Vico `HorizontalAxis.Line` for the dashed nominal-capacity reference | TASK-14; the dashed nominal-`battery_kwh` reference line maps to a Vico decoration |
 
 ### Implementation
 
@@ -1793,7 +1794,7 @@ Vico has no pie chart. Implement once, use twice:
 
 **Step 5 — Remove MPAndroidChart.**
 
-Once all five tabs render correctly with the new implementations:
+Once all six tabs render correctly with the new implementations:
 
 1. Drop `implementation(libs.mpandroidchart)` and the `mpandroidchart` entry
    from `gradle/libs.versions.toml`.
@@ -1803,7 +1804,7 @@ Once all five tabs render correctly with the new implementations:
 
 **Step 6 — Tests and docs.**
 
-1. Update or add Espresso tests in `app/src/androidTest/` for each of the five
+1. Update or add Espresso tests in `app/src/androidTest/` for each of the six
    tabs: assert the chart `View` is non-empty when the ViewModel emits a
    `Loaded` state with mock data.
 2. Update `TEST_PLAN.md` (Charts section): replace MPAndroidChart-specific
@@ -2156,14 +2157,6 @@ that officially supports `compileSdk = 35` and remove the workaround.
 > error model to consume. Sequencing notes below cover the remaining
 > open work only.
 
-- **TASK-26 + TASK-14 schema-version coordination:** **Room v4 is now
-  the floor** (TASK-25 took v3 → v4). Both TASK-26 (`Int` → `Long` PKs)
-  and TASK-14 (battery degradation columns) bump the schema again.
-  Whichever lands first claims **v5**; the other increments to **v6**
-  unless the two are batched into a single `MIGRATION_4_5` (recommended
-  — see the per-task specs). `BackupData.CURRENT_VERSION` and
-  `BackupSerializer.SUPPORTED_VERSIONS` need a matching coordinated
-  bump.
 - **TASK-30 marker reuse:** complete the Vico marker wrapper once in Step 2
   and reuse in Step 3. Do not port `ChartsMarkerView` twice.
 
@@ -2173,7 +2166,7 @@ that officially supports `compileSdk = 35` and remove the workaround.
 
 - The package root is `org.spsl.evtracker`.
 - The project uses Kotlin DSL (`build.gradle.kts`), Hilt for DI, Room for
-  local persistence (currently at schema version 3), and Kotlin Coroutines
+  local persistence (currently at schema version 6), and Kotlin Coroutines
   with Flow throughout.
 - All new classes must follow the existing naming and packaging conventions
   documented in [`../CLAUDE.md`](../CLAUDE.md).
@@ -2181,5 +2174,9 @@ that officially supports `compileSdk = 35` and remove the workaround.
   `app/build.gradle.kts` first. Prefer libraries already present.
 - After any structural change, run `./gradlew test` (JVM) and
   `./gradlew connectedAndroidTest` (instrumented) to verify no regressions.
-- Room schema version is currently **3**. Any migration must bump it to **4**
-  and add a corresponding migration file under `app/schemas/`.
+- Room schema version is currently **6**. Any migration must bump it to **7**
+  and add a corresponding migration file under `app/schemas/`. The migration
+  list in `AppDatabase.companion` and `DatabaseModule.provideDatabase` must
+  both be updated; `BackupData.CURRENT_VERSION` and
+  `BackupSerializer.SUPPORTED_VERSIONS` need a coordinated bump when the
+  schema change touches a field that's serialized to the Drive backup.

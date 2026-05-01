@@ -31,7 +31,8 @@
 | F5 | **First-boot setup wizard** | One-time: primary metric + unit + currency |
 | F6 | Statistics dashboard | Last charge, 7 days, 30 days, year, custom range |
 | F7 | Multi-metric stats cards | km/kWh, mi/kWh, kWh/100km, cost/km, cost/100km (based on preference) |
-| F8 | Charts | Line (efficiency trend AC vs DC), Bar (monthly kWh), Bar (monthly cost), Pie (AC/DC split + location split) |
+| F8 | Charts | Line (efficiency trend AC vs DC), Bar (monthly kWh), Bar (monthly cost), Pie (AC/DC split + location split), Line (battery degradation with nominal-capacity reference) |
+| F8b | Battery health card (Dashboard) | Latest effective battery capacity vs nominal `battery_kwh` as a percentage; shown only when the active car has nominal capacity set and ≥1 qualifying charge exists |
 | F9 | Dashboard filter chips | All / AC / DC |
 | F10 | Location quick-chips | Home, Work, Public (fixed) + up to 5 custom learned chips |
 | F11 | Local SQLite storage | Room, no account needed |
@@ -295,6 +296,8 @@ Top 5 by `use_count DESC, last_used DESC` are shown as quick chips in the charge
 │  SaveChargeEvent · DeleteChargeEvent                 │
 │  ObserveDashboardStats · RestoreBackup · ExportCsv   │
 │  StatsCalculator · CostParser · UnitConverter        │
+│  CapacityEstimator (TASK-14) · DateRangeResolver     │
+│  BackupSerializer · ChargeTypeJsonAdapter            │
 ├──────────────────────────────────────────────────────┤
 │  Repository Layer                                    │
 │  CarRepository · ChargeEventRepository               │
@@ -386,6 +389,7 @@ Recommended package layout for long-term maintainability:
 - **Primary metric card** (large): value derived from `primaryMetric` pref
 - Secondary metric cards (smaller): remaining 2 efficiency metrics
 - Cost summary row (hidden when all `costTotal IS NULL` for that period, **or** when the period contains more than one currency — in which case show a "Multi-currency period — cost stats hidden" banner instead)
+- **Battery health card** (TASK-14, hidden when the car has no nominal `battery_kwh` set or no qualifying charge exists): displays `Stats.batteryHealthPercent` as `NN%`. The percentage is computed from the FULL per-car history rather than the period subset — degradation is a long-term property. Values may exceed 100% — that surfaces heuristic over-estimation rather than being clamped.
 - Empty states (mutually exclusive):
   - **No car** (`activeCarId == -1` or no `cars` rows) — copy "Add a car to get started", CTA "Add car" → CarsFragment
   - **No events for active car** — copy "Log your first charge to see stats here", CTA "Log charge" → ChargeEditFragment
@@ -404,6 +408,11 @@ Recommended package layout for long-term maintainability:
   - Toggle: Total cost / Price per kWh
   - Currency label from pref
   - Hint: "Leave blank to skip — won't affect statistics"
+- **SoC section (TASK-14, collapsed by default, tap to expand):**
+  - Two paired inputs: SoC before (%) · SoC after (%), each accepting `0..100`
+  - Stored on the entity as fractions in `0.0..1.0` (after / 100)
+  - Validation: both blank → drop them; both filled, parseable, in-range, with `after > before` → save; otherwise inline error
+  - Powers the exact path of `CapacityEstimator` (Dashboard battery-health card + Charts degradation tab)
 - Note field (optional, single line)
 - Save → validates odometer > last entry, persists, updates `custom_locations`
 
@@ -416,6 +425,7 @@ Recommended package layout for long-term maintainability:
 - Bar chart: monthly cost (hidden if no cost data)
 - Pie chart: AC vs DC split
 - Pie chart: location distribution
+- **Line chart: battery degradation** (TASK-14). Y-axis = effective capacity (kWh) per qualifying charge event; X-axis = event date. A dashed `LimitLine` at the car's nominal `battery_kwh` provides the reference. Points are computed by `CapacityEstimator` — exact when both SoC fields are set, heuristic (using `kwhAdded` itself) when `kwhAdded ≥ 0.8 × nominalBatteryKwh`. The tab renders only when the car has nominal capacity set AND at least 3 qualifying points exist; otherwise an empty-state instructs the user to set the nominal capacity or log more SoC-tagged charges.
 - All charts use MPAndroidChart; support pinch-zoom and value markers
 
 ### History (HistoryFragment)
@@ -491,7 +501,7 @@ First charge event for a car **cannot** compute efficiency (no prior odometer). 
 - "Skip" means local data remains authoritative and future backups upload that local state.
 - The app never attempts field-level or row-level merge between local and remote data.
 
-### Backup JSON structure (v4) — authoritative field list
+### Backup JSON structure (v6) — authoritative field list
 
 All numeric timestamps are Unix epoch **milliseconds**; `exported_at` is ISO 8601 UTC.
 
