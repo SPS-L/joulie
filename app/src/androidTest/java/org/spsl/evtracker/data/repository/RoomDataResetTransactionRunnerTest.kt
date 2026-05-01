@@ -37,7 +37,7 @@ class RoomDataResetTransactionRunnerTest {
 
     @Test fun clearAllTables_emptiesAllThreeTables() = runBlocking {
         val carId = db.carDao().insert(
-            CarEntity(name = "Test", make = "M", model = "X", year = 2024, batteryKwh = 75.0),
+            CarEntity(name = "Test", make = "M", model = "X", year = 2024, batteryKwh = 75.0, createdAt = 0L),
         ).toInt()
         db.chargeEventDao().insert(
             ChargeEventEntity(
@@ -46,6 +46,7 @@ class RoomDataResetTransactionRunnerTest {
                 odometerKm = 100.0,
                 kwhAdded = 20.0,
                 chargeType = "AC",
+                createdAt = 0L,
             ),
         )
         db.customLocationDao().insertIfMissing(
@@ -66,7 +67,7 @@ class RoomDataResetTransactionRunnerTest {
 
     @Test fun clearAllTables_isAtomic_throwingFromOneDeleteRollsBackOthers() = runBlocking {
         val carId = db.carDao().insert(
-            CarEntity(name = "Test", make = "M", model = "X", year = 2024, batteryKwh = 75.0),
+            CarEntity(name = "Test", make = "M", model = "X", year = 2024, batteryKwh = 75.0, createdAt = 0L),
         ).toInt()
         db.chargeEventDao().insert(
             ChargeEventEntity(
@@ -75,6 +76,7 @@ class RoomDataResetTransactionRunnerTest {
                 odometerKm = 100.0,
                 kwhAdded = 20.0,
                 chargeType = "AC",
+                createdAt = 0L,
             ),
         )
 

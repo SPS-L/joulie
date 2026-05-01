@@ -20,7 +20,20 @@ import org.spsl.evtracker.domain.repository.LocationReader
 import org.spsl.evtracker.domain.repository.LocationWriter
 import org.spsl.evtracker.domain.repository.SettingsReader
 import org.spsl.evtracker.domain.repository.SettingsWriter
+import org.spsl.evtracker.domain.usecase.NowProvider
 import java.io.IOException
+
+/**
+ * Deterministic clock for JVM tests. Replaces every direct
+ * `System.currentTimeMillis()` call in tests that exercise NowProvider-driven
+ * code paths (TASK-28).
+ */
+class FakeNowProvider(@Volatile var time: Long = 0L) : NowProvider {
+    override fun nowMillis() = time
+    fun advance(ms: Long) {
+        time += ms
+    }
+}
 
 class FakeCarReader(initial: List<CarEntity> = emptyList()) : CarReader {
     private val state = MutableStateFlow(initial)
@@ -304,6 +317,7 @@ class FakeSaveChargeEventGateway {
     val locationReader = FakeLocationReader()
     val backupScheduler = FakeBackupScheduler()
     val costParser = org.spsl.evtracker.domain.service.CostParser()
+    val nowProvider = FakeNowProvider()
 
     val useCase: org.spsl.evtracker.domain.usecase.SaveChargeEventUseCase =
         org.spsl.evtracker.domain.usecase.SaveChargeEventUseCase(
@@ -312,6 +326,7 @@ class FakeSaveChargeEventGateway {
             locationWriter = locationWriter,
             backupScheduler = backupScheduler,
             costParser = costParser,
+            now = nowProvider,
         )
 
     fun seedEvents(events: List<ChargeEventEntity>) {

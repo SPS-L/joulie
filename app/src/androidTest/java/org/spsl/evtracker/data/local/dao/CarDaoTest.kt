@@ -37,7 +37,7 @@ class CarDaoTest {
 
     @Test
     fun insertCar_idIsAssigned() = runBlocking {
-        val rowId = carDao.insert(CarEntity(name = "T"))
+        val rowId = carDao.insert(CarEntity(name = "T", createdAt = 0L))
         assertTrue("rowId must be > 0; got $rowId", rowId > 0)
 
         val saved = carDao.getById(rowId.toInt())
@@ -47,7 +47,7 @@ class CarDaoTest {
 
     @Test
     fun updateCar_changesPersist() = runBlocking {
-        val rowId = carDao.insert(CarEntity(name = "T")).toInt()
+        val rowId = carDao.insert(CarEntity(name = "T", createdAt = 0L)).toInt()
         // Re-fetch — the original local still has id = 0 and would silently no-op on update.
         val saved = carDao.getById(rowId)!!
 
@@ -60,8 +60,8 @@ class CarDaoTest {
 
     @Test
     fun deleteCar_removesFromList() = runBlocking {
-        val id1 = carDao.insert(CarEntity(name = "A")).toInt()
-        val id2 = carDao.insert(CarEntity(name = "B")).toInt()
+        val id1 = carDao.insert(CarEntity(name = "A", createdAt = 0L)).toInt()
+        val id2 = carDao.insert(CarEntity(name = "B", createdAt = 0L)).toInt()
         // Re-fetch before delete; original local has id = 0.
         carDao.delete(carDao.getById(id1)!!)
 

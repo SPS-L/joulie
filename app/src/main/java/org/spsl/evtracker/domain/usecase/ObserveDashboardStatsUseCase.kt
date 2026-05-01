@@ -24,6 +24,7 @@ class ObserveDashboardStatsUseCase @Inject constructor(
     private val settingsReader: SettingsReader,
     private val statsCalculator: StatsCalculator,
     private val dateRangeResolver: DateRangeResolver,
+    private val now: NowProvider,
 ) {
     @OptIn(ExperimentalCoroutinesApi::class)
     fun observe(period: DashboardPeriod, filter: ChargeTypeFilter): Flow<DashboardUiState> {
@@ -49,7 +50,7 @@ class ObserveDashboardStatsUseCase @Inject constructor(
         val periodEvents = when (period) {
             DashboardPeriod.SincePreviousCharge -> allEventsForCar.takeLast(2)
             else -> {
-                val range = dateRangeResolver.resolve(period)
+                val range = dateRangeResolver.resolve(period, now.nowMillis())
                 allEventsForCar.filter { it.eventDate in range.startMillis..range.endMillis }
             }
         }

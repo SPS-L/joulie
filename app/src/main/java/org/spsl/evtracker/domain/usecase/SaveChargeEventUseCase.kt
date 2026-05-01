@@ -16,6 +16,7 @@ class SaveChargeEventUseCase @Inject constructor(
     private val locationWriter: LocationWriter,
     private val backupScheduler: BackupScheduler,
     private val costParser: CostParser,
+    private val now: NowProvider,
 ) {
     suspend operator fun invoke(input: SaveChargeEventInput): SaveChargeEventResult {
         // 1. Validate odometer > previous event's (excluding own id when updating).
@@ -31,6 +32,7 @@ class SaveChargeEventUseCase @Inject constructor(
         } ?: Pair(null, null)
         val currency = if (costTotal != null) input.costInput?.currency else null
 
+        val nowMs = now.nowMillis()
         val entity = ChargeEventEntity(
             id = input.eventId ?: 0,
             carId = input.carId,
@@ -43,6 +45,7 @@ class SaveChargeEventUseCase @Inject constructor(
             currency = currency,
             location = input.location?.takeIf { it.isNotBlank() },
             note = input.note,
+            createdAt = nowMs,
         )
 
         // 3. Persist (insert or update by id).
@@ -54,7 +57,7 @@ class SaveChargeEventUseCase @Inject constructor(
         }
 
         // 4. Record location usage if non-blank.
-        input.location?.takeIf { it.isNotBlank() }?.let { locationWriter.recordUsage(it) }
+        input.location?.takeIf { it.isNotBlank() }?.let { locationWriter.recordUsage(it, nowMs) }
 
         // 5. Enqueue backup.
         backupScheduler.enqueueBackup()

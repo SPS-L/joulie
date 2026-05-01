@@ -38,7 +38,7 @@ class CarRepositoryTest {
 
     @Test
     fun deleteCar_cascadesEvents_throughRepository() = runBlocking {
-        val carId = carRepository.insert(CarEntity(name = "T")).toInt()
+        val carId = carRepository.insert(CarEntity(name = "T", createdAt = 0L)).toInt()
         repeat(3) {
             chargeEventRepository.insert(
                 ChargeEventEntity(
@@ -46,6 +46,7 @@ class CarRepositoryTest {
                     eventDate = System.currentTimeMillis(),
                     odometerKm = 100.0 * (it + 1),
                     kwhAdded = 10.0,
+                    createdAt = 0L,
                 ),
             )
         }

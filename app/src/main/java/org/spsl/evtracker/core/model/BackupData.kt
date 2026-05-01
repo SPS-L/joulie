@@ -20,7 +20,7 @@ data class BackupData(
             cars: List<CarEntity>,
             events: List<ChargeEventEntity>,
             locations: List<CustomLocationEntity>,
-            now: Long = System.currentTimeMillis(),
+            now: Long,
         ): BackupData = BackupData(
             backupVersion = CURRENT_VERSION,
             exportedAt = Instant.ofEpochMilli(now).toString(),

@@ -12,5 +12,5 @@ data class CustomLocationEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val label: String,
     val useCount: Int = 1,
-    val lastUsed: Long = System.currentTimeMillis(),
+    val lastUsed: Long,
 )

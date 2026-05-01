@@ -79,6 +79,7 @@ class SettingsViewModelTest {
             locationReader = FakeLocationReader(),
             settingsWriter = writer,
             backupScheduler = scheduler,
+            now = org.spsl.evtracker.testing.FakeNowProvider(),
         )
         val locationReader = FakeLocationReader(seededLocations)
         val carReader = FakeCarReader(seededCars)
@@ -405,6 +406,7 @@ class SettingsViewModelTest {
             model = "M3",
             year = 2024,
             batteryKwh = 75.0,
+            createdAt = 0L,
         )
         val s = build(activeCarId = 5, seededCars = listOf(car))
         advanceUntilIdle()
@@ -425,6 +427,7 @@ class SettingsViewModelTest {
             model = "M3",
             year = 2024,
             batteryKwh = 75.0,
+            createdAt = 0L,
         )
         val s = build(activeCarId = 5, seededCars = listOf(car))
         advanceUntilIdle()

@@ -8,7 +8,7 @@ import javax.inject.Inject
 
 class DateRangeResolver @Inject constructor() {
 
-    fun resolve(period: DashboardPeriod, nowMillis: Long = System.currentTimeMillis()): DateRange =
+    fun resolve(period: DashboardPeriod, nowMillis: Long): DateRange =
         when (period) {
             DashboardPeriod.SincePreviousCharge -> DateRange(0L, nowMillis)
             DashboardPeriod.Last7Days -> DateRange(nowMillis - 7 * MILLIS_PER_DAY, nowMillis)
@@ -17,7 +17,7 @@ class DateRangeResolver @Inject constructor() {
             is DashboardPeriod.Custom -> DateRange(period.fromMillis, period.toMillis)
         }
 
-    fun resolveCharts(period: ChartsPeriod, nowMillis: Long = System.currentTimeMillis()): DateRange =
+    fun resolveCharts(period: ChartsPeriod, nowMillis: Long): DateRange =
         when (period) {
             ChartsPeriod.Last6Months -> DateRange(nowMillis - 182L * MILLIS_PER_DAY, nowMillis)
             ChartsPeriod.Last12Months -> DateRange(nowMillis - 365L * MILLIS_PER_DAY, nowMillis)

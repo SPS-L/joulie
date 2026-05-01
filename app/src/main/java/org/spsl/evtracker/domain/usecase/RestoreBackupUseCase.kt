@@ -25,6 +25,7 @@ class RestoreBackupUseCase @Inject constructor(
     private val locationReader: LocationReader,
     private val settingsWriter: SettingsWriter,
     private val backupScheduler: BackupScheduler,
+    private val now: NowProvider,
 ) {
     suspend operator fun invoke(): RestoreResult {
         val json = backupRepository.readRemoteBackup()
@@ -43,7 +44,7 @@ class RestoreBackupUseCase @Inject constructor(
         val currentCars = carReader.observeAll().first()
         val currentEvents = currentCars.flatMap { chargeEventQueries.getAllForCarSorted(it.id) }
         val currentLocations = locationReader.observeAll().first()
-        val snapshot = BackupData.fromEntities(currentCars, currentEvents, currentLocations)
+        val snapshot = BackupData.fromEntities(currentCars, currentEvents, currentLocations, now = now.nowMillis())
         snapshotWriter.write(backupSerializer.toJson(snapshot))
 
         val (newCars, newEvents, newLocations) = parsed.toEntities()

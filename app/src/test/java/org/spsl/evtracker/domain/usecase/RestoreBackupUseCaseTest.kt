@@ -17,6 +17,7 @@ import org.spsl.evtracker.testing.FakeBackupScheduler
 import org.spsl.evtracker.testing.FakeCarReader
 import org.spsl.evtracker.testing.FakeChargeEventQueries
 import org.spsl.evtracker.testing.FakeLocationReader
+import org.spsl.evtracker.testing.FakeNowProvider
 import org.spsl.evtracker.testing.FakeRestoreSnapshotWriter
 import org.spsl.evtracker.testing.FakeRestoreTransactionRunner
 import org.spsl.evtracker.testing.FakeSettingsWriter
@@ -44,6 +45,7 @@ class RestoreBackupUseCaseTest {
         val useCase = RestoreBackupUseCase(
             backupRepo, serializer, transactionRunner, snapshotWriter,
             carReader, queries, locationReader, settingsWriter, scheduler,
+            FakeNowProvider(),
         )
         return RestoreSetup(useCase, transactionRunner, snapshotWriter, settingsWriter, scheduler)
     }
@@ -80,7 +82,7 @@ class RestoreBackupUseCaseTest {
     fun success_clearsAndImportsAndEnqueuesBackup() = runTest {
         val data = BackupData.fromEntities(
             cars = listOf(CarEntity(id = 1, name = "T", createdAt = 0L)),
-            events = listOf(ChargeEventEntity(id = 7, carId = 1, eventDate = 1L, odometerKm = 100.0, kwhAdded = 10.0)),
+            events = listOf(ChargeEventEntity(id = 7, carId = 1, eventDate = 1L, odometerKm = 100.0, kwhAdded = 10.0, createdAt = 0L)),
             locations = listOf(CustomLocationEntity(id = 1, label = "Home", useCount = 1, lastUsed = 0L)),
             now = 0L,
         )
@@ -132,7 +134,7 @@ class RestoreBackupUseCaseTest {
             ChargeEventEntity(
                 id = 7, carId = 1, eventDate = 2L, odometerKm = 100.0, kwhAdded = 10.0,
                 chargeType = "DC", costTotal = 5.0, costPerKwh = 0.5, currency = "EUR",
-                location = "Home", note = "n",
+                location = "Home", note = "n", createdAt = 0L,
             ),
         )
         val locations = listOf(CustomLocationEntity(id = 1, label = "Home", useCount = 3, lastUsed = 9L))

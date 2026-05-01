@@ -17,8 +17,4 @@ object WorkerModule {
     @Singleton
     fun provideWorkManager(@ApplicationContext context: Context): WorkManager =
         WorkManager.getInstance(context)
-
-    @Provides
-    @Singleton
-    fun provideClock(): () -> Long = { System.currentTimeMillis() }
 }

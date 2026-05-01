@@ -20,6 +20,8 @@ import kotlinx.coroutines.launch
 import org.spsl.evtracker.R
 import org.spsl.evtracker.core.model.ManageLocationsEvent
 import org.spsl.evtracker.databinding.FragmentManageLocationsBinding
+import org.spsl.evtracker.domain.usecase.NowProvider
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class ManageLocationsFragment : Fragment() {
@@ -28,6 +30,8 @@ class ManageLocationsFragment : Fragment() {
     private var _binding: FragmentManageLocationsBinding? = null
     private val binding get() = _binding!!
     private lateinit var adapter: ManageLocationsAdapter
+
+    @Inject lateinit var nowProvider: NowProvider
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -40,7 +44,7 @@ class ManageLocationsFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        adapter = ManageLocationsAdapter()
+        adapter = ManageLocationsAdapter(nowProvider::nowMillis)
         binding.recycler.layoutManager = LinearLayoutManager(requireContext())
         binding.recycler.adapter = adapter
         binding.recycler.addItemDecoration(

@@ -15,17 +15,22 @@ import org.spsl.evtracker.testing.FakeBackupScheduler
 import org.spsl.evtracker.testing.FakeChargeEventQueries
 import org.spsl.evtracker.testing.FakeChargeEventWriter
 import org.spsl.evtracker.testing.FakeLocationWriter
+import org.spsl.evtracker.testing.FakeNowProvider
 
 class SaveChargeEventUseCaseTest {
 
-    private fun build(initialEvents: List<ChargeEventEntity> = emptyList()): SaveSetup {
+    private fun build(
+        initialEvents: List<ChargeEventEntity> = emptyList(),
+        nowMs: Long = 0L,
+    ): SaveSetup {
         val queries = FakeChargeEventQueries()
         queries.seed(initialEvents)
         val writer = FakeChargeEventWriter(queries.shareStore())
         val locationWriter = FakeLocationWriter()
         val scheduler = FakeBackupScheduler()
-        val useCase = SaveChargeEventUseCase(queries, writer, locationWriter, scheduler, CostParser())
-        return SaveSetup(useCase, queries, locationWriter, scheduler)
+        val now = FakeNowProvider(nowMs)
+        val useCase = SaveChargeEventUseCase(queries, writer, locationWriter, scheduler, CostParser(), now)
+        return SaveSetup(useCase, queries, locationWriter, scheduler, now)
     }
 
     private data class SaveSetup(
@@ -33,6 +38,7 @@ class SaveChargeEventUseCaseTest {
         val queries: FakeChargeEventQueries,
         val locationWriter: FakeLocationWriter,
         val scheduler: FakeBackupScheduler,
+        val now: FakeNowProvider,
     )
 
     @Test
@@ -56,7 +62,7 @@ class SaveChargeEventUseCaseTest {
 
     @Test
     fun update_success_keepsId() = runTest {
-        val existing = ChargeEventEntity(id = 5, carId = 1, eventDate = 1000L, odometerKm = 100.0, kwhAdded = 10.0)
+        val existing = ChargeEventEntity(id = 5, carId = 1, eventDate = 1000L, odometerKm = 100.0, kwhAdded = 10.0, createdAt = 0L)
         val s = build(initialEvents = listOf(existing))
         val result = s.useCase(
             SaveChargeEventInput(
@@ -74,7 +80,7 @@ class SaveChargeEventUseCaseTest {
 
     @Test
     fun insertOdometerNotIncreasing_returnsResultAndPersistsNothing() = runTest {
-        val previous = ChargeEventEntity(id = 1, carId = 1, eventDate = 1000L, odometerKm = 200.0, kwhAdded = 10.0)
+        val previous = ChargeEventEntity(id = 1, carId = 1, eventDate = 1000L, odometerKm = 200.0, kwhAdded = 10.0, createdAt = 0L)
         val s = build(initialEvents = listOf(previous))
         val result = s.useCase(
             SaveChargeEventInput(
@@ -92,8 +98,8 @@ class SaveChargeEventUseCaseTest {
 
     @Test
     fun updateOdometerCheck_ignoresOwnId() = runTest {
-        val existing = ChargeEventEntity(id = 5, carId = 1, eventDate = 2000L, odometerKm = 200.0, kwhAdded = 10.0)
-        val before = ChargeEventEntity(id = 4, carId = 1, eventDate = 1000L, odometerKm = 100.0, kwhAdded = 10.0)
+        val existing = ChargeEventEntity(id = 5, carId = 1, eventDate = 2000L, odometerKm = 200.0, kwhAdded = 10.0, createdAt = 0L)
+        val before = ChargeEventEntity(id = 4, carId = 1, eventDate = 1000L, odometerKm = 100.0, kwhAdded = 10.0, createdAt = 0L)
         val s = build(initialEvents = listOf(before, existing))
         val result = s.useCase(
             SaveChargeEventInput(
@@ -125,5 +131,22 @@ class SaveChargeEventUseCaseTest {
         assertNull(saved.costTotal)
         assertNull(saved.costPerKwh)
         assertNull(saved.currency)
+    }
+
+    @Test
+    fun createdAtAndLocationLastUsed_reflectNowProviderValue() = runTest {
+        val s = build(nowMs = 12_345L)
+        s.useCase(
+            SaveChargeEventInput(
+                carId = 1,
+                eventDate = 1000L,
+                odometerKm = 100.0,
+                kwhAdded = 10.0,
+                chargeType = "AC",
+                location = "Home",
+            ),
+        )
+        assertEquals(12_345L, s.queries.current().single().createdAt)
+        assertEquals(12_345L, s.locationWriter.current().single().lastUsed)
     }
 }

@@ -83,7 +83,7 @@ The debug APK lands at `app/build/outputs/apk/debug/app-debug.apk`.
 ### Tests
 
 ```bash
-./gradlew test                  # JVM unit tests (~245)
+./gradlew test                  # JVM unit tests (~247)
 ./gradlew connectedAndroidTest  # Espresso / Room — needs API 26+ device or emulator
 ```
 

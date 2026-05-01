@@ -37,7 +37,7 @@ class ChargeEventDaoTest {
             .build()
         carDao = db.carDao()
         chargeEventDao = db.chargeEventDao()
-        carId = carDao.insert(CarEntity(name = "T")).toInt()
+        carId = carDao.insert(CarEntity(name = "T", createdAt = 0L)).toInt()
     }
 
     @After
@@ -54,6 +54,7 @@ class ChargeEventDaoTest {
         eventDate = eventDate,
         odometerKm = odometerKm,
         kwhAdded = kwhAdded,
+        createdAt = 0L,
     )
 
     @Test
