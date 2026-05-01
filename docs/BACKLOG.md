@@ -14,7 +14,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-04 | 🟡 | JVM unit tests for `CostParser` | — | ☑ |
 | TASK-05 | — | ~~JVM unit tests for `EfficiencyPoint`~~ — **closed, premise wrong** | — | ☒ |
 | TASK-06 | 🟡 | JVM unit tests for use cases | — | ☑ |
-| TASK-07 | 🟡 | Drive backup error handling & retry logic | — | ☐ |
+| TASK-07 | 🟡 | Drive backup error handling & retry logic | — | ☑ |
 | TASK-08 | 🟢 | Replace `CarEditDialog` with a Compose `AlertDialog` (requires adding Compose) | — | ☐ |
 | TASK-09 | 🟢 | CSV export of charge events with efficiency column, date-range picker | — | ☐ |
 | TASK-10 | 🟢 | In-app About / Info screen with SPS-Lab acknowledgment | — | ☑ |
@@ -206,7 +206,46 @@ Use `kotlinx-coroutines-test` if the use cases are suspending functions.
 
 ---
 
-## 🟡 TASK-07 — Add error handling and retry logic to `DriveBackupRepository`
+## 🟡 TASK-07 — Add error handling and retry logic to `DriveBackupRepository` ☑ Done (2026-05-01)
+
+> **Outcome:** new `domain/backup/BackupResult.kt` sealed class —
+> `Success` / `AuthRequired` / `Failure(reason, cause?)`. The
+> `BackupRepository.backupCurrentData()` contract flips from
+> `Unit`-returning + throwing to `BackupResult`-returning, with
+> exceptions handled internally. `DriveBackupRepository` gains a
+> bounded retry loop: `MAX_ATTEMPTS = 3`, exponential backoff
+> `250 ms × 2^attempt` (250 / 500 / 1000 ms total), retrying transient
+> failures only — network `IOException` incl. `UnknownHostException`,
+> HTTP 429, HTTP 5xx, and HTTP 403 with quota / rate reasons. Auth
+> errors (401, 403 auth-reason) and `storageQuotaExceeded` 403 short-
+> circuit the loop; unknown / unparseable 403 bodies stay on the
+> conservative-auth path. The previously-missing `storageQuotaExceeded`
+> branch (Drive full) now correctly maps to
+> `Failure("Drive storage full", cause)` instead of being lumped into
+> the conservative-auth fallback. Every non-recoverable path logs via
+> `android.util.Log.e("DriveBackupRepository", ..., cause)`;
+> `app/build.gradle.kts` gains `testOptions.unitTests.isReturnDefaultValues
+> = true` so JVM tests don't blow up on the Android stub.
+> `DriveBackupWorker.doWork()` collapses from a multi-catch ladder to
+> a `when (result)` translator and stops returning `Result.retry()` —
+> the repo already exhausted the retry budget, so amplifying it via
+> WorkManager would duplicate effort. The read path
+> (`readRemoteBackup()`) keeps its existing exception contract because
+> `SettingsViewModel.onDriveAuthGranted` and `RestoreBackupUseCase`
+> already catch `DriveAuthRequiredException` / `IOException`; the
+> `withRetry` helper still wraps it so transient blips on the read
+> path retry too. Test surface: ten new JVM cases on
+> `DriveBackupRepositoryTest` cover storage-full vs auth, retry-then-
+> success on 429 / 500 / 403-quota / `UnknownHostException`,
+> retry-exhaustion → `Failure("HTTP 429")` /
+> `Failure("Network failure: …")`, no-retry on auth / storage-full,
+> and the read path's 401-throws + 429-retries-then-succeeds.
+> `FakeDriveRemoteSource` gains `failTimes: Int = 1` budget +
+> `failuresRaised: Int` counter so retry tests drive multi-failure
+> scenarios deterministically. JVM unit-test count: 265 → 275. All
+> gates green: `:app:assembleRelease` (R8), `:app:lint`, `ktlintCheck`,
+> `:app:assembleDebugAndroidTest`, `:app:testDebugUnitTest`. The
+> original task text is preserved below for historical context.
 
 The class `app/src/main/java/org/spsl/evtracker/data/backup/DriveBackupRepository.kt`
 interfaces with the Google Drive API. It must handle common failure modes.

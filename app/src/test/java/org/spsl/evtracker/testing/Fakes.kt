@@ -268,11 +268,14 @@ class FakeBackupScheduler : BackupScheduler {
 
 class FakeBackupRepository(
     var remoteJson: String? = null,
+    var nextBackupResult: org.spsl.evtracker.domain.backup.BackupResult =
+        org.spsl.evtracker.domain.backup.BackupResult.Success,
 ) : BackupRepository {
     var backupCurrentDataCount: Int = 0
         private set
-    override suspend fun backupCurrentData() {
+    override suspend fun backupCurrentData(): org.spsl.evtracker.domain.backup.BackupResult {
         backupCurrentDataCount++
+        return nextBackupResult
     }
     override suspend fun readRemoteBackup(): String? = remoteJson
 }
@@ -389,7 +392,22 @@ class FakeDriveAuthManager(
 class FakeDriveRemoteSource : DriveRemoteSource {
     private var fileId: String? = null
     private var body: ByteArray? = null
+
+    /**
+     * Throwable to raise from the next [failTimes] calls. After it has been
+     * raised that many times, both fields auto-reset and subsequent calls
+     * succeed normally. `failTimes = 1` is the legacy single-shot behaviour.
+     */
     var failNext: Throwable? = null
+    var failTimes: Int = 1
+
+    /** Total method invocations on this fake (find / create / update / download), including ones that succeed. */
+    var attemptCount: Int = 0
+        private set
+
+    /** Number of times [failNext] was actually raised as an exception. */
+    var failuresRaised: Int = 0
+        private set
 
     override suspend fun findBackupFileId(accessToken: String): String? {
         consumeFailure()
@@ -422,8 +440,14 @@ class FakeDriveRemoteSource : DriveRemoteSource {
     fun seededFileId(): String? = fileId
 
     private fun consumeFailure() {
+        attemptCount++
         val e = failNext ?: return
-        failNext = null
+        failTimes--
+        if (failTimes <= 0) {
+            failNext = null
+            failTimes = 1
+        }
+        failuresRaised++
         throw e
     }
 }
