@@ -48,7 +48,30 @@
 | `multipleCurrencies_costStatsNull` | 4 events, 2 EUR + 2 USD | costPerKm=null, costPer100km=null (multi-currency guard) |
 | `singleCurrencyAcrossPeriod_costStatsComputed` | 4 events all EUR | costPerKm=Σcost/Σdist |
 
-### 1.5 DateUtilsTest.kt
+### 1.5 CapacityEstimatorTest.kt
+
+Locks in the TASK-14 battery-capacity estimator. SoC fields are stored as fractions in `0.0..1.0`. The heuristic boundary is `kwhAdded ≥ 0.8 × nominalBatteryKwh`. `batteryHealthPercent` is **not clamped** — over-estimation by the heuristic surfaces as values above 100%.
+
+| Test | Description |
+|------|-------------|
+| `exactCapacity_fromSocFields` | Both SoC fields present → `kwhAdded / (after − before)`; result has `isExact = true` |
+| `exactCapacity_ignoresHeuristicOnSameEvent` | Exact path takes priority even when the heuristic would also qualify |
+| `exactCapacity_withNullNominal` | Exact path doesn't need `nominalBatteryKwh` at all |
+| `exactCapacity_socAfterEqualBefore_skipped` | Strict `after > before` — equal values skipped (no division-by-zero) |
+| `exactCapacity_socAfterBelowBefore_skipped` | Reversed SoC values skipped (treated as invalid input, not flipped) |
+| `heuristic_kwhAtLeast80PctOfNominal_qualifies` | `50 / 60 ≈ 0.833` qualifies → `effectiveCapacity = kwhAdded` with `isExact = false` |
+| `heuristic_belowEightyPct_skipped` | `47 / 60 ≈ 0.783` does NOT qualify |
+| `heuristic_exactlyEightyPct_qualifies` | `48 / 60 = 0.80` boundary value qualifies (≥ comparison) |
+| `heuristic_withNullNominal_skipped` | No nominal capacity → no heuristic possible → skipped |
+| `mixed_exactAndHeuristic_bothEmittedSortedByDate` | Mixed events emitted, sorted ascending by `eventDate` regardless of source path |
+| `zeroOrNegativeKwhAdded_skipped` | `kwhAdded ≤ 0` always skipped, even with valid SoC |
+| `emptyEvents_returnsEmpty` | Empty input → empty output |
+| `batteryHealth_latestPointVsNominal` | Uses the chronologically latest point ÷ nominal × 100 |
+| `batteryHealth_nullWhenNoPoints` | Empty points → `null` |
+| `batteryHealth_nullWhenNoNominal` | Null nominal → `null` |
+| `batteryHealth_doesNotClampAbove100` | Heuristic over-estimation surfaces as `> 100%` rather than being clamped |
+
+### 1.6 DateUtilsTest.kt
 
 | Test | Input | Expected |
 |------|-------|----------|
@@ -97,7 +120,8 @@
 | `migrate_2_to_3` | Creates `custom_locations`; adds cost/location/note columns (camelCase) |
 | `migrate_3_to_4_rewritesLegacyDcRows` | Seeds a v3 DB with a `chargeType = 'DC'` row, runs `MIGRATION_3_4`, asserts the row is rewritten to `'DC_FAST'`. Column type stays TEXT — `@TypeConverters(ChargeTypeConverter)` does the enum round-trip. |
 | `migrate_4_to_5_isNoOp_widenIntPksToLong` | Runs `MIGRATION_3_4` then `MIGRATION_4_5` against a v3 fixture and asserts existing rows survive untouched with PKs round-tripping as 64-bit `Long`. SQLite `INTEGER` columns already hold 64 bits, so the migration is a deliberate no-op (TASK-26). |
-| `migrate_1_to_5_validatesSchema` | Full chain v1 → v5; opens via `Room.databaseBuilder(...).build().openHelper.writableDatabase` to force schema validation against the entity declarations (catches column-name casing drift), asserts the migrated `ChargeType` decodes to `ChargeType.AC`, and asserts entity PKs round-trip as `Long`. |
+| `migrate_5_to_6_addsSocColumns` | Runs the full v3 → v4 → v5 → v6 chain against a fixture and asserts the new `socBefore` and `socAfter` REAL columns exist and default to `NULL` on legacy rows (TASK-14). |
+| `migrate_1_to_6_validatesSchema` | Full chain v1 → v6; opens via `Room.databaseBuilder(...).build().openHelper.writableDatabase` to force schema validation against the entity declarations (catches column-name casing drift), asserts the migrated `ChargeType` decodes to `ChargeType.AC`, asserts entity PKs round-trip as `Long`, and asserts both SoC columns are `null` on rows persisted before TASK-14. |
 
 ---
 

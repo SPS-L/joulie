@@ -25,5 +25,11 @@ sealed class ChartsUiState {
         val monthlyCost: List<MonthBucket>,
         val acDc: AcDcSplit,
         val locations: List<LocationSlice>,
+        /** TASK-14: capacity points for the active car, sorted by eventDate. Empty when the
+         *  car has no nominal `battery_kwh` set OR fewer than 3 qualifying points exist. */
+        val capacity: List<CapacityPoint>,
+        /** TASK-14: nominal battery capacity (kWh) for the active car; used to draw the
+         *  reference line on the degradation chart. `null` when unset on the car. */
+        val nominalBatteryKwh: Double?,
     ) : ChartsUiState()
 }

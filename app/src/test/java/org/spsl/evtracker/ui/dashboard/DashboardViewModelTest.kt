@@ -66,6 +66,7 @@ class DashboardViewModelTest {
             chargeEventQueries = queries,
             settingsReader = settingsReader,
             statsCalculator = StatsCalculator(),
+            capacityEstimator = org.spsl.evtracker.domain.service.CapacityEstimator(),
             dateRangeResolver = DateRangeResolver(),
             now = FakeNowProvider(System.currentTimeMillis()),
         )

@@ -125,6 +125,7 @@ class DashboardFragment : Fragment() {
         renderEmptyState(state)
         renderStatsCards(state)
         renderCostCard(state)
+        renderBatteryHealthCard(state)
         renderBanner(state)
     }
 
@@ -233,6 +234,15 @@ class DashboardFragment : Fragment() {
 
     private fun renderBanner(state: DashboardScreenState) {
         binding.dashboardMultiCurrencyBanner.isVisible = state.dashboard.showMultiCurrencyBanner
+    }
+
+    private fun renderBatteryHealthCard(state: DashboardScreenState) {
+        val pct = state.dashboard.stats?.batteryHealthPercent
+        binding.dashboardCardBatteryHealth.isVisible = pct != null
+        if (pct != null) {
+            binding.dashboardBatteryHealthValue.text =
+                getString(R.string.battery_health_value_format, pct)
+        }
     }
 
     private fun handleEvent(event: DashboardEvent) {

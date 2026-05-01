@@ -14,7 +14,7 @@ data class BackupData(
     @SerializedName("custom_locations") val customLocations: List<CustomLocationDto>,
 ) {
     companion object {
-        const val CURRENT_VERSION = 5
+        const val CURRENT_VERSION = 6
 
         fun fromEntities(
             cars: List<CarEntity>,
@@ -67,17 +67,44 @@ data class ChargeEventDto(
     @SerializedName("currency") val currency: String?,
     @SerializedName("location") val location: String?,
     @SerializedName("note") val note: String,
+    /** TASK-14: optional state-of-charge fields. Absent on v3/v4/v5 backups. */
+    @SerializedName("soc_before") val socBefore: Double? = null,
+    @SerializedName("soc_after") val socAfter: Double? = null,
     @SerializedName("created_at") val createdAt: Long,
 ) {
     fun toEntity() = ChargeEventEntity(
-        id, carId, eventDate, odometerKm, kwhAdded, chargeType,
-        costTotal, costPerKwh, currency, location, note, createdAt,
+        id = id,
+        carId = carId,
+        eventDate = eventDate,
+        odometerKm = odometerKm,
+        kwhAdded = kwhAdded,
+        chargeType = chargeType,
+        costTotal = costTotal,
+        costPerKwh = costPerKwh,
+        currency = currency,
+        location = location,
+        note = note,
+        socBefore = socBefore,
+        socAfter = socAfter,
+        createdAt = createdAt,
     )
 
     companion object {
         fun fromEntity(e: ChargeEventEntity) = ChargeEventDto(
-            e.id, e.carId, e.eventDate, e.odometerKm, e.kwhAdded, e.chargeType,
-            e.costTotal, e.costPerKwh, e.currency, e.location, e.note, e.createdAt,
+            id = e.id,
+            carId = e.carId,
+            eventDate = e.eventDate,
+            odometerKm = e.odometerKm,
+            kwhAdded = e.kwhAdded,
+            chargeType = e.chargeType,
+            costTotal = e.costTotal,
+            costPerKwh = e.costPerKwh,
+            currency = e.currency,
+            location = e.location,
+            note = e.note,
+            socBefore = e.socBefore,
+            socAfter = e.socAfter,
+            createdAt = e.createdAt,
         )
     }
 }

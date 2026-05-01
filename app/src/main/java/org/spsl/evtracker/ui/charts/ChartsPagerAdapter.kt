@@ -11,6 +11,7 @@ class ChartsPagerAdapter(host: Fragment) : FragmentStateAdapter(host) {
         ChartsTabFragment.TabKind.MONTHLY_COST,
         ChartsTabFragment.TabKind.AC_DC,
         ChartsTabFragment.TabKind.LOCATIONS,
+        ChartsTabFragment.TabKind.DEGRADATION,
     )
 
     fun tabKindAt(position: Int): ChartsTabFragment.TabKind = tabs[position]

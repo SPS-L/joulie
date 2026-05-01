@@ -43,6 +43,7 @@ class ObserveDashboardStatsUseCaseTest {
             chargeEventQueries = queries,
             settingsReader = settings,
             statsCalculator = StatsCalculator(),
+            capacityEstimator = org.spsl.evtracker.domain.service.CapacityEstimator(),
             dateRangeResolver = DateRangeResolver(),
             now = FakeNowProvider(System.currentTimeMillis()),
         )
@@ -105,6 +106,7 @@ class ObserveDashboardStatsUseCaseTest {
             queries,
             settings,
             StatsCalculator(),
+            org.spsl.evtracker.domain.service.CapacityEstimator(),
             DateRangeResolver(),
             FakeNowProvider(System.currentTimeMillis()),
         )

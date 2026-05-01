@@ -15,4 +15,12 @@ data class Stats(
     val costPerKm: Double?,
     val costPer100Km: Double?,
     val mixedCurrency: Boolean,
+    /**
+     * TASK-14: latest effective battery capacity as a percentage of the
+     * car's nominal `battery_kwh`. `null` when nominal capacity is unset
+     * or no qualifying capacity points exist in the period. Values may
+     * exceed 100% — over-estimation by the heuristic is information,
+     * not a clamp target.
+     */
+    val batteryHealthPercent: Double? = null,
 )

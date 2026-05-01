@@ -35,6 +35,14 @@ data class ChargeEditUiState(
     val odometerBelowPrevious: Boolean = false,
     /** True when the typed odometer (converted to km) is ≥ [nextOdometerKm]. Drives inline error + Save gate. */
     val odometerAboveNext: Boolean = false,
+    /** TASK-14: SoC card collapsed by default; expand toggles via "+ Add SoC data". */
+    val socExpanded: Boolean = false,
+    /** TASK-14: raw user input for SoC-before, expressed as a percentage string (`"0".."100"`). */
+    val socBeforeText: String = "",
+    /** TASK-14: raw user input for SoC-after, expressed as a percentage string (`"0".."100"`). */
+    val socAfterText: String = "",
+    /** TASK-14: localized error string-res for the SoC pair, or `null` when valid / both blank. */
+    val socError: Int? = null,
 ) {
     sealed class Mode {
         object Create : Mode()

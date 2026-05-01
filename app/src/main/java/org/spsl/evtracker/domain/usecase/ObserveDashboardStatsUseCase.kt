@@ -11,10 +11,12 @@ import org.spsl.evtracker.core.model.ChargeTypeFilter
 import org.spsl.evtracker.core.model.DashboardPeriod
 import org.spsl.evtracker.core.model.DashboardUiState
 import org.spsl.evtracker.core.model.EmptyState
+import org.spsl.evtracker.data.local.entity.CarEntity
 import org.spsl.evtracker.data.local.entity.ChargeEventEntity
 import org.spsl.evtracker.domain.repository.CarReader
 import org.spsl.evtracker.domain.repository.ChargeEventQueries
 import org.spsl.evtracker.domain.repository.SettingsReader
+import org.spsl.evtracker.domain.service.CapacityEstimator
 import org.spsl.evtracker.domain.service.DateRangeResolver
 import org.spsl.evtracker.domain.service.StatsCalculator
 import javax.inject.Inject
@@ -24,6 +26,7 @@ class ObserveDashboardStatsUseCase @Inject constructor(
     private val chargeEventQueries: ChargeEventQueries,
     private val settingsReader: SettingsReader,
     private val statsCalculator: StatsCalculator,
+    private val capacityEstimator: CapacityEstimator,
     private val dateRangeResolver: DateRangeResolver,
     private val now: NowProvider,
 ) {
@@ -35,10 +38,12 @@ class ObserveDashboardStatsUseCase @Inject constructor(
             when {
                 cars.isEmpty() || activeCarId == -1L ->
                     flowOf(DashboardUiState(emptyState = EmptyState.NoCar))
-                else ->
+                else -> {
+                    val activeCar = cars.firstOrNull { it.id == activeCarId }
                     chargeEventQueries.observeForCar(activeCarId).map { events ->
-                        buildUiState(events, period, filter)
+                        buildUiState(events, period, filter, activeCar)
                     }
+                }
             }
         }
     }
@@ -47,6 +52,7 @@ class ObserveDashboardStatsUseCase @Inject constructor(
         allEventsForCar: List<ChargeEventEntity>,
         period: DashboardPeriod,
         filter: ChargeTypeFilter,
+        activeCar: CarEntity?,
     ): DashboardUiState {
         val periodEvents = when (period) {
             DashboardPeriod.SincePreviousCharge -> allEventsForCar.takeLast(2)
@@ -63,7 +69,16 @@ class ObserveDashboardStatsUseCase @Inject constructor(
         return if (filtered.isEmpty()) {
             DashboardUiState(emptyState = EmptyState.NoEvents)
         } else {
-            val stats = statsCalculator.computeStats(filtered, label = period.toString())
+            // Battery-health is computed from the FULL per-car history, not the
+            // filtered/period subset — degradation is a long-term property and
+            // hiding it when the user picks a tight period would be misleading.
+            val capacityPoints = capacityEstimator.estimate(allEventsForCar, activeCar?.batteryKwh)
+            val healthPct = capacityEstimator.batteryHealthPercent(capacityPoints, activeCar?.batteryKwh)
+            val stats = statsCalculator.computeStats(
+                events = filtered,
+                label = period.toString(),
+                batteryHealthPercent = healthPct,
+            )
             DashboardUiState(stats = stats, showMultiCurrencyBanner = stats.mixedCurrency)
         }
     }

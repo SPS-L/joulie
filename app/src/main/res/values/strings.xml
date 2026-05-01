@@ -189,6 +189,9 @@
     <string name="metric_unavailable">—</string>
     <string name="metric_need_two_charges">Need 2+ charges</string>
     <string name="cost_card_total">Total cost</string>
+    <string name="battery_health_card_label">Battery health</string>
+    <string name="battery_health_card_subtitle">Latest effective capacity vs nominal</string>
+    <string name="battery_health_value_format">%1$.0f%%</string>
     <string name="cost_card_per_km">Cost per km</string>
     <string name="cost_card_per_100km">Cost per 100km</string>
     <string name="fab_log_charge">Log charge</string>
@@ -199,6 +202,9 @@
     <string name="error_odometer_must_be_greater_than">Must be greater than last entry (%1$s %2$s)</string>
     <string name="error_odometer_must_be_less_than">Must be less than next entry (%1$s %2$s)</string>
     <string name="error_kwh_required">Enter a valid kWh value</string>
+    <string name="error_soc_both_required">Enter both SoC values, or clear both</string>
+    <string name="error_soc_range">SoC values must be between 0 and 100</string>
+    <string name="error_soc_after_must_exceed_before">SoC after must be greater than SoC before</string>
 
     <!-- Charge edit -->
     <string name="charge_edit_create_title">Add charge</string>
@@ -211,6 +217,9 @@
     <string name="hint_note">Note (optional)</string>
     <string name="hint_date_time">Date &amp; time</string>
     <string name="cost_section_header">Cost (optional)</string>
+    <string name="soc_section_header">SoC data (optional)</string>
+    <string name="hint_soc_before">SoC before (%)</string>
+    <string name="hint_soc_after">SoC after (%)</string>
     <string name="cost_mode_total">Total</string>
     <string name="cost_mode_per_kwh">Per kWh</string>
     <string name="charge_type_ac">AC</string>
@@ -256,6 +265,11 @@
     <string name="charts_tab_monthly_cost">Monthly cost</string>
     <string name="charts_tab_ac_dc">AC vs DC</string>
     <string name="charts_tab_locations">Locations</string>
+    <string name="charts_tab_degradation">Degradation</string>
+    <string name="charts_degradation_legend_effective">Effective capacity</string>
+    <string name="charts_degradation_legend_nominal">Nominal</string>
+    <string name="charts_degradation_no_battery">Set the car\'s nominal battery capacity in Cars to enable this chart</string>
+    <string name="charts_degradation_need_three">Need at least 3 qualifying charges (full charge or charges with SoC values entered)</string>
     <string name="charts_trend_legend_ac">AC</string>
     <string name="charts_trend_legend_dc">DC</string>
     <string name="charts_trend_y_kmh">Efficiency (km/kWh)</string>

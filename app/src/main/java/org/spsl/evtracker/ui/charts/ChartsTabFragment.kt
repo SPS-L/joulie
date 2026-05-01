@@ -37,7 +37,7 @@ import java.util.Calendar
 @AndroidEntryPoint
 class ChartsTabFragment : Fragment() {
 
-    enum class TabKind { TREND, MONTHLY_KWH, MONTHLY_COST, AC_DC, LOCATIONS }
+    enum class TabKind { TREND, MONTHLY_KWH, MONTHLY_COST, AC_DC, LOCATIONS, DEGRADATION }
 
     private var _binding: FragmentChartsTabBinding? = null
     private val binding get() = _binding!!
@@ -94,7 +94,65 @@ class ChartsTabFragment : Fragment() {
             TabKind.MONTHLY_COST -> renderMonthlyCost(charts, container, empty)
             TabKind.AC_DC -> renderAcDc(charts, container, empty, subtitle)
             TabKind.LOCATIONS -> renderLocations(charts, container, empty)
+            TabKind.DEGRADATION -> renderDegradation(state, charts, container, empty)
         }
+    }
+
+    private fun renderDegradation(
+        state: ChartsScreenState,
+        charts: ChartsUiState.Loaded,
+        container: FrameLayout,
+        empty: TextView,
+    ) {
+        val nominal = charts.nominalBatteryKwh
+        val points = charts.capacity
+        if (nominal == null || nominal <= 0.0) {
+            empty.text = getString(R.string.charts_degradation_no_battery)
+            empty.isVisible = true
+            return
+        }
+        if (points.isEmpty()) {
+            empty.text = getString(R.string.charts_degradation_need_three)
+            empty.isVisible = true
+            return
+        }
+        val chart = LineChart(requireContext())
+        ChartStyling.configureLineChart(chart)
+        val (acColor, _) = ChartStyling.resolveSeriesColors(requireContext())
+        val windowStart = charts.periodStartMillis
+
+        val entries = points.map {
+            val xDays = ((it.eventDate - windowStart).toDouble() / ChartStyling.MILLIS_PER_DAY).toFloat()
+            Entry(xDays, it.effectiveCapacityKwh.toFloat(), it.eventDate as Any)
+        }
+        val capacitySet = LineDataSet(entries, getString(R.string.charts_degradation_legend_effective)).apply {
+            color = acColor
+            setCircleColor(acColor)
+            lineWidth = 2f
+            circleRadius = 3.5f
+            setDrawValues(false)
+            setDrawFilled(false)
+        }
+
+        // Reference line at the car's nominal battery_kwh — drawn as a horizontal
+        // limit-line on the Y-axis (dashed) per spec.
+        val limitLine = com.github.mikephil.charting.components.LimitLine(
+            nominal.toFloat(),
+            getString(R.string.charts_degradation_legend_nominal),
+        ).apply {
+            lineWidth = 1.5f
+            enableDashedLine(12f, 8f, 0f)
+            lineColor = acColor
+            textColor = acColor
+            textSize = 10f
+        }
+        chart.axisLeft.addLimitLine(limitLine)
+        chart.axisLeft.axisMinimum = 0f
+
+        chart.xAxis.valueFormatter = ChartStyling.dateLabelFormatter(windowStart, state.period)
+        chart.data = LineData(capacitySet)
+        chart.invalidate()
+        container.addView(chart)
     }
 
     private fun renderTrend(

@@ -199,6 +199,7 @@ class MigrationTest {
                 AppDatabase.MIGRATION_2_3,
                 AppDatabase.MIGRATION_3_4,
                 AppDatabase.MIGRATION_4_5,
+                AppDatabase.MIGRATION_5_6,
             )
             .build()
 
@@ -303,7 +304,30 @@ class MigrationTest {
     }
 
     @Test
-    fun migrate_1_to_5_validatesSchema() = runBlocking {
+    fun migrate_5_to_6_addsSocColumns() = runBlocking {
+        // MIGRATION_5_6 (TASK-14): adds nullable socBefore + socAfter REAL
+        // columns to charge_events. Existing rows leave both at NULL.
+        val v3 = buildV3Database()
+        v3.execSQL("INSERT INTO cars (name, createdAt) VALUES ('A', 1000)")
+        v3.execSQL(
+            "INSERT INTO charge_events " +
+                "(carId, eventDate, odometerKm, kwhAdded, chargeType, note, createdAt) " +
+                "VALUES (1, 2000, 100.0, 10.0, 'AC', '', 2000)",
+        )
+        AppDatabase.MIGRATION_3_4.migrate(v3)
+        AppDatabase.MIGRATION_4_5.migrate(v3)
+        AppDatabase.MIGRATION_5_6.migrate(v3)
+
+        v3.query("SELECT socBefore, socAfter FROM charge_events WHERE id = 1").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertTrue("socBefore should default to NULL on legacy rows", cursor.isNull(0))
+            assertTrue("socAfter should default to NULL on legacy rows", cursor.isNull(1))
+        }
+        v3.close()
+    }
+
+    @Test
+    fun migrate_1_to_6_validatesSchema() = runBlocking {
         val v1 = buildV1Database()
         v1.execSQL("INSERT INTO cars (name, createdAt) VALUES ('A', 1000)")
         v1.execSQL(
@@ -312,10 +336,11 @@ class MigrationTest {
         )
         v1.close()
 
-        // Open through Room with all four migrations registered. Room runs them
-        // in order and then validates the resulting schema against v5 entity
-        // declarations. Schema validation also exercises the ChargeTypeConverter
-        // wiring on the chargeType column and the Long-PK widening (TASK-26).
+        // Open through Room with all five migrations registered. Room runs them
+        // in order and then validates the resulting schema against v6 entity
+        // declarations. Schema validation exercises the ChargeTypeConverter
+        // wiring on the chargeType column (TASK-25), the Long-PK widening
+        // (TASK-26), and the new optional SoC columns (TASK-14).
         val room = openWithRoom()
         try {
             val event = room.chargeEventDao().getAllForCarSorted(1L).single()
@@ -324,6 +349,8 @@ class MigrationTest {
             assertEquals(ChargeType.AC, event.chargeType) // MIGRATION_1_2 default → enum AC
             assertEquals(null, event.costTotal) // MIGRATION_2_3 add column
             assertEquals("", event.note) // MIGRATION_2_3 add column NOT NULL DEFAULT ''
+            assertEquals(null, event.socBefore) // MIGRATION_5_6 add column
+            assertEquals(null, event.socAfter) // MIGRATION_5_6 add column
         } finally {
             room.close()
         }

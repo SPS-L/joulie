@@ -45,6 +45,8 @@ class SaveChargeEventUseCase @Inject constructor(
             currency = currency,
             location = input.location?.takeIf { it.isNotBlank() },
             note = input.note,
+            socBefore = input.socBefore,
+            socAfter = input.socAfter,
             createdAt = nowMs,
         )
 
