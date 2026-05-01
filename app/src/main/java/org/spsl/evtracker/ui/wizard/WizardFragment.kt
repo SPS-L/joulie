@@ -54,16 +54,19 @@ class WizardFragment : Fragment() {
                         if (state.page == 0) View.INVISIBLE else View.VISIBLE
                     binding.wizardButtonNext.text = when (state.page) {
                         0 -> getString(R.string.wizard_button_get_started)
-                        1 -> getString(R.string.wizard_button_next)
-                        else -> getString(R.string.wizard_button_finish)
+                        3 -> getString(R.string.wizard_button_finish)
+                        else -> getString(R.string.wizard_button_next)
                     }
+                    // On page 3 (About + Disclaimer) Finish is gated by acceptance.
+                    binding.wizardButtonNext.isEnabled =
+                        state.page != 3 || state.disclaimerAccepted
                 }
             }
         }
     }
 
     private fun onPrimaryButtonClicked() {
-        if (viewModel.state.value.page < 2) {
+        if (viewModel.state.value.page < 3) {
             viewModel.goNext()
         } else {
             binding.wizardButtonNext.isEnabled = false

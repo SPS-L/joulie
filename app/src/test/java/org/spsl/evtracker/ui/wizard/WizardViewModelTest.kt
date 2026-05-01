@@ -87,14 +87,27 @@ class WizardViewModelTest {
     }
 
     @Test
-    fun goNext_clampsAtPage2() {
-        repeat(5) { vm.goNext() }
-        assertEquals(2, vm.state.value.page)
+    fun goNext_clampsAtPage3() {
+        repeat(6) { vm.goNext() }
+        assertEquals(3, vm.state.value.page)
     }
 
     @Test
     fun goBack_clampsAtPage0() {
-        repeat(3) { vm.goBack() }
+        repeat(4) { vm.goBack() }
         assertEquals(0, vm.state.value.page)
+    }
+
+    @Test
+    fun disclaimerAccepted_initialState_isFalse() {
+        assertEquals(false, vm.state.value.disclaimerAccepted)
+    }
+
+    @Test
+    fun setDisclaimerAccepted_togglesFlag() {
+        vm.setDisclaimerAccepted(true)
+        assertEquals(true, vm.state.value.disclaimerAccepted)
+        vm.setDisclaimerAccepted(false)
+        assertEquals(false, vm.state.value.disclaimerAccepted)
     }
 }

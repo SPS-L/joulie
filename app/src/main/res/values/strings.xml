@@ -147,6 +147,11 @@
     <string name="wizard_button_next">Next \u2192</string>
     <string name="wizard_button_get_started">Get Started</string>
     <string name="wizard_button_finish">Finish \u2713</string>
+
+    <!-- Wizard page 4 \u2014 About + Disclaimer acceptance gate -->
+    <string name="wizard_about_title">About this app &amp; terms</string>
+    <string name="wizard_disclaimer_accept">I have read and accept the disclaimer</string>
+
     <string name="placeholder_dashboard">Dashboard \u2014 coming soon</string>
     <string name="placeholder_charge_edit">Charge Edit \u2014 coming soon</string>
     <string name="placeholder_cars">Cars \u2014 coming soon</string>
