@@ -26,10 +26,9 @@ class AddCarUseCase @Inject constructor(
             batteryKwh = form.batteryKwh.toDoubleOrNull(),
             createdAt = now.nowMillis(),
         )
-        val rowId = carWriter.insert(entity)
-        if (rowId <= 0L) return Result.PersistenceFailed
-        val newId = rowId.toInt()
-        if (settingsReader.activeCarId.first() == -1) {
+        val newId = carWriter.insert(entity)
+        if (newId <= 0L) return Result.PersistenceFailed
+        if (settingsReader.activeCarId.first() == -1L) {
             settingsWriter.setActiveCarId(newId)
         }
         backupScheduler.enqueueBackup()
@@ -37,7 +36,7 @@ class AddCarUseCase @Inject constructor(
     }
 
     sealed class Result {
-        data class Success(val id: Int) : Result()
+        data class Success(val id: Long) : Result()
         object NameBlank : Result()
         object PersistenceFailed : Result()
     }

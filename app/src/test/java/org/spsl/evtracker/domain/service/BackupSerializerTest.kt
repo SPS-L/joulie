@@ -19,15 +19,15 @@ class BackupSerializerTest {
     @Test
     fun roundTrip_preservesAllFields() {
         val original = BackupData.fromEntities(
-            cars = listOf(CarEntity(id = 1, name = "Tesla", make = "T", model = "M3", year = 2024, batteryKwh = 60.0, createdAt = 1000L)),
+            cars = listOf(CarEntity(id = 1L, name = "Tesla", make = "T", model = "M3", year = 2024, batteryKwh = 60.0, createdAt = 1000L)),
             events = listOf(
                 ChargeEventEntity(
-                    id = 17, carId = 1, eventDate = 2000L, odometerKm = 12345.0, kwhAdded = 22.4,
+                    id = 17L, carId = 1L, eventDate = 2000L, odometerKm = 12345.0, kwhAdded = 22.4,
                     chargeType = ChargeType.AC, costTotal = 5.5, costPerKwh = 0.245, currency = "EUR",
                     location = "Home", note = "first", createdAt = 3000L,
                 ),
             ),
-            locations = listOf(CustomLocationEntity(id = 5, label = "Supercharger A6", useCount = 4, lastUsed = 4000L)),
+            locations = listOf(CustomLocationEntity(id = 5L, label = "Supercharger A6", useCount = 4, lastUsed = 4000L)),
             now = 5000L,
         )
 
@@ -51,7 +51,7 @@ class BackupSerializerTest {
     @Test
     fun toJson_isHtmlEscapeFree() {
         val data = BackupData.fromEntities(
-            cars = listOf(CarEntity(id = 1, name = "<&>", createdAt = 1L)),
+            cars = listOf(CarEntity(id = 1L, name = "<&>", createdAt = 1L)),
             events = emptyList(),
             locations = emptyList(),
             now = 0L,
@@ -113,8 +113,8 @@ class BackupSerializerTest {
             cars = emptyList(),
             events = listOf(
                 ChargeEventEntity(
-                    id = 1,
-                    carId = 1,
+                    id = 1L,
+                    carId = 1L,
                     eventDate = 0L,
                     odometerKm = 0.0,
                     kwhAdded = 0.0,

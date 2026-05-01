@@ -42,8 +42,8 @@ class ChargeEventRepositoryTest {
 
     @Test
     fun observeForCar_emitsOnlyForGivenCar() = runBlocking {
-        val carAId = carRepository.insert(CarEntity(name = "A", createdAt = 0L)).toInt()
-        val carBId = carRepository.insert(CarEntity(name = "B", createdAt = 0L)).toInt()
+        val carAId = carRepository.insert(CarEntity(name = "A", createdAt = 0L))
+        val carBId = carRepository.insert(CarEntity(name = "B", createdAt = 0L))
 
         val now = System.currentTimeMillis()
         repeat(3) {
@@ -75,7 +75,7 @@ class ChargeEventRepositoryTest {
 
     @Test
     fun getInRange_excludesOutOfRange() = runBlocking {
-        val carId = carRepository.insert(CarEntity(name = "C", createdAt = 0L)).toInt()
+        val carId = carRepository.insert(CarEntity(name = "C", createdAt = 0L))
         val t = System.currentTimeMillis()
 
         chargeEventRepository.insert(eventAt(carId, t - 5 * MILLIS_PER_DAY))
@@ -91,7 +91,7 @@ class ChargeEventRepositoryTest {
         assertEquals(2, last30.size)
     }
 
-    private fun eventAt(carId: Int, eventDate: Long) = ChargeEventEntity(
+    private fun eventAt(carId: Long, eventDate: Long) = ChargeEventEntity(
         carId = carId,
         eventDate = eventDate,
         odometerKm = 100.0,

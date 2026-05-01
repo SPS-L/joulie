@@ -47,7 +47,7 @@ class HistoryViewModelTest {
 
     private fun build(
         events: List<ChargeEventEntity> = emptyList(),
-        activeCarId: Int = 1,
+        activeCarId: Long = 1L,
         distanceUnit: String = "km",
     ): VmFixture {
         val store = MutableStateFlow(events)
@@ -68,7 +68,7 @@ class HistoryViewModelTest {
         val store: MutableStateFlow<List<ChargeEventEntity>>,
     )
 
-    private fun event(id: Int, date: Long, type: ChargeType = ChargeType.AC, carId: Int = 1) = ChargeEventEntity(
+    private fun event(id: Long, date: Long, type: ChargeType = ChargeType.AC, carId: Long = 1L) = ChargeEventEntity(
         id = id,
         carId = carId,
         eventDate = date,
@@ -80,7 +80,7 @@ class HistoryViewModelTest {
 
     @Test
     fun noActiveCar_emitsEmpty() = runTest {
-        val (vm, _, _, _, _) = build(activeCarId = -1)
+        val (vm, _, _, _, _) = build(activeCarId = -1L)
         advanceUntilIdle()
         assertTrue(vm.uiState.value.rows.isEmpty())
     }
@@ -89,22 +89,22 @@ class HistoryViewModelTest {
     fun eventsLoadedAndSortedNewestFirst() = runTest {
         val (vm, _, _, _, _) = build(
             events = listOf(
-                event(1, 100L),
-                event(2, 200L),
-                event(3, 300L),
+                event(1L, 100L),
+                event(2L, 200L),
+                event(3L, 300L),
             ),
         )
         val state = vm.uiState.first { it.rows.size == 3 }
-        assertEquals(listOf(3, 2, 1), state.rows.map { it.event.id })
+        assertEquals(listOf(3L, 2L, 1L), state.rows.map { it.event.id })
     }
 
     @Test
     fun filterAc_filtersDcOut() = runTest {
         val (vm, _, _, _, _) = build(
             events = listOf(
-                event(1, 100L, ChargeType.AC),
-                event(2, 200L, ChargeType.DC_FAST),
-                event(3, 300L, ChargeType.AC),
+                event(1L, 100L, ChargeType.AC),
+                event(2L, 200L, ChargeType.DC_FAST),
+                event(3L, 300L, ChargeType.AC),
             ),
         )
         vm.uiState.first { it.rows.size == 3 }
@@ -117,9 +117,9 @@ class HistoryViewModelTest {
     fun filterDc_filtersAcOut() = runTest {
         val (vm, _, _, _, _) = build(
             events = listOf(
-                event(1, 100L, ChargeType.AC),
-                event(2, 200L, ChargeType.DC_FAST),
-                event(3, 300L, ChargeType.AC),
+                event(1L, 100L, ChargeType.AC),
+                event(2L, 200L, ChargeType.DC_FAST),
+                event(3L, 300L, ChargeType.AC),
             ),
         )
         vm.uiState.first { it.rows.size == 3 }
@@ -130,9 +130,9 @@ class HistoryViewModelTest {
 
     @Test
     fun swipeDelete_after5s_callsDeleteUseCase() = runTest {
-        val (vm, _, _, _, store) = build(events = listOf(event(7, 100L)))
+        val (vm, _, _, _, store) = build(events = listOf(event(7L, 100L)))
         vm.uiState.first { it.rows.size == 1 }
-        vm.onSwipeDelete(event(7, 100L))
+        vm.onSwipeDelete(event(7L, 100L))
         advanceTimeBy(5_001)
         runCurrent()
         assertEquals(0, store.value.size)
@@ -140,36 +140,36 @@ class HistoryViewModelTest {
 
     @Test
     fun swipeDelete_undo_cancelsTimer() = runTest {
-        val (vm, _, _, _, store) = build(events = listOf(event(7, 100L)))
+        val (vm, _, _, _, store) = build(events = listOf(event(7L, 100L)))
         vm.uiState.first { it.rows.size == 1 }
-        vm.onSwipeDelete(event(7, 100L))
+        vm.onSwipeDelete(event(7L, 100L))
         runCurrent()
-        vm.onUndoDelete(7)
+        vm.onUndoDelete(7L)
         advanceTimeBy(10_000)
         runCurrent()
         assertEquals(1, store.value.size)
-        assertFalse(vm.uiState.value.rows.first { it.event.id == 7 }.isPendingDelete)
+        assertFalse(vm.uiState.value.rows.first { it.event.id == 7L }.isPendingDelete)
     }
 
     @Test
     fun multipleConcurrentDeletes_eachTracked() = runTest {
-        val (vm, _, _, _, store) = build(events = listOf(event(1, 100L), event(2, 200L)))
+        val (vm, _, _, _, store) = build(events = listOf(event(1L, 100L), event(2L, 200L)))
         vm.uiState.first { it.rows.size == 2 }
-        vm.onSwipeDelete(event(1, 100L))
-        vm.onSwipeDelete(event(2, 200L))
+        vm.onSwipeDelete(event(1L, 100L))
+        vm.onSwipeDelete(event(2L, 200L))
         runCurrent()
-        vm.onUndoDelete(1)
+        vm.onUndoDelete(1L)
         advanceTimeBy(5_001)
         runCurrent()
         // Only event 2 was committed.
-        assertEquals(listOf(1), store.value.map { it.id })
+        assertEquals(listOf(1L), store.value.map { it.id })
     }
 
     @Test
     fun milesUnit_displayOdometerConverted() = runTest {
-        val (vm, _, _, _, _) = build(events = listOf(event(1, 100L)), distanceUnit = "miles")
+        val (vm, _, _, _, _) = build(events = listOf(event(1L, 100L)), distanceUnit = "miles")
         val state = vm.uiState.first { it.rows.size == 1 }
-        // event(1, 100L) has odometerKm = 100.0 → 62.137 mi
+        // event(1L, 100L) has odometerKm = 100.0 → 62.137 mi
         assertEquals(62.137, state.rows.single().displayOdometer, 0.005)
     }
 
@@ -180,40 +180,40 @@ class HistoryViewModelTest {
         val job = launch(start = CoroutineStart.UNDISPATCHED) {
             vm.events.collect { received += it }
         }
-        vm.onRowClick(11)
+        vm.onRowClick(11L)
         advanceUntilIdle()
         job.cancel()
         assertTrue("got $received", received.isNotEmpty())
         val event = received.first()
         assertTrue(event is HistoryEvent.NavigateToEdit)
-        assertEquals(11, (event as HistoryEvent.NavigateToEdit).eventId)
+        assertEquals(11L, (event as HistoryEvent.NavigateToEdit).eventId)
     }
 
     @Test
     fun swipeDelete_emitsUndoSnackbarEvent() = runTest {
-        val (vm, _, _, _, _) = build(events = listOf(event(7, 100L)))
+        val (vm, _, _, _, _) = build(events = listOf(event(7L, 100L)))
         vm.uiState.first { it.rows.size == 1 }
         val received = mutableListOf<HistoryEvent>()
         val job = launch(start = CoroutineStart.UNDISPATCHED) {
             vm.events.collect { received += it }
         }
-        vm.onSwipeDelete(event(7, 100L))
+        vm.onSwipeDelete(event(7L, 100L))
         runCurrent()
         job.cancel()
         assertTrue("got $received", received.isNotEmpty())
         val event = received.first()
         assertTrue(event is HistoryEvent.ShowUndoSnackbar)
-        assertEquals(7, (event as HistoryEvent.ShowUndoSnackbar).eventId)
+        assertEquals(7L, (event as HistoryEvent.ShowUndoSnackbar).eventId)
     }
 
     @Test
     fun pendingRow_stillPresentForUndoButFlaggedAsPending() = runTest {
-        val (vm, _, _, _, _) = build(events = listOf(event(7, 100L)))
+        val (vm, _, _, _, _) = build(events = listOf(event(7L, 100L)))
         vm.uiState.first { it.rows.size == 1 }
-        vm.onSwipeDelete(event(7, 100L))
+        vm.onSwipeDelete(event(7L, 100L))
         runCurrent()
         // BEFORE the 5s timer expires, the row stays in rows with isPendingDelete=true
-        assertNotNull(vm.uiState.value.rows.firstOrNull { it.event.id == 7 })
-        assertTrue(vm.uiState.value.rows.first { it.event.id == 7 }.isPendingDelete)
+        assertNotNull(vm.uiState.value.rows.firstOrNull { it.event.id == 7L })
+        assertTrue(vm.uiState.value.rows.first { it.event.id == 7L }.isPendingDelete)
     }
 }

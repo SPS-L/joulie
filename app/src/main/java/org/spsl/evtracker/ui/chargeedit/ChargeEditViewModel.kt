@@ -51,12 +51,12 @@ class ChargeEditViewModel @Inject constructor(
     val events: SharedFlow<ChargeEditEvent> = _events.asSharedFlow()
 
     init {
-        val rawId = savedStateHandle.get<Int>("eventId") ?: -1
+        val rawId = savedStateHandle.get<Long>("eventId") ?: -1L
         viewModelScope.launch {
             val activeCarId = settingsReader.activeCarId.first()
             val unit = settingsReader.distanceUnit.first()
             val ccy = settingsReader.currency.first()
-            if (rawId == -1) {
+            if (rawId == -1L) {
                 buildCreateState(activeCarId, unit, ccy)
             } else {
                 val event = chargeEventQueries.getById(rawId)
@@ -76,7 +76,7 @@ class ChargeEditViewModel @Inject constructor(
         }
     }
 
-    private suspend fun buildCreateState(activeCarId: Int, unit: String, ccy: String) {
+    private suspend fun buildCreateState(activeCarId: Long, unit: String, ccy: String) {
         val sorted = chargeEventQueries.getAllForCarSorted(activeCarId)
         val prevKm = sorted.lastOrNull()?.odometerKm
         val prefilled = prevKm?.let { (it + 1.0).toDisplayUnit(unit).toString() } ?: ""

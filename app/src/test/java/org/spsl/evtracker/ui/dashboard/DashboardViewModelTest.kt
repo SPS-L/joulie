@@ -47,7 +47,7 @@ class DashboardViewModelTest {
     private fun build(
         cars: List<CarEntity> = emptyList(),
         events: List<ChargeEventEntity> = emptyList(),
-        activeCarId: Int = -1,
+        activeCarId: Long = -1L,
         primaryMetric: String = "kwh_per_100km",
         distanceUnit: String = "km",
         currency: String = "EUR",
@@ -89,21 +89,21 @@ class DashboardViewModelTest {
 
     @Test
     fun hasCarButNoEvents_emitsNoEventsEmptyState() = runTest {
-        val car = CarEntity(id = 1, name = "Tesla", createdAt = 0L)
-        val (vm, _) = build(cars = listOf(car), activeCarId = 1)
+        val car = CarEntity(id = 1L, name = "Tesla", createdAt = 0L)
+        val (vm, _) = build(cars = listOf(car), activeCarId = 1L)
         val state = vm.uiState.first { it.dashboard.emptyState == EmptyState.NoEvents }
         assertEquals(EmptyState.NoEvents, state.dashboard.emptyState)
     }
 
     @Test
     fun eventsLoaded_propagatesStatsFromUseCase() = runTest {
-        val car = CarEntity(id = 1, name = "Tesla", createdAt = 0L)
+        val car = CarEntity(id = 1L, name = "Tesla", createdAt = 0L)
         val now = System.currentTimeMillis()
         val events = listOf(
-            ChargeEventEntity(id = 1, carId = 1, eventDate = now - 86_400_000, odometerKm = 100.0, kwhAdded = 20.0, chargeType = ChargeType.AC, createdAt = 0L),
-            ChargeEventEntity(id = 2, carId = 1, eventDate = now, odometerKm = 200.0, kwhAdded = 25.0, chargeType = ChargeType.AC, createdAt = 0L),
+            ChargeEventEntity(id = 1L, carId = 1L, eventDate = now - 86_400_000, odometerKm = 100.0, kwhAdded = 20.0, chargeType = ChargeType.AC, createdAt = 0L),
+            ChargeEventEntity(id = 2L, carId = 1L, eventDate = now, odometerKm = 200.0, kwhAdded = 25.0, chargeType = ChargeType.AC, createdAt = 0L),
         )
-        val (vm, _) = build(cars = listOf(car), events = events, activeCarId = 1)
+        val (vm, _) = build(cars = listOf(car), events = events, activeCarId = 1L)
         val state = vm.uiState.first { it.dashboard.stats != null }
         assertNotNull(state.dashboard.stats)
         assertEquals(45.0, state.dashboard.stats!!.totalKwh, 0.001)
@@ -112,13 +112,13 @@ class DashboardViewModelTest {
 
     @Test
     fun selectFilter_filtersDcOut() = runTest {
-        val car = CarEntity(id = 1, name = "Tesla", createdAt = 0L)
+        val car = CarEntity(id = 1L, name = "Tesla", createdAt = 0L)
         val now = System.currentTimeMillis()
         val events = listOf(
-            ChargeEventEntity(id = 1, carId = 1, eventDate = now - 86_400_000, odometerKm = 100.0, kwhAdded = 20.0, chargeType = ChargeType.AC, createdAt = 0L),
-            ChargeEventEntity(id = 2, carId = 1, eventDate = now, odometerKm = 200.0, kwhAdded = 25.0, chargeType = ChargeType.DC_FAST, createdAt = 0L),
+            ChargeEventEntity(id = 1L, carId = 1L, eventDate = now - 86_400_000, odometerKm = 100.0, kwhAdded = 20.0, chargeType = ChargeType.AC, createdAt = 0L),
+            ChargeEventEntity(id = 2L, carId = 1L, eventDate = now, odometerKm = 200.0, kwhAdded = 25.0, chargeType = ChargeType.DC_FAST, createdAt = 0L),
         )
-        val (vm, _) = build(cars = listOf(car), events = events, activeCarId = 1)
+        val (vm, _) = build(cars = listOf(car), events = events, activeCarId = 1L)
         vm.selectFilter(ChargeTypeFilter.AC)
         val state = vm.uiState.first { it.filter == ChargeTypeFilter.AC && it.dashboard.stats?.chargeCount == 1 }
         assertEquals(1, state.dashboard.stats?.chargeCount)
@@ -126,14 +126,14 @@ class DashboardViewModelTest {
 
     @Test
     fun selectPeriod_recomputesFromUseCase() = runTest {
-        val car = CarEntity(id = 1, name = "Tesla", createdAt = 0L)
+        val car = CarEntity(id = 1L, name = "Tesla", createdAt = 0L)
         val now = System.currentTimeMillis()
         val daysAgo = { d: Int -> now - d * 86_400_000L }
         val events = listOf(
-            ChargeEventEntity(id = 1, carId = 1, eventDate = daysAgo(20), odometerKm = 100.0, kwhAdded = 20.0, chargeType = ChargeType.AC, createdAt = 0L),
-            ChargeEventEntity(id = 2, carId = 1, eventDate = daysAgo(2), odometerKm = 200.0, kwhAdded = 25.0, chargeType = ChargeType.AC, createdAt = 0L),
+            ChargeEventEntity(id = 1L, carId = 1L, eventDate = daysAgo(20), odometerKm = 100.0, kwhAdded = 20.0, chargeType = ChargeType.AC, createdAt = 0L),
+            ChargeEventEntity(id = 2L, carId = 1L, eventDate = daysAgo(2), odometerKm = 200.0, kwhAdded = 25.0, chargeType = ChargeType.AC, createdAt = 0L),
         )
-        val (vm, _) = build(cars = listOf(car), events = events, activeCarId = 1)
+        val (vm, _) = build(cars = listOf(car), events = events, activeCarId = 1L)
         vm.uiState.first { it.dashboard.stats?.chargeCount == 2 }
         vm.selectPeriod(DashboardPeriod.Last7Days)
         val state = vm.uiState.first { it.period == DashboardPeriod.Last7Days && it.dashboard.stats?.chargeCount == 1 }
@@ -142,13 +142,13 @@ class DashboardViewModelTest {
 
     @Test
     fun multiCurrency_propagatesShowBanner() = runTest {
-        val car = CarEntity(id = 1, name = "Tesla", createdAt = 0L)
+        val car = CarEntity(id = 1L, name = "Tesla", createdAt = 0L)
         val now = System.currentTimeMillis()
         val events = listOf(
-            ChargeEventEntity(id = 1, carId = 1, eventDate = now - 86_400_000, odometerKm = 100.0, kwhAdded = 20.0, chargeType = ChargeType.AC, costTotal = 5.0, costPerKwh = 0.25, currency = "EUR", createdAt = 0L),
-            ChargeEventEntity(id = 2, carId = 1, eventDate = now, odometerKm = 200.0, kwhAdded = 25.0, chargeType = ChargeType.AC, costTotal = 7.0, costPerKwh = 0.28, currency = "USD", createdAt = 0L),
+            ChargeEventEntity(id = 1L, carId = 1L, eventDate = now - 86_400_000, odometerKm = 100.0, kwhAdded = 20.0, chargeType = ChargeType.AC, costTotal = 5.0, costPerKwh = 0.25, currency = "EUR", createdAt = 0L),
+            ChargeEventEntity(id = 2L, carId = 1L, eventDate = now, odometerKm = 200.0, kwhAdded = 25.0, chargeType = ChargeType.AC, costTotal = 7.0, costPerKwh = 0.28, currency = "USD", createdAt = 0L),
         )
-        val (vm, _) = build(cars = listOf(car), events = events, activeCarId = 1)
+        val (vm, _) = build(cars = listOf(car), events = events, activeCarId = 1L)
         val state = vm.uiState.first { it.dashboard.showMultiCurrencyBanner }
         assertTrue(state.dashboard.showMultiCurrencyBanner)
     }
@@ -162,8 +162,8 @@ class DashboardViewModelTest {
 
     @Test
     fun customRange_emitsCustomPeriod() = runTest {
-        val car = CarEntity(id = 1, name = "Tesla", createdAt = 0L)
-        val (vm, _) = build(cars = listOf(car), activeCarId = 1)
+        val car = CarEntity(id = 1L, name = "Tesla", createdAt = 0L)
+        val (vm, _) = build(cars = listOf(car), activeCarId = 1L)
         vm.selectCustomRange(from = 1_000L, to = 2_000L)
         val state = vm.uiState.first { it.period is DashboardPeriod.Custom }
         val custom = state.period as DashboardPeriod.Custom
@@ -173,9 +173,9 @@ class DashboardViewModelTest {
 
     @Test
     fun onFabClick_emitsNavigateEvent_whenCarActive() = runTest {
-        val car = CarEntity(id = 1, name = "Tesla", createdAt = 0L)
-        val (vm, _) = build(cars = listOf(car), activeCarId = 1)
-        vm.uiState.first { it.activeCarId == 1 }
+        val car = CarEntity(id = 1L, name = "Tesla", createdAt = 0L)
+        val (vm, _) = build(cars = listOf(car), activeCarId = 1L)
+        vm.uiState.first { it.activeCarId == 1L }
         val received = mutableListOf<DashboardEvent>()
         val job = launch(start = kotlinx.coroutines.CoroutineStart.UNDISPATCHED) {
             vm.events.collect { received += it }
@@ -188,8 +188,8 @@ class DashboardViewModelTest {
 
     @Test
     fun onFabClick_emitsNothing_whenNoCar() = runTest {
-        val (vm, _) = build(activeCarId = -1)
-        vm.uiState.first { it.activeCarId == -1 }
+        val (vm, _) = build(activeCarId = -1L)
+        vm.uiState.first { it.activeCarId == -1L }
         vm.onFabClick()
         assertNull(vm.events.replayCache.firstOrNull())
     }

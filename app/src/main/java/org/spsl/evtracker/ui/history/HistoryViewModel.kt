@@ -42,7 +42,7 @@ class HistoryViewModel @Inject constructor(
 
     private data class PendingDelete(val event: ChargeEventEntity, val job: Job)
 
-    private val pendingDeletes = MutableStateFlow<Map<Int, PendingDelete>>(emptyMap())
+    private val pendingDeletes = MutableStateFlow<Map<Long, PendingDelete>>(emptyMap())
     private val filter = MutableStateFlow(ChargeTypeFilter.ALL)
 
     private val _events = MutableSharedFlow<HistoryEvent>(
@@ -52,10 +52,10 @@ class HistoryViewModel @Inject constructor(
     val events: SharedFlow<HistoryEvent> = _events.asSharedFlow()
 
     private data class Inputs(
-        val activeCarId: Int,
+        val activeCarId: Long,
         val distanceUnit: String,
         val filter: ChargeTypeFilter,
-        val pending: Map<Int, PendingDelete>,
+        val pending: Map<Long, PendingDelete>,
     )
 
     val uiState: StateFlow<HistoryUiState> = combine(
@@ -65,10 +65,10 @@ class HistoryViewModel @Inject constructor(
         pendingDeletes,
     ) { active, unit, f, pending -> Inputs(active, unit, f, pending) }
         .flatMapLatest { inputs ->
-            if (inputs.activeCarId == -1) {
+            if (inputs.activeCarId == -1L) {
                 flowOf(
                     HistoryUiState(
-                        activeCarId = -1,
+                        activeCarId = -1L,
                         distanceUnit = inputs.distanceUnit,
                         filter = inputs.filter,
                     ),
@@ -121,12 +121,12 @@ class HistoryViewModel @Inject constructor(
         _events.tryEmit(HistoryEvent.ShowUndoSnackbar(id))
     }
 
-    fun onUndoDelete(eventId: Int) {
+    fun onUndoDelete(eventId: Long) {
         pendingDeletes.value[eventId]?.job?.cancel()
         pendingDeletes.update { it - eventId }
     }
 
-    fun onRowClick(eventId: Int) {
+    fun onRowClick(eventId: Long) {
         _events.tryEmit(HistoryEvent.NavigateToEdit(eventId))
     }
 }

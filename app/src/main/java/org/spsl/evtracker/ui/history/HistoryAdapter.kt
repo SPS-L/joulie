@@ -12,7 +12,7 @@ import org.spsl.evtracker.ui.common.DateFormat
 import org.spsl.evtracker.ui.common.MoneyFormat
 
 class HistoryAdapter(
-    private val onRowClick: (Int) -> Unit,
+    private val onRowClick: (Long) -> Unit,
 ) : ListAdapter<HistoryRow, HistoryAdapter.ViewHolder>(Diff) {
 
     private var distanceUnit: String = "km"
@@ -33,7 +33,7 @@ class HistoryAdapter(
         holder.bind(getItem(position), distanceUnit, onRowClick)
 
     inner class ViewHolder(private val binding: ItemChargeEventBinding) : RecyclerView.ViewHolder(binding.root) {
-        fun bind(row: HistoryRow, unit: String, onRowClick: (Int) -> Unit) {
+        fun bind(row: HistoryRow, unit: String, onRowClick: (Long) -> Unit) {
             // Hide pending-delete rows entirely; the data is still present so Undo can find it.
             if (row.isPendingDelete) {
                 binding.root.visibility = android.view.View.GONE

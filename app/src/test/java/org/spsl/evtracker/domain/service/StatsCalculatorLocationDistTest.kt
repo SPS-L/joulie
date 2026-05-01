@@ -11,7 +11,7 @@ class StatsCalculatorLocationDistTest {
     private val calc = StatsCalculator()
 
     private fun ev(location: String?) = ChargeEventEntity(
-        id = 0, carId = 1, eventDate = 0L, odometerKm = 0.0, kwhAdded = 1.0,
+        id = 0L, carId = 1L, eventDate = 0L, odometerKm = 0.0, kwhAdded = 1.0,
         chargeType = ChargeType.AC, costTotal = null, costPerKwh = null,
         currency = null, location = location, note = "", createdAt = 0L,
     )

@@ -45,11 +45,11 @@ class ManageLocationsViewModelTest {
     private fun build(): ManageLocationsViewModel =
         ManageLocationsViewModel(locationReader, locationWriter, backupScheduler)
 
-    private fun loc(id: Int, label: String, useCount: Int = 1, lastUsed: Long = id.toLong()) =
+    private fun loc(id: Long, label: String, useCount: Int = 1, lastUsed: Long = id) =
         CustomLocationEntity(id = id, label = label, useCount = useCount, lastUsed = lastUsed)
 
     @Test fun observe_emitsSortedList() = runTest(dispatcher) {
-        locationReader.state.value = listOf(loc(1, "A", 1, 10), loc(2, "B", 5, 5), loc(3, "C", 5, 15))
+        locationReader.state.value = listOf(loc(1L, "A", 1, 10), loc(2L, "B", 5, 5), loc(3L, "C", 5, 15))
         val vm = build()
         advanceUntilIdle()
         // Sort: useCount DESC, lastUsed DESC ⇒ C(5,15), B(5,5), A(1,10)
@@ -57,7 +57,7 @@ class ManageLocationsViewModelTest {
     }
 
     @Test fun swipe_addsToPendingDeletions_emitsSnackbar() = runTest(dispatcher) {
-        locationReader.state.value = listOf(loc(1, "A"))
+        locationReader.state.value = listOf(loc(1L, "A"))
         val vm = build()
         advanceUntilIdle()
         val received = mutableListOf<ManageLocationsEvent>()
@@ -70,7 +70,7 @@ class ManageLocationsViewModelTest {
     }
 
     @Test fun swipe_then_undo_cancelsJob_removesFromPending() = runTest(dispatcher) {
-        locationReader.state.value = listOf(loc(1, "A"))
+        locationReader.state.value = listOf(loc(1L, "A"))
         val vm = build()
         advanceUntilIdle()
         vm.onSwipeDelete("A")
@@ -83,7 +83,7 @@ class ManageLocationsViewModelTest {
     }
 
     @Test fun swipe_then_5sElapses_callsLocationWriterDelete_andEnqueueBackup() = runTest(dispatcher) {
-        locationReader.state.value = listOf(loc(1, "A"))
+        locationReader.state.value = listOf(loc(1L, "A"))
         val vm = build()
         advanceUntilIdle()
         vm.onSwipeDelete("A")
@@ -93,7 +93,7 @@ class ManageLocationsViewModelTest {
     }
 
     @Test fun swipe_multipleLabels_each_has_independent_job() = runTest(dispatcher) {
-        locationReader.state.value = listOf(loc(1, "A"), loc(2, "B"))
+        locationReader.state.value = listOf(loc(1L, "A"), loc(2L, "B"))
         val vm = build()
         advanceUntilIdle()
         vm.onSwipeDelete("A")
@@ -109,7 +109,7 @@ class ManageLocationsViewModelTest {
     }
 
     @Test fun swipe_then_clearVm_cancelsAllJobs_doesNotCallDelete() = runTest(dispatcher) {
-        locationReader.state.value = listOf(loc(1, "A"))
+        locationReader.state.value = listOf(loc(1L, "A"))
         val vm = build()
         advanceUntilIdle()
         vm.onSwipeDelete("A")
@@ -131,7 +131,7 @@ class ManageLocationsViewModelTest {
     }
 
     @Test fun swipe_lastRow_visibleLocationsIsEmpty_during_undo_window() = runTest(dispatcher) {
-        locationReader.state.value = listOf(loc(1, "A"))
+        locationReader.state.value = listOf(loc(1L, "A"))
         val vm = build()
         advanceUntilIdle()
         assertEquals(1, vm.uiState.value.visibleLocations.size)

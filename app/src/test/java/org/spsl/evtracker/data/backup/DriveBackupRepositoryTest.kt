@@ -69,7 +69,7 @@ class DriveBackupRepositoryTest {
 
     @Test
     fun backup_noExistingFile_callsCreate_andReturnsSuccess() = runTest {
-        val s = build(cars = listOf(CarEntity(id = 1, name = "T", createdAt = 0L)))
+        val s = build(cars = listOf(CarEntity(id = 1L, name = "T", createdAt = 0L)))
         val result = s.repo.backupCurrentData()
         assertEquals(BackupResult.Success, result)
         assertNotNull(s.remote.lastUploadedBytes())
@@ -81,7 +81,7 @@ class DriveBackupRepositoryTest {
         val seed = serializer.toJson(
             BackupData.fromEntities(emptyList(), emptyList(), emptyList(), now = 0L),
         )
-        val s = build(cars = listOf(CarEntity(id = 1, name = "T", createdAt = 0L)))
+        val s = build(cars = listOf(CarEntity(id = 1L, name = "T", createdAt = 0L)))
         s.remote.seed(seed.toByteArray(Charsets.UTF_8))
         val result = s.repo.backupCurrentData()
         assertEquals(BackupResult.Success, result)
@@ -92,14 +92,14 @@ class DriveBackupRepositoryTest {
 
     @Test
     fun backup_serializerRoundTripPreservesAllFields() = runTest {
-        val car = CarEntity(id = 1, name = "T", createdAt = 5L)
+        val car = CarEntity(id = 1L, name = "T", createdAt = 5L)
         val event = ChargeEventEntity(
-            id = 7, carId = 1, eventDate = 1L,
+            id = 7L, carId = 1L, eventDate = 1L,
             odometerKm = 100.0, kwhAdded = 10.0, chargeType = ChargeType.DC_FAST,
             costTotal = 5.0, costPerKwh = 0.5, currency = "EUR",
             location = "Home", note = "n", createdAt = 0L,
         )
-        val loc = CustomLocationEntity(id = 1, label = "Home", useCount = 1, lastUsed = 9L)
+        val loc = CustomLocationEntity(id = 1L, label = "Home", useCount = 1, lastUsed = 9L)
         val s = build(cars = listOf(car), events = listOf(event), locations = listOf(loc))
         assertEquals(BackupResult.Success, s.repo.backupCurrentData())
         val parsed = serializer.fromJson(s.remote.lastUploadedBytes()!!.toString(Charsets.UTF_8))
@@ -178,7 +178,7 @@ class DriveBackupRepositoryTest {
 
     @Test
     fun backup_drive429_retriesThenSucceeds() = runTest {
-        val s = build(cars = listOf(CarEntity(id = 1, name = "T", createdAt = 0L)))
+        val s = build(cars = listOf(CarEntity(id = 1L, name = "T", createdAt = 0L)))
         s.remote.failNext = http(429, "Too Many Requests")
         s.remote.failTimes = 1
         val result = s.repo.backupCurrentData()
@@ -188,7 +188,7 @@ class DriveBackupRepositoryTest {
 
     @Test
     fun backup_drive500_retriesThenSucceeds() = runTest {
-        val s = build(cars = listOf(CarEntity(id = 1, name = "T", createdAt = 0L)))
+        val s = build(cars = listOf(CarEntity(id = 1L, name = "T", createdAt = 0L)))
         s.remote.failNext = http(500, "Internal Server Error")
         s.remote.failTimes = 1
         assertEquals(BackupResult.Success, s.repo.backupCurrentData())
@@ -197,7 +197,7 @@ class DriveBackupRepositoryTest {
 
     @Test
     fun backup_drive403Quota_retriesThenSucceeds() = runTest {
-        val s = build(cars = listOf(CarEntity(id = 1, name = "T", createdAt = 0L)))
+        val s = build(cars = listOf(CarEntity(id = 1L, name = "T", createdAt = 0L)))
         s.remote.failNext = http(
             403,
             "Forbidden",
@@ -210,7 +210,7 @@ class DriveBackupRepositoryTest {
 
     @Test
     fun backup_unknownHostException_retriesThenSucceeds() = runTest {
-        val s = build(cars = listOf(CarEntity(id = 1, name = "T", createdAt = 0L)))
+        val s = build(cars = listOf(CarEntity(id = 1L, name = "T", createdAt = 0L)))
         s.remote.failNext = UnknownHostException("no internet")
         s.remote.failTimes = 1
         assertEquals(BackupResult.Success, s.repo.backupCurrentData())
@@ -219,7 +219,7 @@ class DriveBackupRepositoryTest {
 
     @Test
     fun backup_transient429_threeFailures_returnsFailure() = runTest {
-        val s = build(cars = listOf(CarEntity(id = 1, name = "T", createdAt = 0L)))
+        val s = build(cars = listOf(CarEntity(id = 1L, name = "T", createdAt = 0L)))
         s.remote.failNext = http(429, "Too Many Requests")
         s.remote.failTimes = 99 // exceeds MAX_ATTEMPTS
         val result = s.repo.backupCurrentData()
@@ -231,7 +231,7 @@ class DriveBackupRepositoryTest {
 
     @Test
     fun backup_transientNetworkException_threeFailures_returnsFailure() = runTest {
-        val s = build(cars = listOf(CarEntity(id = 1, name = "T", createdAt = 0L)))
+        val s = build(cars = listOf(CarEntity(id = 1L, name = "T", createdAt = 0L)))
         s.remote.failNext = IOException("socket reset")
         s.remote.failTimes = 99
         val result = s.repo.backupCurrentData()

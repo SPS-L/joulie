@@ -8,7 +8,7 @@ interface ChargeEventWriter {
     suspend fun delete(event: ChargeEventEntity)
 
     /** F1: per-active-car reset. */
-    suspend fun deleteForCar(carId: Int)
+    suspend fun deleteForCar(carId: Long)
 
     /** F1: global reset. */
     suspend fun deleteAll()

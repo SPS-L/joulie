@@ -8,8 +8,8 @@ class ResetActiveCarDataUseCase @Inject constructor(
     private val chargeEventWriter: ChargeEventWriter,
     private val backupScheduler: BackupScheduler,
 ) {
-    suspend operator fun invoke(carId: Int) {
-        require(carId != -1) { "ResetActiveCarDataUseCase called with carId=-1" }
+    suspend operator fun invoke(carId: Long) {
+        require(carId != -1L) { "ResetActiveCarDataUseCase called with carId=-1" }
         chargeEventWriter.deleteForCar(carId)
         backupScheduler.enqueueBackup()
     }

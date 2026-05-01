@@ -3,7 +3,13 @@ package org.spsl.evtracker.domain.repository
 import kotlinx.coroutines.flow.Flow
 
 interface SettingsReader {
-    val activeCarId: Flow<Int>
+    /**
+     * Active car id, or `-1L` when none. Storage backing is `intPreferencesKey`
+     * for backward-compat with v1.0.x DataStore values; the repository widens
+     * to `Long` at the boundary so callers see the same type as the entity PK.
+     * One user with thousands of cars over decades won't exceed `Int.MAX_VALUE`.
+     */
+    val activeCarId: Flow<Long>
     val primaryMetric: Flow<String>
     val distanceUnit: Flow<String>
     val currency: Flow<String>

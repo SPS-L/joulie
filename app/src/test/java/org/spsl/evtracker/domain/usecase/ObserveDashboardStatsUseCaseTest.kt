@@ -32,7 +32,7 @@ class ObserveDashboardStatsUseCaseTest {
     private fun build(
         cars: List<CarEntity> = emptyList(),
         events: List<ChargeEventEntity> = emptyList(),
-        activeCarId: Int = -1,
+        activeCarId: Long = -1L,
     ): Triple<ObserveDashboardStatsUseCase, FakeChargeEventQueries, FakeSettingsReader> {
         val carReader = FakeCarReader(cars)
         val queries = FakeChargeEventQueries()
@@ -51,7 +51,7 @@ class ObserveDashboardStatsUseCaseTest {
 
     @Test
     fun noCars_emitsNoCarEmptyState() = runTest {
-        val (useCase, _, _) = build(cars = emptyList(), activeCarId = -1)
+        val (useCase, _, _) = build(cars = emptyList(), activeCarId = -1L)
         val state = useCase.observe(DashboardPeriod.Last30Days, ChargeTypeFilter.ALL).first()
         assertEquals(EmptyState.NoCar, state.emptyState)
     }
@@ -59,8 +59,8 @@ class ObserveDashboardStatsUseCaseTest {
     @Test
     fun activeCarMinusOne_emitsNoCarEmptyState() = runTest {
         val (useCase, _, _) = build(
-            cars = listOf(CarEntity(id = 1, name = "T", createdAt = 0L)),
-            activeCarId = -1,
+            cars = listOf(CarEntity(id = 1L, name = "T", createdAt = 0L)),
+            activeCarId = -1L,
         )
         val state = useCase.observe(DashboardPeriod.Last30Days, ChargeTypeFilter.ALL).first()
         assertEquals(EmptyState.NoCar, state.emptyState)
@@ -69,9 +69,9 @@ class ObserveDashboardStatsUseCaseTest {
     @Test
     fun noEventsForActiveCar_emitsNoEventsEmptyState() = runTest {
         val (useCase, _, _) = build(
-            cars = listOf(CarEntity(id = 1, name = "T", createdAt = 0L)),
+            cars = listOf(CarEntity(id = 1L, name = "T", createdAt = 0L)),
             events = emptyList(),
-            activeCarId = 1,
+            activeCarId = 1L,
         )
         val state = useCase.observe(DashboardPeriod.Last30Days, ChargeTypeFilter.ALL).first()
         assertEquals(EmptyState.NoEvents, state.emptyState)
@@ -81,13 +81,13 @@ class ObserveDashboardStatsUseCaseTest {
     fun eventsPresent_emitsStatsAndMultiCurrencyFlag() = runTest {
         val now = System.currentTimeMillis()
         val (useCase, _, _) = build(
-            cars = listOf(CarEntity(id = 1, name = "T", createdAt = 0L)),
+            cars = listOf(CarEntity(id = 1L, name = "T", createdAt = 0L)),
             events = listOf(
-                ChargeEventEntity(carId = 1, eventDate = now - 5 * MS_PER_DAY, odometerKm = 0.0, kwhAdded = 0.0, costTotal = 5.0, currency = "EUR", createdAt = 0L),
-                ChargeEventEntity(carId = 1, eventDate = now - 3 * MS_PER_DAY, odometerKm = 100.0, kwhAdded = 20.0, costTotal = 6.0, currency = "USD", createdAt = 0L),
-                ChargeEventEntity(carId = 1, eventDate = now - 1 * MS_PER_DAY, odometerKm = 200.0, kwhAdded = 20.0, costTotal = 7.0, currency = "EUR", createdAt = 0L),
+                ChargeEventEntity(carId = 1L, eventDate = now - 5 * MS_PER_DAY, odometerKm = 0.0, kwhAdded = 0.0, costTotal = 5.0, currency = "EUR", createdAt = 0L),
+                ChargeEventEntity(carId = 1L, eventDate = now - 3 * MS_PER_DAY, odometerKm = 100.0, kwhAdded = 20.0, costTotal = 6.0, currency = "USD", createdAt = 0L),
+                ChargeEventEntity(carId = 1L, eventDate = now - 1 * MS_PER_DAY, odometerKm = 200.0, kwhAdded = 20.0, costTotal = 7.0, currency = "EUR", createdAt = 0L),
             ),
-            activeCarId = 1,
+            activeCarId = 1L,
         )
         val state = useCase.observe(DashboardPeriod.Last30Days, ChargeTypeFilter.ALL).first()
         assertTrue(state.stats != null)
@@ -96,7 +96,7 @@ class ObserveDashboardStatsUseCaseTest {
 
     @Test
     fun reEmitsWhenEventInsertedForActiveCar() = runTest(UnconfinedTestDispatcher()) {
-        val carReader = FakeCarReader(listOf(CarEntity(id = 1, name = "T", createdAt = 0L)))
+        val carReader = FakeCarReader(listOf(CarEntity(id = 1L, name = "T", createdAt = 0L)))
         val queries = FakeChargeEventQueries()
         val writer = FakeChargeEventWriter(queries.shareStore())
         val settings = FakeSettingsReader(activeCarIdInit = 1)
@@ -119,9 +119,9 @@ class ObserveDashboardStatsUseCaseTest {
 
         // Insert an event for the active car within the period window.
         val now = System.currentTimeMillis()
-        writer.insert(ChargeEventEntity(carId = 1, eventDate = now - 1 * MS_PER_DAY, odometerKm = 0.0, kwhAdded = 10.0, createdAt = 0L))
+        writer.insert(ChargeEventEntity(carId = 1L, eventDate = now - 1 * MS_PER_DAY, odometerKm = 0.0, kwhAdded = 10.0, createdAt = 0L))
         advanceUntilIdle()
-        writer.insert(ChargeEventEntity(carId = 1, eventDate = now, odometerKm = 100.0, kwhAdded = 20.0, createdAt = 0L))
+        writer.insert(ChargeEventEntity(carId = 1L, eventDate = now, odometerKm = 100.0, kwhAdded = 20.0, createdAt = 0L))
         advanceUntilIdle()
         // Latest emission should now have stats (two events => delta-odo computable).
         assertTrue("expected stats after insert; emissions=$emissions", emissions.last().stats != null)

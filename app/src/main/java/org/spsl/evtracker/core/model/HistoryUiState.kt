@@ -6,7 +6,7 @@ data class HistoryUiState(
     val rows: List<HistoryRow> = emptyList(),
     val filter: ChargeTypeFilter = ChargeTypeFilter.ALL,
     val distanceUnit: String = "km",
-    val activeCarId: Int = -1,
+    val activeCarId: Long = -1L,
 ) {
     val isEmpty: Boolean get() = rows.isEmpty()
 }
@@ -19,6 +19,6 @@ data class HistoryRow(
 )
 
 sealed class HistoryEvent {
-    data class ShowUndoSnackbar(val eventId: Int) : HistoryEvent()
-    data class NavigateToEdit(val eventId: Int) : HistoryEvent()
+    data class ShowUndoSnackbar(val eventId: Long) : HistoryEvent()
+    data class NavigateToEdit(val eventId: Long) : HistoryEvent()
 }

@@ -23,8 +23,8 @@ import org.spsl.evtracker.core.model.ChargeType
     ],
 )
 data class ChargeEventEntity(
-    @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    val carId: Int,
+    @PrimaryKey(autoGenerate = true) val id: Long = 0L,
+    val carId: Long,
     val eventDate: Long,
     val odometerKm: Double,
     val kwhAdded: Double,

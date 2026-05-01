@@ -12,10 +12,10 @@ class RenameCarUseCaseTest {
 
     @Test
     fun nameBlank_returnsError() = runTest {
-        val cars = FakeCarRepository(initial = listOf(CarEntity(id = 1, name = "Old", createdAt = 0L)))
+        val cars = FakeCarRepository(initial = listOf(CarEntity(id = 1L, name = "Old", createdAt = 0L)))
         val scheduler = FakeBackupScheduler()
         val useCase = RenameCarUseCase(cars, scheduler)
-        val result = useCase(carId = 1, newName = "")
+        val result = useCase(carId = 1L, newName = "")
         assertTrue(result is RenameCarUseCase.Result.NameBlank)
         assertEquals("Old", cars.current().single().name)
         assertEquals(0, scheduler.enqueueCount)
@@ -23,10 +23,10 @@ class RenameCarUseCaseTest {
 
     @Test
     fun success_renamesAndEnqueues() = runTest {
-        val cars = FakeCarRepository(initial = listOf(CarEntity(id = 1, name = "Old", createdAt = 0L)))
+        val cars = FakeCarRepository(initial = listOf(CarEntity(id = 1L, name = "Old", createdAt = 0L)))
         val scheduler = FakeBackupScheduler()
         val useCase = RenameCarUseCase(cars, scheduler)
-        val result = useCase(carId = 1, newName = "New")
+        val result = useCase(carId = 1L, newName = "New")
         assertTrue(result is RenameCarUseCase.Result.Success)
         assertEquals("New", cars.current().single().name)
         assertEquals(1, scheduler.enqueueCount)
@@ -34,9 +34,9 @@ class RenameCarUseCaseTest {
 
     @Test
     fun nameTrimmed() = runTest {
-        val cars = FakeCarRepository(initial = listOf(CarEntity(id = 1, name = "Old", createdAt = 0L)))
+        val cars = FakeCarRepository(initial = listOf(CarEntity(id = 1L, name = "Old", createdAt = 0L)))
         val useCase = RenameCarUseCase(cars, FakeBackupScheduler())
-        useCase(carId = 1, newName = "  Trimmed  ")
+        useCase(carId = 1L, newName = "  Trimmed  ")
         assertEquals("Trimmed", cars.current().single().name)
     }
 }

@@ -86,7 +86,7 @@ class MainActivityResetRecoveryTest {
     @Test fun startup_resetInProgressTrue_runsUseCase_clearsFlag_beforeUiVisible() = runBlocking {
         val carId = database.carDao().insert(
             CarEntity(name = "Test", make = "M", model = "X", year = 2024, batteryKwh = 75.0, createdAt = 0L),
-        ).toInt()
+        )
         settingsRepository.setResetInProgress(true)
 
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
@@ -105,7 +105,7 @@ class MainActivityResetRecoveryTest {
     @Test fun startup_resetInProgressFalse_doesNotRunUseCase() = runBlocking {
         val carId = database.carDao().insert(
             CarEntity(name = "Test", make = "M", model = "X", year = 2024, batteryKwh = 75.0, createdAt = 0L),
-        ).toInt()
+        )
         settingsRepository.setResetInProgress(false)
 
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->

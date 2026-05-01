@@ -9,7 +9,7 @@ import androidx.room.PrimaryKey
     indices = [Index(value = ["label"], unique = true)],
 )
 data class CustomLocationEntity(
-    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    @PrimaryKey(autoGenerate = true) val id: Long = 0L,
     val label: String,
     val useCount: Int = 1,
     val lastUsed: Long,

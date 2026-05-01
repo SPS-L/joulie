@@ -12,20 +12,20 @@ import org.spsl.evtracker.data.local.entity.ChargeEventEntity
 interface ChargeEventDao {
 
     @Query("SELECT * FROM charge_events WHERE carId = :carId ORDER BY eventDate ASC")
-    fun observeForCar(carId: Int): Flow<List<ChargeEventEntity>>
+    fun observeForCar(carId: Long): Flow<List<ChargeEventEntity>>
 
     @Query(
         "SELECT * FROM charge_events " +
             "WHERE carId = :carId AND eventDate BETWEEN :from AND :to " +
             "ORDER BY eventDate ASC",
     )
-    suspend fun getInRange(carId: Int, from: Long, to: Long): List<ChargeEventEntity>
+    suspend fun getInRange(carId: Long, from: Long, to: Long): List<ChargeEventEntity>
 
     @Query("SELECT * FROM charge_events WHERE carId = :carId ORDER BY eventDate ASC")
-    suspend fun getAllForCarSorted(carId: Int): List<ChargeEventEntity>
+    suspend fun getAllForCarSorted(carId: Long): List<ChargeEventEntity>
 
     @Query("SELECT * FROM charge_events WHERE id = :id")
-    suspend fun getById(id: Int): ChargeEventEntity?
+    suspend fun getById(id: Long): ChargeEventEntity?
 
     @Insert
     suspend fun insert(event: ChargeEventEntity): Long
@@ -37,7 +37,7 @@ interface ChargeEventDao {
     suspend fun delete(event: ChargeEventEntity)
 
     @Query("DELETE FROM charge_events WHERE carId = :carId")
-    suspend fun deleteForCar(carId: Int)
+    suspend fun deleteForCar(carId: Long)
 
     @Query("DELETE FROM charge_events")
     suspend fun deleteAll()

@@ -33,7 +33,7 @@ class ObserveDashboardStatsUseCase @Inject constructor(
             Pair(activeCarId, cars)
         }.flatMapLatest { (activeCarId, cars) ->
             when {
-                cars.isEmpty() || activeCarId == -1 ->
+                cars.isEmpty() || activeCarId == -1L ->
                     flowOf(DashboardUiState(emptyState = EmptyState.NoCar))
                 else ->
                     chargeEventQueries.observeForCar(activeCarId).map { events ->

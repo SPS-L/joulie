@@ -18,7 +18,7 @@ import org.spsl.evtracker.data.local.entity.CustomLocationEntity
         ChargeEventEntity::class,
         CustomLocationEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 @TypeConverters(ChargeTypeConverter::class)
@@ -95,6 +95,23 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL(
                     "UPDATE charge_events SET chargeType = 'DC_FAST' WHERE chargeType = 'DC'",
                 )
+            }
+        }
+
+        /**
+         * TASK-26: widen entity primary keys (and foreign keys) from Kotlin
+         * `Int` to `Long`. SQLite already stores `INTEGER` columns as up to
+         * 8 bytes, so the on-disk schema is unchanged — Room's affinity for
+         * these columns stays `INTEGER` and the column DDL is identical.
+         * The migration is therefore a deliberate no-op: bumping to version
+         * 5 acts as a tripwire for the entity-side type change so future
+         * downgrades (or stale DBs) trip Room's schema validator instead of
+         * silently truncating Long values to Int.
+         */
+        val MIGRATION_4_5: Migration = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // No-op: SQLite INTEGER columns already hold 64-bit signed
+                // integers; widening Kotlin Int → Long doesn't change DDL.
             }
         }
     }

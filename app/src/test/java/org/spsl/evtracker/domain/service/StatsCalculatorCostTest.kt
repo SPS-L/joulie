@@ -17,7 +17,7 @@ class StatsCalculatorCostTest {
         costTotal: Double? = null,
         currency: String? = null,
     ) = ChargeEventEntity(
-        carId = 1,
+        carId = 1L,
         eventDate = eventDate,
         odometerKm = odometerKm,
         kwhAdded = kwhAdded,

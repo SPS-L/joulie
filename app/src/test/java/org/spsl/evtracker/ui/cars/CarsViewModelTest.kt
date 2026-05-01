@@ -43,7 +43,7 @@ class CarsViewModelTest {
 
     private fun build(
         cars: List<CarEntity> = emptyList(),
-        activeCarId: Int = -1,
+        activeCarId: Long = -1L,
     ): VmFixture {
         val repo = FakeCarRepository(initial = cars)
         val reader = FakeSettingsReader(activeCarIdInit = activeCarId)
@@ -73,10 +73,10 @@ class CarsViewModelTest {
     @Test
     fun marksActiveCarInList() = runTest {
         val cars = listOf(
-            CarEntity(id = 1, name = "A", createdAt = 0L),
-            CarEntity(id = 2, name = "B", createdAt = 0L),
+            CarEntity(id = 1L, name = "A", createdAt = 0L),
+            CarEntity(id = 2L, name = "B", createdAt = 0L),
         )
-        val (vm, _, _, _) = build(cars = cars, activeCarId = 2)
+        val (vm, _, _, _) = build(cars = cars, activeCarId = 2L)
         val state = vm.uiState.first { it.cars.size == 2 }
         assertEquals(2, state.activeCarId)
         assertFalse(state.cars[0].isActive)

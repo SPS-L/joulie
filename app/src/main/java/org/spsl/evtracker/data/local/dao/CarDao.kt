@@ -15,7 +15,7 @@ interface CarDao {
     fun observeAll(): Flow<List<CarEntity>>
 
     @Query("SELECT * FROM cars WHERE id = :id")
-    suspend fun getById(id: Int): CarEntity?
+    suspend fun getById(id: Long): CarEntity?
 
     // Default OnConflictStrategy.ABORT (no `onConflict` parameter). NOT REPLACE:
     // a stale-id insert on cars would DELETE the existing row and cascade-delete
@@ -29,10 +29,10 @@ interface CarDao {
     suspend fun update(car: CarEntity)
 
     @Query("UPDATE cars SET name = :name WHERE id = :id")
-    suspend fun rename(id: Int, name: String)
+    suspend fun rename(id: Long, name: String)
 
     @Query("DELETE FROM cars WHERE id = :id")
-    suspend fun deleteById(id: Int)
+    suspend fun deleteById(id: Long)
 
     @Delete
     suspend fun delete(car: CarEntity)

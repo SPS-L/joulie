@@ -15,11 +15,11 @@ class DeleteCarUseCase @Inject constructor(
     private val settingsWriter: SettingsWriter,
     private val backupScheduler: BackupScheduler,
 ) {
-    suspend operator fun invoke(carId: Int) {
+    suspend operator fun invoke(carId: Long) {
         carWriter.deleteById(carId)
         if (settingsReader.activeCarId.first() == carId) {
             val remaining = carReader.observeAll().first()
-            settingsWriter.setActiveCarId(remaining.firstOrNull()?.id ?: -1)
+            settingsWriter.setActiveCarId(remaining.firstOrNull()?.id ?: -1L)
         }
         backupScheduler.enqueueBackup()
     }

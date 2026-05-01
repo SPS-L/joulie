@@ -28,8 +28,8 @@ class ObserveChartsModelsUseCaseTest {
     private val now = NowProvider { nowMs }
 
     private fun setup(
-        cars: List<CarEntity> = listOf(CarEntity(id = 1, name = "C", createdAt = 0L)),
-        activeCarId: Int = 1,
+        cars: List<CarEntity> = listOf(CarEntity(id = 1L, name = "C", createdAt = 0L)),
+        activeCarId: Long = 1L,
         events: List<ChargeEventEntity> = emptyList(),
     ): ObserveChartsModelsUseCase {
         val carReader = FakeCarReader(cars)
@@ -55,19 +55,19 @@ class ObserveChartsModelsUseCaseTest {
         currency: String? = null,
         location: String? = null,
     ) = ChargeEventEntity(
-        id = 0, carId = 1, eventDate = date, odometerKm = odo, kwhAdded = kwh,
+        id = 0L, carId = 1L, eventDate = date, odometerKm = odo, kwhAdded = kwh,
         chargeType = type, costTotal = cost, costPerKwh = null,
         currency = currency, location = location, note = "", createdAt = 0L,
     )
 
     @Test fun noCar_emitsNoCar() = runTest {
-        val state = setup(cars = emptyList(), activeCarId = -1)
+        val state = setup(cars = emptyList(), activeCarId = -1L)
             .observe(ChartsPeriod.Last12Months).first()
         assertTrue(state is ChartsUiState.NoCar)
     }
 
     @Test fun activeCarMinusOne_emitsNoCar() = runTest {
-        val state = setup(activeCarId = -1).observe(ChartsPeriod.Last12Months).first()
+        val state = setup(activeCarId = -1L).observe(ChartsPeriod.Last12Months).first()
         assertTrue(state is ChartsUiState.NoCar)
     }
 
@@ -143,8 +143,8 @@ class ObserveChartsModelsUseCaseTest {
     @Test fun carSwitch_resetsState() = runTest {
         val carReader = FakeCarReader(
             listOf(
-                CarEntity(id = 1, name = "A", createdAt = 0L),
-                CarEntity(id = 2, name = "B", createdAt = 0L),
+                CarEntity(id = 1L, name = "A", createdAt = 0L),
+                CarEntity(id = 2L, name = "B", createdAt = 0L),
             ),
         )
         val queries = FakeChargeEventQueries().apply {

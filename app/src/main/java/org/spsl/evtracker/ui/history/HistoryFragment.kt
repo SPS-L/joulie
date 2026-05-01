@@ -64,7 +64,7 @@ class HistoryFragment : Fragment() {
                 viewModel.uiState.collect { state ->
                     adapter.setDistanceUnit(state.distanceUnit)
                     adapter.submitList(state.rows)
-                    val visibleEmpty = state.isEmpty && state.activeCarId != -1
+                    val visibleEmpty = state.isEmpty && state.activeCarId != -1L
                     binding.historyEmpty.isVisible = visibleEmpty
                     binding.historyRecycler.isVisible = !visibleEmpty
                 }

@@ -4,7 +4,7 @@ import org.spsl.evtracker.data.local.entity.CarEntity
 
 data class DashboardScreenState(
     val cars: List<CarEntity> = emptyList(),
-    val activeCarId: Int = -1,
+    val activeCarId: Long = -1L,
     val period: DashboardPeriod = DashboardPeriod.Last30Days,
     val filter: ChargeTypeFilter = ChargeTypeFilter.ALL,
     val primaryMetric: String = "kwh_per_100km",

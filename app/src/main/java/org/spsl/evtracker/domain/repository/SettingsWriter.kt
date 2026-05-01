@@ -1,7 +1,7 @@
 package org.spsl.evtracker.domain.repository
 
 interface SettingsWriter {
-    suspend fun setActiveCarId(id: Int)
+    suspend fun setActiveCarId(id: Long)
     suspend fun setDriveEnabled(enabled: Boolean)
     suspend fun setLastBackupAt(epochMs: Long)
 

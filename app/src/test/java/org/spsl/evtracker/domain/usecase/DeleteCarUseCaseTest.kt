@@ -13,7 +13,7 @@ class DeleteCarUseCaseTest {
 
     private fun useCase(
         cars: FakeCarRepository,
-        activeCarId: Int,
+        activeCarId: Long,
         scheduler: FakeBackupScheduler = FakeBackupScheduler(),
         settingsWriter: FakeSettingsWriter = FakeSettingsWriter(),
     ): Triple<DeleteCarUseCase, FakeSettingsWriter, FakeBackupScheduler> {
@@ -26,42 +26,42 @@ class DeleteCarUseCaseTest {
     fun deleteActiveCar_clearsToNextRemaining() = runTest {
         val cars = FakeCarRepository(
             initial = listOf(
-                CarEntity(id = 1, name = "A", createdAt = 0L),
-                CarEntity(id = 2, name = "B", createdAt = 0L),
+                CarEntity(id = 1L, name = "A", createdAt = 0L),
+                CarEntity(id = 2L, name = "B", createdAt = 0L),
             ),
         )
-        val (uc, settingsWriter, _) = useCase(cars, activeCarId = 1)
-        uc(carId = 1)
-        assertEquals(2, settingsWriter.activeCarId)
+        val (uc, settingsWriter, _) = useCase(cars, activeCarId = 1L)
+        uc(carId = 1L)
+        assertEquals(2L, settingsWriter.activeCarId)
     }
 
     @Test
     fun deleteOnlyCar_clearsToMinusOne() = runTest {
-        val cars = FakeCarRepository(initial = listOf(CarEntity(id = 1, name = "Only", createdAt = 0L)))
-        val (uc, settingsWriter, _) = useCase(cars, activeCarId = 1)
-        uc(carId = 1)
-        assertEquals(-1, settingsWriter.activeCarId)
+        val cars = FakeCarRepository(initial = listOf(CarEntity(id = 1L, name = "Only", createdAt = 0L)))
+        val (uc, settingsWriter, _) = useCase(cars, activeCarId = 1L)
+        uc(carId = 1L)
+        assertEquals(-1L, settingsWriter.activeCarId)
     }
 
     @Test
     fun deleteInactiveCar_leavesActiveAlone() = runTest {
         val cars = FakeCarRepository(
             initial = listOf(
-                CarEntity(id = 3, name = "C", createdAt = 0L),
-                CarEntity(id = 5, name = "E", createdAt = 0L),
+                CarEntity(id = 3L, name = "C", createdAt = 0L),
+                CarEntity(id = 5L, name = "E", createdAt = 0L),
             ),
         )
         val initialWriter = FakeSettingsWriter()
-        val (uc, settingsWriter, _) = useCase(cars, activeCarId = 5, settingsWriter = initialWriter)
-        uc(carId = 3)
-        assertEquals(-1, settingsWriter.activeCarId)
+        val (uc, settingsWriter, _) = useCase(cars, activeCarId = 5L, settingsWriter = initialWriter)
+        uc(carId = 3L)
+        assertEquals(-1L, settingsWriter.activeCarId)
     }
 
     @Test
     fun success_enqueuesBackup() = runTest {
-        val cars = FakeCarRepository(initial = listOf(CarEntity(id = 1, name = "A", createdAt = 0L)))
-        val (uc, _, scheduler) = useCase(cars, activeCarId = 1)
-        uc(carId = 1)
+        val cars = FakeCarRepository(initial = listOf(CarEntity(id = 1L, name = "A", createdAt = 0L)))
+        val (uc, _, scheduler) = useCase(cars, activeCarId = 1L)
+        uc(carId = 1L)
         assertEquals(1, scheduler.enqueueCount)
     }
 }

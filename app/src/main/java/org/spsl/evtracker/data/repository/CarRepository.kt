@@ -13,12 +13,12 @@ class CarRepository @Inject constructor(
     private val carDao: CarDao,
 ) : CarReader, CarWriter {
     override fun observeAll(): Flow<List<CarEntity>> = carDao.observeAll()
-    override suspend fun getById(id: Int): CarEntity? = carDao.getById(id)
+    override suspend fun getById(id: Long): CarEntity? = carDao.getById(id)
     override suspend fun insert(car: CarEntity): Long = carDao.insert(car)
     suspend fun update(car: CarEntity) = carDao.update(car)
     suspend fun delete(car: CarEntity) = carDao.delete(car)
-    override suspend fun rename(carId: Int, newName: String) = carDao.rename(carId, newName)
-    override suspend fun deleteById(carId: Int) {
+    override suspend fun rename(carId: Long, newName: String) = carDao.rename(carId, newName)
+    override suspend fun deleteById(carId: Long) {
         carDao.deleteById(carId)
     }
     override suspend fun deleteAll() = carDao.deleteAll()

@@ -39,8 +39,12 @@ class SettingsRepository @Inject constructor(
     override val resetInProgress: Flow<Boolean> =
         dataStore.data.map { it[PreferenceKeys.RESET_IN_PROGRESS] ?: false }
 
-    override val activeCarId: Flow<Int> =
-        dataStore.data.map { it[PreferenceKeys.ACTIVE_CAR_ID] ?: -1 }
+    // ACTIVE_CAR_ID stays an `intPreferencesKey` (TASK-26 didn't touch DataStore
+    // backing types — switching `intPreferencesKey` to `longPreferencesKey` with
+    // the same key name would silently lose the existing Int value). We widen
+    // to Long at the boundary so callers see the same type as the entity PK.
+    override val activeCarId: Flow<Long> =
+        dataStore.data.map { (it[PreferenceKeys.ACTIVE_CAR_ID] ?: -1).toLong() }
 
     override suspend fun completeSetup(metric: String, unit: String, currency: String) {
         dataStore.edit { prefs ->
@@ -90,8 +94,8 @@ class SettingsRepository @Inject constructor(
         }
     }
 
-    override suspend fun setActiveCarId(id: Int) {
-        dataStore.edit { it[PreferenceKeys.ACTIVE_CAR_ID] = id }
+    override suspend fun setActiveCarId(id: Long) {
+        dataStore.edit { it[PreferenceKeys.ACTIVE_CAR_ID] = id.toInt() }
     }
 
     override suspend fun setDriveEnabled(enabled: Boolean) {

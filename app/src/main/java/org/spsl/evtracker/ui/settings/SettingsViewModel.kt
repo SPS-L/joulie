@@ -82,7 +82,7 @@ class SettingsViewModel @Inject constructor(
         }
         viewModelScope.launch {
             settingsReader.activeCarId.collect { id ->
-                val name = if (id == -1) null else carReader.getById(id)?.name
+                val name = if (id == -1L) null else carReader.getById(id)?.name
                 _uiState.update { it.copy(activeCarId = id, activeCarName = name) }
             }
         }
@@ -206,7 +206,7 @@ class SettingsViewModel @Inject constructor(
 
     fun onResetActiveCarData() {
         val carId = _uiState.value.activeCarId
-        if (carId == -1) return
+        if (carId == -1L) return
         viewModelScope.launch { resetActiveCarDataUseCase(carId) }
     }
 
@@ -219,7 +219,7 @@ class SettingsViewModel @Inject constructor(
 
     fun onExportCsv() {
         val carId = _uiState.value.activeCarId
-        if (carId == -1) return
+        if (carId == -1L) return
         viewModelScope.launch {
             try {
                 val useKm = _uiState.value.distanceUnit == "km"
