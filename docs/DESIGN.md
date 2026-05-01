@@ -563,7 +563,29 @@ Restore notes:
 - Do **not** queue backup for transient UI actions that are still undoable; enqueue only after the local state change is committed
 - Implementation: WorkManager `OneTimeWorkRequest` enqueued via `enqueueUniqueWork("drive_backup", REPLACE, ...)` so rapid successive changes debounce to one upload
 - Constraints: `NetworkType.CONNECTED` — offline saves queue and run when the device reconnects
-- Backoff: exponential, starting at 30 s
+- Backoff: WorkManager-level backoff is configured but rarely exercised — the repo's in-call retry loop (next subsection) absorbs all transient failures within a single worker invocation
+
+### Error model and retry (TASK-07)
+
+`BackupRepository.backupCurrentData()` returns a terminal `BackupResult`:
+
+| Variant | Trigger | UI / Worker reaction |
+|---------|---------|----------------------|
+| `Success` | upload completed | `Worker → Result.success()`; `lastBackupAt` written |
+| `AuthRequired` | `silentToken()` failed, HTTP 401, HTTP 403 with auth-class reason (`appNotAuthorized`, `insufficientFilePermissions`, `insufficientPermissions`, `forbidden`), or HTTP 403 with unknown / unparseable body (conservative fallback) | `Worker → Result.failure()`; future TASK-19 surface posts a re-auth notification |
+| `Failure(reason, cause?)` | non-recoverable terminal outcome — currently `"Drive storage full"` (HTTP 403 `storageQuotaExceeded`), `"HTTP <n>"` if the retry budget exhausted on a 4xx/5xx, or `"Network failure: <ExceptionClass>"` if it exhausted on a transport `IOException` | `Worker → Result.failure()`; reason carries through to logs and (TASK-19) notifications |
+
+`DriveBackupRepository` runs its own bounded retry loop inside `backupCurrentData()` and `readRemoteBackup()`:
+
+- **Retry budget:** `MAX_ATTEMPTS = 3`, exponential backoff `250 ms × 2^attempt` (so 250 ms, 500 ms before the 2nd and 3rd tries; final attempt has no trailing delay).
+- **Transient (retried):** transport `IOException` (incl. `UnknownHostException`), HTTP 429, HTTP 5xx, HTTP 403 with quota / rate reasons (`rateLimitExceeded`, `userRateLimitExceeded`, `quotaExceeded`).
+- **Non-recoverable (short-circuits the loop):** auth errors, `storageQuotaExceeded` 403, unknown / unparseable 403 body.
+
+The Worker's `doWork()` is therefore a thin `when (result)` translator that never returns `Result.retry()` — the repo has already exhausted its retry budget by the time it returns, and asking WorkManager to retry on top would amplify the backoff. WorkManager's `NetworkType.CONNECTED` constraint still gates the worker from running offline, which is the OS-level retry mechanism.
+
+All non-recoverable paths log via `android.util.Log.e("DriveBackupRepository", reason, cause)`. JVM unit tests stub Android logging via `testOptions.unitTests.isReturnDefaultValues = true` in `app/build.gradle.kts`.
+
+`readRemoteBackup()` keeps its existing exception contract (returns `String?`, throws `DriveAuthRequiredException` / `IOException`) because `SettingsViewModel.onDriveAuthGranted` and `RestoreBackupUseCase` already handle those — but it goes through the same `withRetry` wrapper, so transient blips on the read path retry too.
 
 ---
 
@@ -578,5 +600,7 @@ Restore notes:
 | Custom locations > 5 | Only top 5 shown as chips; all accessible via Manage Locations |
 | Unit change | Never rewrites stored km values; all display conversions are in-memory |
 | Remote backup exists when Drive is enabled | Prompt user to replace or skip; never merge automatically |
-| Drive backup fails | Local data remains source of truth; retry via WorkManager and show last-backup timestamp in Settings |
+| Drive backup fails (transient) | Repo retries up to 3 times with exponential backoff; if the budget exhausts the worker reports `Result.failure()` and the next committed local change re-enqueues a fresh worker. Local data is always source of truth; Settings shows the last-backup timestamp. |
+| Drive backup fails (auth) | Repo returns `BackupResult.AuthRequired`; the worker fails fast (no retry) and TASK-19 will surface a re-auth notification once it lands. |
+| Drive backup fails (storage full) | Repo returns `BackupResult.Failure("Drive storage full")`; no retry — retrying won't free Drive quota. |
 | DB migration fails | Destructive fallback with user warning |

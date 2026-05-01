@@ -26,7 +26,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-16 | 🟢 | Static analysis & code style gate in CI (ktlint + Android Lint) | — | ☑ |
 | TASK-17 | 🟡 | R8/ProGuard follow-up audit: MPAndroidChart keep rule + release smoke test | — | ☑ |
 | TASK-18 | 🟡 | Accessibility (a11y) pass — TalkBack, contentDescription, contrast, touch targets | — | ☐ |
-| TASK-19 | 🟡 | Backup failure notification channel + Android 13+ `POST_NOTIFICATIONS` handling | TASK-07 | ☐ |
+| TASK-19 | 🟡 | Backup failure notification channel + Android 13+ `POST_NOTIFICATIONS` handling | — | ☐ |
 | TASK-20 | 🟢 | CO₂ savings tracker (ICE baseline, Cyprus grid intensity, methodology doc) | — | ☐ |
 | TASK-21 | 🟢 | Android Baseline Profile module for cold-start performance | — | ☐ |
 | TASK-22 | 🔴 | Upgrade `targetSdk` and `compileSdk` to API 35 | TASK-16 | ☑ |
@@ -994,10 +994,9 @@ WCAG 2.1 AA.
 
 ## 🟡 TASK-19 — Backup failure notification channel
 
-> **Requires: TASK-07.** Step §4 below distinguishes auth-failure
-> notifications via TASK-07's `BackupResult.AuthRequired` sealed-class
-> variant. Land TASK-07 first so this task consumes a stable error model
-> rather than inventing one that later diverges.
+> **TASK-07 has landed.** Step §4 below consumes the
+> `BackupResult.AuthRequired` sealed-class variant directly — the
+> stable error model exists in `domain/backup/BackupResult.kt`.
 
 Drive auto-backup runs via WorkManager (`enqueueUniqueWork("drive_backup", REPLACE, ...)`).
 On failure (network down, OAuth revoked, quota exceeded), the only signal is
@@ -1778,9 +1777,11 @@ auto-backup contract elsewhere.
 2. Implement it on
    `app/src/main/java/org/spsl/evtracker/data/backup/DriveBackupRepository.kt`:
    list `appDataFolder` for files named `evtracker_backup.json`, call
-   `drive.files().delete(fileId)` for each match, and translate IO errors
-   through the existing `runTranslating` helper. (If TASK-07 has landed,
-   return the sealed `BackupResult` flavour instead.)
+   `drive.files().delete(fileId)` for each match, and route IO errors
+   through the existing `withRetry` + `runTranslating` helpers so the
+   delete path picks up TASK-07's bounded retry for free. Return
+   `BackupResult` (`Success` / `AuthRequired` / `Failure(reason, cause?)`)
+   to match `backupCurrentData()`'s contract.
 
 3. Add two new use cases under `app/src/main/java/org/spsl/evtracker/domain/usecase/`:
 
@@ -2065,29 +2066,27 @@ that officially supports `compileSdk = 35` and remove the workaround.
 
 ## Notes for Agents (TASK-22 to TASK-30 addendum)
 
-> Sequencing notes for **TASK-16, TASK-22, TASK-23, TASK-24, TASK-29** are
-> obsolete — all five landed. The static-analysis CI gate (TASK-16) is in
-> place; the SDK bump to 35 (TASK-22) merged with no `connectedAndroidTest`
-> matrix to coordinate (the workflow is static-analysis only); TASK-23 →
-> TASK-24 ran in the prescribed order; and TASK-29's debug build type +
-> `BuildConfig` enablement is merged with the OAuth-client implication
-> documented in `GOOGLE_CLOUD_SETUP.md` Step 5b. Sequencing notes below
-> cover the remaining open work only.
+> Sequencing notes for **TASK-07, TASK-16, TASK-22, TASK-23, TASK-24,
+> TASK-25, TASK-28, TASK-29** are obsolete — all eight landed. The
+> static-analysis CI gate (TASK-16) is in place; the SDK bump to 35
+> (TASK-22) merged with no `connectedAndroidTest` matrix to coordinate;
+> TASK-23 → TASK-24 ran in the prescribed order; TASK-25 claimed Room
+> v3 → v4 + `MIGRATION_3_4` and bumped `backup_version` to 4;
+> TASK-28 retired the parallel `() -> Long` clock; TASK-29's debug
+> build type + `BuildConfig` enablement is merged with the OAuth-client
+> implication documented in `GOOGLE_CLOUD_SETUP.md` Step 5b; TASK-07
+> introduced the `BackupResult` sealed class so TASK-19 has a stable
+> error model to consume. Sequencing notes below cover the remaining
+> open work only.
 
-- **TASK-19 prerequisite for TASK-07:** TASK-19's auth-failure
-  notification path consumes TASK-07's `BackupResult.AuthRequired` sealed
-  variant. Land TASK-07 first so the error model is stable.
-- **TASK-26 schema-version coordination:** TASK-14 (battery degradation),
-  TASK-25 (`ChargeType` enum), and TASK-26 (`Int` → `Long`) all bump the Room
-  schema. Whichever lands first claims the next version; later tasks must
-  increment again and update the migration list in `AppDatabase.getInstance`.
-- **TASK-25 backup compatibility:** the `ChargeType` enum rename (`DC` →
-  `DC_FAST`) must round-trip through `BackupData` JSON without data loss.
-  Bump `backup_version` to 4 and add a deserialiser fallback for the legacy
-  string. A broken backup round-trip is a data-loss risk.
-- **TASK-28 already partially exists:** don't introduce a parallel `Clock`
-  interface — use the existing `NowProvider` and delete the duplicate
-  `() -> Long` in `WorkerModule`.
+- **TASK-26 + TASK-14 schema-version coordination:** **Room v4 is now
+  the floor** (TASK-25 took v3 → v4). Both TASK-26 (`Int` → `Long` PKs)
+  and TASK-14 (battery degradation columns) bump the schema again.
+  Whichever lands first claims **v5**; the other increments to **v6**
+  unless the two are batched into a single `MIGRATION_4_5` (recommended
+  — see the per-task specs). `BackupData.CURRENT_VERSION` and
+  `BackupSerializer.SUPPORTED_VERSIONS` need a matching coordinated
+  bump.
 - **TASK-30 marker reuse:** complete the Vico marker wrapper once in Step 2
   and reuse in Step 3. Do not port `ChartsMarkerView` twice.
 
