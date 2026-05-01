@@ -242,6 +242,47 @@ For real-device Drive auth and backup verification, complete the external OAuth 
 
 ---
 
+## 5b. Release-APK smoke test (run before every tagged release)
+
+The release APK runs through R8 with the keep rules in `app/proguard-rules.pro`.
+Pre-merge gates and instrumented Espresso tests use the **debug** APK, which
+does **not** exercise minification — Drive sign-in, MPAndroidChart renderers,
+Gson reflection on backup DTOs, and Room's generated DAOs all need to be
+verified against the minified release APK before publishing the GitHub Release.
+
+Run this matrix on a physical device or API-26+ emulator after every `v*` tag
+push **before** advancing the release from draft to published. Tester emails
+must be allow-listed on the Google Cloud OAuth consent screen
+(`docs/GOOGLE_CLOUD_SETUP.md` Step 4).
+
+```bash
+./gradlew :app:assembleRelease
+adb install -r app/build/outputs/apk/release/app-release.apk
+```
+
+| # | Step | Pass criterion |
+|---|------|----------------|
+| 1 | Cold-launch the app from the launcher | Wizard renders, no crash, all 4 pages reachable |
+| 2 | Complete the wizard | Lands on Dashboard with the "no car" empty state; `setupComplete=true` (verify by relaunching — wizard must NOT reappear) |
+| 3 | Settings → Cars → add a car | Car appears in list; Dashboard now shows the active car |
+| 4 | Dashboard FAB → log a charge with cost (e.g. 30 kWh / €12.50) | Save returns to Dashboard; total kWh + cost rows render correct values |
+| 5 | Add a second event so efficiency can compute | Efficiency stat is no longer "—"; the configured primary metric (default `kwh_per_100km`) renders a number |
+| 6 | Bottom nav → Charts; cycle every tab (Trend / Monthly kWh / Monthly cost / AC vs DC / Locations) | Each tab renders without crash; MPAndroidChart canvases are non-empty (this exercises the new keep rule) |
+| 7 | Settings → enable Drive backup → sign in (allow-listed Google account) → wait for first backup | Snackbar reports success; verify `evtracker_backup.json` lands in the App Data folder via `files.list?spaces=appDataFolder` |
+| 8 | Add another charge event after Drive is enabled | WorkManager fires a follow-up backup; remote `modifiedTime` advances |
+| 9 | Settings → Reset preferences → confirm | App relaunches into the wizard; existing charge data intact (TASK-23 startup auto-recovery path) |
+| 10 | Re-complete the wizard (page 4 disclaimer must be re-accepted) | Dashboard returns; previously logged events still visible |
+| 11 | Settings → Export CSV | Share-sheet opens; chosen target receives a non-empty `.csv` with the correct header for the active distance unit |
+| 12 | Settings → About | About screen renders with version (e.g. `1.0.1`), SPS-Lab card with tappable links, MIT license, and the open-source-libraries card |
+
+**On any failure:** capture `adb logcat *:E` from the moment of the crash,
+file an issue, and **do not publish the GitHub Release** — keep it in draft
+until the regression is fixed and the matrix re-runs cleanly. R8 regressions
+typically manifest as `NoSuchMethodError`, `NoSuchFieldError`, or
+`ClassNotFoundException` from inside Drive / Gson / MPAndroidChart frames.
+
+---
+
 ## 6. Coverage Targets
 
 | Layer | Target |

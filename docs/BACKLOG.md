@@ -24,7 +24,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-14 | 🟡 | Battery capacity degradation tracker | — | ☐ |
 | TASK-15 | 🟢 | Localisation (i18n) foundation | TASK-16 | ☐ |
 | TASK-16 | 🟢 | Static analysis & code style gate in CI (ktlint + Android Lint) | — | ☑ |
-| TASK-17 | 🟡 | R8/ProGuard follow-up audit: MPAndroidChart keep rule + release smoke test | — | ☐ |
+| TASK-17 | 🟡 | R8/ProGuard follow-up audit: MPAndroidChart keep rule + release smoke test | — | ☑ |
 | TASK-18 | 🟡 | Accessibility (a11y) pass — TalkBack, contentDescription, contrast, touch targets | — | ☐ |
 | TASK-19 | 🟡 | Backup failure notification channel + Android 13+ `POST_NOTIFICATIONS` handling | TASK-07 | ☐ |
 | TASK-20 | 🟢 | CO₂ savings tracker (ICE baseline, Cyprus grid intensity, methodology doc) | — | ☐ |
@@ -839,7 +839,30 @@ no static analysis ever runs against PRs or `main`. With ~176 Kotlin files in
 
 ---
 
-## 🟡 TASK-17 — R8/ProGuard follow-up audit: chart library + release smoke test
+## 🟡 TASK-17 — R8/ProGuard follow-up audit: chart library + release smoke test ☑ Done (2026-05-01)
+
+> **Outcome:** `app/proguard-rules.pro` gains a defensive
+> `-keep class com.github.mikephil.charting.** { *; }` + matching
+> `-dontwarn` (MPAndroidChart ships zero consumer ProGuard rules,
+> verified by `grep mikephil app/build/outputs/mapping/release/configuration.txt`
+> returning empty before the change and three lines after). The same
+> file gains an evidence comment naming the three AAR-bundled rule
+> files that already cover Hilt and Room
+> (`hilt-android-2.50/proguard.txt`, `hilt-work-1.1.0/proguard.txt`,
+> `room-runtime-2.6.1/proguard.txt`) so future contributors don't add
+> redundant `-keep dagger.hilt.*` / `-keep androidx.room.*` rules.
+> `:app:assembleRelease` runs R8 cleanly with the new rules and emits
+> the signed `app-release.apk` (verified locally). The end-to-end
+> manual smoke matrix (12 steps: wizard → log charge → all five Charts
+> tabs → Drive backup landing in App Data folder → reset preferences
+> auto-recovery → CSV export → About) is documented as
+> `docs/TEST_PLAN.md §5b "Release-APK smoke test"` and is the gate
+> between "tag pushed → APK built" and "GitHub Release published".
+> The smoke matrix itself requires a physical device or API-26+
+> emulator with an allow-listed Google account, so the act of running
+> it stays a release-time human task — but CI now produces the APK
+> deterministically and the matrix names every observable that R8 can
+> realistically break. The original task text is preserved below.
 
 The release build's R8 rules (`app/proguard-rules.pro`) were partially audited
 in commit `48f0f14` (v1.0.1) for the Drive sync path: keep rules now cover
