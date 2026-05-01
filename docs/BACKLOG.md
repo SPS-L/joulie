@@ -838,13 +838,23 @@ proper i18n support so the app can be translated in the future.
 3. Add plurals resources (`<plurals>`) for any strings that vary by count
    (e.g., "1 charge event" vs. "3 charge events").
 
-4. Create a Greek translation file as a first target locale (relevant for
-   Cyprus University of Technology context):
-   `app/src/main/res/values-el/strings.xml`
+4. **English is the default locale** — `app/src/main/res/values/strings.xml`
+   stays as-is. Add three target translations:
+   - Greek — `app/src/main/res/values-el/strings.xml`
+   - Turkish — `app/src/main/res/values-tr/strings.xml`
+   - Russian — `app/src/main/res/values-ru/strings.xml`
+
    Translate at minimum: all navigation labels, screen titles, button
    labels, empty state messages, and error messages. Domain-specific
    technical terms (kWh, km/kWh, AC, DC) should remain in their
    internationally recognised forms.
+
+   `MissingTranslation` is already wired in error mode (TASK-16) but
+   cannot fire today because no `values-<lang>/` resources exist. The
+   moment the first translated `strings.xml` lands, **every English
+   string must have a translation in all three locales** or the build
+   breaks. Plan the extraction (step 1) and the three translations
+   together to avoid landing a half-localised state.
 
 5. Add a lint rule to `app/build.gradle.kts` to fail the build on
    hardcoded strings in layouts:
