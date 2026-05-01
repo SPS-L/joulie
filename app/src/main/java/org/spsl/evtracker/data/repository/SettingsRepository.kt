@@ -39,6 +39,12 @@ class SettingsRepository @Inject constructor(
     override val resetInProgress: Flow<Boolean> =
         dataStore.data.map { it[PreferenceKeys.RESET_IN_PROGRESS] ?: false }
 
+    override val consecutiveBackupFailures: Flow<Int> =
+        dataStore.data.map { it[PreferenceKeys.CONSECUTIVE_BACKUP_FAILURES] ?: 0 }
+
+    override val notificationPermissionDenied: Flow<Boolean> =
+        dataStore.data.map { it[PreferenceKeys.NOTIFICATION_PERMISSION_DENIED] ?: false }
+
     // ACTIVE_CAR_ID stays an `intPreferencesKey` (TASK-26 didn't touch DataStore
     // backing types — switching `intPreferencesKey` to `longPreferencesKey` with
     // the same key name would silently lose the existing Int value). We widen
@@ -104,6 +110,14 @@ class SettingsRepository @Inject constructor(
 
     override suspend fun setLastBackupAt(epochMs: Long) {
         dataStore.edit { it[PreferenceKeys.LAST_BACKUP_AT] = epochMs }
+    }
+
+    override suspend fun setConsecutiveBackupFailures(value: Int) {
+        dataStore.edit { it[PreferenceKeys.CONSECUTIVE_BACKUP_FAILURES] = value }
+    }
+
+    override suspend fun setNotificationPermissionDenied(value: Boolean) {
+        dataStore.edit { it[PreferenceKeys.NOTIFICATION_PERMISSION_DENIED] = value }
     }
 
     /** Used by the future Settings → Reset preferences action (Sub-project F). */

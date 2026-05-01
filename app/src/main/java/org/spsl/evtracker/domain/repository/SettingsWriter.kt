@@ -29,4 +29,10 @@ interface SettingsWriter {
      * AND resetInProgress=true inside a single dataStore.edit { ... } block.
      */
     suspend fun markGlobalResetInProgress()
+
+    /** TASK-19: 0 to reset on success, or `previous + 1` after a backup failure. */
+    suspend fun setConsecutiveBackupFailures(value: Int)
+
+    /** TASK-19: set to true once when the user denies POST_NOTIFICATIONS — never reverted. */
+    suspend fun setNotificationPermissionDenied(value: Boolean)
 }

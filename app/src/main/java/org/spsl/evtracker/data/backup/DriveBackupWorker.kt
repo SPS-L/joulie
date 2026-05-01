@@ -8,6 +8,7 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import org.spsl.evtracker.domain.backup.BackupRepository
 import org.spsl.evtracker.domain.backup.BackupResult
+import org.spsl.evtracker.domain.notification.BackupOutcomeReporter
 import org.spsl.evtracker.domain.repository.SettingsWriter
 import org.spsl.evtracker.domain.usecase.NowProvider
 
@@ -18,6 +19,7 @@ class DriveBackupWorker @AssistedInject constructor(
     private val backupRepository: BackupRepository,
     private val settingsWriter: SettingsWriter,
     private val now: NowProvider,
+    private val outcomeReporter: BackupOutcomeReporter,
 ) : CoroutineWorker(appContext, params) {
 
     /**
@@ -25,13 +27,24 @@ class DriveBackupWorker @AssistedInject constructor(
      * via its own bounded loop. The worker only translates terminal results
      * to the WorkManager [Result] surface — no `Result.retry()` needed,
      * which keeps WorkManager's outer retry from amplifying the inner one.
+     *
+     * TASK-19: side-channels the result through [BackupOutcomeReporter]
+     * before translating, so the failure-streak counter and notifications
+     * fire whether the user opens the app or not.
      */
-    override suspend fun doWork(): Result = when (backupRepository.backupCurrentData()) {
-        BackupResult.Success -> {
-            settingsWriter.setLastBackupAt(now.nowMillis())
-            Result.success()
+    override suspend fun doWork(): Result {
+        val result = backupRepository.backupCurrentData()
+        outcomeReporter.onResult(result)
+        return when (result) {
+            BackupResult.Success -> {
+                settingsWriter.setLastBackupAt(now.nowMillis())
+                Result.success()
+            }
+            // Repository already exhausted its retry budget (TASK-07);
+            // returning Result.retry() would let WorkManager re-amplify it.
+            BackupResult.AuthRequired -> Result.failure()
+            // Same invariant — see KDoc above and TASK-07 / TASK-36.
+            is BackupResult.Failure -> Result.failure()
         }
-        BackupResult.AuthRequired -> Result.failure()
-        is BackupResult.Failure -> Result.failure()
     }
 }

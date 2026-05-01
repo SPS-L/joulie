@@ -34,4 +34,17 @@ interface SettingsReader {
      * sets it back to false.
      */
     val setupComplete: Flow<Boolean>
+
+    /**
+     * TASK-19: streak counter incremented on each Drive backup failure
+     * (Auth-required or generic) and reset to 0 on success. `MainActivity`
+     * reads this to decide when to prompt for `POST_NOTIFICATIONS`.
+     */
+    val consecutiveBackupFailures: Flow<Int>
+
+    /**
+     * TASK-19: sticky once true. Set by `MainActivity` when the user denies
+     * `POST_NOTIFICATIONS`. Once true, the rationale dialog never re-fires.
+     */
+    val notificationPermissionDenied: Flow<Boolean>
 }

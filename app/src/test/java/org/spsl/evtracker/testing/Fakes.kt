@@ -12,6 +12,7 @@ import org.spsl.evtracker.domain.backup.DriveAuthManager
 import org.spsl.evtracker.domain.backup.DriveRemoteSource
 import org.spsl.evtracker.domain.backup.RestoreSnapshotWriter
 import org.spsl.evtracker.domain.backup.RestoreTransactionRunner
+import org.spsl.evtracker.domain.notification.BackupNotifier
 import org.spsl.evtracker.domain.repository.CarReader
 import org.spsl.evtracker.domain.repository.CarWriter
 import org.spsl.evtracker.domain.repository.ChargeEventQueries
@@ -132,6 +133,8 @@ class FakeSettingsReader(
     themeInit: String = "system",
     resetInProgressInit: Boolean = false,
     setupCompleteInit: Boolean = true,
+    consecutiveBackupFailuresInit: Int = 0,
+    notificationPermissionDeniedInit: Boolean = false,
 ) : SettingsReader {
     private val activeCar = MutableStateFlow(activeCarIdInit)
     private val metric = MutableStateFlow(primaryMetricInit)
@@ -142,6 +145,8 @@ class FakeSettingsReader(
     private val themeFlow = MutableStateFlow(themeInit)
     private val resetInProgressFlow = MutableStateFlow(resetInProgressInit)
     private val setupCompleteFlow = MutableStateFlow(setupCompleteInit)
+    private val consecutiveBackupFailuresFlow = MutableStateFlow(consecutiveBackupFailuresInit)
+    private val notificationPermissionDeniedFlow = MutableStateFlow(notificationPermissionDeniedInit)
     override val activeCarId: Flow<Long> = activeCar
     override val primaryMetric: Flow<String> = metric
     override val distanceUnit: Flow<String> = unit
@@ -151,6 +156,8 @@ class FakeSettingsReader(
     override val theme: Flow<String> = themeFlow
     override val resetInProgress: Flow<Boolean> = resetInProgressFlow
     override val setupComplete: Flow<Boolean> = setupCompleteFlow
+    override val consecutiveBackupFailures: Flow<Int> = consecutiveBackupFailuresFlow
+    override val notificationPermissionDenied: Flow<Boolean> = notificationPermissionDeniedFlow
     fun setActiveCarId(id: Long) {
         activeCar.value = id
     }
@@ -178,6 +185,12 @@ class FakeSettingsReader(
     fun setCurrency(value: String) {
         curr.value = value
     }
+    fun setConsecutiveBackupFailures(value: Int) {
+        consecutiveBackupFailuresFlow.value = value
+    }
+    fun setNotificationPermissionDenied(value: Boolean) {
+        notificationPermissionDeniedFlow.value = value
+    }
 }
 
 class FakeSettingsWriter(
@@ -200,6 +213,10 @@ class FakeSettingsWriter(
     var setupComplete: Boolean = true
         private set
     var resetInProgress: Boolean = false
+        private set
+    var consecutiveBackupFailures: Int = 0
+        private set
+    var notificationPermissionDenied: Boolean = false
         private set
 
     override suspend fun setActiveCarId(id: Long) {
@@ -256,6 +273,14 @@ class FakeSettingsWriter(
         activeCarId = -1
         resetInProgress = true
     }
+    override suspend fun setConsecutiveBackupFailures(value: Int) {
+        callRecorder?.add("setConsecutiveBackupFailures($value)")
+        consecutiveBackupFailures = value
+    }
+    override suspend fun setNotificationPermissionDenied(value: Boolean) {
+        callRecorder?.add("setNotificationPermissionDenied($value)")
+        notificationPermissionDenied = value
+    }
 }
 
 class FakeBackupScheduler : BackupScheduler {
@@ -263,6 +288,24 @@ class FakeBackupScheduler : BackupScheduler {
         private set
     override suspend fun enqueueBackup() {
         enqueueCount++
+    }
+}
+
+class FakeBackupNotifier : BackupNotifier {
+    var chronicCount: Int = 0
+        private set
+    var authCount: Int = 0
+        private set
+    var clearCount: Int = 0
+        private set
+    override fun notifyChronicFailure() {
+        chronicCount++
+    }
+    override fun notifyAuthRequired() {
+        authCount++
+    }
+    override fun clearAll() {
+        clearCount++
     }
 }
 

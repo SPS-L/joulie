@@ -19,4 +19,10 @@ object PreferenceKeys {
 
     /** F1: durable interrupted-reset flag. See ResetAllDataUseCase + MainActivity. */
     val RESET_IN_PROGRESS = booleanPreferencesKey("resetInProgress")
+
+    /** TASK-19: streak counter incremented on each Drive backup failure, reset on success. */
+    val CONSECUTIVE_BACKUP_FAILURES = intPreferencesKey("consecutiveBackupFailures")
+
+    /** TASK-19: true once the user has explicitly denied POST_NOTIFICATIONS. Sticky — never re-prompt. */
+    val NOTIFICATION_PERMISSION_DENIED = booleanPreferencesKey("notificationPermissionDenied")
 }
