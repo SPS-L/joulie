@@ -34,5 +34,15 @@ data class ChargeEventEntity(
     val currency: String? = null,
     val location: String? = null,
     val note: String = "",
+    /**
+     * State of charge before charging, stored as a fraction in `0.0..1.0`.
+     * `null` when the user did not enter SoC data on this event (TASK-14).
+     */
+    val socBefore: Double? = null,
+    /**
+     * State of charge after charging, stored as a fraction in `0.0..1.0`.
+     * `null` when the user did not enter SoC data on this event (TASK-14).
+     */
+    val socAfter: Double? = null,
     val createdAt: Long,
 )

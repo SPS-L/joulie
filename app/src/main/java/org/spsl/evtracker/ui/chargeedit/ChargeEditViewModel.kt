@@ -117,7 +117,15 @@ class ChargeEditViewModel @Inject constructor(
             nextOdometerKm = nextKm,
             odometerBelowPrevious = prevKm != null && event.odometerKm <= prevKm,
             odometerAboveNext = nextKm != null && event.odometerKm >= nextKm,
+            socExpanded = event.socBefore != null || event.socAfter != null,
+            socBeforeText = event.socBefore?.let { (it * 100.0).toPercentText() } ?: "",
+            socAfterText = event.socAfter?.let { (it * 100.0).toPercentText() } ?: "",
         )
+    }
+
+    private fun Double.toPercentText(): String {
+        val rounded = kotlin.math.round(this * 10.0) / 10.0
+        return if (rounded % 1.0 == 0.0) rounded.toInt().toString() else rounded.toString()
     }
 
     private fun Double.toDisplayUnit(unit: String): Double =
@@ -145,6 +153,38 @@ class ChargeEditViewModel @Inject constructor(
     fun setCostMode(mode: CostMode) = _uiState.update { it.copy(costMode = mode) }
     fun setCostValue(text: String) = _uiState.update { it.copy(costValue = text) }
     fun setNote(text: String) = _uiState.update { it.copy(note = text) }
+    fun toggleSocExpanded() = _uiState.update { it.copy(socExpanded = !it.socExpanded, socError = null) }
+    fun setSocBefore(text: String) = _uiState.update { it.copy(socBeforeText = text, socError = null) }
+    fun setSocAfter(text: String) = _uiState.update { it.copy(socAfterText = text, socError = null) }
+
+    private sealed class SocParseResult {
+        object None : SocParseResult()
+        data class Both(val before: Double, val after: Double) : SocParseResult()
+        data class Error(val messageRes: Int) : SocParseResult()
+    }
+
+    /**
+     * SoC inputs are valid if (a) both blank — drop them — or (b) both
+     * non-blank, parseable, in `[0, 100]`, with `after > before`. Any other
+     * combination is an error. Saved values convert from `0..100` percent to
+     * the entity's `0.0..1.0` fraction.
+     */
+    private fun parseSoc(state: ChargeEditUiState): SocParseResult {
+        if (!state.socExpanded) return SocParseResult.None
+        val beforeText = state.socBeforeText.trim()
+        val afterText = state.socAfterText.trim()
+        if (beforeText.isEmpty() && afterText.isEmpty()) return SocParseResult.None
+        if (beforeText.isEmpty() || afterText.isEmpty()) {
+            return SocParseResult.Error(R.string.error_soc_both_required)
+        }
+        val before = beforeText.toDoubleOrNull()
+        val after = afterText.toDoubleOrNull()
+        if (before == null || after == null || before !in 0.0..100.0 || after !in 0.0..100.0) {
+            return SocParseResult.Error(R.string.error_soc_range)
+        }
+        if (after <= before) return SocParseResult.Error(R.string.error_soc_after_must_exceed_before)
+        return SocParseResult.Both(before = before / 100.0, after = after / 100.0)
+    }
 
     fun save() {
         val state = _uiState.value
@@ -167,6 +207,15 @@ class ChargeEditViewModel @Inject constructor(
         } else {
             null
         }
+        val socResult = parseSoc(state)
+        if (socResult is SocParseResult.Error) {
+            _uiState.update { it.copy(saving = false, socError = socResult.messageRes) }
+            return
+        }
+        val (socBeforeFraction, socAfterFraction) = when (socResult) {
+            is SocParseResult.Both -> socResult.before to socResult.after
+            else -> null to null
+        }
         val input = SaveChargeEventInput(
             eventId = (state.mode as? ChargeEditUiState.Mode.Edit)?.eventId,
             carId = state.carId,
@@ -177,8 +226,10 @@ class ChargeEditViewModel @Inject constructor(
             costInput = costInput,
             location = state.location.ifBlank { null },
             note = state.note,
+            socBefore = socBeforeFraction,
+            socAfter = socAfterFraction,
         )
-        _uiState.update { it.copy(saving = true, odometerError = null, kwhError = null) }
+        _uiState.update { it.copy(saving = true, odometerError = null, kwhError = null, socError = null) }
         viewModelScope.launch {
             when (saveChargeEvent(input)) {
                 is SaveChargeEventResult.Success -> {

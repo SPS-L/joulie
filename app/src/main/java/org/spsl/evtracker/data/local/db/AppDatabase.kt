@@ -18,7 +18,7 @@ import org.spsl.evtracker.data.local.entity.CustomLocationEntity
         ChargeEventEntity::class,
         CustomLocationEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = true,
 )
 @TypeConverters(ChargeTypeConverter::class)
@@ -112,6 +112,21 @@ abstract class AppDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 // No-op: SQLite INTEGER columns already hold 64-bit signed
                 // integers; widening Kotlin Int → Long doesn't change DDL.
+            }
+        }
+
+        /**
+         * TASK-14: add optional `socBefore` and `socAfter` REAL columns to
+         * `charge_events` so the user can record state-of-charge data per
+         * event. Both columns are nullable and default to NULL — events
+         * persisted before this migration leave both fields blank.
+         * `CapacityEstimator` consumes the fields when both are present
+         * (else falls back to the heuristic `kwh_added` proxy on full charges).
+         */
+        val MIGRATION_5_6: Migration = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE charge_events ADD COLUMN socBefore REAL")
+                db.execSQL("ALTER TABLE charge_events ADD COLUMN socAfter REAL")
             }
         }
     }

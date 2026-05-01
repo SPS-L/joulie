@@ -21,7 +21,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-11 | 🟡 | Odometer regression detection UX improvement | — | ☑ |
 | TASK-12 | 🟡 | Widget: last-charge summary on home screen | — | ☐ |
 | TASK-13 | 🟢 | Charging session timer / live session mode | — | ☐ |
-| TASK-14 | 🟡 | Battery capacity degradation tracker | — | ☐ |
+| TASK-14 | 🟡 | Battery capacity degradation tracker | — | ☑ |
 | TASK-15 | 🟢 | Localisation (i18n) foundation | TASK-16 | ☐ |
 | TASK-16 | 🟢 | Static analysis & code style gate in CI (ktlint + Android Lint) | — | ☑ |
 | TASK-17 | 🟡 | R8/ProGuard follow-up audit: MPAndroidChart keep rule + release smoke test | — | ☑ |
@@ -724,7 +724,51 @@ edit form when they finish.
 
 ---
 
-## 🟡 TASK-14 — Battery Capacity Degradation Tracker
+## 🟡 TASK-14 — Battery Capacity Degradation Tracker ☑ Done (2026-05-01)
+
+> **Outcome:** `ChargeEventEntity` gains optional `socBefore` and
+> `socAfter` `Double?` fields stored as fractions in `0.0..1.0`. Room
+> schema bumped v5 → v6 with `MIGRATION_5_6 = ALTER TABLE
+> charge_events ADD COLUMN socBefore REAL; ADD COLUMN socAfter REAL`
+> — purely additive, no rebuild. `BackupData.CURRENT_VERSION` 5 → 6
+> with `BackupSerializer.SUPPORTED_VERSIONS = {3, 4, 5, 6}`; older
+> backups simply leave the new fields at `null`. New
+> `domain/service/CapacityEstimator` service computes per-event
+> effective capacity as `kwhAdded / (socAfter - socBefore)` when both
+> SoC fields are set (exact path), or `kwhAdded` itself when
+> `kwhAdded ≥ 0.8 × nominalBatteryKwh` (heuristic fallback for
+> near-full charges). Events that satisfy neither rule are skipped;
+> the chart needs at least 3 qualifying points and a non-null nominal
+> capacity to render. `Stats` gains `batteryHealthPercent: Double?`
+> (latest effective capacity ÷ nominal × 100, **not clamped** —
+> over-100% values surface heuristic over-estimation as diagnostic
+> info). `ObserveDashboardStatsUseCase` and `ObserveChartsModelsUseCase`
+> both inject `CapacityEstimator` and pass the active car's
+> `batteryKwh`. `ChargeEditUiState` gains `socExpanded`,
+> `socBeforeText`, `socAfterText`, `socError`; the form has a new
+> "+ Add SoC data" expandable card with two paired `0..100` percent
+> inputs. Validation: both blank → drop them; both filled, parseable,
+> in-range, with `after > before` → save as fractions; otherwise
+> show inline error from one of three new strings
+> (`error_soc_both_required`, `error_soc_range`,
+> `error_soc_after_must_exceed_before`). Dashboard renders a new
+> `dashboard_card_battery_health` MaterialCardView showing
+> "Battery health · NN%" when `Stats.batteryHealthPercent != null`.
+> Charts adds a 6th tab `DEGRADATION` rendering an MPAndroidChart
+> `LineChart` of `effectiveCapacityKwh` over time with a dashed
+> `LimitLine` at the car's `nominalBatteryKwh`; falls back to two
+> empty-state messages — "Set the car's nominal battery capacity in
+> Cars to enable this chart" / "Need at least 3 qualifying charges".
+> New JVM `CapacityEstimatorTest` (16 cases) covers exact path,
+> heuristic boundary at 80%, mixed events sorted by date,
+> zero/negative kWh skipped, `batteryHealthPercent` semantics, and
+> the no-clamp guarantee. New instrumented
+> `migrate_5_to_6_addsSocColumns` test; `migrate_1_to_5_validatesSchema`
+> renamed to `migrate_1_to_6_validatesSchema` and asserts both new
+> columns default to `NULL` on legacy rows. JVM unit-test count
+> 275 → 291 (+16). All gates green: `:app:assembleDebug`,
+> `:app:assembleRelease` (R8), `:app:assembleDebugAndroidTest`,
+> `ktlintCheck`, `:app:lint`, `:app:testDebugUnitTest`.
 
 The `cars` table already has a `battery_kwh` field for the nominal battery
 capacity. Use it to track and visualise real-world effective capacity over

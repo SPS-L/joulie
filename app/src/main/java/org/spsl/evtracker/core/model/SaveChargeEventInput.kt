@@ -12,6 +12,10 @@ data class SaveChargeEventInput(
     val costInput: CostInput? = null,
     val location: String? = null,
     val note: String = "",
+    /** TASK-14: optional state-of-charge before charging, fraction `0.0..1.0`. */
+    val socBefore: Double? = null,
+    /** TASK-14: optional state-of-charge after charging, fraction `0.0..1.0`. */
+    val socAfter: Double? = null,
 )
 
 data class CostInput(

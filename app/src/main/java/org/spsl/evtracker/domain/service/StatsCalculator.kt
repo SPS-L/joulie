@@ -13,7 +13,11 @@ import javax.inject.Inject
 
 class StatsCalculator @Inject constructor() {
 
-    fun computeStats(events: List<ChargeEventEntity>, label: String): Stats {
+    fun computeStats(
+        events: List<ChargeEventEntity>,
+        label: String,
+        batteryHealthPercent: Double? = null,
+    ): Stats {
         val totalKwhAll = events.sumOf { it.kwhAdded }
         val chargeCount = events.size
 
@@ -78,6 +82,7 @@ class StatsCalculator @Inject constructor() {
             costPerKm = costPerKm,
             costPer100Km = costPer100Km,
             mixedCurrency = mixedCurrency,
+            batteryHealthPercent = batteryHealthPercent,
         )
     }
 

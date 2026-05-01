@@ -60,6 +60,9 @@ class ChargeEditFragment : Fragment() {
         binding.chargeEditCostModeTotal.setOnClickListener { viewModel.setCostMode(CostMode.TOTAL) }
         binding.chargeEditCostModePerKwh.setOnClickListener { viewModel.setCostMode(CostMode.PER_KWH) }
         binding.chargeEditCostToggle.setOnClickListener { viewModel.toggleCostExpanded() }
+        binding.chargeEditSocToggle.setOnClickListener { viewModel.toggleSocExpanded() }
+        binding.chargeEditSocBefore.doAfterTextChanged { viewModel.setSocBefore(it?.toString().orEmpty()) }
+        binding.chargeEditSocAfter.doAfterTextChanged { viewModel.setSocAfter(it?.toString().orEmpty()) }
         binding.chargeEditSave.setOnClickListener { viewModel.save() }
 
         viewLifecycleOwner.lifecycleScope.launch {
@@ -137,6 +140,15 @@ class ChargeEditFragment : Fragment() {
         if (binding.chargeEditNote.text?.toString() != state.note) {
             binding.chargeEditNote.setText(state.note)
         }
+        binding.chargeEditSocSection.isVisible = state.socExpanded
+        if (binding.chargeEditSocBefore.text?.toString() != state.socBeforeText) {
+            binding.chargeEditSocBefore.setText(state.socBeforeText)
+        }
+        if (binding.chargeEditSocAfter.text?.toString() != state.socAfterText) {
+            binding.chargeEditSocAfter.setText(state.socAfterText)
+        }
+        binding.chargeEditSocAfterLayout.error =
+            state.socError?.let { getString(it) }
         binding.chargeEditSave.isEnabled =
             !state.saving && !state.odometerBelowPrevious && !state.odometerAboveNext
     }
