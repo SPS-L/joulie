@@ -20,7 +20,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-10 | 🟢 | In-app About / Info screen with SPS-Lab acknowledgment | — | ☑ |
 | TASK-11 | 🟡 | Odometer regression detection UX improvement | — | ☑ |
 | TASK-12 | 🟡 | Widget: last-charge summary on home screen | — | ☑ |
-| TASK-13 | 🟢 | Charging session timer / live session mode | — | ☐ |
+| TASK-13 | — | ~~Charging session timer / live session mode~~ — **closed, scope vs value** | — | ☒ |
 | TASK-14 | 🟡 | Battery capacity degradation tracker | — | ☑ |
 | TASK-15 | 🟢 | Localisation (i18n) foundation | TASK-16 | ☐ |
 | TASK-16 | 🟢 | Static analysis & code style gate in CI (ktlint + Android Lint) | — | ☑ |
@@ -747,7 +747,23 @@ If no charge events exist for the active car, show: `"No charges logged yet."`
 
 ---
 
-## 🟢 TASK-13 — Live Charging Session Timer
+## ☒ TASK-13 — ~~Live Charging Session Timer~~
+
+> **Closed (2026-05-02):** scope-vs-value mismatch. Decided against the
+> feature on review. The implementation cost (foreground service +
+> persistent notification + DataStore session-resume on process death +
+> ForegroundServiceType + Android 14 FGS-permission ceremony +
+> `POST_NOTIFICATIONS` interplay with TASK-19's existing channels) is
+> disproportionate to the user value (a duration field and a
+> pre-filled `event_date` that the user already enters at save time).
+> Real-world charging sessions are well-known to the user; a stopwatch
+> doesn't add information they don't have. If a future need surfaces
+> (e.g. session-tied analytics: power curve, taper time, kWh/h trend),
+> file a fresh task with the analytics requirement leading the spec —
+> the timer would then be infrastructure for the analytics, not a
+> standalone affordance.
+>
+> The original task text is preserved below for historical context.
 
 Add an optional "I am charging now" mode that lets the user start a timed
 charging session and auto-fills the timestamp and duration on the charge
