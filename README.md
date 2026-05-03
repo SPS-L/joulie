@@ -44,7 +44,7 @@ Log every charge — odometer, kWh added, AC/DC, location, optional cost — and
 Signed release APKs are attached to every GitHub Release: see the [Releases page](https://github.com/SPS-L/EV-android-app/releases).
 
 ```bash
-adb install evtracker-v1.0.1.apk
+adb install evtracker-v1.3.0.apk
 ```
 
 You can also open the APK on the device after enabling **Install from unknown sources** for your file manager or browser.
@@ -125,6 +125,16 @@ Run the full gate locally before opening a PR:
 ```
 
 Style is anchored by [`.editorconfig`](.editorconfig) (Kotlin official / IntelliJ style, 4-space indent), so the IDE's reformat output and `ktlintCheck` agree. Pre-existing lint offenses are absorbed by [`app/lint-baseline.xml`](app/lint-baseline.xml); **only new violations break the build**. Regenerate the baseline only when retiring a rule, never to "clean up" — it's append-by-omission by design.
+
+New Kotlin files under `app/src/main/java/org/spsl/evtracker/` must carry the SPDX header (TASK-51 relicense convention):
+
+```kotlin
+// SPDX-FileCopyrightText: 2026 Cyprus University of Technology,
+//                         Sustainable Power Systems Lab <https://sps-lab.org>
+// SPDX-License-Identifier: GPL-3.0-or-later
+```
+
+Test sources, generated files, and third-party vendored code are explicitly out of scope.
 
 If you're using an AI coding assistant (Claude Code, Cursor, etc.), [`CLAUDE.md`](CLAUDE.md) documents the project's invariants, ViewModel/event patterns, test infrastructure, and Drive-backup rules.
 
