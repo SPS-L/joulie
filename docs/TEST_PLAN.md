@@ -203,6 +203,23 @@ Locks in the TASK-43 enum + Room TypeConverter pair, mirroring the TASK-25 `Char
 |------|-------------|
 | `derivedExcludedCount_reflectsKwhSourceFlag_inPeriod` | Mixed measured + derived events in the period: derived ones do not produce capacity points, but the count is exposed via `ChartsUiState.Loaded.derivedExcludedCount` so the chart can render the banner. With 1 measured + 2 derived events, capacity is empty (below `MIN_POINTS_FOR_CHART = 3`) and `derivedExcludedCount == 2` |
 
+### 1.17 ExportCsvUseCaseTest.kt
+
+Locks in the CSV-injection / RFC 4180 escape contract for `ExportCsvUseCase.csvEscape` (TASK-52, 2026-05-03). The file has 2 baseline cases (header column-name flip per `useKm`, row count vs event count) plus 10 hardening cases listed below. The shared test helper `rowFor(location, note, currency)` builds a single charge event, runs `writeCsv` into a `StringWriter`, and slices on the FIRST `\n` (header terminator) to capture the entire data row including any embedded `\r` / `\n` that legitimately live inside a quoted field — `lineSequence().drop(1).first()` would truncate the row at the first embedded line break and was the cause of two early-iteration test failures.
+
+| Test | Description |
+|------|-------------|
+| `note_containingCarriageReturn_isQuoted` | RFC 4180 mandates CR-bearing fields to be quoted; pre-TASK-52 only `\n` triggered quoting. Note `"line1\rline2"` → `"line1\rline2"` |
+| `note_containingTab_isQuoted` | Excel auto-detects TSV when a tab appears in the first data row; quoting forces CSV interpretation. Note `"col1\tcol2"` → `"col1\tcol2"` |
+| `note_startingWithEquals_getsFormulaPrefix` | Canonical OWASP CSV-injection. Note `"=SUM(A1:A10)"` → `"'=SUM(A1:A10)"` (apostrophe inside outer quotes neutralises Excel's formula mode) |
+| `location_startingWithPlus_getsFormulaPrefix` | International phone numbers (`"+44 7000"`) are legitimate user data that triggers Excel's formula mode. Apostrophe-prefix protects without losing the data |
+| `note_startingWithMinus_getsFormulaPrefix` | Note `"-Some negative note"` → `"'-Some negative note"` (the same trigger that, on a numeric column, would be benign — but `note` is text) |
+| `note_startingWithAt_getsFormulaPrefix` | `@` is the fourth canonical trigger — covers e.g. `"@everyone"` |
+| `note_withFormulaPrefixAndEmbeddedQuote_doublesQuotesInsideField` | Compound case: leading `=` triggers the apostrophe prefix AND an embedded `"` requires standard CSV doubling. `=HYPERLINK("http://evil")` → `"'=HYPERLINK(""http://evil"")"`. Regression guard for the prefix + escape interaction |
+| `note_plainText_isNotQuoted` | Over-quoting regression guard: `"Charged at home"` is benign and stays unquoted. The full row ends with `,Charged at home` (no trailing record terminator after `trimEnd('\n')`) |
+| `note_existingCommaAndQuoteCases_stayGreen` | RFC 4180 baseline — `,` → quoted; embedded `"` → doubled and quoted; `\n` → quoted |
+| `currency_isAlsoEscaped` | TASK-52 expanded escape coverage to the `currency` column (free-form letter code stored verbatim from the wizard). A malicious `currency = "=USD"` emits `"'=USD"` instead of `=USD` |
+
 ---
 
 ## 2. Room Integration Tests (in-memory DB)
