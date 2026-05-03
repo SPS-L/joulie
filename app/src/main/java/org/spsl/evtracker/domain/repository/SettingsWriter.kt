@@ -35,4 +35,11 @@ interface SettingsWriter {
 
     /** TASK-19: set to true once when the user denies POST_NOTIFICATIONS — never reverted. */
     suspend fun setNotificationPermissionDenied(value: Boolean)
+
+    /**
+     * TASK-54: persist the ISO-8601 `exported_at` of the most recently
+     * Skipped or Restored remote snapshot. Pass empty string to clear
+     * (used by `WipeRemoteBackupUseCase` on successful delete).
+     */
+    suspend fun setLastSeenRemoteBackupExportedAt(value: String)
 }

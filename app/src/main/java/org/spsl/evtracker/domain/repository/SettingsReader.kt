@@ -47,4 +47,13 @@ interface SettingsReader {
      * `POST_NOTIFICATIONS`. Once true, the rationale dialog never re-fires.
      */
     val notificationPermissionDenied: Flow<Boolean>
+
+    /**
+     * TASK-54: ISO-8601 `exported_at` string of the Drive snapshot most recently
+     * offered to (and Skipped or Restored by) the user. Empty string = none.
+     * Compared verbatim against the `exported_at` field of incoming remote
+     * backups in `SettingsViewModel.onDriveAuthGranted` to suppress the
+     * destructive restore-prompt loop. Reset on `WipeRemoteBackupUseCase` success.
+     */
+    val lastSeenRemoteBackupExportedAt: Flow<String>
 }

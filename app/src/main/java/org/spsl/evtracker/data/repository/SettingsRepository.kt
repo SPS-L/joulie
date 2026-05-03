@@ -45,6 +45,9 @@ class SettingsRepository @Inject constructor(
     override val notificationPermissionDenied: Flow<Boolean> =
         dataStore.data.map { it[PreferenceKeys.NOTIFICATION_PERMISSION_DENIED] ?: false }
 
+    override val lastSeenRemoteBackupExportedAt: Flow<String> =
+        dataStore.data.map { it[PreferenceKeys.LAST_SEEN_REMOTE_BACKUP_EXPORTED_AT] ?: "" }
+
     // ACTIVE_CAR_ID stays an `intPreferencesKey` (TASK-26 didn't touch DataStore
     // backing types — switching `intPreferencesKey` to `longPreferencesKey` with
     // the same key name would silently lose the existing Int value). We widen
@@ -118,6 +121,10 @@ class SettingsRepository @Inject constructor(
 
     override suspend fun setNotificationPermissionDenied(value: Boolean) {
         dataStore.edit { it[PreferenceKeys.NOTIFICATION_PERMISSION_DENIED] = value }
+    }
+
+    override suspend fun setLastSeenRemoteBackupExportedAt(value: String) {
+        dataStore.edit { it[PreferenceKeys.LAST_SEEN_REMOTE_BACKUP_EXPORTED_AT] = value }
     }
 
     /** Used by the future Settings → Reset preferences action (Sub-project F). */

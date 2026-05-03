@@ -75,4 +75,53 @@ class WipeRemoteBackupUseCaseTest {
         // UI's "Last backup at …" hint reverts to its empty state.
         assertEquals(0L, writer.lastBackupAt)
     }
+
+    @Test
+    fun success_clearsLastSeenRemoteBackupExportedAtMarker() = runTest {
+        // TASK-54: a successful wipe must also clear the durable last-seen
+        // marker. Otherwise the next remote upload + Drive re-toggle would be
+        // silently swallowed because the marker still pointed at the deleted
+        // snapshot's exportedAt — the user would never be offered the new one.
+        val repo = FakeBackupRepository(nextDeleteResult = BackupResult.Success)
+        val recorder = mutableListOf<String>()
+        val writer = FakeSettingsWriter(callRecorder = recorder)
+        // Seed the marker as if a previous Skip / Restore had populated it.
+        writer.setLastSeenRemoteBackupExportedAt("2025-01-01T00:00:00Z")
+        recorder.clear() // drop the seed call so the assertions below are clean
+        val sut = WipeRemoteBackupUseCase(repo, writer)
+
+        sut()
+
+        assertEquals(
+            "marker must reset to empty string on wipe success",
+            "",
+            writer.lastSeenRemoteBackupExportedAt,
+        )
+        // Also verify the call ordering: lastBackupAt FIRST, marker SECOND.
+        // Order isn't load-bearing today, but the test pins it so a reorder
+        // ever-so-slightly more visible in code review.
+        assertEquals(
+            listOf("setLastBackupAt(0)", "setLastSeenRemoteBackupExportedAt()"),
+            recorder,
+        )
+    }
+
+    @Test
+    fun authRequired_doesNotClearLastSeenMarker() = runTest {
+        // TASK-54 regression guard: only Success clears the marker. AuthRequired
+        // means the wipe didn't happen, so the remote snapshot may still exist
+        // and the marker is still meaningful.
+        val repo = FakeBackupRepository(nextDeleteResult = BackupResult.AuthRequired)
+        val writer = FakeSettingsWriter()
+        writer.setLastSeenRemoteBackupExportedAt("2025-01-01T00:00:00Z")
+        val sut = WipeRemoteBackupUseCase(repo, writer)
+
+        sut()
+
+        assertEquals(
+            "marker must NOT be cleared on AuthRequired",
+            "2025-01-01T00:00:00Z",
+            writer.lastSeenRemoteBackupExportedAt,
+        )
+    }
 }

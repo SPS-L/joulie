@@ -25,4 +25,15 @@ object PreferenceKeys {
 
     /** TASK-19: true once the user has explicitly denied POST_NOTIFICATIONS. Sticky — never re-prompt. */
     val NOTIFICATION_PERMISSION_DENIED = booleanPreferencesKey("notificationPermissionDenied")
+
+    /**
+     * TASK-54: ISO-8601 `exported_at` of the remote Drive backup most recently
+     * offered to the user (Skip) or restored. Empty string ("") = never seen.
+     * Used by `SettingsViewModel.onDriveAuthGranted` to silently enable Drive
+     * when the remote snapshot identity matches the marker, so the
+     * destructive-action restore prompt is not shown twice for the same backup.
+     * Cleared on `WipeRemoteBackupUseCase` success.
+     */
+    val LAST_SEEN_REMOTE_BACKUP_EXPORTED_AT =
+        stringPreferencesKey("lastSeenRemoteBackupExportedAt")
 }

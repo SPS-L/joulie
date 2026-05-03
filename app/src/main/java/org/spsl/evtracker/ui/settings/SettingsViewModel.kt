@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.spsl.evtracker.R
@@ -109,11 +110,27 @@ class SettingsViewModel @Inject constructor(
                     settingsWriter.setDriveEnabled(true)
                     backupScheduler.enqueueBackup()
                     _uiState.update { it.copy(isAuthInFlight = false) }
-                } else {
-                    val label = parseExportedAtLabel(json)
-                    _uiState.update { it.copy(isAuthInFlight = false, pendingRestoreLabel = label) }
-                    _events.tryEmit(SettingsEvent.ShowRestorePrompt(label))
+                    return@launch
                 }
+                val snapshot = parseRemoteSnapshot(json)
+                // TASK-54: if the user has already been offered (and Skipped or
+                // Restored) this exact remote snapshot, enable Drive silently
+                // instead of re-firing the destructive restore prompt.
+                val lastSeen = settingsReader.lastSeenRemoteBackupExportedAt.first()
+                if (snapshot.exportedAt.isNotEmpty() && snapshot.exportedAt == lastSeen) {
+                    settingsWriter.setDriveEnabled(true)
+                    backupScheduler.enqueueBackup()
+                    _uiState.update { it.copy(isAuthInFlight = false) }
+                    return@launch
+                }
+                _uiState.update {
+                    it.copy(
+                        isAuthInFlight = false,
+                        pendingRestoreLabel = snapshot.label,
+                        pendingRestoreExportedAt = snapshot.exportedAt.takeIf { v -> v.isNotEmpty() },
+                    )
+                }
+                _events.tryEmit(SettingsEvent.ShowRestorePrompt(snapshot.label))
             } catch (_: DriveAuthRequiredException) {
                 _uiState.update { it.copy(isAuthInFlight = false) }
                 _events.tryEmit(SettingsEvent.ShowError(R.string.drive_auth_failed))
@@ -131,17 +148,30 @@ class SettingsViewModel @Inject constructor(
 
     fun onConfirmRestore() {
         viewModelScope.launch {
+            // TASK-54: capture the snapshot identity BEFORE the restore use case
+            // overwrites local data — after restore the marker means "the local
+            // DB is now this snapshot; don't re-prompt to restore it again."
+            val pendingExportedAt = _uiState.value.pendingRestoreExportedAt
             when (restoreBackupUseCase()) {
                 is RestoreResult.Success -> {
-                    _uiState.update { it.copy(pendingRestoreLabel = null) }
+                    if (!pendingExportedAt.isNullOrEmpty()) {
+                        settingsWriter.setLastSeenRemoteBackupExportedAt(pendingExportedAt)
+                    }
+                    _uiState.update {
+                        it.copy(pendingRestoreLabel = null, pendingRestoreExportedAt = null)
+                    }
                     _events.tryEmit(SettingsEvent.RestoreSucceeded)
                 }
                 is RestoreResult.VersionMismatch -> {
-                    _uiState.update { it.copy(pendingRestoreLabel = null) }
+                    _uiState.update {
+                        it.copy(pendingRestoreLabel = null, pendingRestoreExportedAt = null)
+                    }
                     _events.tryEmit(SettingsEvent.ShowError(R.string.drive_remote_backup_too_new))
                 }
                 RestoreResult.NoRemoteBackup -> {
-                    _uiState.update { it.copy(pendingRestoreLabel = null) }
+                    _uiState.update {
+                        it.copy(pendingRestoreLabel = null, pendingRestoreExportedAt = null)
+                    }
                     _events.tryEmit(SettingsEvent.ShowError(R.string.drive_restore_failed))
                 }
             }
@@ -150,14 +180,26 @@ class SettingsViewModel @Inject constructor(
 
     fun onSkipRestore() {
         viewModelScope.launch {
+            // TASK-54: persist the marker BEFORE flipping driveEnabled so a fast
+            // re-entry of Settings sees the marker already populated.
+            val pendingExportedAt = _uiState.value.pendingRestoreExportedAt
+            if (!pendingExportedAt.isNullOrEmpty()) {
+                settingsWriter.setLastSeenRemoteBackupExportedAt(pendingExportedAt)
+            }
             settingsWriter.setDriveEnabled(true)
             backupScheduler.enqueueBackup()
-            _uiState.update { it.copy(pendingRestoreLabel = null) }
+            _uiState.update {
+                it.copy(pendingRestoreLabel = null, pendingRestoreExportedAt = null)
+            }
         }
     }
 
     fun onRestorePromptDismissed() {
-        _uiState.update { it.copy(pendingRestoreLabel = null) }
+        // No marker write here: dismiss != Skip. The user neither accepted nor
+        // declined the snapshot, so the next entry should still offer it.
+        _uiState.update {
+            it.copy(pendingRestoreLabel = null, pendingRestoreExportedAt = null)
+        }
     }
 
     fun onToggleDriveOff() {
@@ -292,15 +334,26 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    private fun parseExportedAtLabel(json: String): String {
-        return try {
-            val match = EXPORTED_AT_REGEX.find(json)
-            val iso = match?.groupValues?.get(1) ?: return UNKNOWN_DATE
-            val instant = Instant.parse(iso)
-            DATE_FORMAT.format(Date(instant.toEpochMilli()))
+    /**
+     * TASK-54: parse the remote backup JSON once and return both the raw
+     * `exported_at` string (used for the durable last-seen marker) and the
+     * human-readable label (shown in the restore prompt). `exportedAt` is
+     * the empty string when the JSON has no parseable `exported_at` field —
+     * callers must treat empty as "no identity available, do not write the
+     * marker." Mirrors the legacy `parseExportedAtLabel` behaviour for the
+     * label side.
+     */
+    private data class RemoteBackupSnapshot(val exportedAt: String, val label: String)
+
+    private fun parseRemoteSnapshot(json: String): RemoteBackupSnapshot {
+        val match = EXPORTED_AT_REGEX.find(json) ?: return RemoteBackupSnapshot("", UNKNOWN_DATE)
+        val iso = match.groupValues[1]
+        val label = try {
+            DATE_FORMAT.format(Date(Instant.parse(iso).toEpochMilli()))
         } catch (_: Throwable) {
             UNKNOWN_DATE
         }
+        return RemoteBackupSnapshot(exportedAt = iso, label = label)
     }
 
     private fun unitFor(metric: String): String = when (metric) {

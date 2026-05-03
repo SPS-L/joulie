@@ -10,6 +10,13 @@ data class SettingsUiState(
     val isAuthInFlight: Boolean = false,
     /** Non-null while the restore prompt is on screen. */
     val pendingRestoreLabel: String? = null,
+    /**
+     * TASK-54: raw `exported_at` value of the snapshot that drove the
+     * pending prompt. Captured at prompt time so Skip / Confirm can
+     * write the durable last-seen marker without re-reading the
+     * remote backup. Always cleared together with [pendingRestoreLabel].
+     */
+    val pendingRestoreExportedAt: String? = null,
 
     // TASK-31 — manual Drive controls:
     /** True while [PushBackupNowUseCase] is in flight. Mutually exclusive with [isManualWipeRunning]. */

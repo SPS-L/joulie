@@ -136,6 +136,7 @@ class FakeSettingsReader(
     setupCompleteInit: Boolean = true,
     consecutiveBackupFailuresInit: Int = 0,
     notificationPermissionDeniedInit: Boolean = false,
+    lastSeenRemoteBackupExportedAtInit: String = "",
 ) : SettingsReader {
     private val activeCar = MutableStateFlow(activeCarIdInit)
     private val metric = MutableStateFlow(primaryMetricInit)
@@ -148,6 +149,7 @@ class FakeSettingsReader(
     private val setupCompleteFlow = MutableStateFlow(setupCompleteInit)
     private val consecutiveBackupFailuresFlow = MutableStateFlow(consecutiveBackupFailuresInit)
     private val notificationPermissionDeniedFlow = MutableStateFlow(notificationPermissionDeniedInit)
+    private val lastSeenRemoteBackupExportedAtFlow = MutableStateFlow(lastSeenRemoteBackupExportedAtInit)
     override val activeCarId: Flow<Long> = activeCar
     override val primaryMetric: Flow<String> = metric
     override val distanceUnit: Flow<String> = unit
@@ -159,6 +161,7 @@ class FakeSettingsReader(
     override val setupComplete: Flow<Boolean> = setupCompleteFlow
     override val consecutiveBackupFailures: Flow<Int> = consecutiveBackupFailuresFlow
     override val notificationPermissionDenied: Flow<Boolean> = notificationPermissionDeniedFlow
+    override val lastSeenRemoteBackupExportedAt: Flow<String> = lastSeenRemoteBackupExportedAtFlow
     fun setActiveCarId(id: Long) {
         activeCar.value = id
     }
@@ -192,6 +195,9 @@ class FakeSettingsReader(
     fun setNotificationPermissionDenied(value: Boolean) {
         notificationPermissionDeniedFlow.value = value
     }
+    fun setLastSeenRemoteBackupExportedAt(value: String) {
+        lastSeenRemoteBackupExportedAtFlow.value = value
+    }
 }
 
 class FakeSettingsWriter(
@@ -218,6 +224,8 @@ class FakeSettingsWriter(
     var consecutiveBackupFailures: Int = 0
         private set
     var notificationPermissionDenied: Boolean = false
+        private set
+    var lastSeenRemoteBackupExportedAt: String = ""
         private set
 
     override suspend fun setActiveCarId(id: Long) {
@@ -281,6 +289,10 @@ class FakeSettingsWriter(
     override suspend fun setNotificationPermissionDenied(value: Boolean) {
         callRecorder?.add("setNotificationPermissionDenied($value)")
         notificationPermissionDenied = value
+    }
+    override suspend fun setLastSeenRemoteBackupExportedAt(value: String) {
+        callRecorder?.add("setLastSeenRemoteBackupExportedAt($value)")
+        lastSeenRemoteBackupExportedAt = value
     }
 }
 

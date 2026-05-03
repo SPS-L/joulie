@@ -33,6 +33,7 @@ private class LinkedSettings(initialFailures: Int = 0) : SettingsReader, Setting
     override val setupComplete: Flow<Boolean> get() = error("unused")
     override val consecutiveBackupFailures: Flow<Int> = failuresFlow
     override val notificationPermissionDenied: Flow<Boolean> = deniedFlow
+    override val lastSeenRemoteBackupExportedAt: Flow<String> get() = error("unused")
 
     override suspend fun setActiveCarId(id: Long) = error("unused")
     override suspend fun setDriveEnabled(enabled: Boolean) = error("unused")
@@ -54,6 +55,7 @@ private class LinkedSettings(initialFailures: Int = 0) : SettingsReader, Setting
     override suspend fun setNotificationPermissionDenied(value: Boolean) {
         deniedFlow.value = value
     }
+    override suspend fun setLastSeenRemoteBackupExportedAt(value: String) = error("unused")
 
     val currentFailures: Int get() = failuresFlow.value
 }
