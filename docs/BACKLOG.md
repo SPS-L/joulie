@@ -59,7 +59,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-49 | 🟢 | Per-event grid carbon intensity (extends TASK-20 with marginal emission factors) | TASK-20 | ☐ |
 | TASK-50 | 🔴 | Stabilise nightly instrumented suite — 21 failures across 4 root causes after WorkManager init landed | TASK-34 | ☑ |
 | TASK-51 | 🔴 | GPL-3.0-or-later license change (pending `play-services-auth` review) | — | ☐ |
-| TASK-52 | 🟡 | CSV escape hardening in `ExportCsvUseCase` — quote `\r` and tabs, neutralise spreadsheet formula-injection prefixes (`=`, `+`, `-`, `@`) in user-supplied fields | — | ☐ |
+| TASK-52 | 🟡 | CSV escape hardening in `ExportCsvUseCase` — quote `\r` and tabs, neutralise spreadsheet formula-injection prefixes (`=`, `+`, `-`, `@`) in user-supplied fields | — | ☑ |
 | TASK-53 | 🟡 | Multi-car invariant guard in `StatsCalculator.computeStats` — `require` the input shares a single `carId` (latent bug if a future caller passes a mixed-car list) | — | ☐ |
 | TASK-54 | 🔴 | Drive switch fires `onUserToggledOn()` on every Settings entry (view-state restoration anti-pattern) — visible OFF→ON flicker + restore-prompt loop; bundled with a durable last-seen marker for the destructive-action path | TASK-31 | ☑ |
 
@@ -3938,7 +3938,54 @@ one.
 
 ---
 
-## 🟡 TASK-52 — CSV escape hardening (`\r`, tabs, formula-injection prefixes)
+## 🟡 TASK-52 — CSV escape hardening (`\r`, tabs, formula-injection prefixes) ☑ Done (2026-05-03)
+
+> **Outcome (merged 2026-05-03 on `feat/task52-csv-escape-hardening`).**
+> `ExportCsvUseCase.csvEscape` rewritten to:
+>
+> 1. Quote on `,`, `"`, `\n`, `\r`, **`\t`** (extends RFC 4180's required
+>    set with bare `\r` and the tab heuristic — Excel auto-detects TSV
+>    when a tab appears in the first row, which corrupts column
+>    alignment).
+> 2. Prefix the field with a single quote `'` when the first character
+>    is in `{ '=', '+', '-', '@' }` (the canonical OWASP CSV-injection
+>    triggers), then quote the result. The leading `'` neutralises
+>    Excel / LibreOffice / Numbers' formula interpretation while
+>    keeping the data round-trippable for any consumer that strips
+>    leading apostrophes (research pipelines do).
+>
+> The hardened `csvEscape` is now applied to `chargeType.name` and
+> `currency` in addition to the previously-escaped `location` /
+> `note` columns. `chargeType.name` is internally controlled (enum
+> values `AC` / `DC_FAST` / `DC_ULTRA` never trigger), but the symmetry
+> guards against a future enum addition or rename. `currency` is
+> stored verbatim from the wizard and is therefore user-supplied for
+> hardening purposes.
+>
+> Numeric / timestamp columns (date, odometer, kwh, cost_total)
+> deliberately bypass `csvEscape`: `Double.toString()` and
+> `Instant.toString()` cannot produce a formula-injection prefix from
+> a non-malicious value (negative numbers like `-3.5` are interpreted
+> as the same number by Excel, not as a destructive formula), and
+> quoting them as text would defeat researchers' pivot tables and
+> charts.
+>
+> **Tests:** 10 new `ExportCsvUseCaseTest` cases —
+> `note_containingCarriageReturn_isQuoted`,
+> `note_containingTab_isQuoted`,
+> `note_startingWithEquals_getsFormulaPrefix`,
+> `location_startingWithPlus_getsFormulaPrefix`,
+> `note_startingWithMinus_getsFormulaPrefix`,
+> `note_startingWithAt_getsFormulaPrefix`,
+> `note_withFormulaPrefixAndEmbeddedQuote_doublesQuotesInsideField`
+> (compound-case regression guard),
+> `note_plainText_isNotQuoted` (over-quoting regression guard),
+> `note_existingCommaAndQuoteCases_stayGreen` (RFC 4180 baseline
+> coverage), `currency_isAlsoEscaped`. The test helper `rowFor(...)`
+> slices on the FIRST `\n` (header terminator) and `trimEnd('\n')` —
+> not `lineSequence().drop(1).first()` — so embedded `\r` / `\n`
+> inside a quoted note doesn't truncate the captured row. JVM
+> unit-test count 377 → 387.
 
 > **Audit finding (`docs/EV-backlog-review.md`, 2026-05-03):**
 > `ExportCsvUseCase.csvEscape(...)` quotes a field only when it contains
