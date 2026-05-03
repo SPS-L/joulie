@@ -113,7 +113,7 @@ Locks in the TASK-31 manual-push contract: `PushBackupNowUseCase` calls `BackupR
 
 ### 1.9 WipeRemoteBackupUseCaseTest.kt
 
-Locks in the TASK-31 manual-wipe contract: `WipeRemoteBackupUseCase` calls `BackupRepository.deleteRemoteBackup()` and only clears `lastBackupAt` to `0L` on `BackupResult.Success`. Failure paths leave the timestamp at its previous value.
+Locks in the TASK-31 manual-wipe contract: `WipeRemoteBackupUseCase` calls `BackupRepository.deleteRemoteBackup()` and only clears `lastBackupAt` to `0L` on `BackupResult.Success`. Failure paths leave the timestamp at its previous value. TASK-54 (2026-05-03) extends the `Success` side-effect to **also** clear the durable last-seen-snapshot marker — `setLastSeenRemoteBackupExportedAt("")` runs in the same branch, ordered AFTER `setLastBackupAt(0L)` (the test pins call ordering so a future reorder is visible in code review).
 
 | Test | Description |
 |------|-------------|
@@ -121,6 +121,8 @@ Locks in the TASK-31 manual-wipe contract: `WipeRemoteBackupUseCase` calls `Back
 | `authRequired_propagates_andDoesNotClearLastBackupAt` | `AuthRequired` returned + previous `lastBackupAt` preserved |
 | `failure_propagates_andDoesNotClearLastBackupAt` | `Failure("HTTP 500")` returned + previous `lastBackupAt` preserved |
 | `success_whenNoPriorTimestamp_writesZero` | Even with a null pre-state, `Success` normalises to `0L` so the empty-state hint reverts |
+| `success_clearsLastSeenRemoteBackupExportedAtMarker` | Pre-seeded marker `"2025-01-01T00:00:00Z"` → after `Success`, marker resets to `""` AND call recorder shows `setLastBackupAt(0)` then `setLastSeenRemoteBackupExportedAt()` in that order (TASK-54) |
+| `authRequired_doesNotClearLastSeenMarker` | Pre-seeded marker → after `AuthRequired`, marker is preserved (the wipe didn't happen, so the remote may still exist and the marker is still meaningful) (TASK-54) |
 
 ### 1.10 LastChargeWidgetSnapshotTest.kt
 
@@ -317,6 +319,19 @@ Locks in the `BackupResult` contract introduced in TASK-07: `Success` / `AuthReq
 | `read_drive401_throwsDriveAuthRequired` | Read path keeps its exception contract — 401 → `DriveAuthRequiredException` (not `BackupResult`) |
 | `read_drive429_retriesThenSucceeds` | Read path also retries transient — 429 then success → returns body |
 
+### 3.5 SettingsViewModelTest.kt — TASK-54 additions (durable last-seen marker)
+
+`SettingsViewModelTest.kt` covers the full Drive (E) + F1 + TASK-31 surface (~36 cases total). The TASK-54 (2026-05-03) additions lock in the durable last-seen-snapshot marker contract: the destructive restore prompt is shown at most once per remote snapshot identity, where identity = the JSON `exported_at` ISO-8601 string. Backed by the new `lastSeenRemoteBackupExportedAt` DataStore key on `SettingsReader` / `SettingsWriter`. All cases use `BackupData.fromEntities(..., now = X)` to seed a remote JSON with a deterministic `exported_at` derived from `Instant.ofEpochMilli(X).toString()`.
+
+| Test | Description |
+|------|-------------|
+| `onDriveAuthGranted_remoteExists_firstTime_emitsPrompt` | Marker default `""`; remote `exported_at = "2023-11-14T22:13:20Z"` → `ShowRestorePrompt` emitted, `pendingRestoreExportedAt` populated, `driveEnabled` stays false until user decides |
+| `onDriveAuthGranted_remoteExists_alreadySeen_skipsSilently` | Pre-seed marker = remote `exported_at` → no `ShowRestorePrompt` emitted; `driveEnabled = true`, `enqueueBackup` called once |
+| `onDriveAuthGranted_remoteWithDifferentExportedAt_promptsAgain` | Marker holds an older `exported_at`, remote has newer `exported_at` → prompt re-fires (covers the wipe + new upload path) |
+| `onSkipRestore_persistsLastSeenExportedAt` | After Skip, `writer.lastSeenRemoteBackupExportedAt` reads back the snapshot's `exported_at`; both `pendingRestoreLabel` and `pendingRestoreExportedAt` are cleared |
+| `onConfirmRestore_success_persistsLastSeenExportedAt` | After successful Restore, marker is written so the same snapshot is never re-prompted post-restore (the local DB already equals it) |
+| `onDriveAuthGranted_noRemote_keepsExistingMarker` | The no-remote path enables Drive without touching the marker (a previous Skip / Restore decision is still meaningful — regression guard) |
+
 ---
 
 ## 4. UI / Instrumented Tests (Espresso)
@@ -430,6 +445,17 @@ Locks in the F1 startup auto-recovery flow. Uses `@UninstallModules(DataResetMod
 | `startup_resetInProgressTrue_runsUseCase_clearsFlag_beforeUiVisible` | Seed `resetInProgress=true` + a Test car in DB; launch `MainActivity`; await `resetInProgress=false`; assert `clearCalls == 1` and the Test car is gone |
 | `startup_resetInProgressFalse_doesNotRunUseCase` | `resetInProgress=false` at launch; assert `clearCalls == 0` and the seeded Test car still exists |
 | `startup_resetRecoveryThrows_showsRetryDialog_doesNotMountNavGraph` | Set `testRunner.failNext = IllegalStateException(…)`; launch; assert the recovery-failure dialog is displayed, the nav graph is not mounted, and `resetInProgress` remains `true` so the next launch retries |
+
+### 4.10 SettingsDriveSwitchEntryTest.kt (instrumented) — TASK-54 Step 0 regression
+
+Covers the user-reported reproduction: every Settings entry the Drive switch visibly flipped OFF→ON on its own and the "Restore from Drive?" dialog appeared. Root cause was that `SettingsFragment.onViewCreated` attached the switch's `OnCheckedChangeListener` synchronously, and Android's view-state restoration called `setChecked(true)` between `onCreateView` and `onStart` to restore the saved checked state — which fired the listener → `onUserToggledOn()` → `auth.authorize()`. Fix is the lazy listener attach inside the StateFlow collector (TASK-54 Step 0, Option A).
+
+Uses the same `@UninstallModules(BackupModule::class)` + local `TestBackupModule` pattern as `DriveBackupWorkerTest` to wire `FakeDriveAuthManager` (which exposes a new `authorizeCallCount: Int` field — incremented on every `authorize()` invocation) and `FakeDriveRemoteSource`. Pre-seeds DataStore with `DRIVE_ENABLED = true` so the StateFlow collector has a real reason to flip `binding.switchDrive.isChecked` from the XML default `false` → `true`.
+
+| Test | Description |
+|------|-------------|
+| `firstEntry_withDriveEnabled_doesNotCallAuthorize` | Launch fragment, move to RESUMED, settle one frame; assert `fakeAuth.authorizeCallCount` did not increment. Pre-fix this fails because the listener attached at line 69 fires when the StateFlow collector's first emission flips `isChecked` |
+| `reEntry_viaActivityRecreation_doesNotCallAuthorize` | Launch + RESUMED, capture `authorizeCallCount`, then `FragmentScenario.recreate()` (full activity recreation — the canonical "navigate away and back" simulation that exercises view-state save/restore), settle one frame, assert the counter did not move. This is the exact reproduction trigger for the user-reported bug |
 
 ---
 

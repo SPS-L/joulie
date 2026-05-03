@@ -583,6 +583,19 @@ Restore notes:
 - Restore and skip are the only two outcomes when a remote snapshot exists. Merge is not supported.
 - After a successful restore, local data becomes the source of truth for all subsequent edits and backups.
 
+#### Restore-prompt suppression (TASK-54)
+
+The destructive restore prompt is shown **at most once per remote snapshot identity.** Snapshot identity = the JSON `exported_at` ISO-8601 string of `evtracker_backup.json`.
+
+- DataStore key `lastSeenRemoteBackupExportedAt: String` (default `""`) records the `exported_at` of the snapshot the user most recently **Skipped** or **Restored**.
+- On every `SettingsViewModel.onDriveAuthGranted()` call, the VM compares the remote `exported_at` to the marker. When they match, Drive is silently re-enabled and `enqueueBackup()` runs without firing `ShowRestorePrompt`.
+- `onSkipRestore()` writes the marker **before** flipping `driveEnabled` so a fast re-entry of Settings sees it populated.
+- `onConfirmRestore()` captures `pendingExportedAt` from `SettingsUiState` **before** invoking `RestoreBackupUseCase`, then writes the marker on `RestoreResult.Success`. The semantic is "the local DB now equals this snapshot — never re-prompt to restore something the user already has."
+- `onRestorePromptDismissed()` does **not** write the marker. Dismiss is neither accept nor decline; the next entry should still offer the snapshot.
+- `WipeRemoteBackupUseCase` clears the marker (`setLastSeenRemoteBackupExportedAt("")`) on `BackupResult.Success`. After a wipe, the next committed local change creates a new snapshot with a different `exported_at`, and the next Drive re-toggle prompts exactly once for it.
+
+The Drive switch listener in `SettingsFragment` is attached **lazily** by the `viewModel.uiState` collector after the first state-driven sync of `binding.switchDrive.isChecked`, never in `onViewCreated`. This prevents Android's view-state restoration (which calls `setChecked()` between `onCreateView` and `onStart`) from synchronously firing `onUserToggledOn()` and triggering an unwanted `auth.authorize()` round-trip on every Settings entry. Instrumented regression: `SettingsDriveSwitchEntryTest`.
+
 ### Manual controls (TASK-31)
 
 In addition to the WorkManager-driven auto-backup, Settings exposes two
