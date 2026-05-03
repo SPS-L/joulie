@@ -1,6 +1,6 @@
 # EV Tracker — Development Backlog
 
-Tasks 1–15 were generated from a senior Android developer code review of the `main` branch (April 2026). Tasks 16–21 are follow-up improvements identified during a 2026-04-30 verification pass against `main` (CI/release pipeline, R8 keep-rules, a11y posture, and SPS-Lab research relevance). Tasks 38–42 are new feature / infra ideas filed 2026-05-02 from a follow-up senior-developer review (research-aligned analytics, schema-migration polish, anonymised research export). Each task is written as a self-contained instruction suitable for a coding agent.
+Tasks 1–15 were generated from a senior Android developer code review of the `main` branch (April 2026). Tasks 16–21 are follow-up improvements identified during a 2026-04-30 verification pass against `main` (CI/release pipeline, R8 keep-rules, a11y posture, and SPS-Lab research relevance). Tasks 38–42 are new feature / infra ideas filed 2026-05-02 from a follow-up senior-developer review (research-aligned analytics, schema-migration polish, anonymised research export). TASK-43 (filed 2026-05-02) closes a real UX gap: many EU/UK chargers and several older EVs (Renault/Nissan/older BMW) display only SoC % before/after, never kWh delivered. Each task is written as a self-contained instruction suitable for a coding agent.
 
 ---
 
@@ -50,6 +50,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-40 | 🟢 | Anonymised research-export pipeline (PII-stripped CSV for SPS-Lab) | TASK-09 | ☐ |
 | TASK-41 | 🟢 | JSON-LD / OCPP-compatible export format (research interoperability) | TASK-09 | ⏸ |
 | TASK-42 | 🟢 | Open Charge Map / OCPI station lookup integration | TASK-37 | ⏸ |
+| TASK-43 | 🟡 | kWh-from-SoC calculator + `kwhSource` provenance flag (degradation banner on derived events) | TASK-14 | ☐ |
 
 **Priority legend:** 🔴 High (architecture/data safety) · 🟡 Medium (robustness/UX) · 🟢 Low (new feature)  
 **Status legend:** ☐ open · ☑ done · ☒ closed (premise no longer holds) · ⏸ under consideration (do not start without explicit go-ahead)  
@@ -3014,6 +3015,122 @@ an OCPI feed. Free text remains the fallback.
 - **OCPI alternative:** if a research partner runs an OCPI feed,
   swap the OCM client for an OCPI client of the same shape — the
   three new entity columns are provider-agnostic.
+
+---
+
+## 🟡 TASK-43 — kWh-from-SoC calculator + `kwhSource` provenance flag
+
+Many EU/UK chargers and several EVs (older Renault Zoe, Nissan Leaf,
+some BMW i3) display only SoC % before/after, never kWh delivered. The
+user can compute the missing kWh from `Δsoc × Car.nominalBatteryKwh`,
+but a value derived this way feeds back tautologically into TASK-14's
+degradation tracker (`capacity = kwhAdded / Δsoc = nominalBatteryKwh`
+exactly). The fix is provenance: store every event with a source flag,
+let derived events count for cost and efficiency, and exclude them
+from degradation — with a visible warning so the user understands why
+the chart is sparser than the event count suggests.
+
+### Scope
+
+1. New `domain/model/ChargeKwhSource` enum: `MEASURED`,
+   `DERIVED_FROM_SOC`. Add a `ChargeKwhSourceConverter` paired with
+   the existing `ChargeTypeConverter` and register both via
+   `@TypeConverters` on `AppDatabase`.
+
+2. Schema bump **v6 → v7**. `ChargeEventEntity.kwhSource:
+   ChargeKwhSource` (non-null). Hand-written `MIGRATION_6_7` adds
+   `kwhSource TEXT NOT NULL DEFAULT 'MEASURED'` so legacy rows
+   backfill cleanly. **Coordination with TASK-39:** if TASK-39 lands
+   first, this is an ideal inaugural `@AutoMigration` candidate
+   (`@ColumnInfo(defaultValue = "MEASURED")` makes Room generate the
+   migration). If TASK-39 has not landed, ship the hand-written
+   migration as written and TASK-39's first beneficiary becomes the
+   next additive bump.
+
+3. Backup format: `BackupData.CURRENT_VERSION` 6 → 7;
+   `SUPPORTED_VERSIONS = {3, 4, 5, 6, 7}`. New optional
+   `kwh_source` JSON field; legacy backups deserialise as
+   `MEASURED`. Adapter mirrors `ChargeTypeJsonAdapter`.
+
+4. **`CapacityEstimator` filter (TASK-14 follow-up).** Both code
+   paths — the exact `kwhAdded / (socAfter - socBefore)` route and
+   the `kwhAdded ≥ 0.8 × nominalBatteryKwh` heuristic route — must
+   skip events where `kwhSource == DERIVED_FROM_SOC`. Otherwise the
+   exact path returns the nominal capacity verbatim, and the
+   heuristic path trivially qualifies. Add three `CapacityEstimatorTest`
+   cases: derived event excluded from exact path, derived event
+   excluded from heuristic path, mixed dataset excludes derived rows
+   only.
+
+5. **In-form calculator on `ChargeEditFragment`.** Add a small
+   "Don't know kWh? Calculate from SoC %" link/button below the kWh
+   `TextInputLayout`. Show only when the active car has
+   `nominalBatteryKwh != null` AND the kWh field is empty. Tapping
+   it expands the existing TASK-14 SoC card (if collapsed) and
+   surfaces an info banner: *"kWh will be estimated from SoC change
+   × nominal capacity. The event will be flagged as estimated and
+   excluded from degradation tracking."* When the user fills both
+   SoC fields, the kWh field auto-populates with `(socAfter -
+   socBefore) × nominalBatteryKwh` (clamped to ≥ 0) and the save
+   button writes `kwhSource = DERIVED_FROM_SOC`.
+
+6. **Override semantics.** If the user manually edits the kWh field
+   after the calculator filled it, flip the source flag back to
+   `MEASURED` (track via a `ViewModel` flag — once the user touches
+   the kWh field post-calculator, treat the value as user-entered).
+   Conversely, re-tapping the calculator link with both SoC fields
+   populated re-derives kWh and re-flips the flag to `DERIVED_FROM_SOC`.
+
+7. **Degradation chart warning banner.** When the Charts → Degradation
+   tab (TASK-14) renders, count the derived events in the visible
+   period. If non-zero, render a banner above the chart:
+   *"N estimated events excluded from degradation tracking
+   (calculated from SoC %)."* The chart itself silently drops
+   those events (already covered by Step 4). Banner uses the same
+   M3 surface treatment as the multi-currency hint on Dashboard.
+
+8. **History list badge.** Add a small "estimated" badge to history
+   rows where `kwhSource == DERIVED_FROM_SOC`, alongside the
+   existing AC / DC charge-type badge. Reuse a tertiary-container
+   colour token; keep the label one word (`Est.`).
+
+9. **Pure helper.** Extract the math into
+   `domain/service/KwhFromSocCalculator.kt` with a single
+   `compute(socBefore: Double, socAfter: Double, nominalBatteryKwh:
+   Double): Double` method that returns `max(0.0, (socAfter -
+   socBefore) × nominalBatteryKwh)`. JVM-test it directly: 4 cases
+   (typical, full charge from 20%→80%, zero delta returns zero,
+   negative delta clamps to zero).
+
+10. New `SaveChargeEventUseCaseTest` cases asserting that
+    `kwhSource` round-trips through the use case unchanged. Update
+    existing fakes / fixtures to construct events with the explicit
+    source field (default `MEASURED` — most tests don't care).
+
+### Notes
+
+- **Charging-loss caveat.** SoC-derived kWh is *battery-side* (what
+  the cells absorbed), not *charger-delivered* (what the user paid
+  for). For AC charging the gap is ~10–15%, for DC ~5%. This biases
+  derived events: efficiency (km/kWh) looks *better* than reality
+  and cost-per-kWh looks *worse* than reality. Acceptable today —
+  documenting the caveat in `DESIGN.md` is enough; a charging-loss
+  factor column would be over-engineering until a researcher asks.
+- **Why not nullable `kwhAdded`?** Considered (Option C in the
+  brainstorm transcript). Rejected — it would touch every aggregate,
+  every chart, every backup version. The provenance flag gets 80%
+  of the value at 20% of the cost, with a clean upgrade path if the
+  app ever needs first-class SoC-only events later.
+- **Why explicit calculator button vs. auto-derive on save?**
+  Explicit button = explicit user acceptance of the estimate. Auto-
+  deriving on save (whenever kWh is blank but SoC is filled) would
+  silently flip events to `DERIVED_FROM_SOC` and surprise users who
+  filled SoC for degradation tracking but had a paper kWh receipt
+  to enter later.
+- **Coordination with TASK-25 / TASK-39.** TASK-25 introduced the
+  `ChargeType` enum + converter pattern; mirror that exactly for
+  `ChargeKwhSource`. TASK-39 (Room `@AutoMigration`) is the natural
+  vehicle for this migration if it lands first — see Step 2.
 
 ---
 
