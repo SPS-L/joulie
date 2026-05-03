@@ -53,7 +53,7 @@ Repo root holds only `README.md`, `CLAUDE.md`, and build/config files. All proje
 ```bash
 ./gradlew assembleDebug                        # target APK path: app/build/outputs/apk/debug/app-debug.apk
 ./gradlew assembleRelease                      # signed if keystore.properties exists, unsigned otherwise
-./gradlew test                                 # JVM unit tests (~360)
+./gradlew test                                 # JVM unit tests (~370)
 ./gradlew connectedAndroidTest                 # Espresso/Room — needs API 26+ device or emulator (canonical CI execution: nightly-instrumented.yml, API 26 + API 35 matrix)
 ./gradlew :app:testDebugUnitTest --tests "org.spsl.evtracker.UnitConverterTest.kmToMiles_positive"
 ```
@@ -141,6 +141,7 @@ Migrations are mandatory and registered in `DatabaseModule.provideDatabase`:
 - `MIGRATION_3_4` (TASK-25): rewrites legacy `'DC'` chargeType cells to `'DC_FAST'` so the enum-backed `ChargeTypeConverter` reads canonical values; column type stays TEXT, no DDL change.
 - `MIGRATION_4_5` (TASK-26): no-op migration that bumps the schema version to 5 alongside the Kotlin `Int` → `Long` PK widening. SQLite `INTEGER` columns already store 64 bits, so no DDL is needed — the migration registration acts as a tripwire so future downgrades trip Room's schema validator instead of silently truncating Long values to Int.
 - `MIGRATION_5_6` (TASK-14): adds nullable `socBefore` and `socAfter` REAL columns to `charge_events` for state-of-charge data. Both columns default to NULL on legacy rows; `CapacityEstimator` consumes them when present (else falls back to the 80%-of-nominal heuristic).
+- `MIGRATION_6_7` (TASK-43): adds `kwhSource TEXT NOT NULL DEFAULT 'MEASURED'` to `charge_events`. Round-tripped via `ChargeKwhSourceConverter` into the `ChargeKwhSource` enum (`MEASURED` / `DERIVED_FROM_SOC`). Legacy rows backfill cleanly to `MEASURED`. `CapacityEstimator` skips `DERIVED_FROM_SOC` events on both the exact and heuristic paths because the derived `kwhAdded` is tautological against `Δsoc × nominalBatteryKwh`.
 
 Indices on `charge_events`: composite `(carId, eventDate)` (matches dominant range query), `chargeType`, `location`. When adding a column, bump the version, add a migration that uses **camelCase** column names (Room's default for entity fields without `@ColumnInfo`), and add a `MigrationTest` case (see docs/TEST_PLAN.md §2.4).
 

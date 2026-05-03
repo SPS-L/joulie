@@ -40,6 +40,8 @@
 
 ### 1.4 StatsCalculatorCostTest.kt
 
+Note (TASK-44, 2026-05-03): the existing fixtures in cases 1–5 below all start with an "anchor event" (`event(1, 0.0, 0.0)`) that has *no* cost, so the pre-TASK-44 bug (first event's cost silently dropped) didn't trip them. The four new cases at the bottom (`firstAndSecondEventBothCosted_…`, `firstAndThirdEventCosted_…`, `singleCostedEvent_…`, `mixedCurrencyWithFirstEventCosted_…`) lock in the corrected `Σ cost` semantic for first-event-costed shapes.
+
 | Test | Input | Expected |
 |------|-------|----------|
 | `allCostNull_costStatsNull` | 3 events, all cost=NULL | costPerKm=null |
@@ -47,6 +49,10 @@
 | `singleCostEvent_correct` | 1 event, cost=5.0, 50km | costPerKm=0.10 |
 | `multipleCurrencies_costStatsNull` | 4 events, 2 EUR + 2 USD | costPerKm=null, costPer100km=null (multi-currency guard) |
 | `singleCurrencyAcrossPeriod_costStatsComputed` | 4 events all EUR | costPerKm=Σcost/Σdist |
+| `firstAndSecondEventBothCosted_totalCostSumsBoth` | 2 events both costed, EUR | totalCost=15 (sum); costPerKm=15/Δkm (TASK-44 — pre-fix dropped event 0's €5) |
+| `firstAndThirdEventCosted_middleNotCosted_totalIncludesBoth` | 3 events, only 1st & 3rd costed | totalCost=sum of both costed events; currency=EUR (TASK-44) |
+| `singleCostedEvent_reportsTotalCost_costPerKmStillNull` | 1 event, costed | totalCost=that cost; currency=EUR; costPerKm=null (delta distance undefined for single event) (TASK-44) |
+| `mixedCurrencyWithFirstEventCosted_totalCostStillNull` | 2 events: EUR + USD, both costed, first event costed | totalCost=null; currency=null; mixedCurrency=true (mixed-currency rule still wins after TASK-44) |
 
 ### 1.5 CapacityEstimatorTest.kt
 
@@ -278,6 +284,11 @@ Uses `TestCoroutineDispatcher` + in-memory Room.
 | `calculator_recalculate_afterUserEdit_reactivates` | User edits → MEASURED, then re-tap link → DERIVED_FROM_SOC again, kWh re-derived (TASK-43) |
 | `editMode_loadsExistingKwhSourceFromEntity` | Loading a persisted event with `kwhSource = DERIVED_FROM_SOC` preserves the flag in UiState (TASK-43) |
 | `save_threadsKwhSourceToInput` | After calculator-driven save, the persisted entity carries `kwhSource = DERIVED_FROM_SOC` and the battery-side derived kWh value (TASK-43) |
+| `socFieldsFilledWithBlankKwh_autoActivatesCalculator` | User types SoC 20 → 80 with kWh blank; auto-activation fires *without* tapping the calculator link → kWh = "36", `kwhSource = DERIVED_FROM_SOC` (TASK-43 follow-up, 2026-05-03) |
+| `socFieldsFilledWithKwhAlreadyPresent_doesNotOverwriteKwh` | User types kWh = "42" first, then SoC 20 → 80; kWh stays "42", calculator stays inactive, `kwhSource = MEASURED` — manual values are never overwritten silently (TASK-43 follow-up) |
+| `socAfterLessThanBefore_doesNotAutoActivate` | SoC 80 → 20 (invalid range) with blank kWh; auto-activation declines, kWh stays "" (TASK-43 follow-up) |
+| `nominalBatteryKwhMissing_doesNotAutoActivate` | Active car has `batteryKwh = null`; SoC fields filled with blank kWh; auto-activation declines (TASK-43 follow-up) |
+| `userClearsKwhAfterAutoFill_thenChangesSoc_reActivates` | After auto-fill, user clears kWh, then changes SoC; auto-activation fires again, derives new kWh from updated SoC (TASK-43 follow-up) |
 
 ### 3.4 DriveBackupRepositoryTest.kt
 
@@ -309,6 +320,13 @@ Locks in the `BackupResult` contract introduced in TASK-07: `Success` / `AuthReq
 ---
 
 ## 4. UI / Instrumented Tests (Espresso)
+
+> **Test runner — `org.spsl.evtracker.HiltTestRunner`** (subclass of `AndroidJUnitRunner`):
+>
+> - **`callApplicationOnCreate(app)`** — calls `WorkManagerTestInitHelper.initializeTestWorkManager(app)` once per test process so the first WorkManager-touching test doesn't crash. The production manifest removes `androidx.work.WorkManagerInitializer` from `androidx.startup` because `EVTrackerApp` implements `Configuration.Provider`; under instrumentation the application is `HiltTestApplication`, which doesn't, so without this hook `WorkManager.getInstance(context)` would throw `IllegalStateException` and take the whole suite down (regression that surfaced in the 2026-05-03 nightly when `MainActivityBottomNavTest` first pulled WorkManager into a Hilt graph).
+> - **`onStart()`** — calls `AccessibilityChecks.enable().setRunChecksFromRootView(true)` (TASK-18 Step 6, 2026-05-03) so every Espresso `ViewAction` (click, type, scrollTo, …) runs the WCAG 2.1 AA rule set against the targeted view AND the surrounding root. No suppression matchers configured — pre-existing violations surface as nightly test failures (informational only; does not block PRs) and feed the TASK-18 follow-up scope.
+>
+> **Fragment host activity** — `androidx.fragment:fragment-testing-manifest:1.6.2` is on `debugImplementation` (TASK-50 sub-fix A, 2026-05-03), so the merged debug app manifest declares `androidx.fragment.app.testing.EmptyFragmentActivity`. Without that, every test that calls `launchFragmentInContainer` fails with "Unable to resolve activity" because the test APK's manifest entry isn't visible to the runtime app package (`org.spsl.evtracker.debug`).
 
 ### 4.1 WizardFlowTest.kt
 
@@ -391,6 +409,27 @@ For real-device Drive auth and backup verification, complete the external OAuth 
 | `restoreFlow_successQueuesFollowupBackup` | complete a successful restore | backup scheduler receives a follow-up enqueue request for the restored local state |
 | `emptyStates_noCarVsNoEvents` | (a) `cars` empty → "Add a car" CTA visible, "Log charge" CTA absent. (b) ≥ 1 car, no events → "Log charge" CTA visible, "Add a car" CTA absent |
 | `csv_firstEventEfficiencyBlank` | Export CSV for car with 3 events; first event row has empty Efficiency column, subsequent rows have numeric values; header reads `Efficiency (km/kWh)` or `Efficiency (mi/kWh)` per unit pref |
+
+### 4.8 DriveBackupWorkerTest.kt (instrumented)
+
+Locks in the worker-level translation of `BackupResult` → `ListenableWorker.Result` per TASK-07's contract. The instrumented `FakeDriveRemoteSource` mirrors the JVM-side budget design (`failNext: Throwable?` + `failTimes: Int` + `failuresRaised: Int`) so both halves of the retry contract are testable on the same fixtures (TASK-50 sub-fix B, 2026-05-03).
+
+| Test | Description |
+|------|-------------|
+| `happyPath_returnsSuccess` | No failures seeded → `BackupResult.Success` → `Result.success()` |
+| `authRevoked_returnsFailure` | `FakeDriveAuthManager.nextResult = Failed("revoked")` → `BackupResult.AuthRequired` → `Result.failure()` (worker never emits `Result.retry()` per TASK-36's invariant) |
+| `ioError_recoversAfterTransientRetry_returnsSuccess` | `failTimes = 1` → repo absorbs the transient via its 3-attempt budget → `Result.success()`, with `failuresRaised == 1` proving the retry actually happened (TASK-50 sub-fix B; replaced the stale `ioError_returnsRetry` case that asserted the pre-TASK-07 contract) |
+| `ioError_exceedsRetryBudget_returnsFailure` | `failTimes = 4` exceeds `MAX_ATTEMPTS = 3` → `BackupResult.Failure` → `Result.failure()` (TASK-50 sub-fix B) |
+
+### 4.9 MainActivityResetRecoveryTest.kt (instrumented)
+
+Locks in the F1 startup auto-recovery flow. Uses `@UninstallModules(DataResetModule::class)` + a local `TestResetModule` to swap the production `RoomDataResetTransactionRunner` for a `TestableResetRunner` spy. The `DataResetModule` was extracted from `DomainModule` in TASK-50 sub-fix C specifically so this single binding can be uninstalled without dragging in unrelated dependencies (mirrors the `BackupModule` pattern used by `DriveBackupWorkerTest`).
+
+| Test | Description |
+|------|-------------|
+| `startup_resetInProgressTrue_runsUseCase_clearsFlag_beforeUiVisible` | Seed `resetInProgress=true` + a Test car in DB; launch `MainActivity`; await `resetInProgress=false`; assert `clearCalls == 1` and the Test car is gone |
+| `startup_resetInProgressFalse_doesNotRunUseCase` | `resetInProgress=false` at launch; assert `clearCalls == 0` and the seeded Test car still exists |
+| `startup_resetRecoveryThrows_showsRetryDialog_doesNotMountNavGraph` | Set `testRunner.failNext = IllegalStateException(…)`; launch; assert the recovery-failure dialog is displayed, the nav graph is not mounted, and `resetInProgress` remains `true` so the next launch retries |
 
 ---
 
