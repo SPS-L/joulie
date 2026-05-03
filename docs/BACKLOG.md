@@ -3239,6 +3239,19 @@ the chart is sparser than the event count suggests.
   silently flip events to `DERIVED_FROM_SOC` and surprise users who
   filled SoC for degradation tracking but had a paper kWh receipt
   to enter later.
+
+  **Update (2026-05-03):** the calculator now also auto-activates at
+  *input time* — the moment the user has typed both SoC fields with
+  a valid range AND kWh is blank, kWh is derived live and provenance
+  flips to `DERIVED_FROM_SOC`. The "save-time silent auto-derive"
+  argued against above is still rejected (the user wouldn't see it
+  happen until after the fact); the new input-time auto-derive is
+  visible as the user types, and the existing `setKwh` echo-guard
+  still flips provenance back to `MEASURED` the moment the user
+  edits the kWh field manually. The explicit "Calculate from SoC %"
+  link survives as an affordance for "overwrite an existing kWh
+  with the SoC-derived value" (auto-activation stays a no-op when
+  kWh is non-blank).
 - **Coordination with TASK-25 / TASK-39.** TASK-25 introduced the
   `ChargeType` enum + converter pattern; mirror that exactly for
   `ChargeKwhSource`. TASK-39 (Room `@AutoMigration`) is the natural

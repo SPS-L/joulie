@@ -594,6 +594,84 @@ class ChargeEditViewModelTest {
         assertEquals(36.0, saved.kwhAdded, 1e-6)
     }
 
+    // TASK-43 follow-up (2026-05-03) — auto-activate the SoC calculator when
+    // the user has filled both SoC fields with a valid range and kWh is blank.
+    // The original TASK-43 design required an explicit "Calculate from SoC %"
+    // tap; user feedback noted that's friction, and the visible-as-you-type
+    // behaviour doesn't suffer from the silent provenance flip the original
+    // save-time auto-derive would have had.
+
+    @Test
+    fun socFieldsFilledWithBlankKwh_autoActivatesCalculator() = runTest {
+        val (vm, _) = build(nominalBatteryKwh = 60.0)
+        vm.uiState.first { it.nominalBatteryKwh == 60.0 }
+        vm.setSocBefore("20")
+        vm.setSocAfter("80")
+        // No call to onCalculateKwhFromSoc — auto-activation should fire.
+        val state = vm.uiState.first { it.kwhCalculatorActive }
+        // 60 × (0.80 - 0.20) = 36
+        assertEquals("36", state.kwh)
+        assertEquals(ChargeKwhSource.DERIVED_FROM_SOC, state.kwhSource)
+    }
+
+    @Test
+    fun socFieldsFilledWithKwhAlreadyPresent_doesNotOverwriteKwh() = runTest {
+        val (vm, _) = build(nominalBatteryKwh = 60.0)
+        vm.uiState.first { it.nominalBatteryKwh == 60.0 }
+        // User types kWh first (measured value from a paper receipt).
+        vm.setKwh("42")
+        vm.uiState.first { it.kwh == "42" }
+        // Then fills SoC for degradation tracking — must NOT overwrite the 42.
+        vm.setSocBefore("20")
+        vm.setSocAfter("80")
+        // Drain the flow a couple of state transitions; the kWh should stay "42"
+        // and the calculator must remain inactive.
+        val state = vm.uiState.first { it.socBeforeText == "20" && it.socAfterText == "80" }
+        assertEquals("42", state.kwh)
+        assertFalse(state.kwhCalculatorActive)
+        assertEquals(ChargeKwhSource.MEASURED, state.kwhSource)
+    }
+
+    @Test
+    fun socAfterLessThanBefore_doesNotAutoActivate() = runTest {
+        val (vm, _) = build(nominalBatteryKwh = 60.0)
+        vm.uiState.first { it.nominalBatteryKwh == 60.0 }
+        vm.setSocBefore("80")
+        vm.setSocAfter("20") // invalid: after < before
+        val state = vm.uiState.first { it.socAfterText == "20" }
+        assertFalse(state.kwhCalculatorActive)
+        assertEquals("", state.kwh)
+    }
+
+    @Test
+    fun nominalBatteryKwhMissing_doesNotAutoActivate() = runTest {
+        val (vm, _) = build(nominalBatteryKwh = null)
+        vm.uiState.first { it.nominalBatteryKwh == null }
+        vm.setSocBefore("20")
+        vm.setSocAfter("80")
+        val state = vm.uiState.first { it.socAfterText == "80" }
+        assertFalse(state.kwhCalculatorActive)
+        assertEquals("", state.kwh)
+    }
+
+    @Test
+    fun userClearsKwhAfterAutoFill_thenChangesSoc_reActivates() = runTest {
+        val (vm, _) = build(nominalBatteryKwh = 60.0)
+        vm.uiState.first { it.nominalBatteryKwh == 60.0 }
+        vm.setSocBefore("20")
+        vm.setSocAfter("80")
+        vm.uiState.first { it.kwhCalculatorActive && it.kwh == "36" }
+        // User clears kWh → setKwh("") flips to MEASURED & deactivates.
+        vm.setKwh("")
+        vm.uiState.first { !it.kwhCalculatorActive && it.kwh == "" }
+        // User adjusts SoC → auto-activation fires again because kWh is blank.
+        vm.setSocAfter("90")
+        val state = vm.uiState.first { it.kwhCalculatorActive && it.kwh != "" }
+        // 60 × (0.90 - 0.20) = 42
+        assertEquals("42", state.kwh)
+        assertEquals(ChargeKwhSource.DERIVED_FROM_SOC, state.kwhSource)
+    }
+
     @Test
     fun setOdometer_blank_clearsBothRegressionFlags() = runTest {
         val gateway = FakeSaveChargeEventGateway()

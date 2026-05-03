@@ -184,11 +184,17 @@ class ChargeEditViewModel @Inject constructor(
     fun toggleSocExpanded() = _uiState.update { it.copy(socExpanded = !it.socExpanded, socError = null) }
     fun setSocBefore(text: String) = _uiState.update { st ->
         val updated = st.copy(socBeforeText = text, socError = null)
-        if (updated.kwhCalculatorActive) recomputeKwhFromSoc(updated) else updated
+        when {
+            updated.kwhCalculatorActive -> recomputeKwhFromSoc(updated)
+            else -> tryAutoActivateCalculator(updated)
+        }
     }
     fun setSocAfter(text: String) = _uiState.update { st ->
         val updated = st.copy(socAfterText = text, socError = null)
-        if (updated.kwhCalculatorActive) recomputeKwhFromSoc(updated) else updated
+        when {
+            updated.kwhCalculatorActive -> recomputeKwhFromSoc(updated)
+            else -> tryAutoActivateCalculator(updated)
+        }
     }
 
     /**
@@ -197,6 +203,13 @@ class ChargeEditViewModel @Inject constructor(
      * pre-derives the kWh field if both SoC values are already present.
      * The calculator stays active until the user manually edits the kWh
      * field (handled in [setKwh]).
+     *
+     * Note: post-auto-derive (2026-05-03), filling both SoC fields with kWh
+     * blank already activates the calculator implicitly via
+     * [tryAutoActivateCalculator]. This explicit entry point survives so
+     * users can still trigger the calculator by tapping the form's
+     * "Calculate from SoC %" link — useful when they want to overwrite an
+     * already-filled kWh value with the SoC-derived one.
      */
     fun onCalculateKwhFromSoc() = _uiState.update { st ->
         if (st.nominalBatteryKwh == null) return@update st // safety net
@@ -207,6 +220,35 @@ class ChargeEditViewModel @Inject constructor(
             kwhError = null,
         )
         recomputeKwhFromSoc(activated)
+    }
+
+    /**
+     * Auto-activate the SoC calculator when the user has supplied both SoC
+     * fields with a valid range and the kWh field is blank. The auto-fill
+     * is visible (kWh appears live as the user types SoC), so unlike the
+     * silent save-time auto-derive considered (and rejected) in TASK-43,
+     * this never surprises the user — manual edits to kWh after the fact
+     * still flip provenance back to `MEASURED` via [setKwh]'s existing
+     * override semantic.
+     *
+     * Returns the input state unchanged when any precondition fails so a
+     * non-blank kWh is never overwritten silently and partial / invalid
+     * SoC entries don't churn the kWh field mid-keystroke.
+     */
+    private fun tryAutoActivateCalculator(state: ChargeEditUiState): ChargeEditUiState {
+        if (state.kwh.isNotBlank()) return state
+        if (state.nominalBatteryKwh == null) return state
+        val before = state.socBeforeText.trim().toDoubleOrNull() ?: return state
+        val after = state.socAfterText.trim().toDoubleOrNull() ?: return state
+        if (before !in 0.0..100.0 || after !in 0.0..100.0) return state
+        if (after <= before) return state
+        return recomputeKwhFromSoc(
+            state.copy(
+                kwhCalculatorActive = true,
+                kwhSource = ChargeKwhSource.DERIVED_FROM_SOC,
+                kwhError = null,
+            ),
+        )
     }
 
     /**
