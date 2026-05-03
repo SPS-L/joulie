@@ -4,6 +4,7 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import org.spsl.evtracker.core.model.ChargeKwhSource
 import org.spsl.evtracker.core.model.ChargeType
 
 @Entity(
@@ -44,5 +45,13 @@ data class ChargeEventEntity(
      * `null` when the user did not enter SoC data on this event (TASK-14).
      */
     val socAfter: Double? = null,
+    /**
+     * Provenance of [kwhAdded] (TASK-43). `MEASURED` is the user-entered or
+     * charger-reported value; `DERIVED_FROM_SOC` is computed from
+     * `(socAfter - socBefore) × Car.nominalBatteryKwh` via the in-form
+     * calculator. Capacity-degradation tracking (TASK-14) skips `DERIVED`
+     * events because the math is tautological.
+     */
+    val kwhSource: ChargeKwhSource = ChargeKwhSource.MEASURED,
     val createdAt: Long,
 )

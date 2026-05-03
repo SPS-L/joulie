@@ -49,6 +49,7 @@ class SaveChargeEventUseCase @Inject constructor(
             note = input.note,
             socBefore = input.socBefore,
             socAfter = input.socAfter,
+            kwhSource = input.kwhSource,
             createdAt = nowMs,
         )
 

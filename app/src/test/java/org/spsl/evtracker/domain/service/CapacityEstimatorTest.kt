@@ -5,6 +5,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.spsl.evtracker.core.model.ChargeKwhSource
 import org.spsl.evtracker.core.model.ChargeType
 import org.spsl.evtracker.data.local.entity.ChargeEventEntity
 
@@ -18,6 +19,7 @@ class CapacityEstimatorTest {
         kwhAdded: Double,
         socBefore: Double? = null,
         socAfter: Double? = null,
+        kwhSource: ChargeKwhSource = ChargeKwhSource.MEASURED,
     ) = ChargeEventEntity(
         id = id,
         carId = 1L,
@@ -27,6 +29,7 @@ class CapacityEstimatorTest {
         chargeType = ChargeType.AC,
         socBefore = socBefore,
         socAfter = socAfter,
+        kwhSource = kwhSource,
         createdAt = 0L,
     )
 
@@ -156,6 +159,80 @@ class CapacityEstimatorTest {
         val events = listOf(event(1L, 100L, kwhAdded = 30.0, socBefore = 0.0, socAfter = 0.5))
         val points = estimator.estimate(events, nominalBatteryKwh = null)
         assertNull(estimator.batteryHealthPercent(points, nominalBatteryKwh = null))
+    }
+
+    // -- TASK-43: derived events excluded from both paths --------------------
+
+    @Test fun derivedEvent_excludedFromExactPath() {
+        // SoC fields present and valid AND kWh is non-zero — would normally
+        // qualify on the exact path, but kwhSource = DERIVED_FROM_SOC means
+        // kwhAdded was computed from `Δsoc × nominal`, so the capacity result
+        // would be exactly nominalBatteryKwh (tautological). Skip.
+        val events = listOf(
+            event(
+                1L,
+                100L,
+                kwhAdded = 36.0,
+                socBefore = 0.20,
+                socAfter = 0.80,
+                kwhSource = ChargeKwhSource.DERIVED_FROM_SOC,
+            ),
+        )
+        val points = estimator.estimate(events, nominalBatteryKwh = 60.0)
+        assertTrue(points.isEmpty())
+    }
+
+    @Test fun derivedEvent_excludedFromHeuristicPath() {
+        // No SoC fields, kWh ≥ 80% of nominal — would qualify on the heuristic
+        // path, but kwhSource = DERIVED_FROM_SOC trumps that. The heuristic
+        // is just as fooled by a derived value as the exact path is.
+        val events = listOf(
+            event(1L, 100L, kwhAdded = 50.0, kwhSource = ChargeKwhSource.DERIVED_FROM_SOC),
+        )
+        val points = estimator.estimate(events, nominalBatteryKwh = 60.0)
+        assertTrue(points.isEmpty())
+    }
+
+    @Test fun mixedDataset_excludesDerivedRowsOnly() {
+        // 4 events: 2 measured (qualify), 2 derived (excluded). The two
+        // measured events should produce points; the derived ones drop out.
+        val events = listOf(
+            event(
+                1L,
+                100L,
+                kwhAdded = 30.0,
+                socBefore = 0.20,
+                socAfter = 0.80,
+                kwhSource = ChargeKwhSource.MEASURED,
+            ),
+            event(
+                2L,
+                200L,
+                kwhAdded = 36.0,
+                socBefore = 0.20,
+                socAfter = 0.80,
+                kwhSource = ChargeKwhSource.DERIVED_FROM_SOC,
+            ),
+            event(3L, 300L, kwhAdded = 50.0, kwhSource = ChargeKwhSource.MEASURED),
+            event(4L, 400L, kwhAdded = 50.0, kwhSource = ChargeKwhSource.DERIVED_FROM_SOC),
+        )
+        val points = estimator.estimate(events, nominalBatteryKwh = 60.0)
+        assertEquals(2, points.size)
+        assertEquals(100L, points[0].eventDate)
+        assertEquals(300L, points[1].eventDate)
+    }
+
+    @Test fun countDerivedEvents_returnsDerivedRowCount() {
+        val events = listOf(
+            event(1L, 100L, kwhAdded = 30.0, kwhSource = ChargeKwhSource.MEASURED),
+            event(2L, 200L, kwhAdded = 36.0, kwhSource = ChargeKwhSource.DERIVED_FROM_SOC),
+            event(3L, 300L, kwhAdded = 50.0, kwhSource = ChargeKwhSource.DERIVED_FROM_SOC),
+        )
+        assertEquals(2, estimator.countDerivedEvents(events))
+    }
+
+    @Test fun countDerivedEvents_emptyListReturnsZero() {
+        assertEquals(0, estimator.countDerivedEvents(emptyList()))
     }
 
     @Test fun batteryHealth_doesNotClampAbove100() {

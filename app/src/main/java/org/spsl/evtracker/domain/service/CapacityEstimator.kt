@@ -1,6 +1,7 @@
 package org.spsl.evtracker.domain.service
 
 import org.spsl.evtracker.core.model.CapacityPoint
+import org.spsl.evtracker.core.model.ChargeKwhSource
 import org.spsl.evtracker.data.local.entity.ChargeEventEntity
 import javax.inject.Inject
 
@@ -20,7 +21,11 @@ import javax.inject.Inject
  *    SoC but probably charged from a low state.
  *
  * Events that satisfy neither rule are skipped. Events with `kwhAdded
- * ≤ 0` are always skipped.
+ * ≤ 0` are always skipped. Events with `kwhSource = DERIVED_FROM_SOC`
+ * (TASK-43) are also always skipped, on both paths — the derived
+ * `kwhAdded` was itself computed from `Δsoc × nominalBatteryKwh`, so
+ * any capacity calculation that round-trips through it is tautological
+ * (exact path returns nominal verbatim; heuristic trivially qualifies).
  */
 class CapacityEstimator @Inject constructor() {
 
@@ -30,6 +35,15 @@ class CapacityEstimator @Inject constructor() {
     ): List<CapacityPoint> = events
         .mapNotNull { event -> estimateOne(event, nominalBatteryKwh) }
         .sortedBy { it.eventDate }
+
+    /**
+     * Count of events flagged `DERIVED_FROM_SOC`. The Charts degradation tab
+     * uses this to render a banner when at least one derived event is in the
+     * visible period — keeps the user informed that the estimator silently
+     * dropped some events from the chart.
+     */
+    fun countDerivedEvents(events: List<ChargeEventEntity>): Int =
+        events.count { it.kwhSource == ChargeKwhSource.DERIVED_FROM_SOC }
 
     /**
      * Latest effective capacity in `points`, or `null` when the list is
@@ -60,6 +74,8 @@ class CapacityEstimator @Inject constructor() {
         nominalBatteryKwh: Double?,
     ): CapacityPoint? {
         if (event.kwhAdded <= 0.0) return null
+        // TASK-43: derived events are tautological for both code paths.
+        if (event.kwhSource == ChargeKwhSource.DERIVED_FROM_SOC) return null
         val before = event.socBefore
         val after = event.socAfter
         if (before != null && after != null && after > before) {

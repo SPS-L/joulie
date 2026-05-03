@@ -72,9 +72,11 @@ class ChartsTabFragment : Fragment() {
         val container = binding.chartsTabChartContainer
         val empty = binding.chartsTabEmptyMessage
         val subtitle = binding.chartsTabSubtitle
+        val banner = binding.chartsTabBanner
         container.removeAllViews()
         empty.isVisible = false
         subtitle.isVisible = false // reset; only AC/DC turns this on
+        banner.isVisible = false // reset; only DEGRADATION turns this on
 
         val charts = state.charts
         if (charts !is ChartsUiState.Loaded) {
@@ -94,7 +96,21 @@ class ChartsTabFragment : Fragment() {
             TabKind.MONTHLY_COST -> renderMonthlyCost(charts, container, empty)
             TabKind.AC_DC -> renderAcDc(charts, container, empty, subtitle)
             TabKind.LOCATIONS -> renderLocations(charts, container, empty)
-            TabKind.DEGRADATION -> renderDegradation(state, charts, container, empty)
+            TabKind.DEGRADATION -> {
+                // TASK-43: surface the count of derived events excluded from
+                // capacity tracking so the user understands why the chart is
+                // sparser than the visible event count would suggest.
+                val excluded = charts.derivedExcludedCount
+                if (excluded > 0) {
+                    banner.text = resources.getQuantityString(
+                        R.plurals.charts_degradation_derived_excluded_banner,
+                        excluded,
+                        excluded,
+                    )
+                    banner.isVisible = true
+                }
+                renderDegradation(state, charts, container, empty)
+            }
         }
     }
 

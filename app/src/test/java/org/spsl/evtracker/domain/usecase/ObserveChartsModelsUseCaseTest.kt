@@ -8,6 +8,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.spsl.evtracker.core.model.ChargeKwhSource
 import org.spsl.evtracker.core.model.ChargeType
 import org.spsl.evtracker.core.model.ChartsPeriod
 import org.spsl.evtracker.core.model.ChartsUiState
@@ -139,6 +140,31 @@ class ObserveChartsModelsUseCaseTest {
         val b = useCase.observe(ChartsPeriod.Last12Months).first() as ChartsUiState.Loaded
         assertFalse(a.periodHasEvents)
         assertTrue(b.periodHasEvents)
+    }
+
+    @Test fun derivedExcludedCount_reflectsKwhSourceFlag_inPeriod() = runTest {
+        // TASK-43: derived events in the visible period must not produce
+        // capacity points (CapacityEstimator filters them) but must be
+        // counted on derivedExcludedCount so the chart can render the banner.
+        val ms30d = 30L * 24 * 60 * 60 * 1000
+        val measured = ev(nowMs - 3 * ms30d, 0.0, kwh = 30.0)
+            .copy(socBefore = 0.20, socAfter = 0.80, kwhSource = ChargeKwhSource.MEASURED)
+        val derivedA = ev(nowMs - 2 * ms30d, 100.0, kwh = 36.0)
+            .copy(socBefore = 0.20, socAfter = 0.80, kwhSource = ChargeKwhSource.DERIVED_FROM_SOC)
+        val derivedB = ev(nowMs - 1 * ms30d, 200.0, kwh = 30.0)
+            .copy(socBefore = 0.20, socAfter = 0.70, kwhSource = ChargeKwhSource.DERIVED_FROM_SOC)
+        val state = setup(
+            cars = listOf(CarEntity(id = 1L, name = "C", batteryKwh = 60.0, createdAt = 0L)),
+            events = listOf(measured, derivedA, derivedB),
+        ).observe(ChartsPeriod.Last12Months).first()
+        assertTrue(state is ChartsUiState.Loaded)
+        val loaded = state as ChartsUiState.Loaded
+        assertEquals(2, loaded.derivedExcludedCount)
+        // Capacity points: only the measured event qualifies, but
+        // MIN_POINTS_FOR_CHART = 3, so capacity ends up empty (chart shows
+        // its own "need three" empty state). The banner is what surfaces
+        // the missing data.
+        assertTrue(loaded.capacity.isEmpty())
     }
 
     @Test fun carSwitch_resetsState() = runTest {

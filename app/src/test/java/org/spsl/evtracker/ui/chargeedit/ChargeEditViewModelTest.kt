@@ -22,10 +22,13 @@ import org.junit.Test
 import org.spsl.evtracker.R
 import org.spsl.evtracker.core.model.ChargeEditEvent
 import org.spsl.evtracker.core.model.ChargeEditUiState
+import org.spsl.evtracker.core.model.ChargeKwhSource
 import org.spsl.evtracker.core.model.ChargeType
+import org.spsl.evtracker.data.local.entity.CarEntity
 import org.spsl.evtracker.data.local.entity.ChargeEventEntity
 import org.spsl.evtracker.data.local.entity.CustomLocationEntity
 import org.spsl.evtracker.domain.service.CostMode
+import org.spsl.evtracker.testing.FakeCarReader
 import org.spsl.evtracker.testing.FakeSaveChargeEventGateway
 import org.spsl.evtracker.testing.FakeSettingsReader
 
@@ -46,6 +49,7 @@ class ChargeEditViewModelTest {
         distanceUnit: String = "km",
         currency: String = "EUR",
         activeCarId: Long = 1L,
+        nominalBatteryKwh: Double? = null,
         customLocations: List<CustomLocationEntity> = emptyList(),
     ): VmFixture {
         gateway.locationReader.state.value = customLocations
@@ -56,10 +60,21 @@ class ChargeEditViewModelTest {
             currencyInit = currency,
         )
         val savedStateHandle = SavedStateHandle(mapOf("eventId" to eventId))
+        val carReader = FakeCarReader(
+            initial = listOf(
+                CarEntity(
+                    id = activeCarId,
+                    name = "Test",
+                    batteryKwh = nominalBatteryKwh,
+                    createdAt = 0L,
+                ),
+            ),
+        )
         val vm = ChargeEditViewModel(
             saveChargeEvent = gateway.useCase,
             locationReader = gateway.locationReader,
             chargeEventQueries = gateway.queries,
+            carReader = carReader,
             settingsReader = freshReader,
             now = gateway.nowProvider,
             savedStateHandle = savedStateHandle,
@@ -446,6 +461,137 @@ class ChargeEditViewModelTest {
         vm.setOdometer("350")
         val state = vm.uiState.first { it.odometer == "350" }
         assertTrue(state.odometerAboveNext)
+    }
+
+    // -- TASK-43: kWh-from-SoC calculator --------------------------------------
+
+    @Test
+    fun createMode_loadsNominalBatteryKwhFromActiveCar() = runTest {
+        val (vm, _) = build(nominalBatteryKwh = 60.0)
+        val state = vm.uiState.first { it.nominalBatteryKwh == 60.0 }
+        assertEquals(60.0, state.nominalBatteryKwh!!, 0.0)
+        assertEquals(ChargeKwhSource.MEASURED, state.kwhSource)
+        assertFalse(state.kwhCalculatorActive)
+    }
+
+    @Test
+    fun calculator_withSocFieldsPrefilled_derivesKwhAndFlagsDerived() = runTest {
+        val (vm, _) = build(nominalBatteryKwh = 60.0)
+        vm.uiState.first { it.nominalBatteryKwh == 60.0 }
+        // User enters SoC % first, then taps the calculator link.
+        vm.toggleSocExpanded()
+        vm.setSocBefore("20")
+        vm.setSocAfter("80")
+        vm.onCalculateKwhFromSoc()
+        val state = vm.uiState.first { it.kwhCalculatorActive }
+        // 60 kWh × (0.80 - 0.20) = 36
+        assertEquals("36", state.kwh)
+        assertEquals(ChargeKwhSource.DERIVED_FROM_SOC, state.kwhSource)
+        assertTrue(state.socExpanded)
+    }
+
+    @Test
+    fun calculator_thenSocChange_recomputesKwh() = runTest {
+        val (vm, _) = build(nominalBatteryKwh = 60.0)
+        vm.uiState.first { it.nominalBatteryKwh == 60.0 }
+        vm.setSocBefore("20")
+        vm.setSocAfter("80")
+        vm.onCalculateKwhFromSoc()
+        vm.uiState.first { it.kwh == "36" }
+        // User adjusts the SoC reading — kWh should update live.
+        vm.setSocAfter("70")
+        val state = vm.uiState.first { it.kwh != "36" }
+        // 60 × (0.70 - 0.20) = 30
+        assertEquals("30", state.kwh)
+        assertEquals(ChargeKwhSource.DERIVED_FROM_SOC, state.kwhSource)
+    }
+
+    @Test
+    fun calculator_userManuallyEditsKwh_revertsToMeasured() = runTest {
+        val (vm, _) = build(nominalBatteryKwh = 60.0)
+        vm.uiState.first { it.nominalBatteryKwh == 60.0 }
+        vm.setSocBefore("20")
+        vm.setSocAfter("80")
+        vm.onCalculateKwhFromSoc()
+        vm.uiState.first { it.kwh == "36" && it.kwhSource == ChargeKwhSource.DERIVED_FROM_SOC }
+        // User overrides the calculator result — flag flips back.
+        vm.setKwh("36.5")
+        val state = vm.uiState.first { it.kwh == "36.5" }
+        assertEquals(ChargeKwhSource.MEASURED, state.kwhSource)
+        assertFalse(state.kwhCalculatorActive)
+    }
+
+    @Test
+    fun setKwh_echoesCurrentText_preservesProvenance() = runTest {
+        // The fragment's text-change listener echoes the calculator's own
+        // setText() — that echo must NOT clobber the provenance flag.
+        val (vm, _) = build(nominalBatteryKwh = 60.0)
+        vm.uiState.first { it.nominalBatteryKwh == 60.0 }
+        vm.setSocBefore("20")
+        vm.setSocAfter("80")
+        vm.onCalculateKwhFromSoc()
+        val derived = vm.uiState.first { it.kwh == "36" && it.kwhSource == ChargeKwhSource.DERIVED_FROM_SOC }
+        // Simulate the fragment's text listener firing with the unchanged value.
+        vm.setKwh(derived.kwh)
+        val state = vm.uiState.first { it.kwh == "36" }
+        assertEquals(ChargeKwhSource.DERIVED_FROM_SOC, state.kwhSource)
+    }
+
+    @Test
+    fun calculator_recalculate_afterUserEdit_reactivates() = runTest {
+        val (vm, _) = build(nominalBatteryKwh = 60.0)
+        vm.uiState.first { it.nominalBatteryKwh == 60.0 }
+        vm.setSocBefore("20")
+        vm.setSocAfter("80")
+        vm.onCalculateKwhFromSoc()
+        vm.uiState.first { it.kwhSource == ChargeKwhSource.DERIVED_FROM_SOC }
+        vm.setKwh("40")
+        vm.uiState.first { it.kwhSource == ChargeKwhSource.MEASURED }
+        // Re-tap the calculator → DERIVED again, kWh re-derived.
+        vm.onCalculateKwhFromSoc()
+        val state = vm.uiState.first { it.kwh == "36" }
+        assertEquals(ChargeKwhSource.DERIVED_FROM_SOC, state.kwhSource)
+    }
+
+    @Test
+    fun editMode_loadsExistingKwhSourceFromEntity() = runTest {
+        val gateway = FakeSaveChargeEventGateway()
+        gateway.seedEvents(
+            listOf(
+                ChargeEventEntity(
+                    id = 1L,
+                    carId = 1L,
+                    eventDate = 1_000L,
+                    odometerKm = 100.0,
+                    kwhAdded = 18.0,
+                    socBefore = 0.20,
+                    socAfter = 0.50,
+                    kwhSource = ChargeKwhSource.DERIVED_FROM_SOC,
+                    createdAt = 0L,
+                ),
+            ),
+        )
+        val (vm, _) = build(eventId = 1L, gateway = gateway, nominalBatteryKwh = 60.0)
+        val state = vm.uiState.first { it.mode is ChargeEditUiState.Mode.Edit }
+        assertEquals(ChargeKwhSource.DERIVED_FROM_SOC, state.kwhSource)
+    }
+
+    @Test
+    fun save_threadsKwhSourceToInput() = runTest {
+        val gateway = FakeSaveChargeEventGateway()
+        val (vm, _) = build(gateway = gateway, nominalBatteryKwh = 60.0)
+        vm.uiState.first { it.nominalBatteryKwh == 60.0 }
+        vm.setOdometer("100")
+        vm.setSocBefore("20")
+        vm.setSocAfter("80")
+        vm.onCalculateKwhFromSoc()
+        vm.uiState.first { it.kwhSource == ChargeKwhSource.DERIVED_FROM_SOC && it.kwh == "36" }
+        vm.save()
+        advanceUntilIdle()
+        val saved = gateway.queries.current().single()
+        assertEquals(ChargeKwhSource.DERIVED_FROM_SOC, saved.kwhSource)
+        // Battery-side kWh was 36 (60 × 0.6).
+        assertEquals(36.0, saved.kwhAdded, 1e-6)
     }
 
     @Test

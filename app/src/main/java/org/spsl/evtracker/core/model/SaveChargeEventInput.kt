@@ -16,6 +16,13 @@ data class SaveChargeEventInput(
     val socBefore: Double? = null,
     /** TASK-14: optional state-of-charge after charging, fraction `0.0..1.0`. */
     val socAfter: Double? = null,
+    /**
+     * TASK-43: provenance of [kwhAdded]. Defaults to MEASURED so callers
+     * that pre-date the in-form calculator stay correct without changes;
+     * the calculator-driven save flow on `ChargeEditViewModel` flips this
+     * to DERIVED_FROM_SOC explicitly.
+     */
+    val kwhSource: ChargeKwhSource = ChargeKwhSource.MEASURED,
 )
 
 data class CostInput(

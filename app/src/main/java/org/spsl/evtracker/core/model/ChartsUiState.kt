@@ -31,5 +31,11 @@ sealed class ChartsUiState {
         /** TASK-14: nominal battery capacity (kWh) for the active car; used to draw the
          *  reference line on the degradation chart. `null` when unset on the car. */
         val nominalBatteryKwh: Double?,
+        /** TASK-43: count of `DERIVED_FROM_SOC` events in the current period.
+         *  Drives the degradation-tab banner ("N estimated events excluded …").
+         *  These events are silently skipped by [CapacityEstimator]; the banner
+         *  surfaces the exclusion so the user can reconcile event count with
+         *  rendered points. */
+        val derivedExcludedCount: Int,
     ) : ChartsUiState()
 }

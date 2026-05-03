@@ -14,7 +14,7 @@ data class BackupData(
     @SerializedName("custom_locations") val customLocations: List<CustomLocationDto>,
 ) {
     companion object {
-        const val CURRENT_VERSION = 6
+        const val CURRENT_VERSION = 7
 
         fun fromEntities(
             cars: List<CarEntity>,
@@ -70,6 +70,16 @@ data class ChargeEventDto(
     /** TASK-14: optional state-of-charge fields. Absent on v3/v4/v5 backups. */
     @SerializedName("soc_before") val socBefore: Double? = null,
     @SerializedName("soc_after") val socAfter: Double? = null,
+    /**
+     * TASK-43: provenance flag on `kwhAdded`. Absent on v3..v6 backups; the
+     * field is declared **nullable** because Gson constructs Kotlin data
+     * classes via `sun.misc.Unsafe.allocateInstance`, which bypasses
+     * primary-constructor defaults — a non-null field with a Kotlin default
+     * still ends up as `null` when the JSON key is missing. Coalesce in
+     * [toEntity] so the entity's non-null contract holds. The right
+     * backfill is `MEASURED` (legacy events predate the in-form calculator).
+     */
+    @SerializedName("kwh_source") val kwhSource: ChargeKwhSource? = null,
     @SerializedName("created_at") val createdAt: Long,
 ) {
     fun toEntity() = ChargeEventEntity(
@@ -86,6 +96,7 @@ data class ChargeEventDto(
         note = note,
         socBefore = socBefore,
         socAfter = socAfter,
+        kwhSource = kwhSource ?: ChargeKwhSource.MEASURED,
         createdAt = createdAt,
     )
 
@@ -104,6 +115,7 @@ data class ChargeEventDto(
             note = e.note,
             socBefore = e.socBefore,
             socAfter = e.socAfter,
+            kwhSource = e.kwhSource,
             createdAt = e.createdAt,
         )
     }

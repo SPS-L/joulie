@@ -6,6 +6,7 @@ import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import org.spsl.evtracker.core.model.ChargeKwhSource
 import org.spsl.evtracker.core.model.HistoryRow
 import org.spsl.evtracker.databinding.ItemChargeEventBinding
 import org.spsl.evtracker.ui.common.DateFormat
@@ -50,6 +51,11 @@ class HistoryAdapter(
             }
             binding.itemChargeDate.text = DateFormat.formatEpochMs(row.event.eventDate)
             binding.itemChargeTypeBadge.text = row.event.chargeType.displayLabel()
+            // TASK-43: surface DERIVED_FROM_SOC events with a small "Est."
+            // badge so the user can spot which rows came from the in-form
+            // SoC calculator and were excluded from degradation tracking.
+            binding.itemChargeEstimatedBadge.isVisible =
+                row.event.kwhSource == ChargeKwhSource.DERIVED_FROM_SOC
             val unitSuffix = if (unit == "miles") "mi" else "km"
             binding.itemChargeSummary.text = "%.1f %s · %.2f kWh".format(row.displayOdometer, unitSuffix, row.event.kwhAdded)
             binding.itemChargeLocation.isVisible = !row.event.location.isNullOrBlank()

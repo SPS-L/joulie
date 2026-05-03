@@ -5,6 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.spsl.evtracker.core.model.ChargeKwhSource
 import org.spsl.evtracker.core.model.ChargeType
 import org.spsl.evtracker.core.model.CostInput
 import org.spsl.evtracker.core.model.SaveChargeEventInput
@@ -136,6 +137,45 @@ class SaveChargeEventUseCaseTest {
         assertNull(saved.costTotal)
         assertNull(saved.costPerKwh)
         assertNull(saved.currency)
+    }
+
+    @Test
+    fun kwhSource_defaultsToMeasured_whenInputOmitsField() = runTest {
+        val s = build()
+        s.useCase(
+            SaveChargeEventInput(
+                carId = 1L,
+                eventDate = 1000L,
+                odometerKm = 100.0,
+                kwhAdded = 10.0,
+                chargeType = ChargeType.AC,
+            ),
+        )
+        // Existing call sites that pre-date TASK-43 stay correct: the
+        // SaveChargeEventInput default is MEASURED, so the persisted entity
+        // is never silently flipped to DERIVED on a normal user flow.
+        assertEquals(ChargeKwhSource.MEASURED, s.queries.current().single().kwhSource)
+    }
+
+    @Test
+    fun kwhSource_persistsDerivedFromSoc_whenInputOptsIn() = runTest {
+        val s = build()
+        s.useCase(
+            SaveChargeEventInput(
+                carId = 1L,
+                eventDate = 1000L,
+                odometerKm = 100.0,
+                kwhAdded = 18.0,
+                chargeType = ChargeType.AC,
+                socBefore = 0.20,
+                socAfter = 0.50,
+                kwhSource = ChargeKwhSource.DERIVED_FROM_SOC,
+            ),
+        )
+        assertEquals(
+            ChargeKwhSource.DERIVED_FROM_SOC,
+            s.queries.current().single().kwhSource,
+        )
     }
 
     @Test

@@ -20,6 +20,24 @@
             android:textAppearance="?attr/textAppearanceTitleSmall"
             tools:text="27 Apr 2026, 12:34"/>
 
+        <!-- TASK-43: "Est." badge for events flagged DERIVED_FROM_SOC. Tertiary-
+             container colour distinguishes the provenance from the AC/DC
+             charge-type badge that sits beside it. -->
+        <TextView
+            android:id="@+id/item_charge_estimated_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="4dp"
+            android:background="?attr/colorTertiaryContainer"
+            android:contentDescription="@string/history_kwh_estimated_badge_content_desc"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="2dp"
+            android:text="@string/history_kwh_estimated_badge"
+            android:textColor="?attr/colorOnTertiaryContainer"
+            android:textAppearance="?attr/textAppearanceLabelSmall"
+            android:visibility="gone"
+            tools:visibility="visible"/>
+
         <TextView
             android:id="@+id/item_charge_type_badge"
             android:layout_width="wrap_content"
