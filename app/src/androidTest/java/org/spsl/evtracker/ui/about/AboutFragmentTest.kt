@@ -54,11 +54,15 @@ class AboutFragmentTest {
             }
     }
 
-    @Test fun licenseCard_containsMit() {
+    @Test fun licenseCard_containsGplIdentifier() {
+        // TASK-51: relicensed from MIT to GPL-3.0-or-later. The card body
+        // surfaces the SPDX identifier so a TalkBack user (and an
+        // automated audit) can confirm the license without parsing
+        // marketing prose.
         launchFragmentInContainer<AboutFragment>(themeResId = R.style.Theme_EVTracker)
             .moveToState(Lifecycle.State.RESUMED).use {
                 onView(withId(R.id.about_license_body))
-                    .check(matches(allOf(isDisplayed(), withSubstring("MIT"))))
+                    .check(matches(allOf(isDisplayed(), withSubstring("GPL-3.0-or-later"))))
             }
     }
 

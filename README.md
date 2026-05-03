@@ -2,7 +2,7 @@
 
 > Native Android app for logging EV charging sessions and analysing real-world efficiency and cost.
 
-[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](#license)
+[![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)](LICENSE)
 [![Latest release](https://img.shields.io/github/v/release/SPS-L/EV-android-app)](https://github.com/SPS-L/EV-android-app/releases/latest)
 [![CI](https://github.com/SPS-L/EV-android-app/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/SPS-L/EV-android-app/actions/workflows/ci.yml)
 [![Release build](https://github.com/SPS-L/EV-android-app/actions/workflows/release.yml/badge.svg)](https://github.com/SPS-L/EV-android-app/actions/workflows/release.yml)
@@ -167,4 +167,6 @@ The workflow can also be triggered manually from the **Actions** tab via `workfl
 
 ## License
 
-Released under the **MIT License**. © [Sustainable Power Systems Lab (SPS-Lab)](https://sps-lab.org/).
+Released under the **GNU General Public License v3.0 or later** ([`GPL-3.0-or-later`](LICENSE)). © 2024–2026 [Sustainable Power Systems Lab (SPS-Lab)](https://sps-lab.org/), Cyprus University of Technology.
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. It is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the [LICENSE](LICENSE) file for the full text.
