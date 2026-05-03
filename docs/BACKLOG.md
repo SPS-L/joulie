@@ -1,6 +1,6 @@
 # EV Tracker — Development Backlog
 
-Tasks 1–15 were generated from a senior Android developer code review of the `main` branch (April 2026). Tasks 16–21 are follow-up improvements identified during a 2026-04-30 verification pass against `main` (CI/release pipeline, R8 keep-rules, a11y posture, and SPS-Lab research relevance). Tasks 38–42 are new feature / infra ideas filed 2026-05-02 from a follow-up senior-developer review (research-aligned analytics, schema-migration polish, anonymised research export). TASK-43 (filed 2026-05-02) closes a real UX gap: many EU/UK chargers and several older EVs (Renault/Nissan/older BMW) display only SoC % before/after, never kWh delivered. Tasks 44–49 are filed 2026-05-03 from a senior-developer code audit cross-checked against the current `main` (`658b60a` + the TASK-43 / TASK-18 Step 6 / nightly-WorkManager fixes): three correctness/UX bugs (`StatsCalculator` cost accumulation, `KwhFromSocCalculator` defensive guard, battery-health overshoot warning) and three research-aligned extensions (charging power profile, time-of-use tariff zones, per-event grid carbon intensity). The audit also folded `kwhSource` / `socBefore` / `socAfter` columns into TASK-09 and concrete K2 / Room version pins into TASK-33. TASK-50 (also filed 2026-05-03) bundles the four fix categories surfaced by the first nightly instrumented cron after the WorkManager-init fix landed — `EmptyFragmentActivity` not declared in the app manifest, a stale `DriveBackupWorkerTest.ioError_returnsRetry` assertion, racy `MainActivityResetRecoveryTest` startup hook, and a `ChartsFragmentTest` initialization error. Each task is written as a self-contained instruction suitable for a coding agent.
+Tasks 1–15 were generated from a senior Android developer code review of the `main` branch (April 2026). Tasks 16–21 are follow-up improvements identified during a 2026-04-30 verification pass against `main` (CI/release pipeline, R8 keep-rules, a11y posture, and SPS-Lab research relevance). Tasks 38–42 are new feature / infra ideas filed 2026-05-02 from a follow-up senior-developer review (research-aligned analytics, schema-migration polish, anonymised research export). TASK-43 (filed 2026-05-02) closes a real UX gap: many EU/UK chargers and several older EVs (Renault/Nissan/older BMW) display only SoC % before/after, never kWh delivered. Tasks 44–49 are filed 2026-05-03 from a senior-developer code audit cross-checked against the current `main` (`658b60a` + the TASK-43 / TASK-18 Step 6 / nightly-WorkManager fixes): three correctness/UX bugs (`StatsCalculator` cost accumulation, `KwhFromSocCalculator` defensive guard, battery-health overshoot warning) and three research-aligned extensions (charging power profile, time-of-use tariff zones, per-event grid carbon intensity). The audit also folded `kwhSource` / `socBefore` / `socAfter` columns into TASK-09 and concrete K2 / Room version pins into TASK-33. TASK-50 (also filed 2026-05-03) bundles the four fix categories surfaced by the first nightly instrumented cron after the WorkManager-init fix landed — `EmptyFragmentActivity` not declared in the app manifest, a stale `DriveBackupWorkerTest.ioError_returnsRetry` assertion, racy `MainActivityResetRecoveryTest` startup hook, and a `ChartsFragmentTest` initialization error. TASK-51 (filed 2026-05-03) captures the GPL relicensing request after a dependency audit found one concrete review item in the shipped runtime set: `com.google.android.gms:play-services-auth` is still distributed under the Android SDK License, so the GPL-3.0-or-later switch should carry that note explicitly in review. Each task is written as a self-contained instruction suitable for a coding agent.
 
 ---
 
@@ -58,6 +58,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-48 | 🟢 | Time-of-use (ToU) tariff classification on charge events | — | ☐ |
 | TASK-49 | 🟢 | Per-event grid carbon intensity (extends TASK-20 with marginal emission factors) | TASK-20 | ☐ |
 | TASK-50 | 🔴 | Stabilise nightly instrumented suite — 21 failures across 4 root causes after WorkManager init landed | TASK-34 | ☐ |
+| TASK-51 | 🔴 | GPL-3.0-or-later license change (pending `play-services-auth` review) | — | ☐ |
 
 **Priority legend:** 🔴 High (architecture/data safety) · 🟡 Medium (robustness/UX) · 🟢 Low (new feature)  
 **Status legend:** ☐ open · ☑ done · ☒ closed (premise no longer holds) · ⏸ under consideration (do not start without explicit go-ahead)  
@@ -3807,4 +3808,70 @@ is instrumented-only work); instrumented-test count may grow by
   list in `AppDatabase.companion` and `DatabaseModule.provideDatabase` must
   both be updated; `BackupData.CURRENT_VERSION` and
   `BackupSerializer.SUPPORTED_VERSIONS` need a coordinated bump when the
-  schema change touches a field that's serialized to the Drive backup.
+   schema change touches a field that's serialized to the Drive backup.
+
+---
+
+## 🔴 TASK-51 — GPL-3.0-or-later license change (pending `play-services-auth` review)
+
+> **Context (2026-05-03):** a runtime dependency audit was run against
+> `app/build.gradle.kts` and the resolved artifact metadata in the local
+> Gradle cache before changing any repo licensing. The result is mostly
+> clean for GPL purposes: AndroidX Core/AppCompat/ConstraintLayout,
+> Navigation, Room, Lifecycle, DataStore, WorkManager, Splashscreen,
+> Material Components, Coroutines, Gson, Hilt, `androidx.hilt:*`,
+> `com.google.api-client:google-api-client-android`, and
+> `com.google.apis:google-api-services-drive` all resolve to Apache-2.0
+> (the Google API Android client inherits Apache-2.0 from its parent POM).
+> `com.github.PhilJay:MPAndroidChart:v3.1.0` does not publish a license tag
+> in its JitPack POM, but the upstream repository's README license section is
+> Apache-2.0. The one unresolved item in the shipped runtime set is
+> `com.google.android.gms:play-services-auth:21.2.0`, whose POM declares the
+> **Android Software Development Kit License**. Keep that review note attached
+> to any GPL switch PR so the license change is made consciously rather than
+> assumed clean by default.
+
+### Scope
+
+This task is intentionally limited to the repository's public license change.
+It does **not** include F-Droid packaging, flavor splits, or distribution
+policy work. Keep the dependency-audit note above in the implementation PR,
+and if `play-services-auth` is judged incompatible for the intended GPL
+distribution model, file a follow-up remediation task instead of growing this
+one.
+
+### Required work
+
+1. **Add a root `LICENSE` file** with the canonical GPL-3.0 text (`GPL-3.0-or-later`).
+    GitHub currently has no root `LICENSE` file to classify, so the repo
+    metadata is incomplete even though human-readable MIT text exists in the
+    docs/UI.
+2. **Replace all current MIT-facing surfaces.** At minimum update:
+    - `README.md` (license badge + footer section currently say MIT)
+    - `app/src/main/res/values/strings.xml` (`about_license_body` currently
+       embeds the full MIT text)
+    - `app/src/androidTest/java/org/spsl/evtracker/ui/about/AboutFragmentTest.kt`
+       (asserts the About card contains `"MIT"`)
+    - `docs/TEST_PLAN.md`, `CLAUDE.md`, and any other docs that still describe
+       the app as MIT-licensed.
+3. **Add SPDX headers to every production Kotlin source file** under
+    `app/src/main/java/org/spsl/evtracker/`.
+    Use:
+    ```kotlin
+    // SPDX-FileCopyrightText: 2026 Cyprus University of Technology,
+    //                         Sustainable Power Systems Lab <https://sps-lab.org>
+    // SPDX-License-Identifier: GPL-3.0-or-later
+    ```
+    Do not touch generated files, test sources, or third-party vendored code.
+4. **Set the GitHub repo license metadata** after the root `LICENSE` file lands.
+    This is a manual GitHub settings step, not a source-tree edit.
+
+### Acceptance
+
+- A root `LICENSE` file exists and GitHub recognizes the repository as
+   `GPL-3.0-or-later`.
+- README, About screen text, tests, and docs no longer mention MIT.
+- Every production Kotlin file under `app/src/main/java/org/spsl/evtracker/`
+   carries the SPDX header.
+- The compatibility audit result is preserved in the task / PR description so
+   future agents do not reopen the same dependency question.
