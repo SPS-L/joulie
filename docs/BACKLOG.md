@@ -1,6 +1,6 @@
 # EV Tracker — Development Backlog
 
-Tasks 1–15 were generated from a senior Android developer code review of the `main` branch (April 2026). Tasks 16–21 are follow-up improvements identified during a 2026-04-30 verification pass against `main` (CI/release pipeline, R8 keep-rules, a11y posture, and SPS-Lab research relevance). Tasks 38–42 are new feature / infra ideas filed 2026-05-02 from a follow-up senior-developer review (research-aligned analytics, schema-migration polish, anonymised research export). TASK-43 (filed 2026-05-02) closes a real UX gap: many EU/UK chargers and several older EVs (Renault/Nissan/older BMW) display only SoC % before/after, never kWh delivered. Tasks 44–49 are filed 2026-05-03 from a senior-developer code audit cross-checked against the current `main` (`658b60a` + the TASK-43 / TASK-18 Step 6 / nightly-WorkManager fixes): three correctness/UX bugs (`StatsCalculator` cost accumulation, `KwhFromSocCalculator` defensive guard, battery-health overshoot warning) and three research-aligned extensions (charging power profile, time-of-use tariff zones, per-event grid carbon intensity). The audit also folded `kwhSource` / `socBefore` / `socAfter` columns into TASK-09 and concrete K2 / Room version pins into TASK-33. Each task is written as a self-contained instruction suitable for a coding agent.
+Tasks 1–15 were generated from a senior Android developer code review of the `main` branch (April 2026). Tasks 16–21 are follow-up improvements identified during a 2026-04-30 verification pass against `main` (CI/release pipeline, R8 keep-rules, a11y posture, and SPS-Lab research relevance). Tasks 38–42 are new feature / infra ideas filed 2026-05-02 from a follow-up senior-developer review (research-aligned analytics, schema-migration polish, anonymised research export). TASK-43 (filed 2026-05-02) closes a real UX gap: many EU/UK chargers and several older EVs (Renault/Nissan/older BMW) display only SoC % before/after, never kWh delivered. Tasks 44–49 are filed 2026-05-03 from a senior-developer code audit cross-checked against the current `main` (`658b60a` + the TASK-43 / TASK-18 Step 6 / nightly-WorkManager fixes): three correctness/UX bugs (`StatsCalculator` cost accumulation, `KwhFromSocCalculator` defensive guard, battery-health overshoot warning) and three research-aligned extensions (charging power profile, time-of-use tariff zones, per-event grid carbon intensity). The audit also folded `kwhSource` / `socBefore` / `socAfter` columns into TASK-09 and concrete K2 / Room version pins into TASK-33. TASK-50 (also filed 2026-05-03) bundles the four fix categories surfaced by the first nightly instrumented cron after the WorkManager-init fix landed — `EmptyFragmentActivity` not declared in the app manifest, a stale `DriveBackupWorkerTest.ioError_returnsRetry` assertion, racy `MainActivityResetRecoveryTest` startup hook, and a `ChartsFragmentTest` initialization error. Each task is written as a self-contained instruction suitable for a coding agent.
 
 ---
 
@@ -57,6 +57,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-47 | 🟢 | Charging power profile fields (`peakPowerKw`, `chargingDurationMinutes`) — schema bump | — | ☐ |
 | TASK-48 | 🟢 | Time-of-use (ToU) tariff classification on charge events | — | ☐ |
 | TASK-49 | 🟢 | Per-event grid carbon intensity (extends TASK-20 with marginal emission factors) | TASK-20 | ☐ |
+| TASK-50 | 🔴 | Stabilise nightly instrumented suite — 21 failures across 4 root causes after WorkManager init landed | TASK-34 | ☐ |
 
 **Priority legend:** 🔴 High (architecture/data safety) · 🟡 Medium (robustness/UX) · 🟢 Low (new feature)  
 **Status legend:** ☐ open · ☑ done · ☒ closed (premise no longer holds) · ⏸ under consideration (do not start without explicit go-ahead)  
@@ -3611,6 +3612,148 @@ historical events on demand. Methodology doc updated with the
 marginal-vs-average section. Anonymised export includes the new
 column. Tests cover the offline-fallback path and the API
 rate-limit handling.
+
+---
+
+## 🔴 TASK-50 — Stabilise nightly instrumented suite (post-WorkManager-init)
+
+> **Context (2026-05-03):** the nightly cron after the WorkManager-init
+> fix (`444b7a2`) ran the full 58-test suite to completion — the
+> process-level crash is gone — but exposed 21 distinct failures
+> across **four** root causes plus the intentional TASK-18 a11y
+> discovery signal. Logs: GitHub Actions run `nightly-instrumented`
+> on `main` after `444b7a2`. Bundle all four sub-fixes in one branch
+> so the next cron flips fully green; the a11y signal stays as
+> follow-up work for TASK-18.
+
+### Sub-fix A — `EmptyFragmentActivity` not declared in app manifest
+
+**Affects (~14 of 21 failures):** `AboutFragmentTest`,
+`ChargeEditFragmentTest`, `ManageLocationsFragmentTest`,
+`SettingsFragmentTest`, `SettingsBackupControlsTest`,
+`ChartsFragmentTest` (the latter surfaces as `Failed to instantiate
+test runner class` because `launchFragmentInContainer` fails before
+any test method executes).
+
+**Failure stack:**
+```
+java.lang.RuntimeException: Unable to resolve activity for Intent
+  cmp: org.spsl.evtracker.debug/
+       androidx.fragment.app.testing.EmptyFragmentActivity
+```
+
+**Root cause:** `androidx.fragment:fragment-testing:1.6.2` is on
+`androidTestImplementation`, which puts the activity declaration
+into the **test APK's** manifest only. The instrumentation runner
+launches activities under the **app under test's** package
+(`org.spsl.evtracker.debug`), so the test APK's declaration is
+invisible. The library was split in 1.6+: the runtime classes stay
+on `fragment-testing`, but the manifest entry moved to the
+companion `fragment-testing-manifest` artifact, which must go on
+`debugImplementation` so it merges into the app manifest.
+
+**Fix (preferred):** add the companion artifact to `libs.versions.toml`
+and wire it on `debugImplementation`:
+```toml
+androidx-fragment-testing-manifest = { module = "androidx.fragment:fragment-testing-manifest", version.ref = "fragmentTesting" }
+```
+```kotlin
+// app/build.gradle.kts
+debugImplementation(libs.androidx.fragment.testing.manifest)
+```
+**Fix (alternative, hand-rolled):** create
+`app/src/debug/AndroidManifest.xml` with the activity declaration
+verbatim. The library approach is preferred — it auto-tracks
+versions and avoids drift.
+
+### Sub-fix B — `DriveBackupWorkerTest.ioError_returnsRetry` is stale post-TASK-07
+
+**Failure:** `expected:<Retry> but was:<Success>`.
+
+**Root cause:** the test asserts `ListenableWorker.Result.retry()`
+on a transient `IOException`. TASK-07 (merged 2026-05-01) explicitly
+removed `Result.retry()` from `DriveBackupWorker.doWork()` — the
+repo now runs its own bounded retry loop (3 attempts, exponential
+backoff) and the worker is a thin `when (result)` translator that
+emits `Result.success()` or `Result.failure()` only. With the
+default `FakeDriveRemoteSource.failTimes = 1`, the IOException is
+raised once, the repo retries, attempt 2 succeeds, the worker
+returns `Result.success()` — exactly what the failing test sees.
+TASK-36's inline-comment on the no-`retry()` invariant is the
+companion record of the same contract change.
+
+**Fix:** rename to `ioError_recoversAfterTransientRetry_returnsSuccess`
+and assert `Result.success()` with `failTimes = 1`. Add a sister
+test `ioError_exceedsRetryBudget_returnsFailure` that sets
+`failTimes = 4` (above `MAX_ATTEMPTS = 3`) and asserts
+`Result.failure()`. This codifies both halves of TASK-07's contract.
+
+### Sub-fix C — `MainActivityResetRecoveryTest` recovery flow not invoked
+
+**Affects:**
+`startup_resetInProgressTrue_runsUseCase_clearsFlag_beforeUiVisible`
+(reports `expected:<1> but was:<0>` on `testRunner.clearCalls`) and
+`startup_resetRecoveryThrows_showsRetryDialog_doesNotMountNavGraph`
+(`NoMatchingRootException`: retry dialog never appears).
+
+**Likely root cause(s) — investigate before fixing:**
+1. The recovery hook in `MainActivity` / `MainViewModel` runs on a
+   coroutine that isn't reaching the test's `awaitNavMounted` poll
+   under the new `WorkManagerTestInitHelper.initializeTestWorkManager`
+   bring-up timing — i.e., the test process starts WorkManager
+   first, the recovery hook second, racing against the dialog
+   inflation.
+2. The `@BindValue testRunner` is not actually overriding the
+   production `DataResetTransactionRunner` binding under the
+   current Hilt graph (maybe a `@Singleton` mismatch or a missing
+   `@Binds` after TASK-24's narrow-IF refactor).
+3. The recovery use case path in `MainViewModel.StartupState`
+   regressed silently and now no-ops on `resetInProgress = true`.
+
+**Fix:** start by adding logcat instrumentation to the test's
+`@Before` (Timber.d at every state transition in
+`MainViewModel.observeStartupState`); confirm whether the use case
+fires at all. If it fires but the assertion is racy, replace
+`scenario.moveToState(RESUMED)` with a
+`MainViewModel.startupState.first { it is StartupState.Ready }`
+gate. If the use case doesn't fire, audit the
+`@BindValue` interaction with the post-TASK-24 graph.
+
+### Sub-fix D — `ChartsFragmentTest.initializationError`
+
+**Failure:** `RuntimeException: Failed to instantiate test runner
+class androidx.test.internal.runner.junit4.AndroidJUnit4ClassRunner`.
+
+**Root cause:** suspected collateral damage from sub-fix A —
+`launchFragmentInContainer` is referenced in the test file
+(`import androidx.fragment.app.testing.launchFragmentInContainer`),
+and the per-class init may be evaluating the import path in a way
+that fails when the host activity isn't resolvable. Verify after
+sub-fix A lands; if `ChartsFragmentTest` still fails, inspect
+class-loading more carefully (look for a static `companion object`
+or a delegated property that fails at construction time).
+
+**Fix:** re-run after sub-fix A. If still failing, capture the
+underlying `Caused by:` chain from the log (the surface error
+hides the real exception) and patch accordingly.
+
+### Out of scope for this task
+
+- **WizardFlowTest a11y failure** (`TabView width is 24dp.
+  Consider making the width 48dp or larger`) — this is the
+  intentional TASK-18 Step 6 discovery signal, not a regression.
+  Track it under TASK-18 follow-up scope (steps 1–5, 7, 8). The
+  nightly run is informational only and does not block PRs.
+
+### Acceptance
+
+The next nightly cron (or a manually triggered
+`workflow_dispatch` of `nightly-instrumented.yml` on the post-fix
+commit) reports green on all 4 of A/B/C/D. The a11y failure
+listed under "Out of scope" is allowed to remain red and feeds
+TASK-18 follow-ups. JVM unit-test count delta probably zero (this
+is instrumented-only work); instrumented-test count may grow by
++1 for sub-fix B's new sister case.
 
 ---
 
