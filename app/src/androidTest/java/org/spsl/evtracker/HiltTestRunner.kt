@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import androidx.test.espresso.accessibility.AccessibilityChecks
 import androidx.test.runner.AndroidJUnitRunner
+import androidx.work.testing.WorkManagerTestInitHelper
 import dagger.hilt.android.testing.HiltTestApplication
 
 class HiltTestRunner : AndroidJUnitRunner() {
@@ -13,6 +14,39 @@ class HiltTestRunner : AndroidJUnitRunner() {
         context: Context?,
     ): Application {
         return super.newApplication(cl, HiltTestApplication::class.java.name, context)
+    }
+
+    /**
+     * Initialize a test [androidx.work.WorkManager] for the whole test
+     * process **before any test method runs**. The production manifest
+     * removes `androidx.work.WorkManagerInitializer` from `androidx.startup`
+     * (see `app/src/main/AndroidManifest.xml`) so
+     * [org.spsl.evtracker.EVTrackerApp] — which implements
+     * `Configuration.Provider` — owns the on-demand initialization. Under
+     * Hilt instrumented tests the Application is `HiltTestApplication`,
+     * which does **not** implement `Configuration.Provider`, so the first
+     * call into [org.spsl.evtracker.di.WorkerModule.provideWorkManager] →
+     * `WorkManager.getInstance(context)` would throw `IllegalStateException`
+     * and crash the test process before any assertions ran. The latent
+     * bug surfaced in the 2026-05-03 nightly run when
+     * `MainActivityBottomNavTest` (TASK-27) became the first test to
+     * resolve a Hilt graph that transitively pulls WorkManager — its crash
+     * took the rest of the 57-test suite down with it.
+     *
+     * `WorkManagerTestInitHelper.initializeTestWorkManager(app)` swaps in
+     * a synchronous executor + an in-memory database backing, so
+     * `getInstance()` returns a usable singleton process-wide. Tests that
+     * don't touch WorkManager pay nothing; tests that do (e.g.
+     * `DriveBackupWorkerTest`) can still drive it via
+     * `WorkManagerTestInitHelper.getTestDriver(...)`.
+     *
+     * Ran from `callApplicationOnCreate(...)` because the helper needs
+     * the already-instantiated `Application` instance — earlier hooks
+     * like `onCreate()` fire before `newApplication(...)` returns.
+     */
+    override fun callApplicationOnCreate(app: Application) {
+        super.callApplicationOnCreate(app)
+        WorkManagerTestInitHelper.initializeTestWorkManager(app)
     }
 
     /**
