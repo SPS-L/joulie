@@ -18,14 +18,17 @@ import kotlinx.coroutines.launch
 import org.spsl.evtracker.R
 import org.spsl.evtracker.core.model.ChargeEditEvent
 import org.spsl.evtracker.core.model.ChargeEditUiState
+import org.spsl.evtracker.core.model.ChargeKwhSource
 import org.spsl.evtracker.core.model.ChargeType
 import org.spsl.evtracker.core.model.CostInput
 import org.spsl.evtracker.core.model.SaveChargeEventInput
 import org.spsl.evtracker.core.model.SaveChargeEventResult
+import org.spsl.evtracker.domain.repository.CarReader
 import org.spsl.evtracker.domain.repository.ChargeEventQueries
 import org.spsl.evtracker.domain.repository.LocationReader
 import org.spsl.evtracker.domain.repository.SettingsReader
 import org.spsl.evtracker.domain.service.CostMode
+import org.spsl.evtracker.domain.service.KwhFromSocCalculator
 import org.spsl.evtracker.domain.service.UnitConverter
 import org.spsl.evtracker.domain.usecase.NowProvider
 import org.spsl.evtracker.domain.usecase.SaveChargeEventUseCase
@@ -36,6 +39,7 @@ class ChargeEditViewModel @Inject constructor(
     private val saveChargeEvent: SaveChargeEventUseCase,
     locationReader: LocationReader,
     private val chargeEventQueries: ChargeEventQueries,
+    private val carReader: CarReader,
     private val settingsReader: SettingsReader,
     private val now: NowProvider,
     savedStateHandle: SavedStateHandle,
@@ -80,6 +84,7 @@ class ChargeEditViewModel @Inject constructor(
         val sorted = chargeEventQueries.getAllForCarSorted(activeCarId)
         val prevKm = sorted.lastOrNull()?.odometerKm
         val prefilled = prevKm?.let { (it + 1.0).toDisplayUnit(unit).toString() } ?: ""
+        val nominal = carReader.getById(activeCarId)?.batteryKwh
         _uiState.value = ChargeEditUiState(
             mode = ChargeEditUiState.Mode.Create,
             carId = activeCarId,
@@ -88,6 +93,7 @@ class ChargeEditViewModel @Inject constructor(
             distanceUnit = unit,
             currency = ccy,
             previousOdometerKm = prevKm,
+            nominalBatteryKwh = nominal,
         )
     }
 
@@ -99,6 +105,7 @@ class ChargeEditViewModel @Inject constructor(
         val displayOdo = event.odometerKm.toDisplayUnit(unit)
         val costExpanded = event.costTotal != null
         val costValue = event.costTotal?.toString() ?: ""
+        val nominal = carReader.getById(event.carId)?.batteryKwh
         _uiState.value = ChargeEditUiState(
             mode = ChargeEditUiState.Mode.Edit(event.id),
             carId = event.carId,
@@ -120,6 +127,8 @@ class ChargeEditViewModel @Inject constructor(
             socExpanded = event.socBefore != null || event.socAfter != null,
             socBeforeText = event.socBefore?.let { (it * 100.0).toPercentText() } ?: "",
             socAfterText = event.socAfter?.let { (it * 100.0).toPercentText() } ?: "",
+            kwhSource = event.kwhSource,
+            nominalBatteryKwh = nominal,
         )
     }
 
@@ -145,7 +154,25 @@ class ChargeEditViewModel @Inject constructor(
                 km >= st.nextOdometerKm,
         )
     }
-    fun setKwh(text: String) = _uiState.update { it.copy(kwh = text, kwhError = null) }
+    /**
+     * TASK-43 override semantics: when the typed text differs from current
+     * state.kwh, the user is genuinely editing — flip provenance to
+     * MEASURED and deactivate the SoC calculator. When the text matches
+     * (echo from a programmatic setText() — initial render, or our own
+     * calculator update), preserve the existing provenance.
+     */
+    fun setKwh(text: String) = _uiState.update { st ->
+        if (text == st.kwh) {
+            st.copy(kwhError = null)
+        } else {
+            st.copy(
+                kwh = text,
+                kwhError = null,
+                kwhSource = ChargeKwhSource.MEASURED,
+                kwhCalculatorActive = false,
+            )
+        }
+    }
     fun setChargeType(type: ChargeType) = _uiState.update { it.copy(chargeType = type) }
     fun selectLocationChip(label: String) = _uiState.update { it.copy(location = label) }
     fun setLocation(text: String) = _uiState.update { it.copy(location = text) }
@@ -154,8 +181,62 @@ class ChargeEditViewModel @Inject constructor(
     fun setCostValue(text: String) = _uiState.update { it.copy(costValue = text) }
     fun setNote(text: String) = _uiState.update { it.copy(note = text) }
     fun toggleSocExpanded() = _uiState.update { it.copy(socExpanded = !it.socExpanded, socError = null) }
-    fun setSocBefore(text: String) = _uiState.update { it.copy(socBeforeText = text, socError = null) }
-    fun setSocAfter(text: String) = _uiState.update { it.copy(socAfterText = text, socError = null) }
+    fun setSocBefore(text: String) = _uiState.update { st ->
+        val updated = st.copy(socBeforeText = text, socError = null)
+        if (updated.kwhCalculatorActive) recomputeKwhFromSoc(updated) else updated
+    }
+    fun setSocAfter(text: String) = _uiState.update { st ->
+        val updated = st.copy(socAfterText = text, socError = null)
+        if (updated.kwhCalculatorActive) recomputeKwhFromSoc(updated) else updated
+    }
+
+    /**
+     * TASK-43: opt-in entry point for the SoC-based kWh calculator.
+     * Expands the SoC card if collapsed, marks the calculator active, and
+     * pre-derives the kWh field if both SoC values are already present.
+     * The calculator stays active until the user manually edits the kWh
+     * field (handled in [setKwh]).
+     */
+    fun onCalculateKwhFromSoc() = _uiState.update { st ->
+        if (st.nominalBatteryKwh == null) return@update st // safety net
+        val activated = st.copy(
+            socExpanded = true,
+            kwhCalculatorActive = true,
+            kwhSource = ChargeKwhSource.DERIVED_FROM_SOC,
+            kwhError = null,
+        )
+        recomputeKwhFromSoc(activated)
+    }
+
+    /**
+     * Re-derives the kWh field from the current SoC inputs and the active
+     * car's nominal capacity. Returns the original state unchanged when
+     * SoC inputs are incomplete or unparseable so the user can keep typing
+     * without partial values overwriting the kWh field mid-keystroke.
+     */
+    private fun recomputeKwhFromSoc(state: ChargeEditUiState): ChargeEditUiState {
+        val nominal = state.nominalBatteryKwh ?: return state
+        val before = state.socBeforeText.trim().toDoubleOrNull()
+        val after = state.socAfterText.trim().toDoubleOrNull()
+        if (before == null || after == null) return state
+        if (before !in 0.0..100.0 || after !in 0.0..100.0) return state
+        val derived = KwhFromSocCalculator.compute(
+            socBefore = before / 100.0,
+            socAfter = after / 100.0,
+            nominalBatteryKwh = nominal,
+        )
+        return state.copy(kwh = formatKwh(derived))
+    }
+
+    /**
+     * Format the derived kWh for display in the kWh `TextInputEditText`.
+     * Strips the trailing `.0` for whole-number values so the field reads
+     * `36` rather than `36.0`. Mirrors [Double.toPercentText].
+     */
+    private fun formatKwh(value: Double): String {
+        val rounded = kotlin.math.round(value * 100.0) / 100.0
+        return if (rounded % 1.0 == 0.0) rounded.toInt().toString() else rounded.toString()
+    }
 
     private sealed class SocParseResult {
         object None : SocParseResult()
@@ -228,6 +309,7 @@ class ChargeEditViewModel @Inject constructor(
             note = state.note,
             socBefore = socBeforeFraction,
             socAfter = socAfterFraction,
+            kwhSource = state.kwhSource,
         )
         _uiState.update { it.copy(saving = true, odometerError = null, kwhError = null, socError = null) }
         viewModelScope.launch {
