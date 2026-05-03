@@ -141,6 +141,60 @@ Locks in the TASK-12 widget snapshot helper. The helper picks the latest event b
 | `relativeDate_overFourWeeks_fallsBackToAbsoluteDate` | > 28 days → absolute "MMM d, yyyy" via locale formatter |
 | `chargeType_AC_propagates`, `chargeType_DC_FAST_propagates` | Latest event's `ChargeType` round-trips through |
 
+### 1.11 KwhFromSocCalculatorTest.kt
+
+Locks in the TASK-43 pure helper `KwhFromSocCalculator.compute(socBefore, socAfter, nominalBatteryKwh)`. Returns `max(0, (socAfter − socBefore) × nominalBatteryKwh)`. Negative deltas clamp to zero (rather than throw) so the caller can treat zero as "calculator could not produce a value". Battery-side kWh only — charging-loss caveat documented inline on the helper's KDoc.
+
+| Test | Description |
+|------|-------------|
+| `typicalCharge_returnsDeltaTimesNominal` | 60 kWh × (0.80 − 0.20) → 36 |
+| `fullCharge_zeroToOne_returnsNominal` | 75 kWh × (1.0 − 0.0) → 75 |
+| `zeroDelta_returnsZero` | Δsoc = 0 → 0 |
+| `negativeDelta_clampsToZero` | User enters socBefore > socAfter → clamps to 0 (no throw) |
+
+### 1.12 ChargeKwhSourceTest.kt + ChargeKwhSourceConverterTest.kt
+
+Locks in the TASK-43 enum + Room TypeConverter pair, mirroring the TASK-25 `ChargeType` pattern. Defensive-fallback contract: unknown / corrupted strings decode to `MEASURED` so a stale row never crashes Room reads (worst-case is a single derived event over-counts in the degradation chart).
+
+| Test | Description |
+|------|-------------|
+| `parseLegacy_knownValues_roundTrip` | `"MEASURED"` and `"DERIVED_FROM_SOC"` decode cleanly |
+| `parseLegacy_unknownValues_fallBackToMeasured` | Empty / garbage strings decode to `MEASURED` |
+| `roundTrip_allValues_preserved` | Converter `fromChargeKwhSource` → `toChargeKwhSource` is identity for every enum value |
+| `unknownString_fallsBackToMeasured` | Converter side: same defensive fallback as the enum |
+
+### 1.13 BackupSerializerTest.kt — TASK-43 additions
+
+| Test | Description |
+|------|-------------|
+| `roundTrip_preservesKwhSourceFlag` | A v7 backup carrying `"kwh_source": "DERIVED_FROM_SOC"` round-trips through Gson preserving the enum value |
+| `fromJson_legacyV6Backup_kwhSourceDefaultsToMeasured` | A v6 backup file (no `kwh_source` key) restores cleanly; `ChargeEventDto.toEntity()` coalesces null → `MEASURED`. The DTO field is **nullable** because Gson uses `Unsafe.allocateInstance` and bypasses Kotlin primary-constructor defaults for absent JSON keys |
+| `toJson_serializesKwhSourceAsName` | `DERIVED_FROM_SOC` writes as the canonical enum name on the wire |
+| `currentVersion_isSeven` | Sanity tripwire: catches a future bump that forgets to update the constant |
+
+### 1.14 CapacityEstimatorTest.kt — TASK-43 additions
+
+| Test | Description |
+|------|-------------|
+| `derivedEvent_excludedFromExactPath` | An event with both SoC fields populated AND `kwhSource = DERIVED_FROM_SOC` produces no capacity point — the exact path early-returns before the divide |
+| `derivedEvent_excludedFromHeuristicPath` | An event with no SoC fields, `kwhAdded ≥ 0.8 × nominal`, AND `kwhSource = DERIVED_FROM_SOC` produces no capacity point — the heuristic path also early-returns |
+| `mixedDataset_excludesDerivedRowsOnly` | Mixed measured + derived events: only the measured ones produce points, sorted ascending by date |
+| `countDerivedEvents_returnsDerivedRowCount` | Counts events flagged `DERIVED_FROM_SOC`; unflagged events do not contribute |
+| `countDerivedEvents_emptyListReturnsZero` | Empty input → 0 |
+
+### 1.15 SaveChargeEventUseCaseTest.kt — TASK-43 additions
+
+| Test | Description |
+|------|-------------|
+| `kwhSource_defaultsToMeasured_whenInputOmitsField` | Existing call sites that pre-date TASK-43 stay correct: `SaveChargeEventInput.kwhSource` default is `MEASURED`, persisted entity is never silently flipped to `DERIVED` |
+| `kwhSource_persistsDerivedFromSoc_whenInputOptsIn` | Explicit `DERIVED_FROM_SOC` round-trips through to the persisted entity unchanged |
+
+### 1.16 ObserveChartsModelsUseCaseTest.kt — TASK-43 addition
+
+| Test | Description |
+|------|-------------|
+| `derivedExcludedCount_reflectsKwhSourceFlag_inPeriod` | Mixed measured + derived events in the period: derived ones do not produce capacity points, but the count is exposed via `ChartsUiState.Loaded.derivedExcludedCount` so the chart can render the banner. With 1 measured + 2 derived events, capacity is empty (below `MIN_POINTS_FOR_CHART = 3`) and `derivedExcludedCount == 2` |
+
 ---
 
 ## 2. Room Integration Tests (in-memory DB)
@@ -183,7 +237,8 @@ Locks in the TASK-12 widget snapshot helper. The helper picks the latest event b
 | `migrate_3_to_4_rewritesLegacyDcRows` | Seeds a v3 DB with a `chargeType = 'DC'` row, runs `MIGRATION_3_4`, asserts the row is rewritten to `'DC_FAST'`. Column type stays TEXT — `@TypeConverters(ChargeTypeConverter)` does the enum round-trip. |
 | `migrate_4_to_5_isNoOp_widenIntPksToLong` | Runs `MIGRATION_3_4` then `MIGRATION_4_5` against a v3 fixture and asserts existing rows survive untouched with PKs round-tripping as 64-bit `Long`. SQLite `INTEGER` columns already hold 64 bits, so the migration is a deliberate no-op (TASK-26). |
 | `migrate_5_to_6_addsSocColumns` | Runs the full v3 → v4 → v5 → v6 chain against a fixture and asserts the new `socBefore` and `socAfter` REAL columns exist and default to `NULL` on legacy rows (TASK-14). |
-| `migrate_1_to_6_validatesSchema` | Full chain v1 → v6; opens via `Room.databaseBuilder(...).build().openHelper.writableDatabase` to force schema validation against the entity declarations (catches column-name casing drift), asserts the migrated `ChargeType` decodes to `ChargeType.AC`, asserts entity PKs round-trip as `Long`, and asserts both SoC columns are `null` on rows persisted before TASK-14. |
+| `migrate_6_to_7_addsKwhSourceColumn` | Runs v3 → v4 → v5 → v6 → v7 against a fixture and asserts the new `kwhSource TEXT NOT NULL DEFAULT 'MEASURED'` column exists and pre-existing rows backfill to `'MEASURED'` (TASK-43). |
+| `migrate_1_to_7_validatesSchema` | Full chain v1 → v7 (renamed from `migrate_1_to_6_validatesSchema`); opens via `Room.databaseBuilder(...).build().openHelper.writableDatabase` to force schema validation against the entity declarations (catches column-name casing drift), asserts the migrated `ChargeType` decodes to `ChargeType.AC`, asserts entity PKs round-trip as `Long`, asserts both SoC columns are `null` on rows persisted before TASK-14, and asserts the new `kwhSource` column resolves to `ChargeKwhSource.MEASURED` via `@TypeConverters(ChargeKwhSourceConverter)`. |
 
 ---
 
@@ -215,6 +270,14 @@ Uses `TestCoroutineDispatcher` + in-memory Room.
 | `saveWithCostZero_storesNull` | Submit form with cost=0; DB entry has `costTotal=null` |
 | `saveWithCost_storesBoth` | Submit form with cost=5.0, kwh=10; `costTotal=5.0`, `costPerKwh=0.5` |
 | `saveLocation_recordsUsage` | Submit with location="Home"; `custom_locations` has "Home" with count ≥ 1 |
+| `createMode_loadsNominalBatteryKwhFromActiveCar` | Active car with `batteryKwh = 60.0` → `state.nominalBatteryKwh == 60.0`; defaults to `kwhSource = MEASURED` and `kwhCalculatorActive = false` (TASK-43) |
+| `calculator_withSocFieldsPrefilled_derivesKwhAndFlagsDerived` | User enters SoC 20% → 80%, taps the calculator link → kWh fills to "36" (60 × 0.6), `kwhSource = DERIVED_FROM_SOC`, SoC card expanded (TASK-43) |
+| `calculator_thenSocChange_recomputesKwh` | Calculator active, then SoC changes → kWh re-derives in real time (TASK-43) |
+| `calculator_userManuallyEditsKwh_revertsToMeasured` | After the calculator filled kWh, manually editing the field flips `kwhSource` back to `MEASURED` and deactivates the calculator (TASK-43) |
+| `setKwh_echoesCurrentText_preservesProvenance` | The fragment's `doAfterTextChanged` listener echoes the calculator's own `setText()` with the unchanged value — the echo guard preserves provenance (TASK-43) |
+| `calculator_recalculate_afterUserEdit_reactivates` | User edits → MEASURED, then re-tap link → DERIVED_FROM_SOC again, kWh re-derived (TASK-43) |
+| `editMode_loadsExistingKwhSourceFromEntity` | Loading a persisted event with `kwhSource = DERIVED_FROM_SOC` preserves the flag in UiState (TASK-43) |
+| `save_threadsKwhSourceToInput` | After calculator-driven save, the persisted entity carries `kwhSource = DERIVED_FROM_SOC` and the battery-side derived kWh value (TASK-43) |
 
 ### 3.4 DriveBackupRepositoryTest.kt
 

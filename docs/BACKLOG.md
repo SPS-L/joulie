@@ -2831,7 +2831,7 @@ purely additive change.
    (`MIGRATION_3_4`'s `'DC' → 'DC_FAST'` rewrite is the canonical
    example — keep that pattern hand-written).
 
-3. Document the rule in `CLAUDE.md` "Database — Room v6" section: a new
+3. Document the rule in `CLAUDE.md` "Database — Room v7" section: a new
    bullet "Additive bumps (new nullable columns, new tables, new
    indices) use `@AutoMigration`. Hand-written migrations are reserved
    for destructive or rewrite operations." Add a short example.

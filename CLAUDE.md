@@ -49,7 +49,7 @@ Repo root holds only `README.md`, `CLAUDE.md`, and build/config files. All proje
 ```bash
 ./gradlew assembleDebug                        # target APK path: app/build/outputs/apk/debug/app-debug.apk
 ./gradlew assembleRelease                      # signed if keystore.properties exists, unsigned otherwise
-./gradlew test                                 # JVM unit tests (~332)
+./gradlew test                                 # JVM unit tests (~360)
 ./gradlew connectedAndroidTest                 # Espresso/Room — needs API 26+ device or emulator (canonical CI execution: nightly-instrumented.yml, API 26 + API 35 matrix)
 ./gradlew :app:testDebugUnitTest --tests "org.spsl.evtracker.UnitConverterTest.kmToMiles_positive"
 ```
