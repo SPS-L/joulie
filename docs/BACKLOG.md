@@ -1,6 +1,6 @@
 # EV Tracker — Development Backlog
 
-Tasks 1–15 were generated from a senior Android developer code review of the `main` branch (April 2026). Tasks 16–21 are follow-up improvements identified during a 2026-04-30 verification pass against `main` (CI/release pipeline, R8 keep-rules, a11y posture, and SPS-Lab research relevance). Tasks 38–42 are new feature / infra ideas filed 2026-05-02 from a follow-up senior-developer review (research-aligned analytics, schema-migration polish, anonymised research export). TASK-43 (filed 2026-05-02) closes a real UX gap: many EU/UK chargers and several older EVs (Renault/Nissan/older BMW) display only SoC % before/after, never kWh delivered. Tasks 44–49 are filed 2026-05-03 from a senior-developer code audit cross-checked against the current `main` (`658b60a` + the TASK-43 / TASK-18 Step 6 / nightly-WorkManager fixes): three correctness/UX bugs (`StatsCalculator` cost accumulation, `KwhFromSocCalculator` defensive guard, battery-health overshoot warning) and three research-aligned extensions (charging power profile, time-of-use tariff zones, per-event grid carbon intensity). The audit also folded `kwhSource` / `socBefore` / `socAfter` columns into TASK-09 and concrete K2 / Room version pins into TASK-33. TASK-50 (also filed 2026-05-03) bundles the four fix categories surfaced by the first nightly instrumented cron after the WorkManager-init fix landed — `EmptyFragmentActivity` not declared in the app manifest, a stale `DriveBackupWorkerTest.ioError_returnsRetry` assertion, racy `MainActivityResetRecoveryTest` startup hook, and a `ChartsFragmentTest` initialization error. TASK-51 (filed 2026-05-03) captures the GPL relicensing request after a dependency audit found one concrete review item in the shipped runtime set: `com.google.android.gms:play-services-auth` is still distributed under the Android SDK License, so the GPL-3.0-or-later switch should carry that note explicitly in review. Each task is written as a self-contained instruction suitable for a coding agent.
+Tasks 1–15 were generated from a senior Android developer code review of the `main` branch (April 2026). Tasks 16–21 are follow-up improvements identified during a 2026-04-30 verification pass against `main` (CI/release pipeline, R8 keep-rules, a11y posture, and SPS-Lab research relevance). Tasks 38–42 are new feature / infra ideas filed 2026-05-02 from a follow-up senior-developer review (research-aligned analytics, schema-migration polish, anonymised research export). TASK-43 (filed 2026-05-02) closes a real UX gap: many EU/UK chargers and several older EVs (Renault/Nissan/older BMW) display only SoC % before/after, never kWh delivered. Tasks 44–49 are filed 2026-05-03 from a senior-developer code audit cross-checked against the current `main` (`658b60a` + the TASK-43 / TASK-18 Step 6 / nightly-WorkManager fixes): three correctness/UX bugs (`StatsCalculator` cost accumulation, `KwhFromSocCalculator` defensive guard, battery-health overshoot warning) and three research-aligned extensions (charging power profile, time-of-use tariff zones, per-event grid carbon intensity). The audit also folded `kwhSource` / `socBefore` / `socAfter` columns into TASK-09 and concrete K2 / Room version pins into TASK-33. TASK-50 (also filed 2026-05-03) bundles the four fix categories surfaced by the first nightly instrumented cron after the WorkManager-init fix landed — `EmptyFragmentActivity` not declared in the app manifest, a stale `DriveBackupWorkerTest.ioError_returnsRetry` assertion, racy `MainActivityResetRecoveryTest` startup hook, and a `ChartsFragmentTest` initialization error. TASK-51 (filed 2026-05-03) captures the GPL relicensing request after a dependency audit found one concrete review item in the shipped runtime set: `com.google.android.gms:play-services-auth` is still distributed under the Android SDK License, so the GPL-3.0-or-later switch should carry that note explicitly in review. Tasks 52–54 (filed 2026-05-03 from `docs/EV-backlog-review.md`) cover three hardening items confirmed against `main`: CSV-injection / CR / tab coverage in `ExportCsvUseCase.csvEscape`, a multi-car `require(...)` guard in `StatsCalculator.computeStats`, and a durable last-seen marker that prevents the Drive restore-prompt from re-firing after the user has skipped or restored the same remote snapshot. The same review proposed two further items (a `NetworkType.CONNECTED` constraint on the backup `WorkRequest` and a forward-compat fallback for unknown `kwhSource` values) which were rejected: both behaviours already hold in `WorkManagerBackupScheduler.kt:27` and `ChargeKwhSource.parseLegacy` respectively. Each task is written as a self-contained instruction suitable for a coding agent.
 
 ---
 
@@ -59,6 +59,9 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-49 | 🟢 | Per-event grid carbon intensity (extends TASK-20 with marginal emission factors) | TASK-20 | ☐ |
 | TASK-50 | 🔴 | Stabilise nightly instrumented suite — 21 failures across 4 root causes after WorkManager init landed | TASK-34 | ☑ |
 | TASK-51 | 🔴 | GPL-3.0-or-later license change (pending `play-services-auth` review) | — | ☐ |
+| TASK-52 | 🟡 | CSV escape hardening in `ExportCsvUseCase` — quote `\r` and tabs, neutralise spreadsheet formula-injection prefixes (`=`, `+`, `-`, `@`) in user-supplied fields | — | ☐ |
+| TASK-53 | 🟡 | Multi-car invariant guard in `StatsCalculator.computeStats` — `require` the input shares a single `carId` (latent bug if a future caller passes a mixed-car list) | — | ☐ |
+| TASK-54 | 🟡 | Durable restore-skip marker — record the remote backup's `exported_at` after Skip / Restore so the same snapshot is never re-prompted on a Drive re-toggle (destructive-action path) | TASK-31 | ☐ |
 
 **Priority legend:** 🔴 High (architecture/data safety) · 🟡 Medium (robustness/UX) · 🟢 Low (new feature)  
 **Status legend:** ☐ open · ☑ done · ☒ closed (premise no longer holds) · ⏸ under consideration (do not start without explicit go-ahead)  
@@ -3932,3 +3935,302 @@ one.
    carries the SPDX header.
 - The compatibility audit result is preserved in the task / PR description so
    future agents do not reopen the same dependency question.
+
+---
+
+## 🟡 TASK-52 — CSV escape hardening (`\r`, tabs, formula-injection prefixes)
+
+> **Audit finding (`docs/EV-backlog-review.md`, 2026-05-03):**
+> `ExportCsvUseCase.csvEscape(...)` quotes a field only when it contains
+> `,`, `"`, or `\n`. Three real cases slip through:
+>
+> 1. **Lone `\r`** — RFC 4180 requires CR to be quoted just like LF.
+>    A `note` containing `"line1\rline2"` will produce a malformed row
+>    when parsed by strict consumers (TASK-40 anonymised export consumers,
+>    SPS-Lab pipelines).
+> 2. **Tabs in `note` / `location`** — quietly accepted today but trip up
+>    spreadsheet importers that auto-detect TSV when a tab appears in the
+>    first row.
+> 3. **Formula injection** — when a user-supplied field starts with `=`,
+>    `+`, `-`, or `@`, Excel / LibreOffice / Numbers all execute it as a
+>    formula on open. A `note` of `=cmd|'/c calc'!A1` is the canonical
+>    proof-of-concept. Researchers (TASK-40 consumers) opening the CSV
+>    in a spreadsheet are the most realistic victims.
+>
+> The fix is a one-line change in `csvEscape` (broaden the trigger set,
+> prefix dangerous-leading-char fields with a single quote `'` before
+> quoting), plus unit-test coverage. No schema, no API change, no UX
+> change. Coordinates with TASK-09 (column extension) — both touch the
+> same writer; land TASK-52 first so the new columns inherit the harder
+> escape rules.
+
+### Scope
+
+1. Update `ExportCsvUseCase.csvEscape(...)`:
+   - Trigger quoting on `,`, `"`, `\n`, `\r`, and `\t`.
+   - When the field's first character is in `{ '=', '+', '-', '@' }`,
+     prepend a single quote `'` before applying the quoting rule. The
+     leading-quote prefix neutralises Excel/LibreOffice formula
+     interpretation while keeping the data round-trippable for any
+     consumer that strips leading apostrophes (research pipelines do).
+2. Apply the hardened `csvEscape` to every user-supplied column that
+   currently bypasses it: `currency` (free-form letter code, low risk
+   but cheap to escape), `chargeType.name` (enum-controlled, but escape
+   anyway for consistency), and any new TASK-09 columns.
+3. JVM tests under `ExportCsvUseCaseTest`:
+   - `note` containing `\r` round-trips through quotes.
+   - `note` containing `\t` round-trips through quotes.
+   - `note = "=SUM(A1:A10)"` emits `"'=SUM(A1:A10)"` (leading `'` inside
+     the quoted field).
+   - `location = "+44 7000"` (legitimate phone-style string, leading `+`)
+     emits `"'+44 7000"`.
+   - `note = "-Some negative note"` emits the leading-`'` form.
+   - Existing `,` / `"` / `\n` cases stay green.
+
+### Acceptance
+
+CSV export survives a malicious `note` field without producing executable
+formulas in mainstream spreadsheet apps. RFC 4180 conformance for `\r`
+holds. Existing CSV consumers (the share-sheet flow, TASK-40 pipeline)
+see no header / column-count change — only the escaping is stricter.
+JVM unit-test count gains ≥ 5 cases.
+
+---
+
+## 🟡 TASK-53 — Multi-car invariant guard in `StatsCalculator.computeStats`
+
+> **Audit finding (`docs/EV-backlog-review.md`, 2026-05-03):**
+> `computeStats` calls `events.sumOf { it.kwhAdded }` on the full input
+> list and then walks an odometer-delta loop assuming every event in the
+> list shares a single car's odometer sequence. The current call site
+> (`ObserveDashboardStatsUseCase.computeFor(...)` →
+> `allEventsForCar.filter { it.eventDate in range… }`) always passes a
+> single-car list, so the invariant holds today — but it is **unenforced**.
+> A future caller (a per-car comparison view, or a refactor that flattens
+> two cars into one stats card) would silently produce nonsense
+> `totalDistanceKm` and every efficiency metric without any signal: the
+> odometer-delta loop produces a positive delta on the car-switch
+> boundary if cars happen to have similar odo readings.
+>
+> Single-line `require(...)` defense-in-depth.
+
+### Scope
+
+1. At the top of `StatsCalculator.computeStats(...)`, after the
+   `chargeCount` line:
+   ```kotlin
+   require(events.map { it.carId }.distinct().size <= 1) {
+       "computeStats expects a single-car event list; got carIds=" +
+           events.map { it.carId }.distinct()
+   }
+   ```
+2. Mirror the same guard at the top of `computeMonthlyBuckets`,
+   `computeEfficiencyTrend`, `computeAcDcSplit`, and
+   `computeLocationDistribution` if they're ever called with a list
+   that's expected to be single-car (audit each call site first — some
+   chart-side aggregations may legitimately accept cross-car input;
+   in that case, leave them alone and document the intentional
+   exemption in the function KDoc).
+3. JVM test on `StatsCalculatorTest` (or a new `StatsCalculatorInvariantTest`):
+   - `computeStats_throws_onMixedCarIds` — feeds events with `carId = 1`
+     and `carId = 2`; asserts `IllegalArgumentException` with the
+     expected message snippet.
+   - `computeStats_succeeds_onEmptyList` — empty list passes the guard
+     (`distinct().size == 0 <= 1`); preserves existing empty-period
+     behaviour.
+
+### Acceptance
+
+Existing tests stay green (every fixture passes single-car lists). New
+test asserts the guard fires on mixed input. JVM unit-test count gains
+≥ 1 case.
+
+---
+
+## 🟡 TASK-54 — Durable restore-skip marker (Drive re-toggle re-prompt fix)
+
+> **Filed 2026-05-03** (user-reported reproduction; root cause confirmed
+> against current `main`).
+>
+> **Bug:** the "Restore from Drive?" dialog can re-appear for the same
+> remote backup after the user has already tapped **Skip** for it. The
+> destructive-action path trains users to dismiss a critical warning by
+> reflex, which is exactly the wrong outcome for a flow that overwrites
+> all local data.
+>
+> **Root cause (verified 2026-05-03):** `SettingsViewModel.onSkipRestore()`
+> writes `pendingRestoreLabel = null` in `_uiState` and calls
+> `settingsWriter.setDriveEnabled(true)`, but **persists no durable
+> marker** that the user has already been offered this snapshot. The
+> only thing recording the user's "Skip" decision is in-memory
+> `SettingsUiState`, which is lost on ViewModel recreation.
+> `PreferenceKeys` has no `last_seen_remote_backup_*` key.
+>
+> The most reliable user-visible re-prompt path verified from code is:
+> tap **Skip** → toggle Drive **OFF** → toggle Drive **ON** → the same
+> backup is offered again (`onUserToggledOn` → `auth.authorize()` →
+> `onDriveAuthGranted()` → `readRemoteBackup() != null` →
+> `ShowRestorePrompt`). The user reports "every Settings entry"
+> reproduction; the listener-rebind in
+> `SettingsFragment.onViewCreated` (`if (binding.switchDrive.isChecked
+> != state.driveEnabled)` block) should suppress the bare-entry path,
+> so the implementer should treat that report as a signal that there
+> is **also** a non-toggle re-entry path to find — but the durable
+> marker fixes the underlying defect for every reproduction trigger
+> regardless of which entry path runs.
+
+### Scope
+
+#### Step 1 — New DataStore key in `PreferenceKeys`
+
+```kotlin
+val LAST_SEEN_REMOTE_BACKUP_EXPORTED_AT =
+    stringPreferencesKey("last_seen_remote_backup_exported_at")
+// ISO-8601 string from BackupData.exported_at. Empty string = never seen.
+// String (not Long) so we can compare verbatim against the JSON field
+// without re-parsing — Instant.parse is the only conversion needed and
+// only on the label-formatting path that already exists today.
+```
+
+Wire `SettingsReader.lastSeenRemoteBackupExportedAt: Flow<String>` and
+`SettingsWriter.setLastSeenRemoteBackupExportedAt(value: String)` —
+follow the existing TASK-24 narrow-IF rule (do **not** add a concrete
+`SettingsRepository` reference outside `di/`).
+
+#### Step 2 — Plumb `exportedAt` into `SettingsUiState`
+
+Today, `parseExportedAtLabel(json)` only formats the date for display.
+Replace it with a small helper that returns `(exportedAt: String,
+label: String)` so the raw `exported_at` value is available to the
+Skip / Restore / dismiss paths without re-reading the remote backup.
+
+```kotlin
+private data class RemoteBackupSnapshot(val exportedAt: String, val label: String)
+
+private fun parseRemoteSnapshot(json: String): RemoteBackupSnapshot {
+    val match = EXPORTED_AT_REGEX.find(json)
+    val raw = match?.groupValues?.get(1) ?: return RemoteBackupSnapshot("", UNKNOWN_DATE)
+    val label = try { DATE_FORMAT.format(Date(Instant.parse(raw).toEpochMilli())) } catch (_: Throwable) { UNKNOWN_DATE }
+    return RemoteBackupSnapshot(exportedAt = raw, label = label)
+}
+```
+
+Add `pendingRestoreExportedAt: String?` to `SettingsUiState` next to
+the existing `pendingRestoreLabel: String?`.
+
+#### Step 3 — Guard in `onDriveAuthGranted()`
+
+```kotlin
+fun onDriveAuthGranted() {
+    viewModelScope.launch {
+        _uiState.update { it.copy(isAuthInFlight = true) }
+        try {
+            val json = backupRepository.readRemoteBackup()
+            if (json == null) {
+                settingsWriter.setDriveEnabled(true)
+                backupScheduler.enqueueBackup()
+                _uiState.update { it.copy(isAuthInFlight = false) }
+                return@launch
+            }
+            val snapshot = parseRemoteSnapshot(json)
+            val lastSeen = settingsReader.lastSeenRemoteBackupExportedAt.first()
+            if (snapshot.exportedAt.isNotEmpty() && snapshot.exportedAt == lastSeen) {
+                // Already offered (and skipped or restored). Enable Drive silently.
+                settingsWriter.setDriveEnabled(true)
+                backupScheduler.enqueueBackup()
+                _uiState.update { it.copy(isAuthInFlight = false) }
+                return@launch
+            }
+            _uiState.update {
+                it.copy(
+                    isAuthInFlight = false,
+                    pendingRestoreLabel = snapshot.label,
+                    pendingRestoreExportedAt = snapshot.exportedAt,
+                )
+            }
+            _events.tryEmit(SettingsEvent.ShowRestorePrompt(snapshot.label))
+        } catch (_: DriveAuthRequiredException) { /* unchanged */ }
+        catch (_: IOException) { /* unchanged */ }
+    }
+}
+```
+
+#### Step 4 — Persist on Skip and on Restore success
+
+```kotlin
+fun onSkipRestore() {
+    viewModelScope.launch {
+        val exportedAt = _uiState.value.pendingRestoreExportedAt
+        if (!exportedAt.isNullOrEmpty()) {
+            settingsWriter.setLastSeenRemoteBackupExportedAt(exportedAt)
+        }
+        settingsWriter.setDriveEnabled(true)
+        backupScheduler.enqueueBackup()
+        _uiState.update { it.copy(pendingRestoreLabel = null, pendingRestoreExportedAt = null) }
+    }
+}
+```
+
+In `onConfirmRestore()`, when `RestoreResult.Success` is returned, also
+write `setLastSeenRemoteBackupExportedAt(exportedAt)` so a successful
+restore also records the snapshot identity. (After a restore, the local
+DB equals the remote backup, so re-prompting would offer the user a
+restore of the data they already have.)
+
+#### Step 5 — Clear on wipe
+
+`WipeRemoteBackupUseCase.invoke()` already resets `lastBackupAt = 0L`
+on `BackupResult.Success`. Mirror that with
+`settingsWriter.setLastSeenRemoteBackupExportedAt("")` on the same
+success branch so a subsequent fresh upload + re-toggle prompts again
+correctly.
+
+### Tests
+
+Add to `SettingsViewModelTest`:
+
+1. `onDriveAuthGranted_remoteExists_firstTime_emitsPrompt` — `exportedAt
+   = "2026-04-01T..."`, `lastSeen = ""` → `ShowRestorePrompt` emitted,
+   `driveEnabled` not yet flipped.
+2. `onDriveAuthGranted_remoteExists_alreadySeen_skipsSilently` — same
+   `exportedAt` written to `lastSeen` → no event, `driveEnabled = true`,
+   `enqueueBackup()` called once.
+3. `onDriveAuthGranted_remoteWithDifferentExportedAt_promptsAgain` —
+   `exportedAt` differs from `lastSeen` (new remote upload after wipe)
+   → prompt emitted.
+4. `onSkipRestore_persistsLastSeenExportedAt` — after skip, the
+   `FakeSettingsReader` reads back the same `exportedAt`.
+5. `onConfirmRestore_success_persistsLastSeenExportedAt` — after a
+   successful restore, the marker is written.
+6. `onWipe_success_clearsLastSeenExportedAt` — after `WipeRemoteBackupUseCase`
+   succeeds, the marker is reset to the empty string.
+7. `onDriveAuthGranted_noRemote_keepsExistingMarker` — no remote backup
+   path enables Drive without touching the marker (regression guard).
+
+Extend `FakeSettingsReader` / `FakeSettingsWriter` with the new key.
+The new `WipeRemoteBackupUseCase` test belongs in `WipeRemoteBackupUseCaseTest`.
+
+### Acceptance
+
+- After **Skip**, no further toggle / consent / Settings entry re-shows
+  the same restore prompt.
+- After a successful **Restore**, no further entry re-shows the same
+  prompt.
+- After **Wipe** + a fresh remote upload, the next Drive re-toggle
+  prompts exactly once for the new snapshot.
+- `./gradlew ktlintCheck :app:lint :app:testDebugUnitTest :app:assembleRelease`
+  green; instrumented `SettingsBackupControlsTest` (TASK-31) stays green.
+- JVM unit-test count gains ≥ 7 cases.
+
+### Out of scope
+
+- The "every Settings entry" reproduction trigger the user reported,
+  if it turns out to require a code path beyond the toggle / consent
+  flow (e.g., the listener-rebind protection failing under some lifecycle
+  pattern). The durable marker fixes the **defect** regardless of which
+  re-entry path triggers it; if the bare-entry trigger still reproduces
+  after this lands, file a follow-up to investigate
+  `SettingsFragment.onViewCreated`'s switch-rebind block.
+- A "Don't ask again" checkbox inside the dialog. The durable marker
+  is automatic and silent; an explicit checkbox is a separate UX
+  decision and not requested.
