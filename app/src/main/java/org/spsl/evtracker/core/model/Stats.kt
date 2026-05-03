@@ -27,4 +27,24 @@ data class Stats(
      * not a clamp target.
      */
     val batteryHealthPercent: Double? = null,
+    /**
+     * TASK-46: true when the chronologically latest capacity point that
+     * fed [batteryHealthPercent] came from the heuristic full-charge
+     * path (`CapacityPoint.isExact = false`) rather than the exact
+     * SoC-delta path. Lets the Dashboard distinguish "92% confirmed by
+     * SoC" from "92% inferred from a near-full charge" — different
+     * confidence levels for the same number.
+     */
+    val batteryHealthIsHeuristic: Boolean = false,
+    /**
+     * TASK-46: true when both [batteryHealthIsHeuristic] holds AND
+     * [batteryHealthPercent] is at or above
+     * `CapacityEstimator.HEURISTIC_OVERESTIMATE_THRESHOLD_PERCENT`
+     * (105%). Drives the "Estimated — heuristic may overestimate"
+     * warning chip on the Dashboard battery-health card. Splitting
+     * heuristic-vs-overestimated into two flags (rather than collapsing
+     * into one) keeps the option open for future UX that wants to show
+     * a softer "Estimated" tag without the overestimation warning.
+     */
+    val batteryHealthIsOverestimated: Boolean = false,
 )

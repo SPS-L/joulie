@@ -241,12 +241,19 @@ class DashboardFragment : Fragment() {
     }
 
     private fun renderBatteryHealthCard(state: DashboardScreenState) {
-        val pct = state.dashboard.stats?.batteryHealthPercent
+        val stats = state.dashboard.stats
+        val pct = stats?.batteryHealthPercent
         binding.dashboardCardBatteryHealth.isVisible = pct != null
         if (pct != null) {
             binding.dashboardBatteryHealthValue.text =
                 getString(R.string.battery_health_value_format, pct)
         }
+        // TASK-46: warning chip fires only when both flags hold — heuristic
+        // path AND the percentage is past the 105% guard. Hidden otherwise
+        // so an exact-path 102% (legitimate noise from whole-percent SoC
+        // entries) doesn't trigger a false alarm.
+        binding.dashboardBatteryHealthEstimatedWarning.isVisible =
+            stats?.batteryHealthIsOverestimated == true
     }
 
     private fun handleEvent(event: DashboardEvent) {

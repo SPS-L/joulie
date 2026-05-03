@@ -21,6 +21,8 @@ class StatsCalculator @Inject constructor() {
         events: List<ChargeEventEntity>,
         label: String,
         batteryHealthPercent: Double? = null,
+        batteryHealthIsHeuristic: Boolean = false,
+        batteryHealthIsOverestimated: Boolean = false,
     ): Stats {
         val totalKwhAll = events.sumOf { it.kwhAdded }
         val chargeCount = events.size
@@ -51,6 +53,9 @@ class StatsCalculator @Inject constructor() {
                 costPerKm = null,
                 costPer100Km = null,
                 mixedCurrency = mixedCurrency,
+                batteryHealthPercent = batteryHealthPercent,
+                batteryHealthIsHeuristic = batteryHealthIsHeuristic,
+                batteryHealthIsOverestimated = batteryHealthIsOverestimated,
             )
         }
 
@@ -86,6 +91,8 @@ class StatsCalculator @Inject constructor() {
             costPer100Km = costPer100Km,
             mixedCurrency = mixedCurrency,
             batteryHealthPercent = batteryHealthPercent,
+            batteryHealthIsHeuristic = batteryHealthIsHeuristic,
+            batteryHealthIsOverestimated = batteryHealthIsOverestimated,
         )
     }
 

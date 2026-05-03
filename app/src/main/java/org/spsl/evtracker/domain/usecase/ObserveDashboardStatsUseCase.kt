@@ -78,10 +78,21 @@ class ObserveDashboardStatsUseCase @Inject constructor(
             // hiding it when the user picks a tight period would be misleading.
             val capacityPoints = capacityEstimator.estimate(allEventsForCar, activeCar?.batteryKwh)
             val healthPct = capacityEstimator.batteryHealthPercent(capacityPoints, activeCar?.batteryKwh)
+            // TASK-46: surface heuristic provenance to the Stats consumer so
+            // the Dashboard can render the "Estimated — heuristic may
+            // overestimate" warning chip when the latest point came from the
+            // unclamped 80%-of-nominal heuristic AND the percentage crosses
+            // the 105% guard.
+            val isHeuristic = capacityEstimator.latestIsExact(capacityPoints) == false
+            val isOverestimated = isHeuristic &&
+                healthPct != null &&
+                healthPct >= CapacityEstimator.HEURISTIC_OVERESTIMATE_THRESHOLD_PERCENT
             val stats = statsCalculator.computeStats(
                 events = filtered,
                 label = period.toString(),
                 batteryHealthPercent = healthPct,
+                batteryHealthIsHeuristic = isHeuristic,
+                batteryHealthIsOverestimated = isOverestimated,
             )
             DashboardUiState(stats = stats, showMultiCurrencyBanner = stats.mixedCurrency)
         }
