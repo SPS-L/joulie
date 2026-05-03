@@ -53,7 +53,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-43 | 🟡 | kWh-from-SoC calculator + `kwhSource` provenance flag (degradation banner on derived events) | TASK-14 | ☑ |
 | TASK-44 | 🟡 | Fix `StatsCalculator.computeStats` cost accumulation (first event's cost silently dropped; inconsistent with `computeMonthlyBuckets`) | — | ☑ |
 | TASK-45 | 🟢 | Defensive SoC range guard (`require(...)`) in `KwhFromSocCalculator.compute` | — | ☐ |
-| TASK-46 | 🟡 | Battery-health card "Estimated" warning when heuristic over-estimates (>105% of nominal AND `isExact = false`) | — | ☐ |
+| TASK-46 | 🟡 | Battery-health card "Estimated" warning when heuristic over-estimates (>105% of nominal AND `isExact = false`) | — | ☑ |
 | TASK-47 | 🟢 | Charging power profile fields (`peakPowerKw`, `chargingDurationMinutes`) — schema bump | — | ☐ |
 | TASK-48 | 🟢 | Time-of-use (ToU) tariff classification on charge events | — | ☐ |
 | TASK-49 | 🟢 | Per-event grid carbon intensity (extends TASK-20 with marginal emission factors) | TASK-20 | ☐ |
@@ -3473,7 +3473,67 @@ unit-test count gains ≥ 4 cases.
 
 ---
 
-## 🟡 TASK-46 — Battery-health card "Estimated" warning when heuristic over-estimates
+## 🟡 TASK-46 — Battery-health card "Estimated" warning when heuristic over-estimates ☑ Done (2026-05-04)
+
+> **Outcome (merged 2026-05-04 on `feat/task46-battery-health-estimated-chip`).**
+>
+> - **`CapacityEstimator`** gains `latestIsExact(points): Boolean?`
+>   (null on empty list; otherwise the chronologically latest point's
+>   `isExact` flag) and a new companion constant
+>   `HEURISTIC_OVERESTIMATE_THRESHOLD_PERCENT = 105.0` documenting the
+>   5%-margin design choice (avoids false alarms on exact-path
+>   readings that legitimately land just over 100% because users
+>   enter SoC as whole percents).
+> - **`Stats`** grows two booleans:
+>   `batteryHealthIsHeuristic: Boolean = false` (latest point came
+>   from the heuristic full-charge path) and
+>   `batteryHealthIsOverestimated: Boolean = false` (heuristic AND
+>   `batteryHealthPercent >= 105.0`). Splitting into two flags keeps
+>   the option open for a softer "Estimated" tag in future UX
+>   without the over-estimation warning.
+> - **`StatsCalculator.computeStats`** signature extended with the
+>   two new optional booleans (default false), threaded into both
+>   the early-return branch and the main return branch.
+> - **`ObserveDashboardStatsUseCase`** computes the booleans
+>   inline: `isHeuristic = capacityEstimator.latestIsExact(points)
+>   == false` (the `== false` literal is intentional — it returns
+>   `false` for an explicitly heuristic latest point AND for the
+>   null/empty case, which collapses both to "no warning"); then
+>   `isOverestimated = isHeuristic && healthPct != null && healthPct
+>   >= HEURISTIC_OVERESTIMATE_THRESHOLD_PERCENT`.
+> - **Layout** adds a new TextView (`@id/dashboard_battery_health_estimated_warning`)
+>   inside the existing `dashboard_card_battery_health` card, styled
+>   as a TASK-43-style chip — `?attr/colorTertiaryContainer`
+>   background, `?attr/colorOnTertiaryContainer` text, label-medium
+>   text appearance, 8dp top margin, hidden by default. Carries
+>   `android:contentDescription="@string/battery_health_estimated_warning_a11y"`
+>   ("Estimated capacity, may overestimate") so TalkBack reads a
+>   self-contained sentence — coordinates with TASK-18 a11y scope.
+> - **`DashboardFragment.renderBatteryHealthCard`** flips the chip's
+>   visibility from `stats?.batteryHealthIsOverestimated == true`
+>   (the strict `== true` keeps null safe).
+> - **Strings** add two new keys: `battery_health_estimated_warning`
+>   ("Estimated — heuristic may overestimate") and
+>   `battery_health_estimated_warning_a11y` ("Estimated capacity,
+>   may overestimate"). Two strings instead of one because the chip
+>   text is intentionally terse for visual density while TalkBack
+>   needs a complete sentence.
+>
+> **Tests:** 5 new JVM cases on `ObserveDashboardStatsUseCaseTest`,
+> all single-event fixtures with `nominal = 60.0` so the heuristic
+> threshold sits at exactly `kwhAdded = 48.0`:
+> `heuristicLatestPoint_overThreshold_setsBothFlags` (kwhAdded = 70
+> → 116.67%, both flags), `heuristicLatestPoint_underThreshold_setsHeuristicButNotOverestimated`
+> (kwhAdded = 50 → 83.3%, only heuristic),
+> `heuristicAtExactly105Percent_setsOverestimated_boundaryGuard`
+> (kwhAdded = 63 → 105.0% exactly — pins the `>=` semantic),
+> `exactLatestPoint_evenAboveThreshold_setsNeitherFlag` (SoC delta
+> 0.2→0.7 over 33 kWh = 110% via the exact path; chip stays hidden
+> per the BACKLOG contract that exact readings are trusted), and
+> `nullNominal_setsNeitherFlag` (regression guard for cars with no
+> `batteryKwh`). The existing `CapacityEstimatorTest` >100%
+> computation case unchanged — no new estimator-level tests needed
+> per the BACKLOG checklist. JVM unit-test count 398 → 403.
 
 > **Audit finding (BUG-02, 2026-05-03):**
 > `CapacityEstimator.batteryHealthPercent(...)` returns values >100%

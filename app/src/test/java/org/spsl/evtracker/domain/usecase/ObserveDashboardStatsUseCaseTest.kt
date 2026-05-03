@@ -95,6 +95,121 @@ class ObserveDashboardStatsUseCaseTest {
         assertTrue(state.showMultiCurrencyBanner)
     }
 
+    // -------------------------------------------------------------------------
+    // TASK-46 — battery-health heuristic / overestimate flags on Stats
+    // -------------------------------------------------------------------------
+
+    private fun nominal60Car() = CarEntity(id = 1L, name = "T", batteryKwh = 60.0, createdAt = 0L)
+
+    @Test
+    fun heuristicLatestPoint_overThreshold_setsBothFlags() = runTest {
+        // kwhAdded = 70 against nominal = 60: heuristic qualifies (70 >= 48),
+        // capacity = 70, pct = 70/60 * 100 = 116.67% — well above the 105%
+        // threshold, so BOTH flags fire.
+        val now = System.currentTimeMillis()
+        val (useCase, _, _) = build(
+            cars = listOf(nominal60Car()),
+            events = listOf(
+                ChargeEventEntity(carId = 1L, eventDate = now - 1 * MS_PER_DAY, odometerKm = 100.0, kwhAdded = 70.0, createdAt = 0L),
+            ),
+            activeCarId = 1L,
+        )
+        val state = useCase.observe(DashboardPeriod.Last30Days, ChargeTypeFilter.ALL).first()
+        val stats = state.stats!!
+        assertTrue("heuristic flag should fire", stats.batteryHealthIsHeuristic)
+        assertTrue("overestimated flag should fire above 105%", stats.batteryHealthIsOverestimated)
+    }
+
+    @Test
+    fun heuristicLatestPoint_underThreshold_setsHeuristicButNotOverestimated() = runTest {
+        // kwhAdded = 50 against nominal = 60: heuristic qualifies (50 >= 48),
+        // capacity = 50, pct = 83.3% — under the 105% threshold, so the
+        // overestimation flag stays clear even though the heuristic flag fires.
+        val now = System.currentTimeMillis()
+        val (useCase, _, _) = build(
+            cars = listOf(nominal60Car()),
+            events = listOf(
+                ChargeEventEntity(carId = 1L, eventDate = now - 1 * MS_PER_DAY, odometerKm = 100.0, kwhAdded = 50.0, createdAt = 0L),
+            ),
+            activeCarId = 1L,
+        )
+        val state = useCase.observe(DashboardPeriod.Last30Days, ChargeTypeFilter.ALL).first()
+        val stats = state.stats!!
+        assertTrue("heuristic flag should fire", stats.batteryHealthIsHeuristic)
+        assertEquals(false, stats.batteryHealthIsOverestimated)
+    }
+
+    @Test
+    fun heuristicAtExactly105Percent_setsOverestimated_boundaryGuard() = runTest {
+        // kwhAdded = 63 against nominal = 60: capacity = 63, pct = 105.0%
+        // exactly. The threshold uses `>=`, so the boundary value triggers.
+        // Regression guard for the BACKLOG-mandated transition point.
+        val now = System.currentTimeMillis()
+        val (useCase, _, _) = build(
+            cars = listOf(nominal60Car()),
+            events = listOf(
+                ChargeEventEntity(carId = 1L, eventDate = now - 1 * MS_PER_DAY, odometerKm = 100.0, kwhAdded = 63.0, createdAt = 0L),
+            ),
+            activeCarId = 1L,
+        )
+        val state = useCase.observe(DashboardPeriod.Last30Days, ChargeTypeFilter.ALL).first()
+        val stats = state.stats!!
+        assertTrue(stats.batteryHealthIsHeuristic)
+        assertTrue("105.0% must trigger via >= comparison", stats.batteryHealthIsOverestimated)
+    }
+
+    @Test
+    fun exactLatestPoint_evenAboveThreshold_setsNeitherFlag() = runTest {
+        // SoC delta 0.2 → 0.7 over 33 kWh = 66 kWh effective capacity.
+        // Against nominal = 60, that's 110% — above the 105% guard, but
+        // the EXACT path is trusted: no warning chip should fire because
+        // exact readings reflect real battery state, not an inferred
+        // upper bound.
+        val now = System.currentTimeMillis()
+        val (useCase, _, _) = build(
+            cars = listOf(nominal60Car()),
+            events = listOf(
+                ChargeEventEntity(
+                    carId = 1L,
+                    eventDate = now - 1 * MS_PER_DAY,
+                    odometerKm = 100.0,
+                    kwhAdded = 33.0,
+                    socBefore = 0.2,
+                    socAfter = 0.7,
+                    createdAt = 0L,
+                ),
+            ),
+            activeCarId = 1L,
+        )
+        val state = useCase.observe(DashboardPeriod.Last30Days, ChargeTypeFilter.ALL).first()
+        val stats = state.stats!!
+        assertEquals(false, stats.batteryHealthIsHeuristic)
+        assertEquals(
+            "exact path must never trip the overestimation chip even above 105%",
+            false,
+            stats.batteryHealthIsOverestimated,
+        )
+    }
+
+    @Test
+    fun nullNominal_setsNeitherFlag() = runTest {
+        // Car has no nominal battery capacity — health pct is null and both
+        // flags should default to false. Regression guard for the case where
+        // the user added a car without setting batteryKwh.
+        val now = System.currentTimeMillis()
+        val (useCase, _, _) = build(
+            cars = listOf(CarEntity(id = 1L, name = "T", batteryKwh = null, createdAt = 0L)),
+            events = listOf(
+                ChargeEventEntity(carId = 1L, eventDate = now - 1 * MS_PER_DAY, odometerKm = 100.0, kwhAdded = 70.0, createdAt = 0L),
+            ),
+            activeCarId = 1L,
+        )
+        val state = useCase.observe(DashboardPeriod.Last30Days, ChargeTypeFilter.ALL).first()
+        val stats = state.stats!!
+        assertEquals(false, stats.batteryHealthIsHeuristic)
+        assertEquals(false, stats.batteryHealthIsOverestimated)
+    }
+
     @Test
     fun reEmitsWhenEventInsertedForActiveCar() = runTest(UnconfinedTestDispatcher()) {
         val carReader = FakeCarReader(listOf(CarEntity(id = 1L, name = "T", createdAt = 0L)))

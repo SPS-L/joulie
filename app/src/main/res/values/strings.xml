@@ -229,6 +229,8 @@
     <string name="battery_health_card_label">Battery health</string>
     <string name="battery_health_card_subtitle">Latest effective capacity vs nominal</string>
     <string name="battery_health_value_format">%1$.0f%%</string>
+    <string name="battery_health_estimated_warning">Estimated — heuristic may overestimate</string>
+    <string name="battery_health_estimated_warning_a11y">Estimated capacity, may overestimate</string>
     <string name="cost_card_per_km">Cost per km</string>
     <string name="cost_card_per_100km">Cost per 100km</string>
     <string name="fab_log_charge">Log charge</string>

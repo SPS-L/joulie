@@ -93,10 +93,35 @@ class CapacityEstimator @Inject constructor() {
         return null
     }
 
+    /**
+     * TASK-46: latest point's exactness flag. `null` when [points] is empty,
+     * `true` when the chronologically latest point came from the exact SoC-
+     * delta path, `false` when it came from the heuristic full-charge path.
+     * The Dashboard battery-health card uses this together with
+     * [batteryHealthPercent] and [HEURISTIC_OVERESTIMATE_THRESHOLD_PERCENT]
+     * to decide whether to render the "Estimated — heuristic may
+     * overestimate" warning chip.
+     */
+    fun latestIsExact(points: List<CapacityPoint>): Boolean? =
+        points.maxByOrNull { it.eventDate }?.isExact
+
     companion object {
         const val HEURISTIC_FULL_CHARGE_FRACTION = 0.8
 
         /** Minimum point count required to render the Charts degradation tab. */
         const val MIN_POINTS_FOR_CHART = 3
+
+        /**
+         * TASK-46: above this, the heuristic capacity estimate is far enough
+         * over the car's nominal capacity that the unclamped value is more
+         * likely a measurement artifact than real battery state. Used by
+         * `ObserveDashboardStatsUseCase` to gate the "Estimated" warning
+         * chip — only fired when the latest point is heuristic AND the
+         * percentage crosses this threshold. The 5% margin avoids noise
+         * from the normal spread of exact SoC readings (which sometimes
+         * land at e.g. 102% because the user's SoC entries round to
+         * whole percents).
+         */
+        const val HEURISTIC_OVERESTIMATE_THRESHOLD_PERCENT = 105.0
     }
 }
