@@ -14,6 +14,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.spsl.evtracker.core.model.ChargeKwhSource
 import org.spsl.evtracker.core.model.ChargeType
 
 @RunWith(AndroidJUnit4::class)
@@ -200,6 +201,7 @@ class MigrationTest {
                 AppDatabase.MIGRATION_3_4,
                 AppDatabase.MIGRATION_4_5,
                 AppDatabase.MIGRATION_5_6,
+                AppDatabase.MIGRATION_6_7,
             )
             .build()
 
@@ -327,7 +329,33 @@ class MigrationTest {
     }
 
     @Test
-    fun migrate_1_to_6_validatesSchema() = runBlocking {
+    fun migrate_6_to_7_addsKwhSourceColumn() = runBlocking {
+        // MIGRATION_6_7 (TASK-43): adds a NOT NULL `kwhSource` TEXT column to
+        // charge_events with `DEFAULT 'MEASURED'`. Pre-migration rows backfill
+        // to MEASURED — exactly the right behaviour, since legacy events were
+        // entered before the in-form calculator existed and so cannot be
+        // DERIVED_FROM_SOC.
+        val v3 = buildV3Database()
+        v3.execSQL("INSERT INTO cars (name, createdAt) VALUES ('A', 1000)")
+        v3.execSQL(
+            "INSERT INTO charge_events " +
+                "(carId, eventDate, odometerKm, kwhAdded, chargeType, note, createdAt) " +
+                "VALUES (1, 2000, 100.0, 10.0, 'AC', '', 2000)",
+        )
+        AppDatabase.MIGRATION_3_4.migrate(v3)
+        AppDatabase.MIGRATION_4_5.migrate(v3)
+        AppDatabase.MIGRATION_5_6.migrate(v3)
+        AppDatabase.MIGRATION_6_7.migrate(v3)
+
+        v3.query("SELECT kwhSource FROM charge_events WHERE id = 1").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals("MEASURED", cursor.getString(0))
+        }
+        v3.close()
+    }
+
+    @Test
+    fun migrate_1_to_7_validatesSchema() = runBlocking {
         val v1 = buildV1Database()
         v1.execSQL("INSERT INTO cars (name, createdAt) VALUES ('A', 1000)")
         v1.execSQL(
@@ -336,11 +364,12 @@ class MigrationTest {
         )
         v1.close()
 
-        // Open through Room with all five migrations registered. Room runs them
-        // in order and then validates the resulting schema against v6 entity
+        // Open through Room with all six migrations registered. Room runs them
+        // in order and then validates the resulting schema against v7 entity
         // declarations. Schema validation exercises the ChargeTypeConverter
         // wiring on the chargeType column (TASK-25), the Long-PK widening
-        // (TASK-26), and the new optional SoC columns (TASK-14).
+        // (TASK-26), the optional SoC columns (TASK-14), and the new
+        // ChargeKwhSourceConverter on kwhSource (TASK-43).
         val room = openWithRoom()
         try {
             val event = room.chargeEventDao().getAllForCarSorted(1L).single()
@@ -351,6 +380,7 @@ class MigrationTest {
             assertEquals("", event.note) // MIGRATION_2_3 add column NOT NULL DEFAULT ''
             assertEquals(null, event.socBefore) // MIGRATION_5_6 add column
             assertEquals(null, event.socAfter) // MIGRATION_5_6 add column
+            assertEquals(ChargeKwhSource.MEASURED, event.kwhSource) // MIGRATION_6_7 default
         } finally {
             room.close()
         }

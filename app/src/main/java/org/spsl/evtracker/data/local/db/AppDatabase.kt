@@ -18,10 +18,10 @@ import org.spsl.evtracker.data.local.entity.CustomLocationEntity
         ChargeEventEntity::class,
         CustomLocationEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = true,
 )
-@TypeConverters(ChargeTypeConverter::class)
+@TypeConverters(ChargeTypeConverter::class, ChargeKwhSourceConverter::class)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun carDao(): CarDao
@@ -127,6 +127,24 @@ abstract class AppDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE charge_events ADD COLUMN socBefore REAL")
                 db.execSQL("ALTER TABLE charge_events ADD COLUMN socAfter REAL")
+            }
+        }
+
+        /**
+         * TASK-43: add a `kwhSource` provenance column to `charge_events`.
+         * `MEASURED` events come from the charger or the user; they remain
+         * eligible for the TASK-14 capacity-degradation tracker.
+         * `DERIVED_FROM_SOC` events are produced by the in-form calculator
+         * and are skipped by `CapacityEstimator` because the math is
+         * tautological. The column is `NOT NULL DEFAULT 'MEASURED'` so legacy
+         * rows backfill cleanly without a separate UPDATE pass.
+         */
+        val MIGRATION_6_7: Migration = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE charge_events " +
+                        "ADD COLUMN kwhSource TEXT NOT NULL DEFAULT 'MEASURED'",
+                )
             }
         }
     }
