@@ -8,9 +8,13 @@ import androidx.test.espresso.matcher.RootMatchers.isDialog
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
 import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import dagger.hilt.android.testing.BindValue
+import dagger.Binds
+import dagger.Module
+import dagger.hilt.InstallIn
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
+import dagger.hilt.android.testing.UninstallModules
+import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -26,10 +30,31 @@ import org.junit.runner.RunWith
 import org.spsl.evtracker.data.local.db.AppDatabase
 import org.spsl.evtracker.data.local.entity.CarEntity
 import org.spsl.evtracker.data.repository.SettingsRepository
+import org.spsl.evtracker.di.DataResetModule
 import org.spsl.evtracker.domain.repository.DataResetTransactionRunner
 import javax.inject.Inject
+import javax.inject.Singleton
 
+/**
+ * `@UninstallModules(DataResetModule::class)` removes the production
+ * `@Binds DataResetTransactionRunner` from the Hilt graph for this
+ * test class. The local `TestResetModule` re-binds the interface to a
+ * `Singleton` `TestableResetRunner` so `ResetAllDataUseCase` injects
+ * the spy. The test's own `@Inject testRunner` field receives the same
+ * singleton so assertions on `clearCalls` / `failNext` see the same
+ * instance the use case mutated.
+ *
+ * Earlier versions of this test used `@BindValue val testRunner:
+ * TestableResetRunner` — that bound the *concrete* class, not the
+ * interface, so the use case kept resolving the production
+ * `RoomDataResetTransactionRunner` via [DataResetModule] and the spy
+ * was never invoked. Switching the field type to the interface caused
+ * a duplicate-binding error (`@BindValue` adds a parallel binding, it
+ * does not replace), which is why the binding had to be extracted to
+ * its own focused module before this fix could land.
+ */
 @HiltAndroidTest
+@UninstallModules(DataResetModule::class)
 @RunWith(AndroidJUnit4::class)
 class MainActivityResetRecoveryTest {
 
@@ -40,15 +65,10 @@ class MainActivityResetRecoveryTest {
 
     @Inject lateinit var database: AppDatabase
 
-    /**
-     * Hilt's @BindValue overrides the production DataResetTransactionRunner binding.
-     * Tests can flip `failNext` to simulate a Room failure inside Step 2.
-     */
-    @BindValue
-    @JvmField
-    val testRunner: TestableResetRunner = TestableResetRunner()
+    @Inject lateinit var testRunner: TestableResetRunner
 
-    class TestableResetRunner : DataResetTransactionRunner {
+    @Singleton
+    class TestableResetRunner @Inject constructor() : DataResetTransactionRunner {
         @Volatile var failNext: Throwable? = null
 
         @Volatile var realDelegate: DataResetTransactionRunner? = null
@@ -62,6 +82,14 @@ class MainActivityResetRecoveryTest {
             }
             realDelegate?.clearAllTables()
         }
+    }
+
+    @Module
+    @InstallIn(SingletonComponent::class)
+    abstract class TestResetModule {
+        @Binds
+        @Singleton
+        abstract fun bindRunner(impl: TestableResetRunner): DataResetTransactionRunner
     }
 
     @Before fun setUp() {

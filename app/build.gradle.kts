@@ -162,6 +162,13 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.accessibility)
     androidTestImplementation(libs.androidx.navigation.testing)
     androidTestImplementation(libs.androidx.fragment.testing)
+    // TASK-50 sub-fix A: fragment-testing 1.6+ split the EmptyFragmentActivity
+    // manifest entry into a companion artifact. It must merge into the *app*
+    // manifest (debug variant), not the test APK manifest, because the
+    // instrumentation runner launches activities under the app's package.
+    // Without this, FragmentScenario.launchInContainer fails with
+    // "Unable to resolve activity for Intent ... EmptyFragmentActivity".
+    debugImplementation(libs.androidx.fragment.testing.manifest)
     androidTestImplementation(libs.androidx.work.testing)
     androidTestImplementation(libs.hilt.android.testing)
     kspAndroidTest(libs.hilt.android.compiler)

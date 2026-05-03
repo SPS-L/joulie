@@ -10,7 +10,6 @@ import org.spsl.evtracker.data.backup.RoomRestoreTransactionRunner
 import org.spsl.evtracker.data.repository.CarRepository
 import org.spsl.evtracker.data.repository.ChargeEventRepository
 import org.spsl.evtracker.data.repository.LocationRepository
-import org.spsl.evtracker.data.repository.RoomDataResetTransactionRunner
 import org.spsl.evtracker.data.repository.SettingsRepository
 import org.spsl.evtracker.domain.backup.BackupRepository
 import org.spsl.evtracker.domain.backup.BackupScheduler
@@ -21,7 +20,6 @@ import org.spsl.evtracker.domain.repository.CarReader
 import org.spsl.evtracker.domain.repository.CarWriter
 import org.spsl.evtracker.domain.repository.ChargeEventQueries
 import org.spsl.evtracker.domain.repository.ChargeEventWriter
-import org.spsl.evtracker.domain.repository.DataResetTransactionRunner
 import org.spsl.evtracker.domain.repository.LocationReader
 import org.spsl.evtracker.domain.repository.LocationWriter
 import org.spsl.evtracker.domain.repository.SettingsReader
@@ -57,10 +55,6 @@ abstract class DomainModule {
     @Binds abstract fun bindRestoreTransactionRunner(impl: RoomRestoreTransactionRunner): RestoreTransactionRunner
 
     @Binds abstract fun bindRestoreSnapshotWriter(impl: CacheDirRestoreSnapshotWriter): RestoreSnapshotWriter
-
-    @Binds abstract fun bindDataResetTransactionRunner(
-        impl: RoomDataResetTransactionRunner,
-    ): DataResetTransactionRunner
 
     // CSV export infrastructure.
     @Binds abstract fun bindCsvFileSink(impl: AndroidCsvFileSink): CsvFileSink
