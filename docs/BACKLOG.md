@@ -1,6 +1,6 @@
 # EV Tracker — Development Backlog
 
-Tasks 1–15 were generated from a senior Android developer code review of the `main` branch (April 2026). Tasks 16–21 are follow-up improvements identified during a 2026-04-30 verification pass against `main` (CI/release pipeline, R8 keep-rules, a11y posture, and SPS-Lab research relevance). Tasks 38–42 are new feature / infra ideas filed 2026-05-02 from a follow-up senior-developer review (research-aligned analytics, schema-migration polish, anonymised research export). TASK-43 (filed 2026-05-02) closes a real UX gap: many EU/UK chargers and several older EVs (Renault/Nissan/older BMW) display only SoC % before/after, never kWh delivered. Each task is written as a self-contained instruction suitable for a coding agent.
+Tasks 1–15 were generated from a senior Android developer code review of the `main` branch (April 2026). Tasks 16–21 are follow-up improvements identified during a 2026-04-30 verification pass against `main` (CI/release pipeline, R8 keep-rules, a11y posture, and SPS-Lab research relevance). Tasks 38–42 are new feature / infra ideas filed 2026-05-02 from a follow-up senior-developer review (research-aligned analytics, schema-migration polish, anonymised research export). TASK-43 (filed 2026-05-02) closes a real UX gap: many EU/UK chargers and several older EVs (Renault/Nissan/older BMW) display only SoC % before/after, never kWh delivered. Tasks 44–49 are filed 2026-05-03 from a senior-developer code audit cross-checked against the current `main` (`658b60a` + the TASK-43 / TASK-18 Step 6 / nightly-WorkManager fixes): three correctness/UX bugs (`StatsCalculator` cost accumulation, `KwhFromSocCalculator` defensive guard, battery-health overshoot warning) and three research-aligned extensions (charging power profile, time-of-use tariff zones, per-event grid carbon intensity). The audit also folded `kwhSource` / `socBefore` / `socAfter` columns into TASK-09 and concrete K2 / Room version pins into TASK-33. Each task is written as a self-contained instruction suitable for a coding agent.
 
 ---
 
@@ -51,6 +51,12 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-41 | 🟢 | JSON-LD / OCPP-compatible export format (research interoperability) | TASK-09 | ⏸ |
 | TASK-42 | 🟢 | Open Charge Map / OCPI station lookup integration | TASK-37 | ⏸ |
 | TASK-43 | 🟡 | kWh-from-SoC calculator + `kwhSource` provenance flag (degradation banner on derived events) | TASK-14 | ☑ |
+| TASK-44 | 🟡 | Fix `StatsCalculator.computeStats` cost accumulation (first event's cost silently dropped; inconsistent with `computeMonthlyBuckets`) | — | ☐ |
+| TASK-45 | 🟢 | Defensive SoC range guard (`require(...)`) in `KwhFromSocCalculator.compute` | — | ☐ |
+| TASK-46 | 🟡 | Battery-health card "Estimated" warning when heuristic over-estimates (>105% of nominal AND `isExact = false`) | — | ☐ |
+| TASK-47 | 🟢 | Charging power profile fields (`peakPowerKw`, `chargingDurationMinutes`) — schema bump | — | ☐ |
+| TASK-48 | 🟢 | Time-of-use (ToU) tariff classification on charge events | — | ☐ |
+| TASK-49 | 🟢 | Per-event grid carbon intensity (extends TASK-20 with marginal emission factors) | TASK-20 | ☐ |
 
 **Priority legend:** 🔴 High (architecture/data safety) · 🟡 Medium (robustness/UX) · 🟢 Low (new feature)  
 **Status legend:** ☐ open · ☑ done · ☒ closed (premise no longer holds) · ⏸ under consideration (do not start without explicit go-ahead)  
@@ -342,6 +348,16 @@ release build still compiles (`./gradlew :app:assembleRelease`).
 > **date-ranged variant** of the existing exporter that also emits the
 > per-row efficiency derived from the previous event for the same car.
 
+> **Audit follow-up (GAP-01, 2026-05-03):** the existing
+> `ExportCsvUseCase` writes 8 columns and silently omits TASK-14
+> (`socBefore`, `socAfter`) and TASK-43 (`kwhSource`) data. Folding
+> the column extension into this task: the new range exporter MUST
+> include the missing columns, AND the existing `ExportCsvUseCase`
+> must be retroactively patched in the same change set so both
+> exporters share the schema. SPS-Lab research consumers (TASK-40) need
+> these columns to distinguish measured-vs-derived energy and to
+> reconstruct degradation context.
+
 1. Add a `ExportChargeEventsRangeUseCase` (or extend `ExportCsvUseCase` with
    a `DateRange?` parameter) that:
    - Accepts `startMillis: Long`, `endMillis: Long`, optional `carId: Long`.
@@ -350,13 +366,21 @@ release build still compiles (`./gradlew :app:assembleRelease`).
    - Computes the same per-row delta-odometer efficiency the History screen
      uses (`kmPerKwh = (odo[i] - odo[i-1]) / kwh[i]`; first event for a car
      emits an empty efficiency cell).
-   - Writes `event_date_iso,car_name,odometer_km,kwh,charge_type,location,cost_total,cost_per_kwh,currency,km_per_kwh,note` and shares via the existing FileProvider authority `${packageName}.fileprovider`.
-2. Add an "Export range…" entry in Settings next to the existing CSV export
+   - Writes `event_date_iso,car_name,odometer_km,kwh,kwh_source,charge_type,location,cost_total,cost_per_kwh,currency,km_per_kwh,soc_before,soc_after,note` and shares via the existing FileProvider authority `${packageName}.fileprovider`.
+   - `kwh_source` emits the enum name (`MEASURED` / `DERIVED_FROM_SOC`).
+   - `soc_before` / `soc_after` emit fractions in `0.0..1.0`, blank when null.
+2. **Retroactively patch** the existing `ExportCsvUseCase.writeCsv(...)`
+   so its output matches the same 14-column header. Update
+   `ExportCsvUseCaseTest` (or add it if missing) with cases asserting
+   `kwh_source`, `soc_before`, `soc_after` appear in both header and
+   rows for `DERIVED_FROM_SOC` and SoC-bearing fixtures.
+3. Add an "Export range…" entry in Settings next to the existing CSV export
    that opens `MaterialDatePicker.Builder.dateRangePicker()` and calls the
    new use case via `SettingsViewModel`.
-3. Add JVM unit tests for the new use case covering: empty range, single
+4. Add JVM unit tests for the new use case covering: empty range, single
    event (efficiency cell empty), multi-event efficiency derivation, mixed
-   currency rows, and `costTotal IS NULL` rows. Use the existing fakes.
+   currency rows, `costTotal IS NULL` rows, `kwhSource = DERIVED_FROM_SOC`
+   row, and a row with both SoC fields set. Use the existing fakes.
 
 ---
 
@@ -2389,6 +2413,17 @@ audit, not the bump.
      are tied 1:1 to Kotlin minor versions.
    - Hilt 2.50 supports Kotlin 2.x, or pin a Hilt version that does
      (Hilt 2.51+ added K2 support).
+   - **Room 2.7.x** is on the audit shortlist alongside Kotlin: Room
+     2.6.1's KSP processor targets Kotlin 1.9.x and is not K2-clean.
+     Bumping Kotlin without bumping Room will surface as KSP processor
+     errors during the trial build. Room 2.7.x also unlocks the
+     `@AutoMigration` work in TASK-39, so the two upgrades pair
+     naturally.
+   - **Concrete pin shortlist** (audit 2026-05-03 — re-verify "latest
+     stable" at execution time): `kotlin = "2.0.21"`,
+     `ksp = "2.0.21-1.0.27"`, `hilt = "2.52"+`, `room = "2.7.x"`. Treat
+     these as the audit hypothesis to confirm or refute, not as fixed
+     targets.
 2. **Plugin and dependency check.** Run `./gradlew dependencies --configuration releaseRuntimeClasspath`
    and grep for any third-party Kotlin-plugin output (`kotlinx-*`,
    compiler plugins, kapt artifacts). The project uses KSP not kapt;
@@ -2935,6 +2970,19 @@ the schema in `METHODOLOGY.md` for transparency.
   `CsvFileSink` infrastructure and the date-range picker.
 - Coordinate with TASK-20 — both create `docs/METHODOLOGY.md`. The
   first to land creates the file; the second appends a section.
+- **Audit follow-up (RES-04, 2026-05-03):** before the use case
+  lands, draft an `AnonymisedExportPolicy` domain object that holds
+  the field-suppression rules (which fields are stripped, which
+  are generalised, which are passed through). Unit-test the policy
+  independently of the export use case, then have
+  `ExportAnonymisedCsvUseCase` consume it. This makes the
+  anonymisation contract reviewable in isolation and prevents
+  accidental field-leak regressions when the schema grows. The
+  methodology doc must additionally cover: GDPR lawful basis (the
+  user is the data subject and consents per export), generalisation
+  rules (hashes per export, not stable cross-export), and a
+  user-facing consent dialog whose body matches the methodology
+  doc verbatim.
 
 ---
 
@@ -3193,6 +3241,351 @@ the chart is sparser than the event count suggests.
   `ChargeType` enum + converter pattern; mirror that exactly for
   `ChargeKwhSource`. TASK-39 (Room `@AutoMigration`) is the natural
   vehicle for this migration if it lands first — see Step 2.
+
+---
+
+## 🟡 TASK-44 — Fix `StatsCalculator.computeStats` cost accumulation
+
+> **Audit finding (BUG-03, 2026-05-03):** `computeStats` accumulates
+> cost inside the delta-odometer loop (`for (i in 1 until sorted.size)`),
+> which silently drops the **first event's cost** from `totalCost` and
+> `costPerKm`. `computeMonthlyBuckets` already sums all events
+> (`bucketEvents.mapNotNull { it.costTotal }.sum()`), so the Dashboard
+> "Total cost" card and the monthly cost chart disagree on the same
+> period. The undercount is negligible in long histories but is a
+> 33–50% error for fresh users with 2–3 sessions — exactly the audience
+> most likely to spot the inconsistency between the two surfaces.
+
+### Scope
+
+1. Separate cost accumulation from the odometer-delta loop in
+   `StatsCalculator.computeStats`. Sum cost across **all** events in
+   the period, not just `sorted[i]` for `i ≥ 1` with `dist > 0`:
+
+   ```kotlin
+   val resolvedTotalCost = if (mixedCurrency) null else
+       events.mapNotNull { it.costTotal }.sum().takeIf { it > 0.0 }
+   ```
+
+   The mixed-currency rule still wins — when `mixedCurrency = true`,
+   every cost-derived field returns `null` (per the existing invariant
+   documented in `CLAUDE.md`'s "Smart cost handling" section).
+2. Update the early-return branch for `events.size < 2`. Single-event
+   periods previously returned `totalCost = null`; they should now
+   return the single event's cost when it exists. `costPerKm`
+   stays `null` because `totalDist` is undefined for a single event.
+3. `costPerKm` keeps its current `totalCost / totalDist` formula but
+   sources `totalCost` from the new sum. With single-event periods
+   it stays `null` (no `totalDist`).
+4. Add JVM regression cases to `StatsCalculatorTest`:
+   - 2 events, both costed → `totalCost` = sum of both (currently only
+     the second is counted).
+   - 3 events, only the first and third are costed → `totalCost`
+     includes both.
+   - Mixed-currency rule still wins (`totalCost = null` regardless).
+   - Single costed event → `totalCost` = that cost; `costPerKm` =
+     `null`.
+   - Existing `costPerKm` test case still passes.
+5. Update `docs/DESIGN.md §7` if the formula table mentions the
+   delta-loop semantics; the new contract is "total cost = sum over
+   period; cost-per-km = total cost / total driven distance".
+
+### Acceptance
+
+`computeStats.totalCost` and the per-month sum from
+`computeMonthlyBuckets` agree on any single-period input. Dashboard
+total-cost surface matches the monthly-cost chart. JVM unit-test count
+increases by ≥ 4. No existing test regresses.
+
+---
+
+## 🟢 TASK-45 — Defensive SoC range guard in `KwhFromSocCalculator`
+
+> **Audit finding (BUG-01, 2026-05-03):**
+> `KwhFromSocCalculator.compute(socBefore, socAfter, nominalBatteryKwh)`
+> accepts any `Double` and clamps only to `≥ 0`. The sole caller in
+> `ChargeEditViewModel.recomputeKwhFromSoc` already validates `[0, 100]
+> %` and divides by 100 before invocation, so the calculator's lack of
+> a guard is currently latent. A future caller wiring percent values
+> directly (or fractions outside `[0,1]`) would silently produce a
+> kWh inflated by 100× without any signal. Defense-in-depth, low cost.
+
+### Scope
+
+1. Add `require(...)` at the top of `compute(...)`:
+
+   ```kotlin
+   require(socBefore in 0.0..1.0 && socAfter in 0.0..1.0) {
+       "SoC values must be fractions in [0,1]; got socBefore=$socBefore socAfter=$socAfter"
+   }
+   require(nominalBatteryKwh > 0.0) {
+       "nominalBatteryKwh must be > 0; got $nominalBatteryKwh"
+   }
+   ```
+2. Update the function KDoc to make the contract explicit: inputs are
+   *fractions* (`0.0..1.0`), not percentages (`0..100`). Cite the
+   `ChargeEditViewModel.recomputeKwhFromSoc` percent→fraction
+   conversion as the canonical caller pattern.
+3. Add JVM cases to `KwhFromSocCalculatorTest`:
+   - `socBefore = 80.0` (raw percent) throws
+     `IllegalArgumentException`.
+   - `socAfter = -0.1` throws.
+   - `nominalBatteryKwh = 0.0` throws.
+   - `nominalBatteryKwh = -10.0` throws.
+
+### Acceptance
+
+Calling the calculator with raw percent inputs or non-positive
+nominal capacity fails fast in development. `ChargeEditViewModel`
+behavior unchanged because it already passes fractions. JVM
+unit-test count gains ≥ 4 cases.
+
+---
+
+## 🟡 TASK-46 — Battery-health card "Estimated" warning when heuristic over-estimates
+
+> **Audit finding (BUG-02, 2026-05-03):**
+> `CapacityEstimator.batteryHealthPercent(...)` returns values >100%
+> when the heuristic path over-counts (typical pattern: user only
+> records "near full" charges, all of which qualify under the 80%
+> heuristic and produce inflated capacity readings). The KDoc
+> explicitly leaves the value unclamped as diagnostic information,
+> but `DashboardFragment.bindBatteryHealth(...)` (around line 240)
+> renders the percentage verbatim with no visual distinction. Users
+> may misread "112%" as "battery is supercharged" rather than "the
+> heuristic over-estimated." `CapacityPoint.isExact` flag is
+> available but unused in the UI.
+
+### Scope
+
+1. Surface heuristic provenance in `Stats` — add a derived field on
+   `Stats` (or a parallel field on `DashboardScreenState.stats`) such
+   as `batteryHealthIsHeuristic: Boolean` and
+   `batteryHealthIsOverestimated: Boolean`, populated from the latest
+   `CapacityPoint`'s `isExact = false` flag and a 1.05× threshold
+   respectively.
+2. In `DashboardFragment.bindBatteryHealth(...)`, render a
+   tertiary-container chip (or supporting text below the percentage)
+   reading "Estimated — heuristic may overestimate" when **both**
+   `latest.isExact = false` AND
+   `batteryHealthPercent ≥ HEURISTIC_OVERESTIMATE_THRESHOLD_PERCENT`
+   (≥ 105). Reuse the TASK-43 "Est." badge styling
+   (`?attr/colorTertiaryContainer`).
+3. Add `contentDescription` for the warning chip so TalkBack reads
+   "estimated capacity, may overestimate" — coordinate with TASK-18.
+4. JVM tests:
+   - `CapacityEstimatorTest` already covers the >100% computation;
+     no new estimator tests needed.
+   - Add `ObserveDashboardStatsUseCaseTest` cases asserting the new
+     boolean flags fire / clear at the threshold.
+   - VM-level test that the chip-visibility flag transitions at
+     exactly 1.05× nominal.
+5. Add the threshold constant on `CapacityEstimator.companion`:
+   ```kotlin
+   const val HEURISTIC_OVERESTIMATE_THRESHOLD_PERCENT = 105.0
+   ```
+
+### Notes
+
+- Coordinate with TASK-30. The Charts degradation tab will be redrawn
+  when MPAndroidChart is replaced; the same warning should appear
+  above the chart on the degradation tab if the latest point exceeds
+  nominal. Defer the chart-side change to TASK-30 if it lands first
+  — the audit explicitly suggests bundling the two.
+- Coordinate with TASK-43. Derived events (`DERIVED_FROM_SOC`) are
+  already excluded by `CapacityEstimator.estimateOne`, so the
+  heuristic path is the only over-estimation source.
+
+### Acceptance
+
+Dashboard renders an "Estimated" supporting chip under the
+battery-health percentage when the latest reading is heuristic AND
+≥ 105% of nominal. Existing Dashboard tests do not regress. New JVM
+tests cover the threshold transition.
+
+---
+
+## 🟢 TASK-47 — Charging power profile fields (`peakPowerKw`, `chargingDurationMinutes`)
+
+> **Audit suggestion (RES-01, 2026-05-03):** The app records energy
+> (`kwhAdded`) but not charging *power over time*. Even a simple
+> nullable `peakPowerKw` field would enable downstream research on
+> charging-infrastructure demand patterns — SPS-Lab grid-integration
+> studies care about peak charger draw distributions, not just total
+> energy. Bundling duration in the same schema bump enables a derived
+> `avgPowerKw` without further storage.
+
+### Scope
+
+1. Schema **v7 → v8** (next migration claim — coordinate with
+   TASK-39's `@AutoMigration` rollout):
+   - Add `peakPowerKw: Double?` to `ChargeEventEntity`.
+   - Add `chargingDurationMinutes: Int?` to `ChargeEventEntity`.
+   - Both nullable, additive-only DDL. Ideal `@AutoMigration`
+     candidate; if TASK-39 hasn't landed yet, write a manual
+     `MIGRATION_7_8` mirroring `MIGRATION_5_6`'s additive pattern.
+2. Backup format `BackupData.CURRENT_VERSION` 7 → 8. Append v8 to
+   `BackupSerializer.SUPPORTED_VERSIONS`. Both DTO fields nullable
+   for legacy v3..v7 compatibility (Gson `Unsafe.allocateInstance`
+   caveat — see TASK-43 outcome banner: nullable DTO + coalesce in
+   `toEntity()` is the established pattern).
+3. ChargeEdit form: optional fields under a new collapsible
+   "Charging power" card (mirrors the SoC card UX from TASK-14 /
+   TASK-43). Both inputs accept blank / null and never block save.
+   Validation: when `chargingDurationMinutes` is provided, it must
+   be `> 0`; when `peakPowerKw` is provided, it must be `> 0` and
+   `≤ 1000` (sanity ceiling).
+4. `StatsCalculator` extension: when `chargingDurationMinutes` is
+   present, compute per-event `avgPowerKw = kwhAdded / (durationMinutes / 60.0)`.
+   Add `Stats` fields `avgPeakPowerKw: Double?` (mean of recorded
+   `peakPowerKw` values in the period) and
+   `avgPowerKwSampleCount: Int` (so the dashboard knows whether to
+   render the new card).
+5. CSV export columns (TASK-09 dependency or coordinated): emit
+   `peak_power_kw,charging_duration_minutes,avg_power_kw` columns
+   when at least one event in the export range has the data.
+6. JVM tests for the schema (instrumented `migrate_7_to_8` or
+   `@AutoMigration` validation), backup round-trip across v7 / v8,
+   `ChargeEditViewModel` parsing/validation, `StatsCalculator` power
+   derivation, mixed-fixture (some events with power data, some
+   without).
+
+### Notes
+
+- Out of scope: real-time power telemetry from chargers, OBD/CAN
+  integration, charging-curve recording. This task is the
+  user-entered minimum; the data already collected (start/end SoC,
+  kWh delivered) plus an optional duration is the MVP.
+- Charging duration cannot reliably be derived from `eventDate`
+  (which is wall-clock when the user logged the session, not session
+  start). An explicit field is required.
+- Coordinate with TASK-40 — the anonymised research export must
+  include both new fields when present.
+- Coordinate with TASK-48 — both touch the schema; bundling them
+  into a single v7 → v8 bump avoids two consecutive additive bumps.
+
+### Acceptance
+
+Schema bumped to v8 with backward-compatible migration. Optional
+power fields appear in ChargeEdit and CSV exports. `Stats` exposes
+average peak power and an avg-power-derivation count. JVM unit-test
+count increases by ≥ 6 cases. No regression in existing tests.
+
+---
+
+## 🟢 TASK-48 — Time-of-use (ToU) tariff classification on charge events
+
+> **Audit suggestion (RES-02, 2026-05-03):** Cost field captures total
+> cost but not *when* the charge occurred relative to grid tariff
+> zones. Cyprus and most EU grids run ToU pricing. Per-tariff cost
+> analysis enables smart-charging time-shift recommendations and
+> aggregate load-profile research for SPS-Lab grid-integration
+> studies.
+
+### Scope
+
+1. Add `core/model/TariffZone` enum: `PEAK`, `OFF_PEAK`,
+   `SUPER_OFF_PEAK`, `FLAT` (default for users without ToU billing).
+   Plus `parseLegacy` defensive fallback like `ChargeType` /
+   `ChargeKwhSource`. Paired Room TypeConverter and Gson adapter,
+   both registered alongside the existing TASK-25 / TASK-43 wiring.
+2. Schema bump to **next available v** (coordinate with TASK-47):
+   add `tariffZone: TariffZone` non-null with `DEFAULT 'FLAT'` so
+   legacy rows backfill cleanly.
+3. Optional **auto-inference**: a tariff schedule stored in
+   DataStore (a list of `(startHourLocal, endHourLocal, zone)`
+   tuples). When present, `SaveChargeEventUseCase` infers
+   `tariffZone` from `eventDate`'s local-time hour against the
+   schedule. Manual override on the form beats auto-inference.
+4. Wizard / Settings UI: optional "I have time-of-use billing"
+   toggle that opens a tariff editor (start time, end time, zone
+   label). Default off — most users keep `FLAT` and never see the
+   ToU surface.
+5. Charts: filter chip on the trend / monthly-cost tabs to limit
+   series to a single zone. Multi-vehicle overlay (TASK-38) gains a
+   "by tariff zone" stratification layer.
+6. CSV export and anonymised export (TASK-40): emit `tariff_zone`
+   column.
+
+### Notes
+
+- Out of scope: live tariff-rate lookup from a utility API,
+  automatic per-zone cost rate suggestion, dynamic ToU (sub-day
+  variation beyond 4 zones). This task lands the *classification*;
+  rate modeling stays user-entered as today.
+- Coordinate with TASK-49 (grid carbon intensity) — both extend the
+  per-event metadata; ideally merged in a single schema bump if both
+  land in the same release window.
+- Local-time inference must use the device's current zone (not the
+  zone of `eventDate`). A user logging a charge while travelling
+  abroad will typically still want the home-tariff schedule applied
+  — flag this as a known caveat in the methodology doc.
+
+### Acceptance
+
+`tariffZone` round-trips through Room + backup. Optional tariff
+schedule auto-classifies new events. Charts gains a ToU filter.
+Existing JVM tests do not regress; new JVM tests cover the auto-
+inference and the FLAT-default backfill.
+
+---
+
+## 🟢 TASK-49 — Per-event grid carbon intensity (extends TASK-20)
+
+> **Audit suggestion (RES-03, 2026-05-03):** TASK-20 proposes a static
+> Cyprus grid intensity baseline. For SPS-Lab publications, a more
+> granular approach is preferable: associate each charge event's
+> timestamp with hourly grid carbon intensity from open APIs
+> (Electricity Maps, ENTSO-E for CY) so retrospective carbon
+> accounting uses *marginal* (not average) emission factors.
+
+### Scope
+
+1. Add nullable `gridCarbonGCo2PerKwh: Int?` to `ChargeEventEntity`
+   (or `Double?` if sub-integer precision matters for marginal
+   factors). Schema bump as part of the same window as TASK-20 /
+   TASK-47 / TASK-48 when possible — three additive nullable
+   columns in one migration is cleaner than three sequential bumps.
+2. **Backfill mode**: a Settings → "Carbon data" → "Backfill
+   historical carbon intensity" action that calls a configurable API
+   endpoint (default Electricity Maps free tier) for each event with
+   `gridCarbonGCo2PerKwh = null`. Network-bound `WorkManager`
+   one-shot, opt-in, no auto-fetch on launch.
+3. **Per-event recording on save**: when the user is online, fetch
+   intensity at `eventDate` ±1 h and persist. Fallback to TASK-20's
+   static baseline when offline; never block save on the network
+   call (fire-and-forget with later backfill).
+4. Carbon savings stat on the Dashboard:
+   `(baselineICE_kgCo2 - actualGridIntensity_kgCo2) × distance` per
+   event, summed across the period. Per-event flag whenever the
+   marginal-vs-baseline delta is negative ("charged on a dirtier-
+   than-typical hour") — useful smart-charging signal.
+5. Methodology doc `docs/METHODOLOGY.md` (created in TASK-20):
+   append a section explaining the marginal-vs-average distinction,
+   the API source, the freshness/lag of the data, and the citation
+   format for SPS-Lab papers.
+6. Anonymised export (TASK-40) emits `grid_carbon_g_co2_per_kwh`.
+
+### Notes
+
+- This task is **explicitly an extension of TASK-20**; do not start
+  before TASK-20 lands. The static baseline is the floor; this task
+  adds the per-event refinement on top.
+- Free-tier API call budgets are tight (Electricity Maps free tier:
+  ~50 requests/day). Batch backfill must respect rate limits and
+  surface a "Quota exceeded — retry later" Snackbar.
+- Optional API-key configuration in Settings; no key bundled in
+  source (consumer-API-key-in-source is a security smell).
+- Coordinate with TASK-48 — both extend per-event metadata; bundle
+  schema bumps when timing allows.
+
+### Acceptance
+
+Per-event carbon intensity stored in Room. Backfill action populates
+historical events on demand. Methodology doc updated with the
+marginal-vs-average section. Anonymised export includes the new
+column. Tests cover the offline-fallback path and the API
+rate-limit handling.
 
 ---
 
