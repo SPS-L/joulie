@@ -205,7 +205,9 @@ Locks in the TASK-43 enum + Room TypeConverter pair, mirroring the TASK-25 `Char
 
 ### 1.17 ExportCsvUseCaseTest.kt
 
-Locks in the CSV-injection / RFC 4180 escape contract for `ExportCsvUseCase.csvEscape` (TASK-52, 2026-05-03). The file has 2 baseline cases (header column-name flip per `useKm`, row count vs event count) plus 10 hardening cases listed below. The shared test helper `rowFor(location, note, currency)` builds a single charge event, runs `writeCsv` into a `StringWriter`, and slices on the FIRST `\n` (header terminator) to capture the entire data row including any embedded `\r` / `\n` that legitimately live inside a quoted field — `lineSequence().drop(1).first()` would truncate the row at the first embedded line break and was the cause of two early-iteration test failures.
+Locks in two related contracts: the TASK-52 (2026-05-03) CSV-injection / RFC 4180 escape rules, and the TASK-09 (2026-05-03) canonical 14-column schema with date-ranged-export support. The file has two baseline cases (`header_isCanonicalFourteenColumnSchema`, `rowCountMatchesEventCount`) plus 10 TASK-52 hardening cases plus 11 TASK-09 schema/range cases. Two shared helpers: `rowFor(location, note, currency)` slices on the first `\n` (header terminator) and `trimEnd('\n')` to capture a single full data row (used by the TASK-52 single-event hardening cases); `writeAndGetLines(events, carName)` walks the output character-by-character honouring CSV quoting state so embedded `\r` / `\n` inside a quoted field don't split a logical record across multiple "lines" (used by the TASK-09 column-index assertions). The previous `headerLineUsesKmOrMilesPerFlag` test was retired when TASK-09 dropped the `useKm` parameter.
+
+**TASK-52 hardening cases:**
 
 | Test | Description |
 |------|-------------|
@@ -219,6 +221,23 @@ Locks in the CSV-injection / RFC 4180 escape contract for `ExportCsvUseCase.csvE
 | `note_plainText_isNotQuoted` | Over-quoting regression guard: `"Charged at home"` is benign and stays unquoted. The full row ends with `,Charged at home` (no trailing record terminator after `trimEnd('\n')`) |
 | `note_existingCommaAndQuoteCases_stayGreen` | RFC 4180 baseline — `,` → quoted; embedded `"` → doubled and quoted; `\n` → quoted |
 | `currency_isAlsoEscaped` | TASK-52 expanded escape coverage to the `currency` column (free-form letter code stored verbatim from the wizard). A malicious `currency = "=USD"` emits `"'=USD"` instead of `=USD` |
+
+**TASK-09 schema + range cases:**
+
+| Test | Description |
+|------|-------------|
+| `header_isCanonicalFourteenColumnSchema` | Asserts the exact 14-column header literal. Replaces the retired `headerLineUsesKmOrMilesPerFlag` since the `useKm` flip is gone |
+| `emptyEvents_emitsHeaderOnly` | Range filters can produce zero rows; the header must still be present so consumers can introspect column names |
+| `singleEvent_efficiencyCellIsBlank` | First (and only) event in the slice has no previous row to delta against; `km_per_kwh` (column 10) is blank |
+| `multiEvent_efficiencyDerivedFromDeltaOdometer` | 100 km gained, 12 kWh charged → `8.333333333333334` km/kWh on row 2; row 1 stays blank |
+| `negativeOdometerDelta_efficiencyBlank` | Odometer rolls back: that row's efficiency is blank, but the chain continues — the next row computes its delta against the rolled-back row (mirrors `StatsCalculator`'s pairwise convention) |
+| `zeroKwh_efficiencyBlank` | 0-kwh rows would divide-by-zero; defensive blank, not NaN |
+| `kwhSource_emitsEnumName` | TASK-43 column 4 — `MEASURED` / `DERIVED_FROM_SOC` enum names emit verbatim |
+| `socFields_emitFractionsOrBlank` | TASK-14 columns 11 / 12 — `0.2` and `0.8` emit as `"0.2"` / `"0.8"`; null fields emit blank |
+| `costPerKwh_emitsDoubleOrBlank_independentOfCostTotal` | Both `costTotal` (col 7) and `costPerKwh` (col 8) are independently nullable per the CostParser contract; each renders Double or blank without coupling |
+| `carName_appearsInEveryRow_andIsEscapedWhenContainsComma` | Car name is column 1 on every row (not just header). A name containing `,` (e.g., `"Tesla, Model 3"`) forces RFC 4180 quoting via the hardened escape |
+| `mixedCurrencyRows_eachRowEmitsItsOwnCurrency` | The exporter does NOT apply mixed-currency aggregation rules (those live in `StatsCalculator` for the dashboard). EUR row + USD row each emit their own currency verbatim — researchers handle aggregation downstream |
+| `rangeFilter_omitsEventsOutsideRange` | Builds a 3-event store (epoch-ms 1000 / 2000 / 3000), calls `export(carId, 1500..2500)`, asserts only the 2000ms event survives the filter. Uses the suspend `export(...)` overload directly via a custom `CsvFileSink` that captures the writer body — exercises the range filter end-to-end rather than going through `writeCsv` |
 
 ---
 

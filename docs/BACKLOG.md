@@ -16,7 +16,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-06 | 🟡 | JVM unit tests for use cases | — | ☑ |
 | TASK-07 | 🟡 | Drive backup error handling & retry logic | — | ☑ |
 | TASK-08 | 🟢 | Replace `CarEditDialog` with a Compose `AlertDialog` (requires adding Compose) | — | ☐ |
-| TASK-09 | 🟢 | CSV export of charge events with efficiency column, date-range picker | — | ☐ |
+| TASK-09 | 🟢 | CSV export of charge events with efficiency column, date-range picker | — | ☑ |
 | TASK-10 | 🟢 | In-app About / Info screen with SPS-Lab acknowledgment | — | ☑ |
 | TASK-11 | 🟡 | Odometer regression detection UX improvement | — | ☑ |
 | TASK-12 | 🟡 | Widget: last-charge summary on home screen | — | ☑ |
@@ -343,7 +343,95 @@ release build still compiles (`./gradlew :app:assembleRelease`).
 
 ---
 
-## 🟢 TASK-09 — Add date-ranged CSV export for charge events with efficiency column
+## 🟢 TASK-09 — Add date-ranged CSV export for charge events with efficiency column ☑ Done (2026-05-03)
+
+> **Outcome (merged 2026-05-03 on `feat/task09-csv-range-export`).**
+> `ExportCsvUseCase` rewritten with a unified 14-column header
+> (identical for full-history and date-ranged exports — research
+> consumers in TASK-40 anchor on a stable schema):
+>
+> ```
+> event_date_iso,car_name,odometer_km,kwh,kwh_source,charge_type,
+> location,cost_total,cost_per_kwh,currency,km_per_kwh,
+> soc_before,soc_after,note
+> ```
+>
+> The previous `useKm` parameter was **dropped entirely** — distance
+> is now always emitted as canonical kilometres regardless of the
+> user's display preference (DESIGN.md invariant: "Odometer is always
+> stored in km"), making exports locale-independent. Researchers
+> running cross-fleet analysis no longer need to know which user ran
+> the export.
+>
+> **New columns wired:**
+> - `car_name` — sourced from `CarReader.getById(carId).name`,
+>   present on every row (not just header).
+> - `kwh_source` — `ChargeKwhSource.name` (`MEASURED` /
+>   `DERIVED_FROM_SOC`), routed through the TASK-52 hardened
+>   `csvEscape` (defensive symmetry against future enum additions).
+> - `cost_per_kwh` — emits the entity's `costPerKwh: Double?`
+>   verbatim; null becomes empty cell.
+> - `km_per_kwh` — computed per-row using the delta-odometer
+>   convention from `StatsCalculator` (DESIGN.md §7): `(odo[i] -
+>   odo[i-1]) / kwh[i]`. Blank when there is no previous event in the
+>   *exported slice* (so first row blank even if events exist
+>   outside the range), or when `dist <= 0` / `kwh <= 0`. The
+>   `prevOdo` chain advances unconditionally — a transient odometer
+>   rollback or zero-kwh row does not break the delta for the next
+>   valid row (mirrors the pairwise convention).
+> - `soc_before` / `soc_after` — fractions in `0.0..1.0` (matching
+>   the on-disk shape from TASK-14), blank when null.
+>
+> **API surface:** `export(carId: Long): Uri` (full history) +
+> `export(carId: Long, range: LongRange?): Uri` (range-aware; pass
+> `null` for full history). Both eventually call into the same
+> private `writeCsv(writer, events, carName)` so there's no
+> duplicate-escape risk. Range is treated as inclusive on both ends
+> via `LongRange` semantics.
+>
+> **UI:** Settings now has two adjacent rows — the existing "Export
+> CSV" row, plus a new "Export CSV (date range)" row that opens a
+> `MaterialDatePicker.Builder.dateRangePicker()` and forwards the
+> selection to `SettingsViewModel.onExportCsvRange(start, end)`.
+> Both rows share the activeCar disabled-state rendering. Three new
+> strings under `settings_export_csv_range*`. The picker fragment is
+> tagged `"export_range_picker"` for back-stack survival.
+>
+> **TASK-52 alignment:** the new code path inherits the hardened
+> `csvEscape` (RFC 4180 + OWASP formula-injection prefixes) for all
+> text columns — `car_name`, `kwh_source`, `chargeType.name`,
+> `location`, `currency`, `note`. Numeric / timestamp columns
+> (`event_date_iso`, `odometer_km`, `kwh`, `cost_total`,
+> `cost_per_kwh`, `km_per_kwh`, `soc_before`, `soc_after`)
+> deliberately bypass the escape; `Double.toString()` /
+> `Instant.toString()` cannot produce a destructive formula prefix
+> from a non-malicious value, and quoting them as text would defeat
+> researchers' pivot tables.
+>
+> **Tests:** the obsolete `headerLineUsesKmOrMilesPerFlag` was
+> retired and replaced with `header_isCanonicalFourteenColumnSchema`.
+> 11 new JVM cases in `ExportCsvUseCaseTest`:
+> `header_isCanonicalFourteenColumnSchema`,
+> `emptyEvents_emitsHeaderOnly`,
+> `singleEvent_efficiencyCellIsBlank`,
+> `multiEvent_efficiencyDerivedFromDeltaOdometer`,
+> `negativeOdometerDelta_efficiencyBlank` (rolled-back row blank,
+> chain continues), `zeroKwh_efficiencyBlank`,
+> `kwhSource_emitsEnumName`, `socFields_emitFractionsOrBlank`,
+> `costPerKwh_emitsDoubleOrBlank_independentOfCostTotal`,
+> `carName_appearsInEveryRow_andIsEscapedWhenContainsComma`,
+> `mixedCurrencyRows_eachRowEmitsItsOwnCurrency`,
+> `rangeFilter_omitsEventsOutsideRange`. The shared helper
+> `writeAndGetLines(events, carName)` walks the output character by
+> character honouring CSV quoting so embedded `\r` / `\n` inside a
+> quoted field don't split a logical record across multiple lines —
+> required because the new 14-column schema makes column-index
+> assertions sensitive to mid-row line breaks. JVM unit-test count
+> 387 → 398.
+>
+> **TASK-40 unblocked.** The anonymised research-export pipeline
+> can now wrap or layer over this exporter rather than re-deriving
+> the column set.
 
 > **Premise correction (2026-04-30):** `EfficiencyPoint` is just a
 > `(eventTimeMillis, kmPerKwh)` data class and does not carry distance,

@@ -323,8 +323,33 @@ class SettingsViewModel @Inject constructor(
         if (carId == -1L) return
         viewModelScope.launch {
             try {
-                val useKm = _uiState.value.distanceUnit == "km"
-                val uri = exportCsvUseCase.export(carId, useKm)
+                // TASK-09: distance is now always emitted as canonical km in
+                // the export — the previous useKm flip was dropped so research
+                // consumers (TASK-40) get a locale-independent schema.
+                val uri = exportCsvUseCase.export(carId)
+                _events.tryEmit(SettingsEvent.LaunchCsvShareIntent(uri))
+            } catch (_: IOException) {
+                _events.tryEmit(SettingsEvent.ShowError(R.string.settings_export_csv_failed))
+            } catch (_: IllegalArgumentException) {
+                _events.tryEmit(SettingsEvent.ShowError(R.string.settings_export_csv_failed))
+            }
+        }
+    }
+
+    /**
+     * TASK-09: date-ranged CSV export. The fragment owns the
+     * `MaterialDatePicker` UI and forwards the selected range here.
+     * `startMillis` and `endMillis` are inclusive on both ends; the
+     * use case treats them via `LongRange` semantics
+     * (`startMillis..endMillis`).
+     */
+    fun onExportCsvRange(startMillis: Long, endMillis: Long) {
+        val carId = _uiState.value.activeCarId
+        if (carId == -1L) return
+        if (endMillis < startMillis) return
+        viewModelScope.launch {
+            try {
+                val uri = exportCsvUseCase.export(carId, startMillis..endMillis)
                 _events.tryEmit(SettingsEvent.LaunchCsvShareIntent(uri))
             } catch (_: IOException) {
                 _events.tryEmit(SettingsEvent.ShowError(R.string.settings_export_csv_failed))

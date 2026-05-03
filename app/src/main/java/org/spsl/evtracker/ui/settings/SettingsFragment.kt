@@ -16,6 +16,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
+import com.google.android.material.datepicker.MaterialDatePicker
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
@@ -88,6 +89,7 @@ class SettingsFragment : Fragment() {
             findNavController().navigate(R.id.action_settings_to_manage_locations)
         }
         binding.rowExportCsv.setOnClickListener { viewModel.onExportCsv() }
+        binding.rowExportCsvRange.setOnClickListener { showExportRangePicker() }
         binding.rowResetPreferences.setOnClickListener { showResetPreferencesDialog() }
         binding.rowResetActiveCar.setOnClickListener { showResetActiveCarDialog() }
         binding.rowAbout.setOnClickListener {
@@ -220,6 +222,27 @@ class SettingsFragment : Fragment() {
         binding.rowExportCsv.alpha = if (activeCarMissing) 0.5f else 1f
         binding.rowExportCsv.isClickable = !activeCarMissing
         binding.rowExportCsv.isFocusable = !activeCarMissing
+        binding.rowExportCsvRange.alpha = if (activeCarMissing) 0.5f else 1f
+        binding.rowExportCsvRange.isClickable = !activeCarMissing
+        binding.rowExportCsvRange.isFocusable = !activeCarMissing
+    }
+
+    /**
+     * TASK-09: opens a `MaterialDatePicker` date-range picker and forwards
+     * the user's choice to [SettingsViewModel.onExportCsvRange]. The picker
+     * uses the default UTC selection mode; the use case treats the
+     * selected millis as inclusive on both ends.
+     */
+    private fun showExportRangePicker() {
+        val picker = MaterialDatePicker.Builder.dateRangePicker()
+            .setTitleText(R.string.settings_export_csv_range_picker_title)
+            .build()
+        picker.addOnPositiveButtonClickListener { selection ->
+            val start = selection?.first ?: return@addOnPositiveButtonClickListener
+            val end = selection.second ?: return@addOnPositiveButtonClickListener
+            viewModel.onExportCsvRange(start, end)
+        }
+        picker.show(parentFragmentManager, "export_range_picker")
     }
 
     private fun launchCsvShareIntent(uri: Uri) {
