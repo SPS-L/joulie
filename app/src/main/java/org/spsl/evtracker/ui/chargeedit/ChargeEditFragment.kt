@@ -63,6 +63,7 @@ class ChargeEditFragment : Fragment() {
         binding.chargeEditSocToggle.setOnClickListener { viewModel.toggleSocExpanded() }
         binding.chargeEditSocBefore.doAfterTextChanged { viewModel.setSocBefore(it?.toString().orEmpty()) }
         binding.chargeEditSocAfter.doAfterTextChanged { viewModel.setSocAfter(it?.toString().orEmpty()) }
+        binding.chargeEditKwhCalculatorLink.setOnClickListener { viewModel.onCalculateKwhFromSoc() }
         binding.chargeEditSave.setOnClickListener { viewModel.save() }
 
         viewLifecycleOwner.lifecycleScope.launch {
@@ -113,6 +114,10 @@ class ChargeEditFragment : Fragment() {
             binding.chargeEditKwh.setText(state.kwh)
         }
         binding.chargeEditKwhLayout.error = state.kwhError?.let { getString(it) }
+        // TASK-43: calculator link visible whenever the active car has a
+        // nominal capacity. Hidden when the car has none — there's nothing
+        // to multiply Δsoc against.
+        binding.chargeEditKwhCalculatorLink.isVisible = state.nominalBatteryKwh != null
         if (state.chargeType.isDc) {
             binding.chargeEditTypeGroup.check(R.id.charge_edit_type_dc)
         } else {
@@ -141,6 +146,10 @@ class ChargeEditFragment : Fragment() {
             binding.chargeEditNote.setText(state.note)
         }
         binding.chargeEditSocSection.isVisible = state.socExpanded
+        // TASK-43: banner appears inside the SoC card while the calculator
+        // is active so the user understands their event will be flagged
+        // and excluded from the degradation chart.
+        binding.chargeEditKwhCalculatorBanner.isVisible = state.kwhCalculatorActive
         if (binding.chargeEditSocBefore.text?.toString() != state.socBeforeText) {
             binding.chargeEditSocBefore.setText(state.socBeforeText)
         }

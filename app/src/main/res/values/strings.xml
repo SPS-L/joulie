@@ -254,6 +254,12 @@
     <string name="soc_section_header">SoC data (optional)</string>
     <string name="hint_soc_before">SoC before (%)</string>
     <string name="hint_soc_after">SoC after (%)</string>
+
+    <!-- TASK-43: kWh-from-SoC calculator -->
+    <string name="kwh_calculator_link">Don\'t know kWh? Calculate from SoC %</string>
+    <string name="kwh_calculator_banner">kWh estimated from SoC change × nominal capacity. Excluded from battery-degradation tracking.</string>
+    <string name="history_kwh_estimated_badge">Est.</string>
+    <string name="history_kwh_estimated_badge_content_desc">kWh estimated from state of charge</string>
     <string name="cost_mode_total">Total</string>
     <string name="cost_mode_per_kwh">Per kWh</string>
     <string name="charge_type_ac">AC</string>
