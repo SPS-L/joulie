@@ -72,6 +72,11 @@ class ObserveChartsModelsUseCase @Inject constructor(
             .estimate(periodEvents, nominalBatteryKwh)
             .takeIf { it.size >= CapacityEstimator.MIN_POINTS_FOR_CHART && nominalBatteryKwh != null }
             .orEmpty()
+        // TASK-43: count derived events in the visible period so the chart
+        // can surface a banner explaining the exclusion. Counted regardless
+        // of whether the chart is rendered (banner can also fire when the
+        // remaining measured-event count is below the 3-point threshold).
+        val derivedExcluded = capacityEstimator.countDerivedEvents(periodEvents)
         return ChartsUiState.Loaded(
             periodHasEvents = periodEvents.isNotEmpty(),
             mixedCurrency = mixed,
@@ -84,6 +89,7 @@ class ObserveChartsModelsUseCase @Inject constructor(
             locations = statsCalculator.computeLocationDistribution(periodEvents),
             capacity = capacityPoints,
             nominalBatteryKwh = nominalBatteryKwh,
+            derivedExcludedCount = derivedExcluded,
         )
     }
 }

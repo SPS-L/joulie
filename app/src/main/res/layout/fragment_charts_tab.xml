@@ -10,6 +10,19 @@
         android:layout_height="match_parent"
         android:orientation="vertical">
 
+        <!-- TASK-43: degradation tab banner. Visible only on the DEGRADATION
+             tab when at least one DERIVED_FROM_SOC event is in the visible
+             period. -->
+        <TextView
+            android:id="@+id/charts_tab_banner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="12dp"
+            android:background="?attr/colorSecondaryContainer"
+            android:textColor="?attr/colorOnSecondaryContainer"
+            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:visibility="gone"/>
+
         <FrameLayout
             android:id="@+id/charts_tab_chart_container"
             android:layout_width="match_parent"
