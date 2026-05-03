@@ -187,7 +187,11 @@ class BackupSerializerTest {
             cars = emptyList(),
             events = listOf(
                 ChargeEventEntity(
-                    id = 1L, carId = 1L, eventDate = 0L, odometerKm = 0.0, kwhAdded = 0.0,
+                    id = 1L,
+                    carId = 1L,
+                    eventDate = 0L,
+                    odometerKm = 0.0,
+                    kwhAdded = 0.0,
                     chargeType = ChargeType.AC,
                     kwhSource = ChargeKwhSource.DERIVED_FROM_SOC,
                     createdAt = 0L,

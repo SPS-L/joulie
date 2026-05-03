@@ -50,7 +50,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-40 | 🟢 | Anonymised research-export pipeline (PII-stripped CSV for SPS-Lab) | TASK-09 | ☐ |
 | TASK-41 | 🟢 | JSON-LD / OCPP-compatible export format (research interoperability) | TASK-09 | ⏸ |
 | TASK-42 | 🟢 | Open Charge Map / OCPI station lookup integration | TASK-37 | ⏸ |
-| TASK-43 | 🟡 | kWh-from-SoC calculator + `kwhSource` provenance flag (degradation banner on derived events) | TASK-14 | ☐ |
+| TASK-43 | 🟡 | kWh-from-SoC calculator + `kwhSource` provenance flag (degradation banner on derived events) | TASK-14 | ☑ |
 
 **Priority legend:** 🔴 High (architecture/data safety) · 🟡 Medium (robustness/UX) · 🟢 Low (new feature)  
 **Status legend:** ☐ open · ☑ done · ☒ closed (premise no longer holds) · ⏸ under consideration (do not start without explicit go-ahead)  
@@ -3018,7 +3018,51 @@ an OCPI feed. Free text remains the fallback.
 
 ---
 
-## 🟡 TASK-43 — kWh-from-SoC calculator + `kwhSource` provenance flag
+## 🟡 TASK-43 — kWh-from-SoC calculator + `kwhSource` provenance flag ☑ Done (2026-05-03)
+
+> **Outcome:** new `core/model/ChargeKwhSource` enum (`MEASURED` /
+> `DERIVED_FROM_SOC`) with `parseLegacy` defensive fallback, paired
+> `data/local/db/ChargeKwhSourceConverter` Room TypeConverter and
+> `domain/service/ChargeKwhSourceJsonAdapter` Gson adapter, all mirroring
+> the TASK-25 `ChargeType` pattern. Schema v6 → v7 with hand-written
+> `MIGRATION_6_7` adding `kwhSource TEXT NOT NULL DEFAULT 'MEASURED'` —
+> legacy rows backfill cleanly. Backup format `CURRENT_VERSION` 6 → 7;
+> `SUPPORTED_VERSIONS = {3, 4, 5, 6, 7}`. The DTO field is **nullable**
+> in `ChargeEventDto.kwhSource: ChargeKwhSource?` because Gson uses
+> `Unsafe.allocateInstance` to construct Kotlin classes (bypasses
+> primary-constructor defaults for absent JSON keys); `toEntity()`
+> coalesces `null → MEASURED` so the entity's non-null contract holds.
+> `CapacityEstimator` skips `DERIVED_FROM_SOC` events on **both** the
+> exact and heuristic paths (the derived `kwhAdded` is already a
+> tautology against `Δsoc × nominal`). New `domain/service/KwhFromSocCalculator`
+> object provides the pure math (`max(0, Δsoc × nominal)`).
+> `ChargeEditViewModel` now injects `CarReader` to load
+> `nominalBatteryKwh`; new `onCalculateKwhFromSoc()` handler expands the
+> SoC card, marks the calculator active, and auto-fills kWh when both
+> SoC fields are populated; SoC setters re-derive kWh while the
+> calculator is active; the `setKwh()` override semantic preserves
+> provenance only when the typed text matches `state.kwh` (the echo
+> from `EditText.setText()`), otherwise it flips to `MEASURED`. The
+> ChargeEdit fragment grows a "Don't know kWh? Calculate from SoC %"
+> link below the kWh field (visibility gated on
+> `state.nominalBatteryKwh != null`) and an info banner inside the SoC
+> card surfaces while the calculator stays active. Charts degradation
+> tab shows a plurals-aware banner when `derivedExcludedCount > 0` in
+> the visible period — count comes from new
+> `CapacityEstimator.countDerivedEvents()`. History rows render a
+> tertiary-container "Est." badge for `DERIVED_FROM_SOC` events. JVM
+> unit-test count: **332 → 360** (+5 `CapacityEstimatorTest`, +4
+> `KwhFromSocCalculatorTest`, +2 `ChargeKwhSourceTest`, +2
+> `ChargeKwhSourceConverterTest`, +4 `BackupSerializerTest`, +2
+> `SaveChargeEventUseCaseTest`, +8 `ChargeEditViewModelTest`, +1
+> `ObserveChargsModelsUseCaseTest`); new instrumented
+> `migrate_6_to_7_addsKwhSourceColumn` test, `migrate_1_to_6` renamed
+> to `migrate_1_to_7`. Charging-loss caveat (battery-side vs.
+> charger-delivered kWh — ~10% AC, ~5% DC) documented inline on the
+> `KwhFromSocCalculator` KDoc. The original task text is preserved
+> below.
+
+
 
 Many EU/UK chargers and several EVs (older Renault Zoe, Nissan Leaf,
 some BMW i3) display only SoC % before/after, never kWh delivered. The
@@ -3172,7 +3216,7 @@ the chart is sparser than the event count suggests.
 
 - The package root is `org.spsl.evtracker`.
 - The project uses Kotlin DSL (`build.gradle.kts`), Hilt for DI, Room for
-  local persistence (currently at schema version 6), and Kotlin Coroutines
+  local persistence (currently at schema version 7), and Kotlin Coroutines
   with Flow throughout.
 - All new classes must follow the existing naming and packaging conventions
   documented in [`../CLAUDE.md`](../CLAUDE.md).
@@ -3180,7 +3224,7 @@ the chart is sparser than the event count suggests.
   `app/build.gradle.kts` first. Prefer libraries already present.
 - After any structural change, run `./gradlew test` (JVM) and
   `./gradlew connectedAndroidTest` (instrumented) to verify no regressions.
-- Room schema version is currently **6**. Any migration must bump it to **7**
+- Room schema version is currently **7**. Any migration must bump it to **8**
   and add a corresponding migration file under `app/schemas/`. The migration
   list in `AppDatabase.companion` and `DatabaseModule.provideDatabase` must
   both be updated; `BackupData.CURRENT_VERSION` and

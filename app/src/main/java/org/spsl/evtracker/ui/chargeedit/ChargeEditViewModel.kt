@@ -154,6 +154,7 @@ class ChargeEditViewModel @Inject constructor(
                 km >= st.nextOdometerKm,
         )
     }
+
     /**
      * TASK-43 override semantics: when the typed text differs from current
      * state.kwh, the user is genuinely editing — flip provenance to
