@@ -58,7 +58,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-48 | 🟢 | Time-of-use (ToU) tariff classification on charge events | — | ☐ |
 | TASK-49 | 🟢 | Per-event grid carbon intensity (extends TASK-20 with marginal emission factors) | TASK-20 | ☐ |
 | TASK-50 | 🔴 | Stabilise nightly instrumented suite — 21 failures across 4 root causes after WorkManager init landed | TASK-34 | ☑ |
-| TASK-51 | 🔴 | GPL-3.0-or-later license change (pending `play-services-auth` review) | — | ☐ |
+| TASK-51 | 🔴 | GPL-3.0-or-later license change (pending `play-services-auth` review) | — | ☑ |
 | TASK-52 | 🟡 | CSV escape hardening in `ExportCsvUseCase` — quote `\r` and tabs, neutralise spreadsheet formula-injection prefixes (`=`, `+`, `-`, `@`) in user-supplied fields | — | ☑ |
 | TASK-53 | 🟡 | Multi-car invariant guard in `StatsCalculator.computeStats` — `require` the input shares a single `carId` (latent bug if a future caller passes a mixed-car list) | — | ☐ |
 | TASK-54 | 🔴 | Drive switch fires `onUserToggledOn()` on every Settings entry (view-state restoration anti-pattern) — visible OFF→ON flicker + restore-prompt loop; bundled with a durable last-seen marker for the destructive-action path | TASK-31 | ☑ |
@@ -3960,7 +3960,76 @@ is instrumented-only work); instrumented-test count may grow by
 
 ---
 
-## 🔴 TASK-51 — GPL-3.0-or-later license change (pending `play-services-auth` review)
+## 🔴 TASK-51 — GPL-3.0-or-later license change (pending `play-services-auth` review) ☑ Done (2026-05-03)
+
+> **Outcome (merged 2026-05-03 on `feat/task51-gpl-license`).**
+>
+> - **`LICENSE`** — new repo-root file with the canonical
+>   `GPL-3.0-or-later` text (674 lines, fetched verbatim from
+>   `https://www.gnu.org/licenses/gpl-3.0.txt`). GitHub will now
+>   classify the repository as `GPL-3.0-or-later` automatically once
+>   the merge lands.
+> - **`README.md`** — license badge flipped from MIT-green to
+>   GPL-3.0-or-later-blue and points at `LICENSE` (not the in-page
+>   anchor). Footer License section rewritten to the standard GPL
+>   "free software; redistribute and/or modify; distributed in the
+>   hope that it will be useful WITHOUT WARRANTY" preamble plus a
+>   pointer to `LICENSE`.
+> - **`app/src/main/res/values/strings.xml`** — `about_license_body`
+>   replaced with a concise GPL acknowledgment (full GPL text would
+>   be ~30K and hostile inside a TextView). The body still names
+>   the SPS-Lab copyright holder, the SPDX identifier, the standard
+>   warranty disclaimer, and a URL out to gnu.org for the full text.
+> - **`AboutFragmentTest.licenseCard_containsMit`** renamed to
+>   `licenseCard_containsGplIdentifier` and now asserts the substring
+>   `"GPL-3.0-or-later"` (the SPDX identifier in the card body — a
+>   stable anchor that survives prose tweaks).
+> - **`CLAUDE.md`** TASK-10 historical entry annotated to note the
+>   relicense ("originally MIT, relicensed to GPL-3.0-or-later in
+>   TASK-51") instead of being silently rewritten — preserves the
+>   "what shipped at TASK-10 time" reading while pointing forward.
+> - **SPDX headers on every production Kotlin source file** under
+>   `app/src/main/java/org/spsl/evtracker/` — 145 files. Header
+>   format (per the BACKLOG spec):
+>   ```kotlin
+>   // SPDX-FileCopyrightText: 2026 Cyprus University of Technology,
+>   //                         Sustainable Power Systems Lab <https://sps-lab.org>
+>   // SPDX-License-Identifier: GPL-3.0-or-later
+>   ```
+>   Headers are prepended via a one-shot shell loop (`find … -type f`
+>   piped into `head -1 | grep SPDX` idempotency guard); generated
+>   files (`build/`, KSP output), test sources (`app/src/test/`,
+>   `app/src/androidTest/`), and any third-party vendored code are
+>   left alone per spec. The idempotency guard keeps a re-run safe.
+>
+> **`play-services-auth` audit note carried forward.** The
+> dependency audit found that
+> `com.google.android.gms:play-services-auth:21.2.0` is distributed
+> under the **Android Software Development Kit License**, not
+> Apache-2.0 like the rest of the runtime. The Android SDK License
+> is generally compatible with GPL-3.0 distribution as a "system
+> library" exception (it ships with the user's device, not the app
+> binary), but anyone building or redistributing this app should
+> review their distribution channel's policy. For F-Droid
+> compatibility specifically, **TASK-37** (replace Drive backup
+> with SAF) is the canonical follow-up — it removes the GMS
+> dependency entirely. This task did NOT block on TASK-37 because
+> the GPL switch is independently valuable and TASK-37 will land
+> on its own timeline.
+>
+> **Gates green:** `ktlintCheck`, `:app:lint`,
+> `:app:testDebugUnitTest`, `:app:assembleRelease`,
+> `:app:assembleDebugAndroidTest`. JVM unit-test count unchanged
+> at 398 (no new tests; the only test edit was renaming the
+> instrumented `licenseCard_*` assertion).
+>
+> **Manual GitHub step still pending:** the repo's "License" field
+> in GitHub's repo settings → "About" panel needs to be set to
+> `GPL-3.0-or-later` after the merge lands so the right-hand
+> sidebar on `github.com/SPS-L/EV-android-app` reflects the change.
+> GitHub will auto-detect from the `LICENSE` file in most cases,
+> so this is usually a no-op verification rather than an active
+> setting change.
 
 > **Context (2026-05-03):** a runtime dependency audit was run against
 > `app/build.gradle.kts` and the resolved artifact metadata in the local
