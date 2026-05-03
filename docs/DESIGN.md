@@ -339,7 +339,7 @@ Top 5 by `use_count DESC, last_used DESC` are shown as quick chips in the charge
 - `DeleteChargeEventUseCase`: deletes an event only after undo expiry or explicit confirmation, then schedules backup.
 - `ObserveDashboardStatsUseCase`: combines active car, period, AC/DC filter, preferences, and events into one UI-ready stats model.
 - `RestoreBackupUseCase`: downloads backup data, validates schema version, snapshots current local state for undo, replaces local state transactionally, and restores settings needed for a consistent post-restore app state.
-- `ExportCsvUseCase`: maps stored km values to the selected display unit at export time and derives row-level metrics consistently.
+- `ExportCsvUseCase`: maps stored km values to the selected display unit at export time and derives row-level metrics consistently. User-supplied text columns (`location`, `note`, `currency`, `chargeType.name`) route through a hardened `csvEscape` (TASK-52) that quotes on the full RFC 4180 set plus `\r` and `\t`, and prefixes a single quote `'` when the field starts with `=`, `+`, `-`, or `@` — neutralising spreadsheet formula injection without losing data round-trip. Numeric / timestamp columns bypass the escape so researchers' pivot tables and charts keep working.
 
 **Repository layer**
 - `CarRepository`: car CRUD plus active-car-safe delete helpers.
