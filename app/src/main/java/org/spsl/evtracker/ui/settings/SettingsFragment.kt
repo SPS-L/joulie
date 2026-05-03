@@ -66,9 +66,14 @@ class SettingsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.switchDrive.setOnCheckedChangeListener { _, isChecked ->
-            if (isChecked) onUserToggledOn() else viewModel.onToggleDriveOff()
-        }
+        // TASK-54 — Step 0: do NOT attach the Drive switch listener here.
+        // Android's view-state restoration calls setChecked() between
+        // onCreateView and onStart to restore the saved checked state,
+        // and any listener attached at this point would synchronously
+        // fire onUserToggledOn() before the StateFlow collector below
+        // has had a chance to sync isChecked to the persisted DataStore
+        // value. The listener is instead attached lazily by the collector,
+        // AFTER the first state-driven sync.
 
         // TASK-31: manual Drive controls
         binding.buttonBackupNow.setOnClickListener { viewModel.onPushBackupClicked() }
@@ -93,9 +98,21 @@ class SettingsFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
+                    // TASK-54 — Step 0: lazy first-attach of the Drive switch
+                    // listener. The first emission unconditionally syncs
+                    // isChecked to the persisted state with NO listener
+                    // attached, then attaches the listener for the first time.
+                    // Subsequent transitions go through the same detach/set/
+                    // reattach rebind block as before.
+                    var driveListenerAttached = false
                     viewModel.uiState.collect { state ->
-                        // E (Drive) — preserve listener-rebind pattern to avoid re-firing
-                        if (binding.switchDrive.isChecked != state.driveEnabled) {
+                        if (!driveListenerAttached) {
+                            binding.switchDrive.isChecked = state.driveEnabled
+                            binding.switchDrive.setOnCheckedChangeListener { _, isChecked ->
+                                if (isChecked) onUserToggledOn() else viewModel.onToggleDriveOff()
+                            }
+                            driveListenerAttached = true
+                        } else if (binding.switchDrive.isChecked != state.driveEnabled) {
                             binding.switchDrive.setOnCheckedChangeListener(null)
                             binding.switchDrive.isChecked = state.driveEnabled
                             binding.switchDrive.setOnCheckedChangeListener { _, isChecked ->

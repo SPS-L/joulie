@@ -11,6 +11,12 @@ import javax.inject.Inject
  * the UI's "Last backup at …" hint doesn't point at a snapshot that no
  * longer exists.
  *
+ * TASK-54: also clears the durable last-seen-snapshot marker on success.
+ * After a wipe, the next committed local change re-creates a fresh
+ * remote snapshot with a NEW `exported_at`; clearing the marker ensures
+ * the next Drive re-toggle prompts the user once for the new snapshot
+ * instead of silently swallowing the prompt because of a stale marker.
+ *
  * The next committed local change will re-enqueue the auto-backup
  * worker, which will create a fresh remote snapshot — the wipe is a
  * point-in-time delete, not an opt-out from auto-backup.
@@ -23,6 +29,7 @@ class WipeRemoteBackupUseCase @Inject constructor(
         val result = backupRepository.deleteRemoteBackup()
         if (result is BackupResult.Success) {
             settingsWriter.setLastBackupAt(0L)
+            settingsWriter.setLastSeenRemoteBackupExportedAt("")
         }
         return result
     }

@@ -266,6 +266,153 @@ class SettingsViewModelTest {
         assertNull(s.vm.uiState.first().pendingRestoreLabel)
     }
 
+    // -------------------------------------------------------------------------
+    // TASK-54 — durable last-seen-snapshot marker
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun onDriveAuthGranted_remoteExists_firstTime_emitsPrompt() = runTest {
+        // Marker default is empty string ("never seen"); a remote snapshot
+        // with a parseable exported_at must trigger the restore prompt.
+        val data = org.spsl.evtracker.core.model.BackupData
+            .fromEntities(emptyList(), emptyList(), emptyList(), now = 1_700_000_000_000L)
+        val json = org.spsl.evtracker.domain.service.BackupSerializer().toJson(data)
+        val s = build(remoteJson = json)
+
+        val received = mutableListOf<SettingsEvent>()
+        val job = launch(start = CoroutineStart.UNDISPATCHED) { s.vm.events.collect { received += it } }
+        s.vm.onDriveAuthGranted()
+        advanceUntilIdle()
+        job.cancel()
+
+        assertTrue(
+            "expected ShowRestorePrompt; got $received",
+            received.any { it is SettingsEvent.ShowRestorePrompt },
+        )
+        assertFalse(
+            "Drive must NOT be flipped on yet — user hasn't decided",
+            s.writer.driveEnabled,
+        )
+        // pendingRestoreExportedAt must be populated so Skip / Confirm can
+        // write the durable marker without re-reading the remote backup.
+        assertEquals(
+            "2023-11-14T22:13:20Z",
+            s.vm.uiState.value.pendingRestoreExportedAt,
+        )
+    }
+
+    @Test
+    fun onDriveAuthGranted_remoteExists_alreadySeen_skipsSilently() = runTest {
+        // Pre-seed the marker to match the remote's exported_at — simulates
+        // "user already tapped Skip on this snapshot before". Drive should
+        // be silently enabled with NO ShowRestorePrompt.
+        val data = org.spsl.evtracker.core.model.BackupData
+            .fromEntities(emptyList(), emptyList(), emptyList(), now = 1_700_000_000_000L)
+        val json = org.spsl.evtracker.domain.service.BackupSerializer().toJson(data)
+        val s = build(remoteJson = json)
+        s.reader.setLastSeenRemoteBackupExportedAt("2023-11-14T22:13:20Z")
+
+        val received = mutableListOf<SettingsEvent>()
+        val job = launch(start = CoroutineStart.UNDISPATCHED) { s.vm.events.collect { received += it } }
+        s.vm.onDriveAuthGranted()
+        advanceUntilIdle()
+        job.cancel()
+
+        assertTrue(
+            "no ShowRestorePrompt should fire when marker matches; got $received",
+            received.none { it is SettingsEvent.ShowRestorePrompt },
+        )
+        assertTrue(s.writer.driveEnabled)
+        assertEquals(1, s.scheduler.enqueueCount)
+        assertNull(s.vm.uiState.value.pendingRestoreLabel)
+    }
+
+    @Test
+    fun onDriveAuthGranted_remoteWithDifferentExportedAt_promptsAgain() = runTest {
+        // Marker holds an older snapshot's exported_at; the current remote
+        // has a NEWER exported_at (e.g., user wiped + a fresh backup landed).
+        // The user must be re-prompted exactly once for the new snapshot.
+        val data = org.spsl.evtracker.core.model.BackupData
+            .fromEntities(emptyList(), emptyList(), emptyList(), now = 1_800_000_000_000L)
+        val json = org.spsl.evtracker.domain.service.BackupSerializer().toJson(data)
+        val s = build(remoteJson = json)
+        s.reader.setLastSeenRemoteBackupExportedAt("2023-11-14T22:13:20Z") // old marker
+
+        val received = mutableListOf<SettingsEvent>()
+        val job = launch(start = CoroutineStart.UNDISPATCHED) { s.vm.events.collect { received += it } }
+        s.vm.onDriveAuthGranted()
+        advanceUntilIdle()
+        job.cancel()
+
+        assertTrue(
+            "different exportedAt must re-prompt; got $received",
+            received.any { it is SettingsEvent.ShowRestorePrompt },
+        )
+        assertFalse(s.writer.driveEnabled)
+    }
+
+    @Test
+    fun onSkipRestore_persistsLastSeenExportedAt() = runTest {
+        val data = org.spsl.evtracker.core.model.BackupData
+            .fromEntities(emptyList(), emptyList(), emptyList(), now = 1_700_000_000_000L)
+        val json = org.spsl.evtracker.domain.service.BackupSerializer().toJson(data)
+        val s = build(remoteJson = json)
+        s.vm.onDriveAuthGranted()
+        advanceUntilIdle()
+        // Skip the prompt.
+        s.vm.onSkipRestore()
+        advanceUntilIdle()
+
+        assertEquals(
+            "Skip must persist the snapshot's exported_at as the durable marker",
+            "2023-11-14T22:13:20Z",
+            s.writer.lastSeenRemoteBackupExportedAt,
+        )
+        assertNull(s.vm.uiState.value.pendingRestoreLabel)
+        assertNull(s.vm.uiState.value.pendingRestoreExportedAt)
+    }
+
+    @Test
+    fun onConfirmRestore_success_persistsLastSeenExportedAt() = runTest {
+        val data = org.spsl.evtracker.core.model.BackupData
+            .fromEntities(emptyList(), emptyList(), emptyList(), now = 1_700_000_000_000L)
+        val json = org.spsl.evtracker.domain.service.BackupSerializer().toJson(data)
+        val s = build(remoteJson = json)
+        s.vm.onDriveAuthGranted()
+        advanceUntilIdle()
+
+        s.vm.onConfirmRestore()
+        advanceUntilIdle()
+
+        assertEquals(
+            "successful restore must persist the marker so the same snapshot is never re-prompted",
+            "2023-11-14T22:13:20Z",
+            s.writer.lastSeenRemoteBackupExportedAt,
+        )
+        assertTrue(s.writer.driveEnabled)
+    }
+
+    @Test
+    fun onDriveAuthGranted_noRemote_keepsExistingMarker() = runTest {
+        // No remote backup path: must NOT touch the marker (a previous
+        // Skip / Restore decision is still meaningful — the user may simply
+        // be re-toggling Drive after the remote was wiped externally).
+        val s = build(remoteJson = null)
+        s.reader.setLastSeenRemoteBackupExportedAt("2023-11-14T22:13:20Z")
+        // The fake Reader's seed is independent of the Writer's storage; the
+        // Writer's lastSeenRemoteBackupExportedAt starts at "" and must STAY
+        // at "" because the use case never writes to it on the no-remote path.
+        s.vm.onDriveAuthGranted()
+        advanceUntilIdle()
+
+        assertEquals(
+            "no-remote path must not write the marker",
+            "",
+            s.writer.lastSeenRemoteBackupExportedAt,
+        )
+        assertTrue(s.writer.driveEnabled)
+    }
+
     @Test
     fun onRestorePromptDismissed_leavesDriveOff() = runTest {
         val data = org.spsl.evtracker.core.model.BackupData.fromEntities(emptyList(), emptyList(), emptyList(), now = 0L)

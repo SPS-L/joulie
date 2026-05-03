@@ -61,7 +61,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-51 | 🔴 | GPL-3.0-or-later license change (pending `play-services-auth` review) | — | ☐ |
 | TASK-52 | 🟡 | CSV escape hardening in `ExportCsvUseCase` — quote `\r` and tabs, neutralise spreadsheet formula-injection prefixes (`=`, `+`, `-`, `@`) in user-supplied fields | — | ☐ |
 | TASK-53 | 🟡 | Multi-car invariant guard in `StatsCalculator.computeStats` — `require` the input shares a single `carId` (latent bug if a future caller passes a mixed-car list) | — | ☐ |
-| TASK-54 | 🔴 | Drive switch fires `onUserToggledOn()` on every Settings entry (view-state restoration anti-pattern) — visible OFF→ON flicker + restore-prompt loop; bundled with a durable last-seen marker for the destructive-action path | TASK-31 | ☐ |
+| TASK-54 | 🔴 | Drive switch fires `onUserToggledOn()` on every Settings entry (view-state restoration anti-pattern) — visible OFF→ON flicker + restore-prompt loop; bundled with a durable last-seen marker for the destructive-action path | TASK-31 | ☑ |
 
 **Priority legend:** 🔴 High (architecture/data safety) · 🟡 Medium (robustness/UX) · 🟢 Low (new feature)  
 **Status legend:** ☐ open · ☑ done · ☒ closed (premise no longer holds) · ⏸ under consideration (do not start without explicit go-ahead)  
@@ -4047,7 +4047,73 @@ test asserts the guard fires on mixed input. JVM unit-test count gains
 
 ---
 
-## 🔴 TASK-54 — Drive switch fires `onUserToggledOn()` on every Settings entry (+ durable restore-skip marker)
+## 🔴 TASK-54 — Drive switch fires `onUserToggledOn()` on every Settings entry (+ durable restore-skip marker) ☑ Done (2026-05-03)
+
+> **Outcome (merged 2026-05-03 on `feat/task54-drive-switch-fix`).** Both
+> coupled defects landed in one PR.
+>
+> **Step 0 — listener-attach hardening (Option A, lazy attach in
+> collector).** The listener attachment in `SettingsFragment.onViewCreated`
+> at the old line 69 is removed entirely; the StateFlow collector now
+> tracks a local `var driveListenerAttached = false` and on the first
+> emission unconditionally syncs `binding.switchDrive.isChecked` to
+> `state.driveEnabled` with NO listener attached, then attaches the
+> listener for the first time. Subsequent transitions go through the
+> same detach/set/reattach rebind block as before. The KDoc-style
+> comment in `onViewCreated` explicitly cites Android's view-state
+> restoration calling `setChecked()` between `onCreateView` and
+> `onStart` as the reason the listener cannot live there.
+>
+> **Steps 1–5 — durable last-seen-snapshot marker.** New
+> `LAST_SEEN_REMOTE_BACKUP_EXPORTED_AT = stringPreferencesKey(...)` on
+> `PreferenceKeys`; `SettingsReader.lastSeenRemoteBackupExportedAt:
+> Flow<String>` (default `""`); `SettingsWriter.setLastSeenRemoteBackupExportedAt(value: String)`
+> wired through `SettingsRepository` and the existing `Fakes.kt`
+> `LinkedSettings` test plumbing. `SettingsViewModel.onDriveAuthGranted`
+> now reads the marker via `settingsReader.lastSeenRemoteBackupExportedAt.first()`
+> and silently flips `driveEnabled = true` + enqueues backup when the
+> remote snapshot's `exported_at` matches the marker — no
+> `ShowRestorePrompt` event fires. `parseExportedAtLabel(json)` becomes
+> `parseRemoteSnapshot(json): RemoteBackupSnapshot` returning both the
+> raw `exportedAt` (for the marker) and the formatted label (for the
+> dialog); `pendingRestoreExportedAt: String?` joins
+> `SettingsUiState` so `onSkipRestore` and `onConfirmRestore` can write
+> the marker without re-reading the remote backup. `WipeRemoteBackupUseCase`
+> clears the marker (`setLastSeenRemoteBackupExportedAt("")`) on
+> `BackupResult.Success` so a fresh upload + Drive re-toggle prompts
+> exactly once for the new snapshot. `onRestorePromptDismissed` does
+> NOT write the marker (dismiss ≠ Skip — neither accept nor decline).
+>
+> **Tests.** New JVM cases: 6 in `SettingsViewModelTest`
+> (`onDriveAuthGranted_remoteExists_firstTime_emitsPrompt`,
+> `onDriveAuthGranted_remoteExists_alreadySeen_skipsSilently`,
+> `onDriveAuthGranted_remoteWithDifferentExportedAt_promptsAgain`,
+> `onSkipRestore_persistsLastSeenExportedAt`,
+> `onConfirmRestore_success_persistsLastSeenExportedAt`,
+> `onDriveAuthGranted_noRemote_keepsExistingMarker`); 2 in
+> `WipeRemoteBackupUseCaseTest`
+> (`success_clearsLastSeenRemoteBackupExportedAtMarker`,
+> `authRequired_doesNotClearLastSeenMarker`). New instrumented file
+> `SettingsDriveSwitchEntryTest` with two cases —
+> `firstEntry_withDriveEnabled_doesNotCallAuthorize` and
+> `reEntry_viaActivityRecreation_doesNotCallAuthorize` — both gated on
+> a new `authorizeCallCount` field on the instrumented
+> `FakeDriveAuthManager`. The reproduction trigger is
+> `FragmentScenario.recreate()` (full activity recreation, the
+> canonical "navigate away and back" simulation that exercises view-state
+> save/restore). Pre-fix, `authorize()` would have been called on every
+> recreation; post-fix the counter stays flat. JVM unit-test count
+> 369 → 377.
+>
+> **Why Option A and not B/C.** Option A is the smallest behaviour
+> change: the StateFlow collector was already responsible for syncing
+> the switch on every emission; piggybacking the first attach onto
+> the same code path keeps a single source of truth for `isChecked`
+> and avoids a parallel "programmatic-change guard flag" that future
+> edits could drop. Option C
+> (`isSaveEnabled = false` on the switch) was tempting but relies on
+> the StateFlow being the single source of truth at all times — a
+> contract the tests don't currently enforce.
 
 > **Filed 2026-05-03** (user-reported reproduction).
 >
