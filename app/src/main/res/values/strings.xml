@@ -144,6 +144,9 @@
     <string name="settings_reset_all_confirm_drive_on">Delete everything? This cannot be undone, and your Google Drive backup will be overwritten with empty data. To preserve the remote copy, turn Drive backup off first.</string>
     <string name="settings_export_csv">Export CSV</string>
     <string name="settings_export_csv_summary">Share charge events as a CSV file.</string>
+    <string name="settings_export_csv_range">Export CSV (date range)</string>
+    <string name="settings_export_csv_range_summary">Pick a start and end date, then share the matching charge events.</string>
+    <string name="settings_export_csv_range_picker_title">Select export range</string>
     <string name="settings_theme_system">System default</string>
     <string name="settings_theme_light">Light</string>
     <string name="settings_theme_dark">Dark</string>
