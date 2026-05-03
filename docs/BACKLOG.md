@@ -51,7 +51,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-41 | 🟢 | JSON-LD / OCPP-compatible export format (research interoperability) | TASK-09 | ⏸ |
 | TASK-42 | 🟢 | Open Charge Map / OCPI station lookup integration | TASK-37 | ⏸ |
 | TASK-43 | 🟡 | kWh-from-SoC calculator + `kwhSource` provenance flag (degradation banner on derived events) | TASK-14 | ☑ |
-| TASK-44 | 🟡 | Fix `StatsCalculator.computeStats` cost accumulation (first event's cost silently dropped; inconsistent with `computeMonthlyBuckets`) | — | ☐ |
+| TASK-44 | 🟡 | Fix `StatsCalculator.computeStats` cost accumulation (first event's cost silently dropped; inconsistent with `computeMonthlyBuckets`) | — | ☑ |
 | TASK-45 | 🟢 | Defensive SoC range guard (`require(...)`) in `KwhFromSocCalculator.compute` | — | ☐ |
 | TASK-46 | 🟡 | Battery-health card "Estimated" warning when heuristic over-estimates (>105% of nominal AND `isExact = false`) | — | ☐ |
 | TASK-47 | 🟢 | Charging power profile fields (`peakPowerKw`, `chargingDurationMinutes`) — schema bump | — | ☐ |
@@ -3244,7 +3244,32 @@ the chart is sparser than the event count suggests.
 
 ---
 
-## 🟡 TASK-44 — Fix `StatsCalculator.computeStats` cost accumulation
+## 🟡 TASK-44 — Fix `StatsCalculator.computeStats` cost accumulation ☑ Done (2026-05-03)
+
+> **Outcome:** the cost-accumulation block in
+> `StatsCalculator.computeStats` is now hoisted above the `events.size
+> < 2` early-return and computes `totalCost = events.mapNotNull {
+> it.costTotal }.sum()` once for the whole period (mixed-currency
+> rule still wins — `totalCost = null`, `costPerKm = null` whenever
+> two distinct currencies appear). The delta-pair odometer loop now
+> only accumulates `pairKwh` and `totalDist`; `costPerKm = totalCost /
+> totalDist` keeps its existing formula but sources `totalCost` from
+> the all-events sum. Single-event periods now report `totalCost`
+> (previously hard-coded to `null` in the early-return branch); their
+> `costPerKm` stays `null` because delta distance is undefined for
+> one event. The Dashboard total-cost surface and the monthly cost
+> chart now agree on the sum for any single period — the audit's
+> 33–50% undercount on 2–3 session histories is gone. Four new
+> regression cases added to `StatsCalculatorCostTest`
+> (`firstAndSecondEventBothCosted_totalCostSumsBoth`,
+> `firstAndThirdEventCosted_middleNotCosted_totalIncludesBoth`,
+> `singleCostedEvent_reportsTotalCost_costPerKmStillNull`,
+> `mixedCurrencyWithFirstEventCosted_totalCostStillNull`); the
+> existing 7 cases pass unchanged because their fixtures all use the
+> "anchor event with zero cost" pattern that carefully avoided the
+> bug. JVM unit-test count 360 → 364. `DESIGN.md §7` already stated
+> `Σ cost / Σ d_km` (line 488); no doc text change needed — the code
+> was the deviation.
 
 > **Audit finding (BUG-03, 2026-05-03):** `computeStats` accumulates
 > cost inside the delta-odometer loop (`for (i in 1 until sorted.size)`),
