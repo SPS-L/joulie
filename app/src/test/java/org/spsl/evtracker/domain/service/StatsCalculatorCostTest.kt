@@ -131,4 +131,68 @@ class StatsCalculatorCostTest {
         assertNull(s.totalCost)
         assertNull(s.currency)
     }
+
+    // TASK-44 regressions — first event's cost must contribute to the period total.
+    // Prior bug: cost accumulated only inside the delta-pair loop (i ≥ 1), so the
+    // first event's cost was silently dropped. This made `computeStats.totalCost`
+    // disagree with `computeMonthlyBuckets`, which already sums every event.
+
+    @Test
+    fun firstAndSecondEventBothCosted_totalCostSumsBoth() {
+        val s = calc.computeStats(
+            listOf(
+                event(1000L, 100.0, 30.0, costTotal = 5.0, currency = "EUR"),
+                event(2000L, 250.0, 25.0, costTotal = 10.0, currency = "EUR"),
+            ),
+            "label",
+        )
+        assertEquals(15.0, s.totalCost!!, 1e-6)
+        assertEquals("EUR", s.currency)
+        // costPerKm uses delta distance (250 - 100 = 150) → 15/150
+        assertEquals(15.0 / 150.0, s.costPerKm!!, 1e-6)
+    }
+
+    @Test
+    fun firstAndThirdEventCosted_middleNotCosted_totalIncludesBoth() {
+        val s = calc.computeStats(
+            listOf(
+                event(1000L, 100.0, 30.0, costTotal = 4.0, currency = "EUR"),
+                event(2000L, 200.0, 25.0, costTotal = null, currency = null),
+                event(3000L, 300.0, 30.0, costTotal = 6.0, currency = "EUR"),
+            ),
+            "label",
+        )
+        assertEquals(10.0, s.totalCost!!, 1e-6)
+        assertEquals("EUR", s.currency)
+    }
+
+    @Test
+    fun singleCostedEvent_reportsTotalCost_costPerKmStillNull() {
+        val s = calc.computeStats(
+            listOf(
+                event(1000L, 100.0, 30.0, costTotal = 5.0, currency = "EUR"),
+            ),
+            "label",
+        )
+        assertEquals(5.0, s.totalCost!!, 1e-6)
+        assertEquals("EUR", s.currency)
+        // Delta-distance is undefined for a single event — efficiency-rate stats stay null.
+        assertNull(s.costPerKm)
+        assertNull(s.costPer100Km)
+    }
+
+    @Test
+    fun mixedCurrencyWithFirstEventCosted_totalCostStillNull() {
+        val s = calc.computeStats(
+            listOf(
+                event(1000L, 100.0, 30.0, costTotal = 5.0, currency = "EUR"),
+                event(2000L, 250.0, 25.0, costTotal = 10.0, currency = "USD"),
+            ),
+            "label",
+        )
+        assertNull(s.totalCost)
+        assertNull(s.currency)
+        assertNull(s.costPerKm)
+        assertTrue(s.mixedCurrency)
+    }
 }
