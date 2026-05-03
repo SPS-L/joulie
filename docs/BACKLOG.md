@@ -1,6 +1,6 @@
 # EV Tracker — Development Backlog
 
-Tasks 1–15 were generated from a senior Android developer code review of the `main` branch (April 2026). Tasks 16–21 are follow-up improvements identified during a 2026-04-30 verification pass against `main` (CI/release pipeline, R8 keep-rules, a11y posture, and SPS-Lab research relevance). Each task is written as a self-contained instruction suitable for a coding agent.
+Tasks 1–15 were generated from a senior Android developer code review of the `main` branch (April 2026). Tasks 16–21 are follow-up improvements identified during a 2026-04-30 verification pass against `main` (CI/release pipeline, R8 keep-rules, a11y posture, and SPS-Lab research relevance). Tasks 38–42 are new feature / infra ideas filed 2026-05-02 from a follow-up senior-developer review (research-aligned analytics, schema-migration polish, anonymised research export). Each task is written as a self-contained instruction suitable for a coding agent.
 
 ---
 
@@ -45,6 +45,11 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-35 | 🟢 | Roborazzi screenshot tests for Dashboard + Charts (must land before TASK-30) | — | ☐ |
 | TASK-36 | 🟡 | Inline-comment the "no `Result.retry()`" invariant in `DriveBackupWorker.doWork()` | — | ☑ |
 | TASK-37 | 🔴 | Replace Google Drive backup with a Storage Access Framework (SAF) implementation (F-Droid blocker) | — | ⏸ |
+| TASK-38 | 🟢 | Multi-vehicle comparative analytics — overlay 2 cars on a single Charts trend | — | ☐ |
+| TASK-39 | 🟢 | Adopt Room `@AutoMigration` for additive schema bumps from v6 onward | — | ☐ |
+| TASK-40 | 🟢 | Anonymised research-export pipeline (PII-stripped CSV for SPS-Lab) | TASK-09 | ☐ |
+| TASK-41 | 🟢 | JSON-LD / OCPP-compatible export format (research interoperability) | TASK-09 | ⏸ |
+| TASK-42 | 🟢 | Open Charge Map / OCPI station lookup integration | TASK-37 | ⏸ |
 
 **Priority legend:** 🔴 High (architecture/data safety) · 🟡 Medium (robustness/UX) · 🟢 Low (new feature)  
 **Status legend:** ☐ open · ☑ done · ☒ closed (premise no longer holds) · ⏸ under consideration (do not start without explicit go-ahead)  
@@ -2746,6 +2751,272 @@ UI change.
 
 ---
 
+## 🟢 TASK-38 — Multi-vehicle comparative analytics on Charts
+
+The data model already supports multiple cars per user, but the Charts
+screen scopes every series to the `activeCarId`. For SPS-Lab fleet-level
+analysis it is useful to overlay two cars on a single trend chart and
+compare efficiency, cost, and degradation curves side-by-side.
+
+### Scope
+
+1. Add a "Compare" toggle to `ChartsFragment` (e.g., a top-of-screen
+   `MaterialButtonToggleGroup` with **Single** / **Compare**). Default
+   to **Single** (current behaviour). When **Compare** is enabled,
+   surface a second car picker; the active car remains series A and
+   the picker selects series B (any other car the user owns).
+
+2. Extend `ChartsScreenState` with `compareCarId: Long?` and
+   `seriesB: ChartSeries?`. `ObserveChartsModelsUseCase` accepts an
+   optional second `carId`; when present, runs the same aggregation
+   pipeline twice (different `carId` filter) and emits both series.
+   Reuse the existing `StatsCalculator` / `DateRangeResolver`
+   pipeline — this is a query-fan-out, not a new metric.
+
+3. Render both series on the same `LineChart` / `BarChart`. Use the
+   primary container colour for series A and the tertiary container
+   colour for series B (M3 tokens, light + dark) so the colour
+   contrast survives both themes. Add a small inline legend with the
+   car nicknames.
+
+4. The **Degradation** tab (TASK-14) gets the same overlay, but only
+   when both cars have a `nominalBatteryKwh`. Otherwise fall back to
+   single-car mode and show a small "compare unavailable — second
+   car has no nominal capacity" hint.
+
+5. Compare mode is irrelevant for the **Pie** tabs (single-car
+   share-of-charge-type breakdown); the toggle hides the comparison
+   picker on those tabs.
+
+6. New JVM cases on `ObserveChartsModelsUseCaseTest` covering the
+   two-car fan-out, the disabled-degradation-fallback, and that
+   selecting the active car as series B is a no-op (collapse to
+   single mode).
+
+7. Update `DESIGN.md` charts section to document the compare mode
+   and the colour mapping. Update `CLAUDE.md` Status entry post-merge.
+
+### Notes
+
+- This is **not** a multi-currency feature — the existing
+  multi-currency-period rule (cost stats hidden when more than one
+  currency is present) applies independently to each series. If A
+  and B are in different currencies, hide the cost trend overlay
+  (drop to single-series for cost) and show the existing banner.
+- No schema change. Backup format unchanged.
+
+---
+
+## 🟢 TASK-39 — Adopt Room `@AutoMigration` for additive bumps from v6 onward
+
+The project hand-writes a migration class for every schema bump
+(currently `MIGRATION_1_2` through `MIGRATION_5_6`). Several of those
+migrations were purely additive (`MIGRATION_5_6` adds two nullable
+columns; `MIGRATION_4_5` is a no-op trip-wire). Room's
+`@AutoMigration(from = N, to = N+1)` annotation generates these
+migrations from the schema JSON automatically and is supported for any
+purely additive change.
+
+### Scope
+
+1. Confirm `app/schemas/` is checked in (it is — `app/build.gradle.kts`
+   already wires `schemaDirectory` via the KSP arg). `@AutoMigration`
+   reads the JSON snapshots from this directory at compile time.
+
+2. From schema **v7 onward**, add `@AutoMigration` entries to
+   `AppDatabase.kt`'s `@Database` annotation `autoMigrations = [...]`
+   array for every additive bump. Reserve hand-written
+   `Migration` objects for destructive or rewrite operations
+   (`MIGRATION_3_4`'s `'DC' → 'DC_FAST'` rewrite is the canonical
+   example — keep that pattern hand-written).
+
+3. Document the rule in `CLAUDE.md` "Database — Room v6" section: a new
+   bullet "Additive bumps (new nullable columns, new tables, new
+   indices) use `@AutoMigration`. Hand-written migrations are reserved
+   for destructive or rewrite operations." Add a short example.
+
+4. **Do not retrofit existing migrations.** `MIGRATION_1_2` through
+   `MIGRATION_5_6` stay as hand-written for stability — replacing
+   them carries no value and risks subtle behaviour differences
+   (Room's auto-migration uses a different DDL strategy that creates
+   shadow tables and copies data; switching mid-life is risky).
+   `MIGRATION_4_5` and `MIGRATION_5_6` were the last hand-written
+   additive ones; v7+ is the boundary.
+
+5. Add an instrumented `migrate_6_to_7_isAutoMigration` test once the
+   first `@AutoMigration` lands, asserting the auto-migration runs
+   end-to-end and preserves data — same shape as the existing
+   `MigrationTest` cases.
+
+### Notes
+
+- `@AutoMigration` cannot be combined with `@DeleteColumn` /
+  `@RenameColumn` without the manual `AutoMigrationSpec` callback.
+  When that's needed, use a hand-written migration instead.
+- This task is infrastructure polish — there is no user-visible
+  behaviour change. Land it when the next additive schema change
+  is queued so the test gets exercised end-to-end.
+
+---
+
+## 🟢 TASK-40 — Anonymised research-export pipeline for SPS-Lab
+
+Bridge the app from a personal-use tool to a research data collection
+instrument: add an opt-in, privacy-preserving export mode that strips
+PII (location free-text, car nicknames) but retains the temporal,
+energy, cost, and SoC fields needed for SPS-Lab analysis. Must publish
+the schema in `METHODOLOGY.md` for transparency.
+
+### Scope
+
+1. New `domain/usecase/ExportAnonymisedCsvUseCase.kt` parallel to the
+   existing `ExportCsvUseCase`. Output schema (one row per charge
+   event, all units canonical):
+   - `event_id` (anonymised — derive a stable per-export hash from
+     the row id, NOT the raw `Long` id; resets per export so the
+     hash chain is non-correlatable across exports)
+   - `car_anon_id` (per-export hash of `carId`; same scheme — A, B,
+     C ordering preserved within an export, opaque between exports)
+   - `event_timestamp_utc` (ISO 8601, UTC)
+   - `kwh_added`
+   - `odometer_km` (canonical km — stored unit)
+   - `charge_type` (`AC` / `DC_FAST` / `DC_ULTRA`)
+   - `cost_total` (or empty)
+   - `currency` (or empty)
+   - `soc_before`, `soc_after` (fractions in `0.0..1.0`, or empty)
+   - `nominal_battery_kwh` (per-car static, denormalised onto the row
+     so the export is self-contained)
+   - **Excluded fields:** `location`, `note`, `car.nickname`, raw
+     primary keys.
+
+2. New Settings row "Export anonymised data for research" gated by a
+   confirmation dialog: "This export removes location names, notes,
+   and car nicknames. It includes timestamps, energy, cost, and
+   battery state. Continue?" Output via the same `FileProvider`
+   sharing path as `ExportCsvUseCase`.
+
+3. Schema authoritatively documented in `docs/METHODOLOGY.md` (new
+   file — same one TASK-20 will create, so coordinate). Include:
+   field list, units, anonymisation guarantees, what is *not*
+   exported, and a citation example.
+
+4. New JVM `ExportAnonymisedCsvUseCaseTest` covering: per-export hash
+   stability within a run; per-export hash uniqueness across runs
+   (i.e., two consecutive exports of the same data produce different
+   `event_id` / `car_anon_id` columns); `location` / `note` /
+   nickname fields absent from header and rows; correct CSV escaping
+   for currency strings.
+
+### Notes
+
+- This is **opt-in per export** (no persistent flag). Researcher
+  asks the user to email the file; user runs the export and shares.
+  No background pipeline, no upload — same surface as TASK-09.
+- Coordinate with TASK-09 — if both land, share the
+  `CsvFileSink` infrastructure and the date-range picker.
+- Coordinate with TASK-20 — both create `docs/METHODOLOGY.md`. The
+  first to land creates the file; the second appends a section.
+
+---
+
+## 🟢 TASK-41 — JSON-LD / OCPP-compatible export format ⏸ Under consideration (2026-05-02)
+
+> **⏸ Deferred — do not start without an explicit go-ahead.** Depends
+> on TASK-09 (date-range CSV) and TASK-40 (anonymised pipeline)
+> landing first; the value is interoperability with grid-side
+> energy-management research, which is a niche surface. Revisit when
+> a concrete consumer (a downstream SPS-Lab tool, an OCPP-compatible
+> aggregator) is identified.
+
+Beyond CSV, add an export to **JSON-LD** (schema.org `Vehicle` +
+`QuantitativeValue`) or an **OCPP-compatible** transaction format for
+interoperability with grid-side energy-management research and tooling.
+
+### Scope (sketch — to be refined when revived)
+
+1. New `domain/usecase/ExportJsonLdUseCase.kt`. Output one JSON-LD
+   document with `@context` set to `https://schema.org`, root type
+   `Vehicle`, and a `chargingHistory` array of objects each with
+   `@type: QuantitativeValue` for `kWh`, `distance`, and
+   `monetaryAmount`. Include explicit `unitCode` strings (UN/CEFACT
+   codes: `KWH`, `KMT`, etc.).
+
+2. Optional second exporter for OCPP 2.0.1
+   `TransactionEventRequest`-shaped JSON; one transaction per
+   charge event. The app does not act as an OCPP charge point —
+   this is an export shim only.
+
+3. New row in Settings → Export, parallel to TASK-09's CSV export.
+   Reuse the `FileProvider` sharing path.
+
+4. Document the schema choice in `docs/METHODOLOGY.md` alongside the
+   TASK-40 anonymised CSV schema. Cite schema.org / OCPP 2.0.1
+   spec versions in use.
+
+### Notes
+
+- **No new third-party dependency.** Hand-roll the JSON-LD with the
+  existing Gson dep — schema.org JSON-LD does not require a
+  framework, just the `@context` / `@type` keys.
+- Decision pending: JSON-LD-only, OCPP-only, or both. Default to
+  JSON-LD on revival (lower scope, broader applicability) and add
+  OCPP as a separate task if a consumer asks.
+
+---
+
+## 🟢 TASK-42 — Open Charge Map / OCPI station lookup integration ⏸ Under consideration (2026-05-02)
+
+> **⏸ Deferred — do not start without an explicit go-ahead.** Two
+> reasons to hold: (1) the F-Droid implications mirror TASK-37 — Open
+> Charge Map is reachable via plain HTTPS, but adding a network
+> dependency for charging-station enrichment broadens the privacy
+> surface and the F-Droid review checklist; (2) the value depends on
+> coverage in the user's geography (OCM coverage in Cyprus / EU is
+> uneven). Revisit when a researcher requests verified-station
+> tagging on a real dataset.
+
+Replace the free-text `location` field with an optional verified
+charging-station tag sourced from the
+[Open Charge Map API](https://openchargemap.org/site/develop/api) or
+an OCPI feed. Free text remains the fallback.
+
+### Scope (sketch — to be refined when revived)
+
+1. Add a "Search station" affordance to the location chip row in
+   `ChargeEditFragment`. Tapping opens a modal with a text search
+   that hits OCM (`api.openchargemap.io/v3/poi`) and returns nearby
+   stations; the user picks one or cancels back to free text.
+
+2. Persist the selected station as a structured value alongside the
+   free-text location: extend `ChargeEventEntity` with optional
+   `stationProvider: String?` (`"OCM"`), `stationId: String?` (the
+   provider's stable id), and `stationLatLng: String?` (canonical
+   `"lat,lng"`). Schema bump v6 → v7 with a hand-written migration
+   adding three nullable TEXT columns.
+
+3. Add an API key configuration step to `docs/BACKUP_SETUP.md` (or
+   a new `docs/OCM_SETUP.md`). The key lives in `local.properties`
+   (gitignored), surfaced via `BuildConfig`, and is **not** required
+   for the app to run — the search affordance hides when missing.
+
+4. Backup serializer bumps `BackupData.CURRENT_VERSION` and adds the
+   new fields to `SUPPORTED_VERSIONS = {3, 4, 5, 6, 7}`.
+
+### Notes
+
+- **Privacy:** the station lookup is an outbound HTTPS call to a
+  third party. Document this clearly in the wizard and in
+  `DESIGN.md`. The lookup is opt-in per event (the user has to
+  tap "Search station" — typing free text never leaves the device).
+- **F-Droid:** OCM API is plain REST over HTTPS, no Google Play
+  Services dependency; this *should* be F-Droid-compatible. Verify
+  during the revival review.
+- **OCPI alternative:** if a research partner runs an OCPI feed,
+  swap the OCM client for an OCPI client of the same shape — the
+  three new entity columns are provider-agnostic.
+
+---
+
 ## Notes for Agents (TASK-22 to TASK-30 addendum)
 
 > Sequencing notes for **TASK-07, TASK-12, TASK-16, TASK-19, TASK-22,
@@ -2765,6 +3036,18 @@ UI change.
 
 - **TASK-30 marker reuse:** complete the Vico marker wrapper once in Step 2
   and reuse in Step 3. Do not port `ChartsMarkerView` twice.
+- **TASK-18 early-win:** Step 6 (`AccessibilityChecks.enable()` in the
+  Espresso setup) is a one-line change that immediately surfaces
+  missing `contentDescription` and undersized touch targets on every
+  subsequent instrumented run. Land it as a standalone PR before
+  attempting the broader a11y audit (Steps 1–5, 7–8); it makes the
+  rest of the audit measurable.
+- **TASK-21 sequencing:** generate the Android Baseline Profile
+  **after TASK-30 lands**, not before. The MPAndroidChart class-loading
+  cost dominates today's cold-start profile; once Vico replaces it,
+  the recorded profile will look materially different. A profile
+  recorded before TASK-30 will be partially invalidated on the very
+  next release.
 
 ---
 
