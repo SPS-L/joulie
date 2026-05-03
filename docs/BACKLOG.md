@@ -1,6 +1,6 @@
 # EV Tracker — Development Backlog
 
-Tasks 1–15 were generated from a senior Android developer code review of the `main` branch (April 2026). Tasks 16–21 are follow-up improvements identified during a 2026-04-30 verification pass against `main` (CI/release pipeline, R8 keep-rules, a11y posture, and SPS-Lab research relevance). Tasks 38–42 are new feature / infra ideas filed 2026-05-02 from a follow-up senior-developer review (research-aligned analytics, schema-migration polish, anonymised research export). TASK-43 (filed 2026-05-02) closes a real UX gap: many EU/UK chargers and several older EVs (Renault/Nissan/older BMW) display only SoC % before/after, never kWh delivered. Tasks 44–49 are filed 2026-05-03 from a senior-developer code audit cross-checked against the current `main` (`658b60a` + the TASK-43 / TASK-18 Step 6 / nightly-WorkManager fixes): three correctness/UX bugs (`StatsCalculator` cost accumulation, `KwhFromSocCalculator` defensive guard, battery-health overshoot warning) and three research-aligned extensions (charging power profile, time-of-use tariff zones, per-event grid carbon intensity). The audit also folded `kwhSource` / `socBefore` / `socAfter` columns into TASK-09 and concrete K2 / Room version pins into TASK-33. TASK-50 (also filed 2026-05-03) bundles the four fix categories surfaced by the first nightly instrumented cron after the WorkManager-init fix landed — `EmptyFragmentActivity` not declared in the app manifest, a stale `DriveBackupWorkerTest.ioError_returnsRetry` assertion, racy `MainActivityResetRecoveryTest` startup hook, and a `ChartsFragmentTest` initialization error. TASK-51 (filed 2026-05-03) captures the GPL relicensing request after a dependency audit found one concrete review item in the shipped runtime set: `com.google.android.gms:play-services-auth` is still distributed under the Android SDK License, so the GPL-3.0-or-later switch should carry that note explicitly in review. Tasks 52–54 (filed 2026-05-03 from `docs/EV-backlog-review.md`) cover three hardening items confirmed against `main`: CSV-injection / CR / tab coverage in `ExportCsvUseCase.csvEscape`, a multi-car `require(...)` guard in `StatsCalculator.computeStats`, and a durable last-seen marker that prevents the Drive restore-prompt from re-firing after the user has skipped or restored the same remote snapshot. The same review proposed two further items (a `NetworkType.CONNECTED` constraint on the backup `WorkRequest` and a forward-compat fallback for unknown `kwhSource` values) which were rejected: both behaviours already hold in `WorkManagerBackupScheduler.kt:27` and `ChargeKwhSource.parseLegacy` respectively. Each task is written as a self-contained instruction suitable for a coding agent.
+Tasks 1–15 were generated from a senior Android developer code review of the `main` branch (April 2026). Tasks 16–21 are follow-up improvements identified during a 2026-04-30 verification pass against `main` (CI/release pipeline, R8 keep-rules, a11y posture, and SPS-Lab research relevance). Tasks 38–42 are new feature / infra ideas filed 2026-05-02 from a follow-up senior-developer review (research-aligned analytics, schema-migration polish, anonymised research export). TASK-43 (filed 2026-05-02) closes a real UX gap: many EU/UK chargers and several older EVs (Renault/Nissan/older BMW) display only SoC % before/after, never kWh delivered. Tasks 44–49 are filed 2026-05-03 from a senior-developer code audit cross-checked against the current `main` (`658b60a` + the TASK-43 / TASK-18 Step 6 / nightly-WorkManager fixes): three correctness/UX bugs (`StatsCalculator` cost accumulation, `KwhFromSocCalculator` defensive guard, battery-health overshoot warning) and three research-aligned extensions (charging power profile, time-of-use tariff zones, per-event grid carbon intensity). The audit also folded `kwhSource` / `socBefore` / `socAfter` columns into TASK-09 and concrete K2 / Room version pins into TASK-33. TASK-50 (also filed 2026-05-03) bundles the four fix categories surfaced by the first nightly instrumented cron after the WorkManager-init fix landed — `EmptyFragmentActivity` not declared in the app manifest, a stale `DriveBackupWorkerTest.ioError_returnsRetry` assertion, racy `MainActivityResetRecoveryTest` startup hook, and a `ChartsFragmentTest` initialization error. TASK-51 (filed 2026-05-03) captures the GPL relicensing request after a dependency audit found one concrete review item in the shipped runtime set: `com.google.android.gms:play-services-auth` is still distributed under the Android SDK License, so the GPL-3.0-or-later switch should carry that note explicitly in review. Tasks 52–54 (filed 2026-05-03 from `docs/EV-backlog-review.md`) cover three hardening items confirmed against `main`: CSV-injection / CR / tab coverage in `ExportCsvUseCase.csvEscape`, a multi-car `require(...)` guard in `StatsCalculator.computeStats`, and TASK-54 — originally framed as a durable last-seen marker for the Drive restore prompt, since expanded to 🔴 priority after a user-supplied reproduction (2026-05-03 in-conversation): on every Settings entry, the Drive switch visibly flips OFF → ON on its own and the "Restore from Drive?" dialog appears. Root cause is two coupled defects — the switch's `OnCheckedChangeListener` fires when Android's view-state restoration calls `setChecked(true)` after the listener is already attached but before the StateFlow collector's rebind block has run, AND the absence of a durable marker that records the user's "Skip" decision. Both fixes are bundled into TASK-54. The same review proposed two further items (a `NetworkType.CONNECTED` constraint on the backup `WorkRequest` and a forward-compat fallback for unknown `kwhSource` values) which were rejected: both behaviours already hold in `WorkManagerBackupScheduler.kt:27` and `ChargeKwhSource.parseLegacy` respectively. Each task is written as a self-contained instruction suitable for a coding agent.
 
 ---
 
@@ -61,7 +61,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-51 | 🔴 | GPL-3.0-or-later license change (pending `play-services-auth` review) | — | ☐ |
 | TASK-52 | 🟡 | CSV escape hardening in `ExportCsvUseCase` — quote `\r` and tabs, neutralise spreadsheet formula-injection prefixes (`=`, `+`, `-`, `@`) in user-supplied fields | — | ☐ |
 | TASK-53 | 🟡 | Multi-car invariant guard in `StatsCalculator.computeStats` — `require` the input shares a single `carId` (latent bug if a future caller passes a mixed-car list) | — | ☐ |
-| TASK-54 | 🟡 | Durable restore-skip marker — record the remote backup's `exported_at` after Skip / Restore so the same snapshot is never re-prompted on a Drive re-toggle (destructive-action path) | TASK-31 | ☐ |
+| TASK-54 | 🔴 | Drive switch fires `onUserToggledOn()` on every Settings entry (view-state restoration anti-pattern) — visible OFF→ON flicker + restore-prompt loop; bundled with a durable last-seen marker for the destructive-action path | TASK-31 | ☐ |
 
 **Priority legend:** 🔴 High (architecture/data safety) · 🟡 Medium (robustness/UX) · 🟢 Low (new feature)  
 **Status legend:** ☐ open · ☑ done · ☒ closed (premise no longer holds) · ⏸ under consideration (do not start without explicit go-ahead)  
@@ -4047,39 +4047,136 @@ test asserts the guard fires on mixed input. JVM unit-test count gains
 
 ---
 
-## 🟡 TASK-54 — Durable restore-skip marker (Drive re-toggle re-prompt fix)
+## 🔴 TASK-54 — Drive switch fires `onUserToggledOn()` on every Settings entry (+ durable restore-skip marker)
 
-> **Filed 2026-05-03** (user-reported reproduction; root cause confirmed
-> against current `main`).
+> **Filed 2026-05-03** (user-reported reproduction).
 >
-> **Bug:** the "Restore from Drive?" dialog can re-appear for the same
-> remote backup after the user has already tapped **Skip** for it. The
-> destructive-action path trains users to dismiss a critical warning by
-> reflex, which is exactly the wrong outcome for a flow that overwrites
-> all local data.
+> **Bug (user verbatim):** *"Every time I enter the Settings on my phone,
+> the Google Drive backup switch on its own toggles **off** and then
+> **on**, and then asks me if I want to restore from Drive. This happens
+> every time."*
 >
-> **Root cause (verified 2026-05-03):** `SettingsViewModel.onSkipRestore()`
-> writes `pendingRestoreLabel = null` in `_uiState` and calls
-> `settingsWriter.setDriveEnabled(true)`, but **persists no durable
-> marker** that the user has already been offered this snapshot. The
-> only thing recording the user's "Skip" decision is in-memory
-> `SettingsUiState`, which is lost on ViewModel recreation.
-> `PreferenceKeys` has no `last_seen_remote_backup_*` key.
+> The visible OFF → ON flicker is the smoking gun: the switch listener
+> is firing `onUserToggledOn()` on bare Settings entry, which calls
+> `auth.authorize()` → `viewModel.onDriveAuthGranted()` →
+> `readRemoteBackup() != null` → `ShowRestorePrompt`. There is no
+> durable record of any prior "Skip" decision, so the same prompt
+> reappears every time.
 >
-> The most reliable user-visible re-prompt path verified from code is:
-> tap **Skip** → toggle Drive **OFF** → toggle Drive **ON** → the same
-> backup is offered again (`onUserToggledOn` → `auth.authorize()` →
-> `onDriveAuthGranted()` → `readRemoteBackup() != null` →
-> `ShowRestorePrompt`). The user reports "every Settings entry"
-> reproduction; the listener-rebind in
-> `SettingsFragment.onViewCreated` (`if (binding.switchDrive.isChecked
-> != state.driveEnabled)` block) should suppress the bare-entry path,
-> so the implementer should treat that report as a signal that there
-> is **also** a non-toggle re-entry path to find — but the durable
-> marker fixes the underlying defect for every reproduction trigger
-> regardless of which entry path runs.
+> **Two coupled defects.** Both must land in the same change:
+>
+> 1. **Switch listener fires on view-state restoration.** In
+>    `SettingsFragment.onViewCreated`, the listener at line 69 is
+>    attached **synchronously** before the `repeatOnLifecycle(STARTED)`
+>    coroutine starts collecting `viewModel.uiState`. Android's view
+>    framework runs `onRestoreInstanceState` between `onCreateView` and
+>    `onStart` and calls `setChecked(true)` on `MaterialSwitch` to
+>    restore the previously-saved checked state (the switch's XML
+>    default is `false`, so this is a real OFF → ON transition).
+>    `setChecked(true)` synchronously fires the just-attached
+>    `OnCheckedChangeListener`, which runs `onUserToggledOn()` before
+>    the rebind block at line 98 ever has a chance to detach.
+>    The listener-rebind protection inside the StateFlow collector is
+>    **correct for subsequent transitions** (DataStore-driven updates
+>    while Settings is in the foreground) but cannot defend the
+>    pre-collector window. Even with the durable marker (defect #2)
+>    landed, the user would still see the unwanted OFF → ON visual
+>    flicker AND a wasted `auth.authorize()` round-trip on every
+>    entry — so this defect needs a real fix, not just suppression.
+> 2. **No durable marker that "Skip" was tapped.**
+>    `SettingsViewModel.onSkipRestore()` writes
+>    `pendingRestoreLabel = null` in `_uiState` and calls
+>    `settingsWriter.setDriveEnabled(true)`, but does **not** persist
+>    any record that this specific remote backup was already offered.
+>    The only thing recording the Skip decision is in-memory
+>    `SettingsUiState`, which is lost on ViewModel recreation.
+>    `PreferenceKeys` has no `last_seen_remote_backup_*` key.
+>    Even if defect #1 were fixed, the user would still get re-prompted
+>    via the legitimate path: Skip → toggle Drive **OFF** → toggle
+>    Drive **ON** → same backup re-offered.
+>
+> The destructive-action path trains users to dismiss a critical
+> warning by reflex, which is exactly the wrong outcome for a flow
+> that overwrites all local data.
 
 ### Scope
+
+#### Step 0 — Stop the switch listener from firing on view-state restoration
+
+The fix is to **never have a live listener attached when the view
+framework or the StateFlow collector first sets `isChecked`.** Pick one
+of the following — they're equivalent in correctness, listed by
+preference:
+
+**Option A (preferred): defer first attach until after the first state
+binding.** Move the listener-attach out of `onViewCreated` and into the
+collector. On the first emission the collector unconditionally syncs
+`isChecked` to `state.driveEnabled` with no listener attached, then
+attaches the listener for the first time. The existing rebind block
+handles every subsequent transition unchanged.
+
+```kotlin
+override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+    super.onViewCreated(view, savedInstanceState)
+    // Note: switchDrive listener is attached LAZILY by the StateFlow
+    // collector below, AFTER the first state-driven sync of isChecked.
+    // This prevents view-state restoration's setChecked() call from
+    // firing onUserToggledOn() before the ViewModel has a chance to
+    // tell us what the persisted Drive-enabled state actually is.
+
+    // ... other listeners (rowPrimaryMetric, rowExportCsv, etc.) stay here ...
+
+    viewLifecycleOwner.lifecycleScope.launch {
+        repeatOnLifecycle(Lifecycle.State.STARTED) {
+            launch {
+                var driveListenerAttached = false
+                viewModel.uiState.collect { state ->
+                    if (!driveListenerAttached) {
+                        binding.switchDrive.isChecked = state.driveEnabled
+                        binding.switchDrive.setOnCheckedChangeListener { _, c ->
+                            if (c) onUserToggledOn() else viewModel.onToggleDriveOff()
+                        }
+                        driveListenerAttached = true
+                    } else if (binding.switchDrive.isChecked != state.driveEnabled) {
+                        binding.switchDrive.setOnCheckedChangeListener(null)
+                        binding.switchDrive.isChecked = state.driveEnabled
+                        binding.switchDrive.setOnCheckedChangeListener { _, c ->
+                            if (c) onUserToggledOn() else viewModel.onToggleDriveOff()
+                        }
+                    }
+                    // ... rest of state binding unchanged ...
+                }
+            }
+            // ... events collector unchanged ...
+        }
+    }
+}
+```
+
+**Option B: programmatic-change guard flag.** Keep the listener attached
+in `onViewCreated`, but set a `var programmaticDriveSwitch = false`
+flag and have the listener short-circuit when it's true. Set the flag
+around any programmatic `isChecked = ...` write, and ALSO around the
+implicit write that `onRestoreInstanceState` performs — which means
+flipping the flag in `onViewStateRestored(savedInstanceState: Bundle?)`
+*before* `super.onViewStateRestored(...)` and clearing it after. This
+is more code than Option A and easier to get wrong if a future edit
+adds a new programmatic write path; only choose it if Option A
+breaks something subtle in instrumented testing.
+
+**Option C: disable view-state save on the switch.**
+`binding.switchDrive.isSaveEnabled = false` plus
+`binding.switchDrive.isSaveFromParentEnabled = false`. The view will
+no longer persist its checked state, so `onRestoreInstanceState`
+becomes a no-op for this view. This is the smallest change but it
+relies on the StateFlow being the single source of truth at all times
+(true today, but not enforced architecturally). Document the contract
+inline if you pick this.
+
+Whichever option lands: the existing line-69 listener attachment must
+be removed (Options A and C) or accompanied by the guard flag (Option
+B). Do not leave the line-69 attach in place untouched — that's the
+defect.
 
 #### Step 1 — New DataStore key in `PreferenceKeys`
 
@@ -4210,8 +4307,50 @@ Add to `SettingsViewModelTest`:
 Extend `FakeSettingsReader` / `FakeSettingsWriter` with the new key.
 The new `WipeRemoteBackupUseCase` test belongs in `WipeRemoteBackupUseCaseTest`.
 
+#### Instrumented test — Step 0 regression guard
+
+Add to `SettingsFragmentTest` (or a new `SettingsDriveSwitchEntryTest`):
+
+```kotlin
+@Test
+fun reEntry_withDriveEnabled_doesNotFireOnUserToggledOn() {
+    // Pre-state: DataStore says driveEnabled = true.
+    settingsWriter.setDriveEnabled(true)
+
+    // First entry — let the fragment mount and the collector run.
+    val scenario = launchFragmentInHiltContainer<SettingsFragment>()
+    scenario.moveToState(Lifecycle.State.RESUMED)
+
+    // Capture how many times the auth flow has been invoked so far.
+    val authCallsBefore = fakeAuth.authorizeCalls
+
+    // Simulate "user navigates away and back" by destroying & recreating
+    // the view. Use Lifecycle.State.CREATED to drop the view, then back
+    // to RESUMED to recreate it. View-state save/restore runs across this
+    // boundary, which is the path that triggered the bug.
+    scenario.moveToState(Lifecycle.State.CREATED)
+    scenario.moveToState(Lifecycle.State.RESUMED)
+
+    // After the round-trip, the auth flow MUST NOT have been re-invoked.
+    // Pre-fix this assertion fails (auth.authorize() ran on view restore).
+    assertEquals(authCallsBefore, fakeAuth.authorizeCalls)
+}
+```
+
+`FakeDriveAuthManager` already exists in `app/src/androidTest/java/.../testing/`;
+add an `authorizeCalls: Int` counter incremented on every `authorize()`
+invocation if it isn't there. This test is the regression guard for
+Step 0 — the durable-marker JVM tests don't cover it because they don't
+exercise the view-state-restoration window.
+
 ### Acceptance
 
+- **No visible OFF → ON flicker on the Drive switch when entering
+  Settings** with `driveEnabled = true`. The switch's first painted
+  state matches the persisted DataStore value; no programmatic
+  flip is observable to the user.
+- **No `auth.authorize()` round-trip on bare Settings entry.** Verified
+  by the new instrumented regression test.
 - After **Skip**, no further toggle / consent / Settings entry re-shows
   the same restore prompt.
 - After a successful **Restore**, no further entry re-shows the same
@@ -4220,17 +4359,16 @@ The new `WipeRemoteBackupUseCase` test belongs in `WipeRemoteBackupUseCaseTest`.
   prompts exactly once for the new snapshot.
 - `./gradlew ktlintCheck :app:lint :app:testDebugUnitTest :app:assembleRelease`
   green; instrumented `SettingsBackupControlsTest` (TASK-31) stays green.
-- JVM unit-test count gains ≥ 7 cases.
+- JVM unit-test count gains ≥ 7 cases; instrumented count gains ≥ 1.
 
 ### Out of scope
 
-- The "every Settings entry" reproduction trigger the user reported,
-  if it turns out to require a code path beyond the toggle / consent
-  flow (e.g., the listener-rebind protection failing under some lifecycle
-  pattern). The durable marker fixes the **defect** regardless of which
-  re-entry path triggers it; if the bare-entry trigger still reproduces
-  after this lands, file a follow-up to investigate
-  `SettingsFragment.onViewCreated`'s switch-rebind block.
 - A "Don't ask again" checkbox inside the dialog. The durable marker
   is automatic and silent; an explicit checkbox is a separate UX
   decision and not requested.
+- Any other view in `SettingsFragment` that may have the same
+  view-state-restoration anti-pattern (e.g., a future preference
+  switch). If Step 0's Option A is chosen and works cleanly for the
+  Drive switch, document the pattern in `docs/DESIGN.md` (or in the
+  fragment's KDoc) so the next switch added inherits the fix; do not
+  retroactively rework other views in this PR.
