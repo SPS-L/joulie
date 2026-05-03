@@ -1085,6 +1085,24 @@ reflection, and the backup DTOs (`BackupData`, `CarDto`, `ChargeEventDto`,
 
 ## 🟡 TASK-18 — Accessibility (a11y) pass
 
+> **Step 6 landed (2026-05-03).** The standalone-PR early-win from the
+> Notes-for-Agents addendum is in: `HiltTestRunner.onStart()` now calls
+> `AccessibilityChecks.enable().setRunChecksFromRootView(true)`, so every
+> Espresso `ViewAction` (click, type, scrollTo, …) in every instrumented
+> test runs the WCAG 2.1 AA rule set against the targeted view. New
+> `androidx.test.espresso:espresso-accessibility:3.5.1` dep wired in
+> `gradle/libs.versions.toml` + `app/build.gradle.kts`. No suppression
+> matchers are configured today — the goal of Step 6 is to make the
+> existing audit gap measurable. The first cron run of
+> `nightly-instrumented.yml` after this lands will surface any
+> pre-existing violations as test failures (informational only — the
+> nightly job never blocks PRs); those failures become the input list
+> for steps 1–5, 7, 8 below.
+>
+> **Steps 1–5, 7, 8 remain open.** Tackle them as follow-up PRs that
+> close violations the nightly surfaces, plus the contrast audit and
+> the DESIGN.md A11y section.
+
 There is no mention of accessibility in `DESIGN.md`, `../CLAUDE.md`, or
 `TEST_PLAN.md`. The app is intended for public use and must meet at least
 WCAG 2.1 AA.
@@ -3197,12 +3215,11 @@ the chart is sparser than the event count suggests.
 
 - **TASK-30 marker reuse:** complete the Vico marker wrapper once in Step 2
   and reuse in Step 3. Do not port `ChartsMarkerView` twice.
-- **TASK-18 early-win:** Step 6 (`AccessibilityChecks.enable()` in the
-  Espresso setup) is a one-line change that immediately surfaces
-  missing `contentDescription` and undersized touch targets on every
-  subsequent instrumented run. Land it as a standalone PR before
-  attempting the broader a11y audit (Steps 1–5, 7–8); it makes the
-  rest of the audit measurable.
+- **TASK-18 early-win:** ☑ landed 2026-05-03 — Step 6
+  (`AccessibilityChecks.enable()` in `HiltTestRunner.onStart`) is in;
+  see the TASK-18 outcome banner for details. Steps 1–5, 7, 8 remain
+  open and should be tackled as follow-up PRs that close violations
+  the nightly run surfaces.
 - **TASK-21 sequencing:** generate the Android Baseline Profile
   **after TASK-30 lands**, not before. The MPAndroidChart class-loading
   cost dominates today's cold-start profile; once Vico replaces it,
