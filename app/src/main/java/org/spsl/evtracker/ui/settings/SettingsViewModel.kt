@@ -27,6 +27,7 @@ import org.spsl.evtracker.domain.backup.BackupRepository
 import org.spsl.evtracker.domain.backup.BackupResult
 import org.spsl.evtracker.domain.backup.BackupScheduler
 import org.spsl.evtracker.domain.backup.DriveAuthRequiredException
+import org.spsl.evtracker.domain.locale.LocaleApplier
 import org.spsl.evtracker.domain.repository.CarReader
 import org.spsl.evtracker.domain.repository.LocationReader
 import org.spsl.evtracker.domain.repository.SettingsReader
@@ -59,6 +60,7 @@ class SettingsViewModel @Inject constructor(
     private val exportCsvUseCase: ExportCsvUseCase,
     private val pushBackupNowUseCase: PushBackupNowUseCase,
     private val wipeRemoteBackupUseCase: WipeRemoteBackupUseCase,
+    private val localeApplier: LocaleApplier,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -89,6 +91,11 @@ class SettingsViewModel @Inject constructor(
         }
         viewModelScope.launch {
             settingsReader.theme.collect { v -> _uiState.update { it.copy(theme = v) } }
+        }
+        viewModelScope.launch {
+            // TASK-55: collect the persisted language tag so the Settings UI
+            // can show the currently-selected option in the dialog.
+            settingsReader.languageTag.collect { v -> _uiState.update { it.copy(languageTag = v) } }
         }
         viewModelScope.launch {
             settingsReader.activeCarId.collect { id ->
@@ -300,6 +307,20 @@ class SettingsViewModel @Inject constructor(
 
     fun onThemeSelected(theme: String) {
         viewModelScope.launch { settingsWriter.setTheme(theme) }
+    }
+
+    /**
+     * TASK-55: persist the selected language tag and apply it to the
+     * running process. Empty string ("") = follow system. The
+     * [LocaleApplier.apply] call triggers an Activity recreation on most
+     * Android versions; the DataStore write is durable so the new
+     * Activity reads the right tag at startup.
+     */
+    fun onLanguageSelected(tag: String) {
+        viewModelScope.launch {
+            settingsWriter.setLanguageTag(tag)
+            localeApplier.apply(tag)
+        }
     }
 
     fun onResetPreferences() {

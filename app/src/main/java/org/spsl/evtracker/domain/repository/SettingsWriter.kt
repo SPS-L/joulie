@@ -46,4 +46,12 @@ interface SettingsWriter {
      * (used by `WipeRemoteBackupUseCase` on successful delete).
      */
     suspend fun setLastSeenRemoteBackupExportedAt(value: String)
+
+    /**
+     * TASK-55: persist the IETF BCP-47 language tag chosen by the user.
+     * Pass empty string for "follow system". Caller is responsible for
+     * also invoking `LocaleApplier.apply(tag)` to surface the change to
+     * the running process.
+     */
+    suspend fun setLanguageTag(value: String)
 }

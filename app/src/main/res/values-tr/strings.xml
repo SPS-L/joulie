@@ -121,6 +121,11 @@
     <string name="settings_distance_unit">Mesafe birimi</string>
     <string name="settings_currency">Para birimi</string>
     <string name="settings_theme">Tema</string>
+    <!-- TASK-55: language picker -->
+    <string name="settings_language">Dil</string>
+    <string name="settings_language_dialog_title">Dil seçin</string>
+    <string name="settings_language_follow_system">Sistem ayarını kullan</string>
+    <string name="wizard_language_label">Dil</string>
     <string name="settings_manage_locations">Konumları yönet</string>
     <string name="settings_manage_locations_summary">%d kayıtlı</string>
     <string name="settings_reset_preferences">Tercihleri sıfırla</string>

@@ -98,15 +98,17 @@ class SettingsViewModelTest {
         val exportCsv = ExportCsvUseCase(carReader, chargeEventQueries, csvSink)
         val pushBackupNow = PushBackupNowUseCase(backupRepo, writer, org.spsl.evtracker.testing.FakeNowProvider(time = 1_700_000_000_000L))
         val wipeRemoteBackup = WipeRemoteBackupUseCase(backupRepo, writer)
+        val localeApplier = org.spsl.evtracker.testing.FakeLocaleApplier()
         val vm = SettingsViewModel(
             reader, writer, locationReader, carReader,
             backupRepo, scheduler, workManager, restoreUseCase,
             resetActive, resetAll, exportCsv,
             pushBackupNow, wipeRemoteBackup,
+            localeApplier,
         )
         return Setup(
             vm, reader, writer, backupRepo, scheduler, workManager,
-            locationReader, carReader, csvSink, chargeEventQueries,
+            locationReader, carReader, csvSink, chargeEventQueries, localeApplier,
         )
     }
 
@@ -121,6 +123,7 @@ class SettingsViewModelTest {
         val carReader: FakeCarReader,
         val csvSink: FakeCsvFileSink,
         val chargeEventQueries: FakeChargeEventQueries,
+        val localeApplier: org.spsl.evtracker.testing.FakeLocaleApplier,
     )
 
     /** Like FakeBackupRepository but lets a test throw from readRemoteBackup. */
@@ -736,5 +739,43 @@ class SettingsViewModelTest {
 
         // Let the slow push finish so runTest doesn't complain about pending coroutines.
         advanceUntilIdle()
+    }
+
+    // -------------------------------------------------------------------------
+    // TASK-55 — language picker
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun onLanguageSelected_persistsTagAndAppliesLocale() = runTest {
+        val s = build()
+        s.vm.onLanguageSelected("el")
+        advanceUntilIdle()
+        assertEquals("el", s.writer.languageTag)
+        assertEquals("el", s.localeApplier.lastAppliedTag)
+        assertEquals(1, s.localeApplier.applyCallCount)
+    }
+
+    @Test
+    fun onLanguageSelected_followSystem_writesEmptyString() = runTest {
+        val s = build()
+        s.vm.onLanguageSelected("ru")
+        advanceUntilIdle()
+        s.vm.onLanguageSelected("")
+        advanceUntilIdle()
+        // Empty-string write replaces the previous "ru" choice; LocaleApplier
+        // sees "" so it can map to LocaleListCompat.getEmptyLocaleList.
+        assertEquals("", s.writer.languageTag)
+        assertEquals("", s.localeApplier.lastAppliedTag)
+    }
+
+    @Test
+    fun languageTag_collectedFromSettingsReader_intoUiState() = runTest {
+        val s = build()
+        // Pre-seed the reader-side flow; the VM's init-collector should
+        // surface it into UiState so the dialog can show the right
+        // selected option.
+        s.reader.setLanguageTag("tr")
+        advanceUntilIdle()
+        assertEquals("tr", s.vm.uiState.value.languageTag)
     }
 }

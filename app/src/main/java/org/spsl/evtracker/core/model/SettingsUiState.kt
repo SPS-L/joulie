@@ -33,6 +33,12 @@ data class SettingsUiState(
     val distanceUnit: String = "km",
     val currency: String = "EUR",
     val theme: String = "system",
+    /**
+     * TASK-55: persisted language tag (`""` = follow system; otherwise
+     * `"en"` / `"el"` / `"tr"` / `"ru"`). Drives the Settings → Language
+     * row's selected-option highlight in the picker dialog.
+     */
+    val languageTag: String = "",
     val activeCarId: Long = -1L,
     val activeCarName: String? = null,
     val customLocationCount: Int = 0,

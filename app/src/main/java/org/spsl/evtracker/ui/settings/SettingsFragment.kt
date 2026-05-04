@@ -89,6 +89,7 @@ class SettingsFragment : Fragment() {
         binding.rowDistanceUnit.setOnClickListener { showDistanceUnitDialog() }
         binding.rowCurrency.setOnClickListener { showCurrencyDialog() }
         binding.rowTheme.setOnClickListener { showThemeDialog() }
+        binding.rowLanguage.setOnClickListener { showLanguageDialog() }
         binding.rowManageLocations.setOnClickListener {
             findNavController().navigate(R.id.action_settings_to_manage_locations)
         }
@@ -204,6 +205,10 @@ class SettingsFragment : Fragment() {
                 else -> R.string.settings_theme_system
             },
         )
+        // TASK-55: language summary. Empty tag = follow system; otherwise the
+        // autonym lookup. Autonym strings are translatable=false so they
+        // always render in their own script regardless of the current locale.
+        binding.summaryLanguage.text = languageLabelFor(state.languageTag)
         binding.summaryManageLocations.text =
             if (state.customLocationCount == 0) {
                 ""
@@ -304,6 +309,42 @@ class SettingsFragment : Fragment() {
             }
             .setNegativeButton(R.string.common_cancel, null)
             .show()
+    }
+
+    /**
+     * TASK-55: language picker dialog. The five options are "Follow
+     * system" + four autonyms — each language's name written in its own
+     * script. Autonyms must NOT be localised: a Greek user looking for
+     * their language needs to see "Ελληνικά" written in Greek script
+     * regardless of the current app locale.
+     */
+    private fun showLanguageDialog() {
+        val labels = arrayOf(
+            getString(R.string.settings_language_follow_system),
+            getString(R.string.language_name_en),
+            getString(R.string.language_name_el),
+            getString(R.string.language_name_tr),
+            getString(R.string.language_name_ru),
+        )
+        val tokens = arrayOf("", "en", "el", "tr", "ru")
+        val current = viewModel.uiState.value.languageTag
+        val checked = tokens.indexOf(current).coerceAtLeast(0)
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.settings_language_dialog_title)
+            .setSingleChoiceItems(labels, checked) { d, which ->
+                viewModel.onLanguageSelected(tokens[which])
+                d.dismiss()
+            }
+            .setNegativeButton(R.string.common_cancel, null)
+            .show()
+    }
+
+    private fun languageLabelFor(tag: String): String = when (tag) {
+        "en" -> getString(R.string.language_name_en)
+        "el" -> getString(R.string.language_name_el)
+        "tr" -> getString(R.string.language_name_tr)
+        "ru" -> getString(R.string.language_name_ru)
+        else -> getString(R.string.settings_language_follow_system)
     }
 
     private fun showThemeDialog() {

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  TASK-55: declared locales for the per-app language selector.
+
+  Lists every locale the app actually ships translations for. Android 13+
+  reads this file to render the OS-level "Language" entry under
+  Settings → Apps → EV Tracker → Language; older Android versions ignore
+  it but the entry is still required for our own in-app picker to map
+  Settings dialog choices onto AppCompatDelegate.setApplicationLocales.
+
+  Adding a new locale here without also adding the matching values-xx/
+  strings.xml will fail :app:lint with MissingTranslation. Adding a
+  values-xx/ folder without listing the locale here means the per-app
+  OS picker won't show it on Android 13+.
+-->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="en"/>
+    <locale android:name="el"/>
+    <locale android:name="tr"/>
+    <locale android:name="ru"/>
+</locale-config>

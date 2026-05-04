@@ -129,6 +129,15 @@
     <string name="settings_distance_unit">Distance unit</string>
     <string name="settings_currency">Currency</string>
     <string name="settings_theme">Theme</string>
+    <!-- TASK-55: language picker. Autonyms (language_name_*) are intentionally translatable=false so a Greek user always sees "Ελληνικά" in Greek script regardless of the current app locale. -->
+    <string name="settings_language">Language</string>
+    <string name="settings_language_dialog_title">Select language</string>
+    <string name="settings_language_follow_system">Follow system</string>
+    <string name="wizard_language_label">Language</string>
+    <string name="language_name_en" translatable="false">English</string>
+    <string name="language_name_el" translatable="false">Ελληνικά</string>
+    <string name="language_name_tr" translatable="false">Türkçe</string>
+    <string name="language_name_ru" translatable="false">Русский</string>
     <string name="settings_manage_locations">Manage custom locations</string>
     <string name="settings_manage_locations_summary">%d saved</string>
     <string name="settings_reset_preferences">Reset preferences</string>

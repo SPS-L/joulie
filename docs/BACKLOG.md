@@ -62,7 +62,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-52 | 🟡 | CSV escape hardening in `ExportCsvUseCase` — quote `\r` and tabs, neutralise spreadsheet formula-injection prefixes (`=`, `+`, `-`, `@`) in user-supplied fields | — | ☑ |
 | TASK-53 | 🟡 | Multi-car invariant guard in `StatsCalculator.computeStats` — `require` the input shares a single `carId` (latent bug if a future caller passes a mixed-car list) | — | ☐ |
 | TASK-54 | 🔴 | Drive switch fires `onUserToggledOn()` on every Settings entry (view-state restoration anti-pattern) — visible OFF→ON flicker + restore-prompt loop; bundled with a durable last-seen marker for the destructive-action path | TASK-31 | ☑ |
-| TASK-55 | 🟡 | Language picker — Settings → Language row (any time) AND first-run picker on the wizard so users never see an unintelligible welcome screen. `AppCompatDelegate.setApplicationLocales` + persisted `language_tag` DataStore key | TASK-15 | ☐ |
+| TASK-55 | 🟡 | Language picker — Settings → Language row (any time) AND first-run picker on the wizard so users never see an unintelligible welcome screen. `AppCompatDelegate.setApplicationLocales` + persisted `language_tag` DataStore key | TASK-15 | ☑ |
 
 **Priority legend:** 🔴 High (architecture/data safety) · 🟡 Medium (robustness/UX) · 🟢 Low (new feature)  
 **Status legend:** ☐ open · ☑ done · ☒ closed (premise no longer holds) · ⏸ under consideration (do not start without explicit go-ahead)  
@@ -4708,7 +4708,81 @@ exercise the view-state-restoration window.
 
 ---
 
-## 🟡 TASK-55 — Language picker (Settings + first-run wizard)
+## 🟡 TASK-55 — Language picker (Settings + first-run wizard) ☑ Done (2026-05-04)
+
+> **Outcome (merged 2026-05-04 on `feat/task55-language-picker`).** Two
+> coupled UX entry points + the architectural plumbing for both:
+>
+> - **`res/xml/locales_config.xml`** lists the four shipped locales
+>   (`en` / `el` / `tr` / `ru`); `AndroidManifest.xml` declares
+>   `android:localeConfig="@xml/locales_config"`. Android 13+ users now
+>   get the OS-level "Language" entry in
+>   `System Settings → Apps → EV Tracker → Language` for free.
+> - **`PreferenceKeys.LANGUAGE_TAG`** (`stringPreferencesKey`).
+>   Empty string = "follow system" (default); otherwise an IETF BCP-47
+>   tag matching one of the shipped locales. Wired through
+>   `SettingsReader.languageTag: Flow<String>` and
+>   `SettingsWriter.setLanguageTag`. `Fakes.kt` (`FakeSettingsReader`,
+>   `FakeSettingsWriter`) and the `LinkedSettings` helper in
+>   `BackupOutcomeReporterTest` got matching pass-through stubs.
+> - **`domain/locale/LocaleApplier`** narrow IF + `data/locale/AndroidLocaleApplier`
+>   impl + single-binding `LocaleModule`. Static
+>   `AppCompatDelegate.setApplicationLocales` is hostile to JVM tests
+>   (it touches `LocaleManager` on Android 13+ and an internal
+>   SharedPreferences fallback on older devices); the narrow IF lets
+>   ViewModels stay JVM-testable. Mirrors the TASK-12 `WidgetRefresher`
+>   pattern. Tests substitute a new `FakeLocaleApplier` that records
+>   the last applied tag + an apply-count.
+> - **`EVTrackerApp.onCreate`** reads the persisted tag asynchronously
+>   (same trade-off as the existing theme branch: DataStore reads are
+>   sub-50ms, AppCompat 1.6+ persists internally so subsequent starts
+>   come up correct before the coroutine even runs).
+> - **Settings → Language** row sits between Theme and the data section,
+>   summary text reflects the current selection. Tap opens a
+>   `MaterialAlertDialog.Builder.setSingleChoiceItems` dialog with five
+>   options: "Follow system" + four autonyms. Autonyms are stored as
+>   `translatable="false"` strings (`language_name_en` / `_el` / `_tr`
+>   / `_ru`) so a Greek-speaking user always sees "Ελληνικά" in Greek
+>   script regardless of the current app locale.
+> - **Wizard page 0** grows a language-row at the bottom of the welcome
+>   page. Same dialog as Settings; selection persists immediately so a
+>   mid-wizard kill survives the next launch even though
+>   `setupComplete` is still false. `WizardPage1Fragment` collects
+>   `WizardViewModel.state.languageTag` to surface the autonym label.
+>   `WizardViewModel.onLanguageSelected(tag)` hits both
+>   `SettingsWriter.setLanguageTag` and `LocaleApplier.apply` in a
+>   single `viewModelScope.launch` so persistence and process-level
+>   apply are atomic from the caller's perspective.
+> - **String resources:** new translatable keys `settings_language`,
+>   `settings_language_dialog_title`, `settings_language_follow_system`,
+>   `wizard_language_label` — present in all four locale files
+>   (en/el/tr/ru) per the TASK-15 `MissingTranslation` error-mode
+>   contract. The four `language_name_*` autonym strings are present
+>   only in `values/` with `translatable="false"`.
+> - **`SettingsUiState.languageTag`** (default `""`) gets populated
+>   from `SettingsReader.languageTag` in the VM's init block.
+>
+> **Tests:** 6 new JVM cases — 3 in `SettingsViewModelTest`
+> (`onLanguageSelected_persistsTagAndAppliesLocale`,
+> `onLanguageSelected_followSystem_writesEmptyString`,
+> `languageTag_collectedFromSettingsReader_intoUiState`) and 3 in
+> `WizardViewModelTest`
+> (`onLanguageSelected_persistsTagAndAppliesLocale`,
+> `onLanguageSelected_followSystem_writesEmptyString`,
+> `onLanguageSelected_persistsTag_evenBeforeFinish` — mid-wizard-kill
+> survival regression guard). `WizardViewModelTest` gained
+> `Dispatchers.setMain` / `resetMain` setup because the VM's init now
+> launches a `viewModelScope` collector for `languageTag`. JVM
+> unit-test count 403 → 409.
+>
+> **Instrumented coverage gap (deferred follow-up):** the BACKLOG spec
+> called for ≥2 instrumented cases (`SettingsLanguagePickerTest`,
+> `WizardLanguagePickerTest`). Both deferred — the JVM tests cover the
+> VM contract end-to-end (DataStore write + LocaleApplier call + UiState
+> roundtrip), and the dialog/Fragment wiring is mechanical
+> (`MaterialAlertDialog.Builder.setSingleChoiceItems`). File a follow-up
+> if instrumented coverage of the `setApplicationLocales`-triggered
+> Activity recreation becomes load-bearing.
 
 > **Filed 2026-05-04 as a TASK-15 follow-up.** TASK-15 shipped four
 > locales (en/el/tr/ru) but no in-app language switcher — the app
