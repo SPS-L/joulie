@@ -63,6 +63,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-53 | 🟡 | Multi-car invariant guard in `StatsCalculator.computeStats` — `require` the input shares a single `carId` (latent bug if a future caller passes a mixed-car list) | — | ☐ |
 | TASK-54 | 🔴 | Drive switch fires `onUserToggledOn()` on every Settings entry (view-state restoration anti-pattern) — visible OFF→ON flicker + restore-prompt loop; bundled with a durable last-seen marker for the destructive-action path | TASK-31 | ☑ |
 | TASK-55 | 🟡 | Language picker — Settings → Language row (any time) AND first-run picker on the wizard so users never see an unintelligible welcome screen. `AppCompatDelegate.setApplicationLocales` + persisted `language_tag` DataStore key | TASK-15 | ☑ |
+| TASK-56 | 🟡 | CI release wiring for the ADI registration token — write `app/src/main/assets/adi-registration.properties` from a GitHub Secret in `release.yml` before `assembleRelease`, so CI-built tagged APKs pass Google's developer-verification check | — | ☐ |
 
 **Priority legend:** 🔴 High (architecture/data safety) · 🟡 Medium (robustness/UX) · 🟢 Low (new feature)  
 **Status legend:** ☐ open · ☑ done · ☒ closed (premise no longer holds) · ⏸ under consideration (do not start without explicit go-ahead)  
@@ -5048,3 +5049,91 @@ The translatable strings need el/tr/ru entries per the
 - Localising the autonym labels themselves. They MUST stay in
   their own script regardless of the current locale; this is the
   whole point of using autonyms.
+
+---
+
+## 🟡 TASK-56 — CI release wiring for the ADI registration token
+
+> **Filed 2026-05-04 as a follow-up to local ADI registration.** The
+> Android Developer Verification (ADI) registration token landed
+> locally on 2026-05-04: `app/src/main/assets/adi-registration.properties`
+> contains a one-line snippet that ties the developer's Google
+> identity to APK builds of `org.spsl.evtracker`, gitignored at
+> `.gitignore:33` because it is sensitivity-class same as
+> `keystore.properties` (anyone who lifts the token can register
+> impersonating builds). The locally-built v1.7.0 APK was uploaded
+> manually to Google's verification page and the developer identity
+> registered against fingerprint
+> `1C:14:8E:BE:84:10:70:B3:F6:C4:74:F1:ED:32:4A:FA:D3:33:3A:FB:73:57:53:B9:DF:B9:13:46:AE:71:FD:78`.
+>
+> **Gap.** `.github/workflows/release.yml` builds + signs + publishes
+> APKs on every `v*` tag push. Without the asset baked in, those
+> CI-built APKs are **not registered** under the developer-verification
+> programme. Today the path is "tag a release → CI publishes APK →
+> the published APK fails verification, only locally-built APKs
+> count." That's wrong direction: the CI-built APK is the canonical
+> distribution artefact (signed by the same release keystore that
+> the registration is bound to).
+
+### Scope
+
+1. Add a new GitHub Actions repository secret:
+   `ADI_REGISTRATION_SNIPPET = CZCZQUJG5FL76AAAAAAAAAAAAA`
+   (manual one-time setup at `Settings → Secrets and variables →
+   Actions`). Mirrors the `KEYSTORE_BASE64` pattern already in place.
+2. Add a step to `.github/workflows/release.yml`, BEFORE the
+   `:app:assembleRelease` step, that writes the secret into the
+   build tree:
+   ```yaml
+   - name: Bake ADI registration asset
+     run: |
+       mkdir -p app/src/main/assets
+       printf '%s\n' "${{ secrets.ADI_REGISTRATION_SNIPPET }}" \
+         > app/src/main/assets/adi-registration.properties
+   ```
+   The trailing `\n` matches the byte layout of Google's sample
+   (27 bytes = 26-char snippet + LF). Critical: do NOT use
+   `echo $VAR` — bash sometimes interpolates a literal `$` if the
+   secret contains shell metacharacters; `printf '%s\n'` is safer.
+3. Add a verification step AFTER `assembleRelease` that confirms
+   the asset was packaged into the APK:
+   ```yaml
+   - name: Verify ADI asset packaged
+     run: |
+       unzip -p app/build/outputs/apk/release/app-release.apk \
+         assets/adi-registration.properties \
+         | grep -qx "${{ secrets.ADI_REGISTRATION_SNIPPET }}"
+   ```
+   The `-x` flag matches the whole line — guards against future
+   trailing-whitespace bugs in the bake step.
+4. Tag a throwaway pre-release (e.g. `v1.7.0-adi-test`) AND upload
+   the resulting CI-built APK to Google's verification page to
+   confirm it passes the verifier. If it does, delete the test tag
+   and the test release. If it doesn't, the verification step
+   above caught a real packaging bug — investigate before any
+   future production release.
+
+### Acceptance
+
+- A push of any `v*` tag produces a CI APK that contains
+  `assets/adi-registration.properties` exactly matching the
+  registered snippet.
+- The verification step in the workflow fails the build (red CI)
+  if the asset is missing or differs from the secret. No silent
+  "ship an unregistered APK" path.
+- README and / or `docs/GOOGLE_CLOUD_SETUP.md` grow a one-line
+  pointer to the new GitHub Secret so future maintainers know to
+  populate it when the secret rotates.
+
+### Out of scope
+
+- Rotating the existing registered token. The current snippet is
+  not compromised; no rotation needed unless it leaks.
+- Per-developer registration tokens. The CI build uses a single
+  org-level token; individual contributors who run
+  `./gradlew assembleRelease` locally still need their own copy
+  for any APK they want to register under their own identity.
+  That's the per-maintainer F-Droid-style story for TASK-37 if
+  it ever lands; out of scope here.
+- Switching the release flow to AAB / Play Store distribution.
+  Tag-driven APK release stays the canonical path for now.

@@ -23,6 +23,15 @@ app/google-services.json
 *.keystore
 keystore.properties
 
+# Android Developer Verification (ADI) registration token. Ties the
+# developer's Google identity to APK builds of this app — same
+# sensitivity class as keystore.properties. Each maintainer needs
+# their own copy at app/src/main/assets/adi-registration.properties
+# (one line, the raw snippet from the Google verification page);
+# CI release.yml needs the same value via a GitHub Secret if the
+# CI-built APK should also be registered.
+app/src/main/assets/adi-registration.properties
+
 # OS noise
 .DS_Store
 Thumbs.db
