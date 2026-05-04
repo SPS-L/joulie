@@ -301,11 +301,21 @@ Uses `TestCoroutineDispatcher` + in-memory Room.
 
 ### 3.2 WizardViewModelTest.kt
 
+`Dispatchers.setMain` / `resetMain` setup is required because the VM's `init` block now launches a `viewModelScope` collector for `SettingsReader.languageTag` (TASK-55).
+
 | Test | Description |
 |------|-------------|
 | `finish_writesSetupComplete_true` | Call `finish()`; DataStore has `setupComplete=true` |
 | `finish_writesAllPrefs` | Call `finish()` with custom values; verify metric, unit, currency all written |
 | `defaultValues_correct` | Fresh VM: metric=`km_per_kwh`, unit=`km`, currency=`EUR` |
+
+**TASK-55 additions:**
+
+| Test | Description |
+|------|-------------|
+| `onLanguageSelected_persistsTagAndAppliesLocale` | `vm.onLanguageSelected("el")` writes `"el"` to `SettingsRepository.languageTag` AND fires `LocaleApplier.apply("el")` exactly once |
+| `onLanguageSelected_followSystem_writesEmptyString` | After picking `"ru"` then `""`, both DataStore and the LocaleApplier reflect the empty-string "follow system" semantic |
+| `onLanguageSelected_persistsTag_evenBeforeFinish` | Mid-wizard kill survival: the language tag is persisted to DataStore the moment the user picks, not on `finish()`. Asserts `setupComplete` is still `false` after the language write completes |
 
 ### 3.3 ChargeEditViewModelTest.kt
 
@@ -357,7 +367,7 @@ Locks in the `BackupResult` contract introduced in TASK-07: `Success` / `AuthReq
 
 ### 3.5 SettingsViewModelTest.kt — TASK-54 additions (durable last-seen marker)
 
-`SettingsViewModelTest.kt` covers the full Drive (E) + F1 + TASK-31 surface (~36 cases total). The TASK-54 (2026-05-03) additions lock in the durable last-seen-snapshot marker contract: the destructive restore prompt is shown at most once per remote snapshot identity, where identity = the JSON `exported_at` ISO-8601 string. Backed by the new `lastSeenRemoteBackupExportedAt` DataStore key on `SettingsReader` / `SettingsWriter`. All cases use `BackupData.fromEntities(..., now = X)` to seed a remote JSON with a deterministic `exported_at` derived from `Instant.ofEpochMilli(X).toString()`.
+`SettingsViewModelTest.kt` covers the full Drive (E) + F1 + TASK-31 surface (~39 cases total). The TASK-54 (2026-05-03) additions lock in the durable last-seen-snapshot marker contract: the destructive restore prompt is shown at most once per remote snapshot identity, where identity = the JSON `exported_at` ISO-8601 string. Backed by the new `lastSeenRemoteBackupExportedAt` DataStore key on `SettingsReader` / `SettingsWriter`. All cases use `BackupData.fromEntities(..., now = X)` to seed a remote JSON with a deterministic `exported_at` derived from `Instant.ofEpochMilli(X).toString()`. The TASK-55 (2026-05-04) additions exercise the language-picker contract via a new `FakeLocaleApplier` recorded in the test `Setup` data class.
 
 | Test | Description |
 |------|-------------|
@@ -367,6 +377,16 @@ Locks in the `BackupResult` contract introduced in TASK-07: `Success` / `AuthReq
 | `onSkipRestore_persistsLastSeenExportedAt` | After Skip, `writer.lastSeenRemoteBackupExportedAt` reads back the snapshot's `exported_at`; both `pendingRestoreLabel` and `pendingRestoreExportedAt` are cleared |
 | `onConfirmRestore_success_persistsLastSeenExportedAt` | After successful Restore, marker is written so the same snapshot is never re-prompted post-restore (the local DB already equals it) |
 | `onDriveAuthGranted_noRemote_keepsExistingMarker` | The no-remote path enables Drive without touching the marker (a previous Skip / Restore decision is still meaningful — regression guard) |
+
+**TASK-55 additions (language picker):**
+
+| Test | Description |
+|------|-------------|
+| `onLanguageSelected_persistsTagAndAppliesLocale` | `vm.onLanguageSelected("el")` writes `"el"` to `FakeSettingsWriter.languageTag` AND fires `FakeLocaleApplier.apply("el")` exactly once |
+| `onLanguageSelected_followSystem_writesEmptyString` | After picking `"ru"` then `""`, both writer and applier reflect the empty-string "follow system" semantic |
+| `languageTag_collectedFromSettingsReader_intoUiState` | Pre-seed `reader.setLanguageTag("tr")` → `vm.uiState.value.languageTag == "tr"`. Confirms the init-time collector surfaces the persisted tag for the dialog's selected-option highlight |
+
+**Deferred instrumented coverage:** the BACKLOG TASK-55 spec called for `SettingsLanguagePickerTest` + `WizardLanguagePickerTest` instrumented cases. Both deferred at merge time — the JVM tests cover the VM contract end-to-end (DataStore + LocaleApplier + UiState round-trip) and the dialog wiring is mechanical (`MaterialAlertDialog.Builder.setSingleChoiceItems`). File a follow-up if instrumented coverage of the `setApplicationLocales`-triggered Activity recreation becomes load-bearing.
 
 ---
 

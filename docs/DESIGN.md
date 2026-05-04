@@ -727,7 +727,7 @@ A 2×2 `AppWidgetProvider`-based tile (`widget/LastChargeWidget`) renders the mo
 
 ---
 
-## 10. Localisation (TASK-15)
+## 10. Localisation (TASK-15, TASK-55)
 
 The app ships with four locales: English (`values/`, canonical), Greek (`values-el/`), Turkish (`values-tr/`), and Russian (`values-ru/`). The locale set targets Cyprus's resident populations — Greek and Turkish as the two communities, Russian for the significant immigrant community — plus English as the development source.
 
@@ -742,3 +742,18 @@ The app ships with four locales: English (`values/`, canonical), Greek (`values-
 **Plurals.** Localisation files use Android `<plurals>` with per-locale CLDR rules — `one`/`other` for English / Greek / Turkish; the full `one`/`few`/`many`/`other` set for Russian. The widget's "N week(s) ago" / "N days ago" fallbacks use these.
 
 **Caveat.** The first-pass translations were LLM-produced (TASK-15, 2026-05-04). They cover all 248 translatable strings in lint-clean form, but require review by native speakers of each locale before any production release. Treat the locale files as a starting point, not finished prose.
+
+### 10.1 Language picker (TASK-55)
+
+Two in-app entry points let users switch language without touching system settings:
+
+- **Settings → Language** row (any time). Tap → `MaterialAlertDialog.Builder.setSingleChoiceItems` with five options: "Follow system" plus four autonyms. Persisted via the new `PreferenceKeys.LANGUAGE_TAG` DataStore key (default `""` = follow system; otherwise an IETF BCP-47 tag).
+- **Wizard page 0** language row at the bottom of the welcome page. Same dialog. Selection persists immediately so a mid-wizard kill survives the next launch even though `setupComplete` is still false.
+
+**Autonym rule.** Each language's name is shown in its own script: `English`, `Ελληνικά`, `Türkçe`, `Русский`. The autonym strings (`language_name_en` / `_el` / `_tr` / `_ru`) are deliberately marked `translatable="false"` — a Greek user looking for their language must see "Ελληνικά" written in Greek script regardless of the current app locale, otherwise the picker is useless to anyone who can't read English.
+
+**Architectural boundary.** `AppCompatDelegate.setApplicationLocales` is a static framework call hostile to JVM tests. The new `domain/locale/LocaleApplier` interface (impl `data/locale/AndroidLocaleApplier`, bound via single-binding `LocaleModule`) wraps it; ViewModels depend on the interface. JVM tests substitute `FakeLocaleApplier` to assert the applied tag without booting AppCompat. Mirrors the TASK-12 `WidgetRefresher` pattern.
+
+**Android 13+ system entry.** `res/xml/locales_config.xml` lists the four shipped locales and `AndroidManifest.xml` declares `android:localeConfig="@xml/locales_config"`. Android 13+ users get the OS-level per-app language entry at *System Settings → Apps → EV Tracker → Language* automatically — driven by the same `setApplicationLocales` call so it stays in sync with the in-app picker.
+
+**Apply at start.** `EVTrackerApp.onCreate` reads the persisted tag asynchronously and calls `LocaleApplier.apply(...)`. AppCompat 1.6+ persists the value internally so subsequent app starts come up in the right locale before the coroutine even runs; the read is mainly a fail-safe for the first launch after a fresh install.
