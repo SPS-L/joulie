@@ -40,4 +40,15 @@ object PreferenceKeys {
      */
     val LAST_SEEN_REMOTE_BACKUP_EXPORTED_AT =
         stringPreferencesKey("lastSeenRemoteBackupExportedAt")
+
+    /**
+     * TASK-55: persisted IETF BCP-47 language tag for the in-app locale
+     * picker. Empty string ("") means "follow system" — the
+     * `AppCompatDelegate.setApplicationLocales` call resolves to an empty
+     * `LocaleListCompat` and Android falls back to the device locale.
+     * Otherwise: `"en"` / `"el"` / `"tr"` / `"ru"` (the locales shipped in
+     * TASK-15). Read once on app start in `EVTrackerApp.onCreate` and
+     * applied via `LocaleApplier`.
+     */
+    val LANGUAGE_TAG = stringPreferencesKey("languageTag")
 }

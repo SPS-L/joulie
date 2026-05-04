@@ -121,6 +121,11 @@
     <string name="settings_distance_unit">Μονάδα απόστασης</string>
     <string name="settings_currency">Νόμισμα</string>
     <string name="settings_theme">Θέμα</string>
+    <!-- TASK-55: language picker -->
+    <string name="settings_language">Γλώσσα</string>
+    <string name="settings_language_dialog_title">Επιλογή γλώσσας</string>
+    <string name="settings_language_follow_system">Όπως το σύστημα</string>
+    <string name="wizard_language_label">Γλώσσα</string>
     <string name="settings_manage_locations">Διαχείριση τοποθεσιών</string>
     <string name="settings_manage_locations_summary">%d αποθηκευμένες</string>
     <string name="settings_reset_preferences">Επαναφορά προτιμήσεων</string>

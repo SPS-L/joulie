@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:gravity="center"
@@ -22,5 +23,32 @@
         android:gravity="center"
         android:text="@string/wizard_welcome_body"
         android:textAppearance="?attr/textAppearanceBodyMedium"/>
+
+    <!-- TASK-55: first-run language picker. Sits at the bottom of page 0 so
+         the user can change languages BEFORE the rest of the wizard renders
+         meaningful content (a Greek-speaking user with an English-defaulted
+         phone needs to find this row even without reading English). -->
+    <LinearLayout
+        android:id="@+id/wizard_page1_language_row"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
+        android:orientation="vertical"
+        android:padding="12dp"
+        android:background="?attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/wizard_language_label"
+            android:textAppearance="?attr/textAppearanceLabelMedium"/>
+        <TextView
+            android:id="@+id/wizard_page1_language_value"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?attr/textAppearanceBodyLarge"
+            tools:text="English"/>
+    </LinearLayout>
 
 </LinearLayout>

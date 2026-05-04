@@ -121,6 +121,11 @@
     <string name="settings_distance_unit">Единица расстояния</string>
     <string name="settings_currency">Валюта</string>
     <string name="settings_theme">Тема</string>
+    <!-- TASK-55: language picker -->
+    <string name="settings_language">Язык</string>
+    <string name="settings_language_dialog_title">Выберите язык</string>
+    <string name="settings_language_follow_system">Как в системе</string>
+    <string name="wizard_language_label">Язык</string>
     <string name="settings_manage_locations">Управление местами</string>
     <string name="settings_manage_locations_summary">%d сохранено</string>
     <string name="settings_reset_preferences">Сбросить настройки</string>

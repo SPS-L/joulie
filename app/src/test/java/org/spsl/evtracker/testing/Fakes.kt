@@ -137,6 +137,7 @@ class FakeSettingsReader(
     consecutiveBackupFailuresInit: Int = 0,
     notificationPermissionDeniedInit: Boolean = false,
     lastSeenRemoteBackupExportedAtInit: String = "",
+    languageTagInit: String = "",
 ) : SettingsReader {
     private val activeCar = MutableStateFlow(activeCarIdInit)
     private val metric = MutableStateFlow(primaryMetricInit)
@@ -150,6 +151,7 @@ class FakeSettingsReader(
     private val consecutiveBackupFailuresFlow = MutableStateFlow(consecutiveBackupFailuresInit)
     private val notificationPermissionDeniedFlow = MutableStateFlow(notificationPermissionDeniedInit)
     private val lastSeenRemoteBackupExportedAtFlow = MutableStateFlow(lastSeenRemoteBackupExportedAtInit)
+    private val languageTagFlow = MutableStateFlow(languageTagInit)
     override val activeCarId: Flow<Long> = activeCar
     override val primaryMetric: Flow<String> = metric
     override val distanceUnit: Flow<String> = unit
@@ -162,6 +164,7 @@ class FakeSettingsReader(
     override val consecutiveBackupFailures: Flow<Int> = consecutiveBackupFailuresFlow
     override val notificationPermissionDenied: Flow<Boolean> = notificationPermissionDeniedFlow
     override val lastSeenRemoteBackupExportedAt: Flow<String> = lastSeenRemoteBackupExportedAtFlow
+    override val languageTag: Flow<String> = languageTagFlow
     fun setActiveCarId(id: Long) {
         activeCar.value = id
     }
@@ -198,6 +201,9 @@ class FakeSettingsReader(
     fun setLastSeenRemoteBackupExportedAt(value: String) {
         lastSeenRemoteBackupExportedAtFlow.value = value
     }
+    fun setLanguageTag(value: String) {
+        languageTagFlow.value = value
+    }
 }
 
 class FakeSettingsWriter(
@@ -226,6 +232,8 @@ class FakeSettingsWriter(
     var notificationPermissionDenied: Boolean = false
         private set
     var lastSeenRemoteBackupExportedAt: String = ""
+        private set
+    var languageTag: String = ""
         private set
 
     override suspend fun setActiveCarId(id: Long) {
@@ -293,6 +301,26 @@ class FakeSettingsWriter(
     override suspend fun setLastSeenRemoteBackupExportedAt(value: String) {
         callRecorder?.add("setLastSeenRemoteBackupExportedAt($value)")
         lastSeenRemoteBackupExportedAt = value
+    }
+    override suspend fun setLanguageTag(value: String) {
+        callRecorder?.add("setLanguageTag($value)")
+        languageTag = value
+    }
+}
+
+/**
+ * TASK-55: JVM-side stub for [LocaleApplier]. Records the last applied
+ * tag so VM tests can assert behaviour without booting AppCompat or the
+ * Android framework.
+ */
+class FakeLocaleApplier : org.spsl.evtracker.domain.locale.LocaleApplier {
+    var lastAppliedTag: String? = null
+        private set
+    var applyCallCount: Int = 0
+        private set
+    override fun apply(tag: String) {
+        applyCallCount++
+        lastAppliedTag = tag
     }
 }
 

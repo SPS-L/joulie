@@ -60,4 +60,12 @@ interface SettingsReader {
      * destructive restore-prompt loop. Reset on `WipeRemoteBackupUseCase` success.
      */
     val lastSeenRemoteBackupExportedAt: Flow<String>
+
+    /**
+     * TASK-55: persisted IETF BCP-47 language tag. Empty string = "follow
+     * system" (the default; `LocaleApplier.apply("")` passes an empty
+     * `LocaleListCompat` to AppCompat and the device locale wins). Other
+     * values: `"en"` / `"el"` / `"tr"` / `"ru"`.
+     */
+    val languageTag: Flow<String>
 }
