@@ -46,7 +46,7 @@ Log every charge — odometer, kWh added, AC/DC, location, optional cost — and
 Signed release APKs are attached to every GitHub Release: see the [Releases page](https://github.com/SPS-L/EV-android-app/releases).
 
 ```bash
-adb install evtracker-v1.6.0.apk
+adb install evtracker-v1.7.0.apk
 ```
 
 You can also open the APK on the device after enabling **Install from unknown sources** for your file manager or browser.
@@ -165,6 +165,7 @@ The workflow can also be triggered manually from the **Actions** tab via `workfl
 | [`docs/DESIGN.md`](docs/DESIGN.md) | Canonical product + technical design spec |
 | [`docs/GOOGLE_CLOUD_SETUP.md`](docs/GOOGLE_CLOUD_SETUP.md) | Drive API + OAuth 2.0 Android client setup |
 | [`docs/TEST_PLAN.md`](docs/TEST_PLAN.md) | Test specification |
+| [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) | CO₂ tracker methodology — coefficients, sources, and caveats (TASK-20) |
 | [`docs/BACKLOG.md`](docs/BACKLOG.md) | Post-v1 refactors and feature backlog |
 | [`docs/AGENT_INSTRUCTIONS.md`](docs/AGENT_INSTRUCTIONS.md) | Original implementation walkthrough (historical) |
 | [`docs/superpowers/`](docs/superpowers/) | Per-sub-project specs and plans (time-stamped, historical) |
