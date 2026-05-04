@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">EV Tracker</string>
+    <string name="app_name" translatable="false">EV Tracker</string>
 
     <!-- Wizard -->
     <string name="wizard_welcome_title">⚡ EV Efficiency Tracker</string>
     <string name="wizard_welcome_body">Let\u2019s set up your preferences \u2014 you can change these later in Settings at any time.</string>
     <string name="wizard_metric_title">How do you like to see efficiency?</string>
-    <string name="wizard_metric_km_kwh">km / kWh</string>
-    <string name="wizard_metric_kwh_100km">kWh / 100 km</string>
-    <string name="wizard_metric_mi_kwh">mi / kWh</string>
+    <string name="wizard_metric_km_kwh" translatable="false">km / kWh</string>
+    <string name="wizard_metric_kwh_100km" translatable="false">kWh / 100 km</string>
+    <string name="wizard_metric_mi_kwh" translatable="false">mi / kWh</string>
     <string name="wizard_unit_label">Distance unit</string>
-    <string name="wizard_unit_km">km</string>
+    <string name="wizard_unit_km" translatable="false">km</string>
     <string name="wizard_unit_miles">miles</string>
     <string name="wizard_currency_title">What currency do you use for charging costs?</string>
     <string name="wizard_currency_hint">Cost entry is optional \u2014 leave 0 to skip tracking.</string>
@@ -43,13 +43,13 @@
 
     <!-- Dashboard -->
     <string name="period_last_charge">Last charge</string>
-    <string name="period_7d">7d</string>
-    <string name="period_30d">30d</string>
+    <string name="period_7d" translatable="false">7d</string>
+    <string name="period_30d" translatable="false">30d</string>
     <string name="period_year">Year</string>
     <string name="period_custom">Custom</string>
     <string name="filter_all">All</string>
-    <string name="filter_ac">AC</string>
-    <string name="filter_dc">DC</string>
+    <string name="filter_ac" translatable="false">AC</string>
+    <string name="filter_dc" translatable="false">DC</string>
     <string name="empty_state_title">No charges yet</string>
     <string name="empty_state_body">Tap + to log your first charge</string>
 
@@ -98,8 +98,8 @@
     <string name="widget_last_charge_label">Last charge</string>
     <string name="widget_empty_state">No charges logged yet.</string>
     <string name="widget_kwh_added_format">%1$s kWh added</string>
-    <string name="widget_efficiency_format">%1$s %2$s</string>
-    <string name="widget_efficiency_dash">—</string>
+    <string name="widget_efficiency_format" translatable="false">%1$s %2$s</string>
+    <string name="widget_efficiency_dash" translatable="false">—</string>
     <string name="widget_charge_type_content_description">Last charge type</string>
 
     <!-- Backup notifications (TASK-19) -->
@@ -172,7 +172,7 @@
     <string name="confirm_reset">This will permanently delete all data. Continue?</string>
     <string name="reset_per_car">Reset this car</string>
     <string name="reset_all">Reset all cars</string>
-    <string name="efficiency_not_available">\u2014</string>
+    <string name="efficiency_not_available" translatable="false">\u2014</string>
 
     <!-- Wizard (Task 7 additions) -->
     <string name="wizard_metric_question">How do you like to see efficiency?</string>
@@ -189,13 +189,13 @@
     <string name="wizard_about_title">About this app &amp; terms</string>
     <string name="wizard_disclaimer_accept">I have read and accept the disclaimer</string>
 
-    <string name="placeholder_dashboard">Dashboard \u2014 coming soon</string>
-    <string name="placeholder_charge_edit">Charge Edit \u2014 coming soon</string>
-    <string name="placeholder_cars">Cars \u2014 coming soon</string>
-    <string name="placeholder_settings">Settings \u2014 coming soon</string>
-    <string name="placeholder_charts">Charts \u2014 coming soon</string>
-    <string name="placeholder_history">History \u2014 coming soon</string>
-    <string name="placeholder_manage_locations">Manage Locations \u2014 coming soon</string>
+    <string name="placeholder_dashboard" translatable="false">Dashboard \u2014 coming soon</string>
+    <string name="placeholder_charge_edit" translatable="false">Charge Edit \u2014 coming soon</string>
+    <string name="placeholder_cars" translatable="false">Cars \u2014 coming soon</string>
+    <string name="placeholder_settings" translatable="false">Settings \u2014 coming soon</string>
+    <string name="placeholder_charts" translatable="false">Charts \u2014 coming soon</string>
+    <string name="placeholder_history" translatable="false">History \u2014 coming soon</string>
+    <string name="placeholder_manage_locations" translatable="false">Manage Locations \u2014 coming soon</string>
 
     <!-- History -->
     <string name="history_title">History</string>
@@ -213,22 +213,22 @@
     <string name="period_since_previous">Since previous</string>
 
     <!-- Dashboard -->
-    <string name="dashboard_title">EV Tracker</string>
+    <string name="dashboard_title" translatable="false">EV Tracker</string>
     <string name="empty_no_car_headline">Add a car to get started</string>
     <string name="empty_no_car_cta">Add car</string>
     <string name="empty_no_events_headline">Log your first charge to see stats here</string>
     <string name="empty_no_events_cta">Log charge</string>
     <string name="multi_currency_banner">Multi-currency period — cost stats hidden</string>
     <string name="manage_cars">Manage cars…</string>
-    <string name="metric_km_per_kwh">km/kWh</string>
-    <string name="metric_kwh_per_100km">kWh/100km</string>
-    <string name="metric_mi_per_kwh">mi/kWh</string>
-    <string name="metric_unavailable">—</string>
+    <string name="metric_km_per_kwh" translatable="false">km/kWh</string>
+    <string name="metric_kwh_per_100km" translatable="false">kWh/100km</string>
+    <string name="metric_mi_per_kwh" translatable="false">mi/kWh</string>
+    <string name="metric_unavailable" translatable="false">—</string>
     <string name="metric_need_two_charges">Need 2+ charges</string>
     <string name="cost_card_total">Total cost</string>
     <string name="battery_health_card_label">Battery health</string>
     <string name="battery_health_card_subtitle">Latest effective capacity vs nominal</string>
-    <string name="battery_health_value_format">%1$.0f%%</string>
+    <string name="battery_health_value_format" translatable="false">%1$.0f%%</string>
     <string name="battery_health_estimated_warning">Estimated — heuristic may overestimate</string>
     <string name="battery_health_estimated_warning_a11y">Estimated capacity, may overestimate</string>
     <string name="cost_card_per_km">Cost per km</string>
@@ -271,8 +271,8 @@
     </plurals>
     <string name="cost_mode_total">Total</string>
     <string name="cost_mode_per_kwh">Per kWh</string>
-    <string name="charge_type_ac">AC</string>
-    <string name="charge_type_dc">DC</string>
+    <string name="charge_type_ac" translatable="false">AC</string>
+    <string name="charge_type_dc" translatable="false">DC</string>
     <string name="charge_save">Save</string>
 
     <!-- Location chips -->
@@ -319,8 +319,8 @@
     <string name="charts_degradation_legend_nominal">Nominal</string>
     <string name="charts_degradation_no_battery">Set the car\'s nominal battery capacity in Cars to enable this chart</string>
     <string name="charts_degradation_need_three">Need at least 3 qualifying charges (full charge or charges with SoC values entered)</string>
-    <string name="charts_trend_legend_ac">AC</string>
-    <string name="charts_trend_legend_dc">DC</string>
+    <string name="charts_trend_legend_ac" translatable="false">AC</string>
+    <string name="charts_trend_legend_dc" translatable="false">DC</string>
     <string name="charts_trend_y_kmh">Efficiency (km/kWh)</string>
     <string name="charts_trend_y_mi">Efficiency (mi/kWh)</string>
     <string name="charts_trend_y_kwh100">Efficiency (kWh/100km)</string>
@@ -329,7 +329,7 @@
     <string name="charts_no_cost_period">No cost data for this period</string>
     <string name="charts_no_locations_period">No location data for this period</string>
     <string name="charts_locations_other">Other</string>
-    <string name="charts_acdc_kwh_subtitle">%1$.1f kWh AC · %2$.1f kWh DC</string>
+    <string name="charts_acdc_kwh_subtitle" translatable="false">%1$.1f kWh AC · %2$.1f kWh DC</string>
     <plurals name="charts_acdc_count_center">
         <item quantity="one">%d charge</item>
         <item quantity="other">%d charges</item>
@@ -337,23 +337,23 @@
 
     <!-- TASK-10 — About / Info screen -->
     <string name="about_title">About</string>
-    <string name="about_app_name">EV Efficiency Tracker</string>
+    <string name="about_app_name" translatable="false">EV Efficiency Tracker</string>
     <string name="about_version_label">Version %1$s (build %2$d)</string>
     <string name="about_acknowledgment_title">Developed by</string>
-    <string name="about_acknowledgment_lab">Sustainable Power Systems Lab (SPS-Lab)</string>
-    <string name="about_acknowledgment_cut">Cyprus University of Technology</string>
+    <string name="about_acknowledgment_lab" translatable="false">Sustainable Power Systems Lab (SPS-Lab)</string>
+    <string name="about_acknowledgment_cut" translatable="false">Cyprus University of Technology</string>
     <string name="about_acknowledgment_location">Limassol, Cyprus</string>
-    <string name="about_link_sps_lab">sps-lab.org</string>
-    <string name="about_link_cut">cut.ac.cy</string>
+    <string name="about_link_sps_lab" translatable="false">sps-lab.org</string>
+    <string name="about_link_cut" translatable="false">cut.ac.cy</string>
     <string name="about_url_sps_lab" translatable="false">https://sps-lab.org</string>
     <string name="about_url_cut" translatable="false">https://cut.ac.cy</string>
     <string name="about_open_link_failed">No browser app is available to open the link.</string>
     <string name="about_license_title">License</string>
-    <string name="about_license_body">GNU General Public License v3.0 or later (GPL-3.0-or-later)\n\nCopyright © 2024–2026 Sustainable Power Systems Lab (SPS-Lab), Cyprus University of Technology.\n\nThis program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.\n\nThis program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.\n\nYou should have received a copy of the GNU General Public License along with this program. If not, see https://www.gnu.org/licenses/gpl-3.0.html.</string>
+    <string name="about_license_body" translatable="false">GNU General Public License v3.0 or later (GPL-3.0-or-later)\n\nCopyright © 2024–2026 Sustainable Power Systems Lab (SPS-Lab), Cyprus University of Technology.\n\nThis program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.\n\nThis program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.\n\nYou should have received a copy of the GNU General Public License along with this program. If not, see https://www.gnu.org/licenses/gpl-3.0.html.</string>
     <string name="about_disclaimer_title">Disclaimer</string>
     <string name="about_disclaimer_body">This application is provided for research and personal use only. Efficiency and cost estimates are based on user-entered data and do not constitute professional energy or financial advice. The SPS-Lab and Cyprus University of Technology accept no liability for decisions made based on data recorded or displayed by this app.</string>
     <string name="about_oss_title">Open Source Libraries</string>
-    <string name="about_oss_body">• Room (Apache 2.0)\n• Hilt / Dagger (Apache 2.0)\n• MPAndroidChart (Apache 2.0)\n• Kotlin Coroutines (Apache 2.0)\n• Google Drive API client (Apache 2.0)</string>
+    <string name="about_oss_body" translatable="false">• Room (Apache 2.0)\n• Hilt / Dagger (Apache 2.0)\n• MPAndroidChart (Apache 2.0)\n• Kotlin Coroutines (Apache 2.0)\n• Google Drive API client (Apache 2.0)</string>
 
     <!-- Settings — About entry point -->
     <string name="settings_about">About</string>

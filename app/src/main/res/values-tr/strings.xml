@@ -1,0 +1,324 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Turkish (tr) translations — LLM-produced first pass.
+    REQUIRES review by a native Turkish speaker before production release.
+-->
+<resources>
+    <!-- Wizard -->
+    <string name="wizard_welcome_title">⚡ EV Verimlilik Takipçisi</string>
+    <string name="wizard_welcome_body">Tercihlerinizi ayarlayalım — bunları daha sonra istediğiniz zaman Ayarlar\'dan değiştirebilirsiniz.</string>
+    <string name="wizard_metric_title">Verimliliği nasıl görmek istersiniz?</string>
+    <string name="wizard_unit_label">Mesafe birimi</string>
+    <string name="wizard_unit_miles">mil</string>
+    <string name="wizard_currency_title">Şarj maliyetleri için hangi para birimini kullanıyorsunuz?</string>
+    <string name="wizard_currency_hint">Maliyet girişi isteğe bağlıdır — izlemeyi atlamak için 0 bırakın.</string>
+    <string name="wizard_btn_get_started">Başlayın</string>
+    <string name="wizard_btn_next">İleri →</string>
+    <string name="wizard_btn_back">← Geri</string>
+    <string name="wizard_btn_finish">Bitir ✓</string>
+
+    <!-- Location chips -->
+    <string name="location_chip_home">🏠 Ev</string>
+    <string name="location_chip_work">💼 İş</string>
+    <string name="location_chip_public">⚡ Genel</string>
+    <string name="location_chip_add">+ Ekle</string>
+
+    <!-- Cost form -->
+    <string name="cost_hint_zero">Atlamak için 0 veya boş bırakın — istatistiklere dahil edilmez</string>
+    <string name="cost_toggle_total">Toplam maliyet</string>
+    <string name="cost_toggle_per_kwh">kWh başına fiyat</string>
+
+    <!-- Settings -->
+    <string name="pref_primary_metric">Birincil verimlilik ölçütü</string>
+    <string name="pref_distance_unit">Mesafe birimi</string>
+    <string name="pref_currency">Para birimi</string>
+    <string name="pref_theme">Tema</string>
+    <string name="pref_drive_backup">Google Drive yedeklemesi</string>
+    <string name="pref_manage_locations">Özel konumları yönet</string>
+    <string name="pref_reset_preferences">Tercihleri sıfırla</string>
+    <string name="pref_reset_data">Tüm verileri sıfırla</string>
+    <string name="pref_export_csv">CSV dışa aktar</string>
+
+    <!-- Dashboard -->
+    <string name="period_last_charge">Son şarj</string>
+    <string name="period_year">Yıl</string>
+    <string name="period_custom">Özel</string>
+    <string name="filter_all">Tümü</string>
+    <string name="empty_state_title">Henüz şarj yok</string>
+    <string name="empty_state_body">İlk şarjınızı kaydetmek için + düğmesine dokunun</string>
+
+    <!-- Cars -->
+    <string name="add_car">Araç ekle</string>
+    <string name="car_name_hint">Araç adı (örn. Tesla Model 3)</string>
+
+    <!-- Drive -->
+    <string name="drive_found_backup">%s tarihli yedek bulundu. Geri yüklensin mi?</string>
+    <string name="drive_restore">Geri yükle</string>
+    <string name="drive_skip">Atla</string>
+    <string name="drive_last_backup">Son yedek: %s</string>
+    <string name="drive_backup_now">Şimdi yedekle</string>
+
+    <!-- Drive (Sub-project E) -->
+    <string name="settings_section_drive">Yedekleme &amp; geri yükleme</string>
+    <string name="settings_drive_label">Google Drive yedeklemesi</string>
+    <string name="settings_drive_subtitle_off">Kapalı</string>
+    <string name="settings_drive_subtitle_on">Açık — her değişiklikte otomatik yedekleme</string>
+    <string name="settings_last_backup_never">Hiç</string>
+    <string name="settings_last_backup_label">Son yedek: %1$s</string>
+    <string name="drive_restore_dialog_title">Drive\'dan geri yüklensin mi?</string>
+    <string name="drive_restore_dialog_body">%1$s tarihli yedek bulundu. Geri yükleme, cihazdaki mevcut verilerin üzerine yazacak.</string>
+    <string name="drive_restore_dialog_confirm">Geri yükle</string>
+    <string name="drive_restore_dialog_skip">Atla</string>
+    <string name="drive_restore_succeeded">Yedek geri yüklendi.</string>
+    <string name="drive_auth_failed">Google Drive\'a giriş yapılamadı. Tekrar deneyin.</string>
+    <string name="drive_consent_cancelled">Drive yedeklemesi etkinleştirilmedi — izin iptal edildi.</string>
+    <string name="drive_network_error">Ağ bağlantısı yok. Yedekleme çevrimiçi olduğunuzda yeniden deneyecek.</string>
+    <string name="drive_remote_backup_too_new">Bu yedek daha yeni bir sürüm tarafından oluşturuldu. Geri yüklemek için uygulamayı güncelleyin.</string>
+    <string name="drive_restore_failed">Yedek geri yüklenemedi. Yerel veriler değişmedi.</string>
+
+    <!-- Drive — manual controls -->
+    <string name="drive_backup_now_button">Şimdi yedekle</string>
+    <string name="drive_wipe_button">Uzak yedeği sil</string>
+    <string name="drive_wipe_confirm_title">Uzak yedek silinsin mi?</string>
+    <string name="drive_wipe_confirm_body">Bu, Google Drive Uygulama Verileri klasöründen \"evtracker_backup.json\" dosyasını kalıcı olarak siler. Bu cihazdaki yerel veriler ETKİLENMEZ. Bir sonraki yerel değişiklik otomatik olarak yeni bir yedek oluşturacak.</string>
+    <string name="drive_wipe_confirm_delete">Sil</string>
+    <string name="drive_backup_now_success">Yedekleme yüklendi</string>
+    <string name="drive_wipe_success">Uzak yedek silindi</string>
+    <string name="drive_backup_now_failure">Yedekleme başarısız. Tekrar deneyin.</string>
+    <string name="drive_wipe_failure">Uzak yedek silinemedi. Tekrar deneyin.</string>
+    <string name="drive_storage_full">Drive depolaması dolu. Yer açın ve tekrar deneyin.</string>
+
+    <!-- Home-screen widget -->
+    <string name="widget_last_charge_label">Son şarj</string>
+    <string name="widget_empty_state">Henüz şarj kaydedilmedi.</string>
+    <string name="widget_kwh_added_format">%1$s kWh eklendi</string>
+    <string name="widget_charge_type_content_description">Son şarj türü</string>
+
+    <!-- Backup notifications -->
+    <string name="backup_notif_channel_status_name">Yedekleme durumu</string>
+    <string name="backup_notif_channel_status_description">Drive yedeklemesi art arda birkaç kez başarısız olduğunda düşük öncelikli uyarılar.</string>
+    <string name="backup_notif_channel_auth_name">Yedekleme için giriş gerekli</string>
+    <string name="backup_notif_channel_auth_description">Drive girişinin yenilenmesi gerektiğinde yüksek öncelikli uyarılar.</string>
+    <string name="backup_notif_chronic_failure_title">Drive yedeklemesi başarısız</string>
+    <string name="backup_notif_chronic_failure_body">Ayarları açmak için dokunun.</string>
+    <string name="backup_notif_auth_required_title">Drive girişi gerekli</string>
+    <string name="backup_notif_auth_required_body">Yeniden bağlanmak için dokunun.</string>
+    <string name="backup_notif_permission_rationale_title">Yedekleme bildirimlerine izin verilsin mi?</string>
+    <string name="backup_notif_permission_rationale_body">EV Tracker bildirimleri yalnızca Drive yedeklemesi başarısız olduğunda sizi bilgilendirmek için kullanır. Başka bir şey için kullanılmaz.</string>
+    <string name="backup_notif_permission_rationale_allow">İzin ver</string>
+    <string name="backup_notif_permission_rationale_deny">Şimdi değil</string>
+
+    <!-- Settings (F1) -->
+    <string name="settings_unit_flipped_to_km">Mesafe birimi km olarak da değiştirildi.</string>
+    <string name="settings_unit_flipped_to_miles">Mesafe birimi mil olarak da değiştirildi.</string>
+    <string name="settings_metric_flipped_km_per_kwh">Birincil ölçüt km / kWh olarak da değiştirildi.</string>
+    <string name="settings_metric_flipped_kwh_per_100km">Birincil ölçüt kWh / 100 km olarak da değiştirildi.</string>
+    <string name="settings_metric_flipped_mi_per_kwh">Birincil ölçüt mi / kWh olarak da değiştirildi.</string>
+    <string name="settings_export_csv_failed">CSV dışa aktarma başarısız.</string>
+
+    <!-- Settings (F1) — row labels and summaries -->
+    <string name="settings_primary_metric">Birincil ölçüt</string>
+    <string name="settings_distance_unit">Mesafe birimi</string>
+    <string name="settings_currency">Para birimi</string>
+    <string name="settings_theme">Tema</string>
+    <string name="settings_manage_locations">Konumları yönet</string>
+    <string name="settings_manage_locations_summary">%d kayıtlı</string>
+    <string name="settings_reset_preferences">Tercihleri sıfırla</string>
+    <string name="settings_reset_preferences_summary">Kurulum sürecinden tekrar geçeceksiniz.</string>
+    <string name="settings_reset_active_car">%1$s için verileri sıfırla</string>
+    <string name="settings_reset_active_car_default">Aktif araç verilerini sıfırla</string>
+    <string name="settings_reset_active_car_summary">Bu araç için tüm şarj etkinliklerini sil. Araçlar ve konumlar korunur.</string>
+    <string name="settings_reset_active_car_confirm">%1$s için tüm şarj etkinlikleri silinsin mi? Bu geri alınamaz.</string>
+    <string name="settings_reset_active_car_done">Şarj etkinlikleri silindi.</string>
+    <string name="settings_reset_all">Tüm verileri sıfırla</string>
+    <string name="settings_reset_all_summary">Tüm araçları, şarj etkinliklerini ve özel konumları sil.</string>
+    <string name="settings_reset_all_confirm">Her şey silinsin mi? Bu geri alınamaz.</string>
+    <string name="settings_reset_all_confirm_drive_on">Her şey silinsin mi? Bu geri alınamaz ve Google Drive yedeklemenizin üzerine boş veriler yazılacak. Uzak kopyayı korumak için önce Drive yedeklemeyi kapatın.</string>
+    <string name="settings_export_csv">CSV dışa aktar</string>
+    <string name="settings_export_csv_summary">Şarj etkinliklerini CSV dosyası olarak paylaş.</string>
+    <string name="settings_export_csv_range">CSV dışa aktar (tarih aralığı)</string>
+    <string name="settings_export_csv_range_summary">Başlangıç ve bitiş tarihi seçin, ardından ilgili şarj etkinliklerini paylaşın.</string>
+    <string name="settings_export_csv_range_picker_title">Dışa aktarma aralığını seçin</string>
+    <string name="settings_theme_system">Sistem varsayılanı</string>
+    <string name="settings_theme_light">Açık</string>
+    <string name="settings_theme_dark">Koyu</string>
+
+    <!-- ManageLocations (F1) -->
+    <string name="manage_locations_title">Özel konumları yönet</string>
+    <string name="manage_locations_empty">Şarj etkinliklerinde kaydettiğiniz konumlar burada görünecek.</string>
+    <string name="manage_locations_row_count">%1$d kez kullanıldı · son %2$s</string>
+    <string name="manage_locations_row_count_zero">Son %1$s</string>
+    <string name="manage_locations_undo_snackbar">\"%1$s\" silindi</string>
+
+    <!-- F1 common -->
+    <string name="common_undo">Geri al</string>
+    <string name="common_cancel">İptal</string>
+    <string name="common_confirm">Onayla</string>
+
+    <!-- F1 startup recovery -->
+    <string name="recovery_failure_title">Sıfırlama kurtarma başarısız</string>
+    <string name="recovery_failure_body">Son sıfırlama işleminiz tamamlanamadı.\n\n%1$s\n\nTekrar deneyin veya sorun devam ederse sistem Ayarlar\'dan uygulamanın verilerini temizleyin.</string>
+    <string name="recovery_failure_retry">Tekrar dene</string>
+
+    <!-- Misc -->
+    <string name="confirm_reset">Bu tüm verileri kalıcı olarak silecek. Devam edilsin mi?</string>
+    <string name="reset_per_car">Bu aracı sıfırla</string>
+    <string name="reset_all">Tüm araçları sıfırla</string>
+
+    <!-- Wizard (Task 7 additions) -->
+    <string name="wizard_metric_question">Verimliliği nasıl görmek istersiniz?</string>
+    <string name="wizard_metric_km_per_kwh">km / kWh (mesafe / enerji)</string>
+    <string name="wizard_metric_kwh_per_100km">kWh / 100 km (enerji / mesafe)</string>
+    <string name="wizard_metric_mi_per_kwh">mi / kWh (mil)</string>
+    <string name="wizard_currency_question">Şarj maliyetleri için hangi para birimini kullanıyorsunuz?</string>
+    <string name="wizard_button_back">← Geri</string>
+    <string name="wizard_button_next">İleri →</string>
+    <string name="wizard_button_get_started">Başlayın</string>
+    <string name="wizard_button_finish">Bitir ✓</string>
+
+    <!-- Wizard page 4 -->
+    <string name="wizard_about_title">Bu uygulama hakkında &amp; koşullar</string>
+    <string name="wizard_disclaimer_accept">Sorumluluk reddi beyanını okudum ve kabul ediyorum</string>
+
+    <!-- History -->
+    <string name="history_title">Geçmiş</string>
+    <string name="history_empty">Henüz şarj yok — kaydetmek için Dashboard\'da + düğmesine dokunun</string>
+    <string name="snackbar_charge_deleted">Şarj silindi</string>
+    <string name="undo">Geri al</string>
+
+    <!-- Bottom nav -->
+    <string name="nav_dashboard">Panel</string>
+    <string name="nav_history">Geçmiş</string>
+    <string name="nav_charts">Grafikler</string>
+    <string name="nav_settings">Ayarlar</string>
+
+    <!-- Period tabs -->
+    <string name="period_since_previous">Öncekinden beri</string>
+
+    <!-- Dashboard -->
+    <string name="empty_no_car_headline">Başlamak için bir araç ekleyin</string>
+    <string name="empty_no_car_cta">Araç ekle</string>
+    <string name="empty_no_events_headline">İstatistikleri görmek için ilk şarjınızı kaydedin</string>
+    <string name="empty_no_events_cta">Şarj kaydet</string>
+    <string name="multi_currency_banner">Çok para birimli dönem — maliyet istatistikleri gizlendi</string>
+    <string name="manage_cars">Araçları yönet…</string>
+    <string name="metric_need_two_charges">2+ şarj gerekli</string>
+    <string name="cost_card_total">Toplam maliyet</string>
+    <string name="battery_health_card_label">Pil durumu</string>
+    <string name="battery_health_card_subtitle">En son efektif kapasite ile nominal karşılaştırması</string>
+    <string name="battery_health_estimated_warning">Tahmini — sezgisel yöntem aşırı tahmin edebilir</string>
+    <string name="battery_health_estimated_warning_a11y">Tahmini kapasite, aşırı tahmin edebilir</string>
+    <string name="cost_card_per_km">km başına maliyet</string>
+    <string name="cost_card_per_100km">100 km başına maliyet</string>
+    <string name="fab_log_charge">Şarj kaydet</string>
+
+    <!-- Charge edit error messages -->
+    <string name="error_odometer_required">Geçerli bir kilometre değeri girin</string>
+    <string name="error_odometer_must_be_higher">Kilometre sayacı önceki kayıttan büyük olmalı</string>
+    <string name="error_odometer_must_be_greater_than">Son kayıttan büyük olmalı (%1$s %2$s)</string>
+    <string name="error_odometer_must_be_less_than">Sonraki kayıttan küçük olmalı (%1$s %2$s)</string>
+    <string name="error_kwh_required">Geçerli bir kWh değeri girin</string>
+    <string name="error_soc_both_required">Her iki SoC değerini de girin veya ikisini de boş bırakın</string>
+    <string name="error_soc_range">SoC değerleri 0 ile 100 arasında olmalı</string>
+    <string name="error_soc_after_must_exceed_before">SoC sonrası değeri SoC öncesinden büyük olmalı</string>
+
+    <!-- Charge edit -->
+    <string name="charge_edit_create_title">Şarj ekle</string>
+    <string name="charge_edit_edit_title">Şarjı düzenle</string>
+    <string name="hint_odometer_km">Kilometre sayacı (km)</string>
+    <string name="hint_odometer_mi">Kilometre sayacı (mi)</string>
+    <string name="hint_kwh">Eklenen kWh</string>
+    <string name="hint_location">Konum</string>
+    <string name="hint_cost">Maliyet</string>
+    <string name="hint_note">Not (isteğe bağlı)</string>
+    <string name="hint_date_time">Tarih &amp; saat</string>
+    <string name="cost_section_header">Maliyet (isteğe bağlı)</string>
+    <string name="soc_section_header">SoC verisi (isteğe bağlı)</string>
+    <string name="hint_soc_before">SoC öncesi (%)</string>
+    <string name="hint_soc_after">SoC sonrası (%)</string>
+
+    <!-- TASK-43: kWh-from-SoC calculator -->
+    <string name="kwh_calculator_link">kWh bilmiyorsanız SoC %\'den hesaplayın</string>
+    <string name="kwh_calculator_banner">kWh, SoC değişimi × nominal kapasite kullanılarak hesaplanıyor. Pil bozunma takibinden hariç tutulur.</string>
+    <string name="history_kwh_estimated_badge">Tah.</string>
+    <string name="history_kwh_estimated_badge_content_desc">kWh, şarj durumundan hesaplandı</string>
+    <plurals name="charts_degradation_derived_excluded_banner">
+        <item quantity="one">%1$d tahmini etkinlik bozunma takibinden hariç tutuldu (SoC %% kullanılarak hesaplandı).</item>
+        <item quantity="other">%1$d tahmini etkinlik bozunma takibinden hariç tutuldu (SoC %% kullanılarak hesaplandı).</item>
+    </plurals>
+    <string name="cost_mode_total">Toplam</string>
+    <string name="cost_mode_per_kwh">kWh başına</string>
+    <string name="charge_save">Kaydet</string>
+
+    <!-- Location chips -->
+    <string name="location_home">Ev</string>
+    <string name="location_work">İş</string>
+    <string name="location_public">Genel</string>
+    <string name="chip_add_location">+ Ekle</string>
+
+    <!-- Cars error messages -->
+    <string name="error_car_name_required">Ad zorunludur</string>
+
+    <!-- Cars -->
+    <string name="cars_title">Araçlar</string>
+    <string name="car_active">Aktif</string>
+    <string name="car_action_set_active">Aktif olarak ayarla</string>
+    <string name="car_action_edit">Düzenle</string>
+    <string name="car_action_delete">Sil</string>
+    <string name="car_delete_title">Araç silinsin mi?</string>
+    <string name="car_delete_message">Bu araca ait tüm şarj etkinlikleri de silinecek.</string>
+    <string name="car_delete_confirm">Sil</string>
+    <string name="car_dialog_add_title">Araç ekle</string>
+    <string name="car_dialog_edit_title">Aracı düzenle</string>
+    <string name="car_dialog_save">Kaydet</string>
+    <string name="car_dialog_cancel">İptal</string>
+    <string name="car_form_name">Ad</string>
+    <string name="car_form_make">Marka</string>
+    <string name="car_form_model">Model</string>
+    <string name="car_form_year">Yıl</string>
+    <string name="car_form_battery_kwh">Pil (kWh)</string>
+
+    <!-- F2 — Charts -->
+    <string name="charts_title">Grafikler</string>
+    <string name="charts_period_last_6_months">Son 6 ay</string>
+    <string name="charts_period_last_12_months">Son 12 ay</string>
+    <string name="charts_period_all_time">Tüm zamanlar</string>
+    <string name="charts_period_custom">Özel…</string>
+    <string name="charts_tab_trend">Eğilim</string>
+    <string name="charts_tab_monthly_kwh">Aylık enerji</string>
+    <string name="charts_tab_monthly_cost">Aylık maliyet</string>
+    <string name="charts_tab_ac_dc">AC - DC</string>
+    <string name="charts_tab_locations">Konumlar</string>
+    <string name="charts_tab_degradation">Bozunma</string>
+    <string name="charts_degradation_legend_effective">Efektif kapasite</string>
+    <string name="charts_degradation_legend_nominal">Nominal</string>
+    <string name="charts_degradation_no_battery">Bu grafiği etkinleştirmek için Araçlar bölümünde aracın nominal pil kapasitesini ayarlayın</string>
+    <string name="charts_degradation_need_three">En az 3 uygun şarj gerekli (tam şarj veya SoC değerleri girilmiş şarjlar)</string>
+    <string name="charts_trend_y_kmh">Verimlilik (km/kWh)</string>
+    <string name="charts_trend_y_mi">Verimlilik (mi/kWh)</string>
+    <string name="charts_trend_y_kwh100">Verimlilik (kWh/100km)</string>
+    <string name="charts_trend_need_two">Eğilim göstermek için en az 2 şarj gerekli</string>
+    <string name="charts_no_data_period">Bu dönem için veri yok</string>
+    <string name="charts_no_cost_period">Bu dönem için maliyet verisi yok</string>
+    <string name="charts_no_locations_period">Bu dönem için konum verisi yok</string>
+    <string name="charts_locations_other">Diğer</string>
+    <plurals name="charts_acdc_count_center">
+        <item quantity="one">%d şarj</item>
+        <item quantity="other">%d şarj</item>
+    </plurals>
+
+    <!-- TASK-10 — About / Info screen -->
+    <string name="about_title">Hakkında</string>
+    <string name="about_version_label">Sürüm %1$s (derleme %2$d)</string>
+    <string name="about_acknowledgment_title">Geliştiren</string>
+    <string name="about_acknowledgment_location">Limasol, Kıbrıs</string>
+    <string name="about_open_link_failed">Bağlantıyı açmak için tarayıcı uygulaması bulunamadı.</string>
+    <string name="about_license_title">Lisans</string>
+    <string name="about_disclaimer_title">Sorumluluk reddi</string>
+    <string name="about_disclaimer_body">Bu uygulama yalnızca araştırma ve kişisel kullanım için sağlanmaktadır. Verimlilik ve maliyet tahminleri kullanıcı tarafından girilen verilere dayanmakta olup profesyonel enerji veya finansal tavsiye niteliği taşımaz. SPS-Lab ve Kıbrıs Teknoloji Üniversitesi, bu uygulama tarafından kaydedilen veya görüntülenen verilere dayanılarak alınan kararlardan doğacak hiçbir zarardan sorumlu tutulamaz.</string>
+    <string name="about_oss_title">Açık kaynak kütüphaneleri</string>
+
+    <!-- Settings — About entry point -->
+    <string name="settings_about">Hakkında</string>
+    <string name="settings_about_summary">Sürüm, lisans, teşekkürler</string>
+</resources>
