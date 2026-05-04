@@ -1,6 +1,6 @@
 # EV Tracker — Development Backlog
 
-Tasks 1–15 were generated from a senior Android developer code review of the `main` branch (April 2026). Tasks 16–21 are follow-up improvements identified during a 2026-04-30 verification pass against `main` (CI/release pipeline, R8 keep-rules, a11y posture, and SPS-Lab research relevance). Tasks 38–42 are new feature / infra ideas filed 2026-05-02 from a follow-up senior-developer review (research-aligned analytics, schema-migration polish, anonymised research export). TASK-43 (filed 2026-05-02) closes a real UX gap: many EU/UK chargers and several older EVs (Renault/Nissan/older BMW) display only SoC % before/after, never kWh delivered. Tasks 44–49 are filed 2026-05-03 from a senior-developer code audit cross-checked against the current `main` (`658b60a` + the TASK-43 / TASK-18 Step 6 / nightly-WorkManager fixes): three correctness/UX bugs (`StatsCalculator` cost accumulation, `KwhFromSocCalculator` defensive guard, battery-health overshoot warning) and three research-aligned extensions (charging power profile, time-of-use tariff zones, per-event grid carbon intensity). The audit also folded `kwhSource` / `socBefore` / `socAfter` columns into TASK-09 and concrete K2 / Room version pins into TASK-33. TASK-50 (also filed 2026-05-03) bundles the four fix categories surfaced by the first nightly instrumented cron after the WorkManager-init fix landed — `EmptyFragmentActivity` not declared in the app manifest, a stale `DriveBackupWorkerTest.ioError_returnsRetry` assertion, racy `MainActivityResetRecoveryTest` startup hook, and a `ChartsFragmentTest` initialization error. TASK-51 (filed 2026-05-03) captures the GPL relicensing request after a dependency audit found one concrete review item in the shipped runtime set: `com.google.android.gms:play-services-auth` is still distributed under the Android SDK License, so the GPL-3.0-or-later switch should carry that note explicitly in review. Tasks 52–54 (filed 2026-05-03 from `docs/EV-backlog-review.md`) cover three hardening items confirmed against `main`: CSV-injection / CR / tab coverage in `ExportCsvUseCase.csvEscape`, a multi-car `require(...)` guard in `StatsCalculator.computeStats`, and TASK-54 — originally framed as a durable last-seen marker for the Drive restore prompt, since expanded to 🔴 priority after a user-supplied reproduction (2026-05-03 in-conversation): on every Settings entry, the Drive switch visibly flips OFF → ON on its own and the "Restore from Drive?" dialog appears. Root cause is two coupled defects — the switch's `OnCheckedChangeListener` fires when Android's view-state restoration calls `setChecked(true)` after the listener is already attached but before the StateFlow collector's rebind block has run, AND the absence of a durable marker that records the user's "Skip" decision. Both fixes are bundled into TASK-54. The same review proposed two further items (a `NetworkType.CONNECTED` constraint on the backup `WorkRequest` and a forward-compat fallback for unknown `kwhSource` values) which were rejected: both behaviours already hold in `WorkManagerBackupScheduler.kt:27` and `ChargeKwhSource.parseLegacy` respectively. Each task is written as a self-contained instruction suitable for a coding agent.
+Tasks 1–15 were generated from a senior Android developer code review of the `main` branch (April 2026). Tasks 16–21 are follow-up improvements identified during a 2026-04-30 verification pass against `main` (CI/release pipeline, R8 keep-rules, a11y posture, and SPS-Lab research relevance). Tasks 38–42 are new feature / infra ideas filed 2026-05-02 from a follow-up senior-developer review (research-aligned analytics, schema-migration polish, anonymised research export). TASK-43 (filed 2026-05-02) closes a real UX gap: many EU/UK chargers and several older EVs (Renault/Nissan/older BMW) display only SoC % before/after, never kWh delivered. Tasks 44–49 are filed 2026-05-03 from a senior-developer code audit cross-checked against the current `main` (`658b60a` + the TASK-43 / TASK-18 Step 6 / nightly-WorkManager fixes): three correctness/UX bugs (`StatsCalculator` cost accumulation, `KwhFromSocCalculator` defensive guard, battery-health overshoot warning) and three research-aligned extensions (charging power profile, time-of-use tariff zones, per-event grid carbon intensity). The audit also folded `kwhSource` / `socBefore` / `socAfter` columns into TASK-09 and concrete K2 / Room version pins into TASK-33. TASK-50 (also filed 2026-05-03) bundles the four fix categories surfaced by the first nightly instrumented cron after the WorkManager-init fix landed — `EmptyFragmentActivity` not declared in the app manifest, a stale `DriveBackupWorkerTest.ioError_returnsRetry` assertion, racy `MainActivityResetRecoveryTest` startup hook, and a `ChartsFragmentTest` initialization error. TASK-51 (filed 2026-05-03) captures the GPL relicensing request after a dependency audit found one concrete review item in the shipped runtime set: `com.google.android.gms:play-services-auth` is still distributed under the Android SDK License, so the GPL-3.0-or-later switch should carry that note explicitly in review. Tasks 52–54 (filed 2026-05-03 from `docs/EV-backlog-review.md`) cover three hardening items confirmed against `main`: CSV-injection / CR / tab coverage in `ExportCsvUseCase.csvEscape`, a multi-car `require(...)` guard in `StatsCalculator.computeStats`, and TASK-54 — originally framed as a durable last-seen marker for the Drive restore prompt, since expanded to 🔴 priority after a user-supplied reproduction (2026-05-03 in-conversation): on every Settings entry, the Drive switch visibly flips OFF → ON on its own and the "Restore from Drive?" dialog appears. Root cause is two coupled defects — the switch's `OnCheckedChangeListener` fires when Android's view-state restoration calls `setChecked(true)` after the listener is already attached but before the StateFlow collector's rebind block has run, AND the absence of a durable marker that records the user's "Skip" decision. Both fixes are bundled into TASK-54. The same review proposed two further items (a `NetworkType.CONNECTED` constraint on the backup `WorkRequest` and a forward-compat fallback for unknown `kwhSource` values) which were rejected: both behaviours already hold in `WorkManagerBackupScheduler.kt:27` and `ChargeKwhSource.parseLegacy` respectively. TASK-55 (filed 2026-05-04 as a TASK-15 follow-up) closes the gap that TASK-15 left open: the four locales shipped, but no in-app picker — a Greek-speaking user with an English-defaulted phone has no way to switch the app to Greek without changing the OS-wide language, and the first-launch wizard renders in the system locale before the user has had a chance to choose. Two coupled UX entry points: a Settings → Language row (any time) and a wizard-page-0 dropdown (first run), both wired through a `LocaleApplier` narrow IF over `AppCompatDelegate.setApplicationLocales` so the VM stays JVM-testable. Each task is written as a self-contained instruction suitable for a coding agent.
 
 ---
 
@@ -62,6 +62,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-52 | 🟡 | CSV escape hardening in `ExportCsvUseCase` — quote `\r` and tabs, neutralise spreadsheet formula-injection prefixes (`=`, `+`, `-`, `@`) in user-supplied fields | — | ☑ |
 | TASK-53 | 🟡 | Multi-car invariant guard in `StatsCalculator.computeStats` — `require` the input shares a single `carId` (latent bug if a future caller passes a mixed-car list) | — | ☐ |
 | TASK-54 | 🔴 | Drive switch fires `onUserToggledOn()` on every Settings entry (view-state restoration anti-pattern) — visible OFF→ON flicker + restore-prompt loop; bundled with a durable last-seen marker for the destructive-action path | TASK-31 | ☑ |
+| TASK-55 | 🟡 | Language picker — Settings → Language row (any time) AND first-run picker on the wizard so users never see an unintelligible welcome screen. `AppCompatDelegate.setApplicationLocales` + persisted `language_tag` DataStore key | TASK-15 | ☐ |
 
 **Priority legend:** 🔴 High (architecture/data safety) · 🟡 Medium (robustness/UX) · 🟢 Low (new feature)  
 **Status legend:** ☐ open · ☑ done · ☒ closed (premise no longer holds) · ⏸ under consideration (do not start without explicit go-ahead)  
@@ -4704,3 +4705,245 @@ exercise the view-state-restoration window.
   Drive switch, document the pattern in `docs/DESIGN.md` (or in the
   fragment's KDoc) so the next switch added inherits the fix; do not
   retroactively rework other views in this PR.
+
+---
+
+## 🟡 TASK-55 — Language picker (Settings + first-run wizard)
+
+> **Filed 2026-05-04 as a TASK-15 follow-up.** TASK-15 shipped four
+> locales (en/el/tr/ru) but no in-app language switcher — the app
+> falls back to whichever locale the device's system language reports.
+> A user whose phone is set to English but who reads Greek has no
+> way to switch the app to Greek without changing the OS-wide
+> language. Worse, on first launch the wizard renders in the system
+> language, so a Greek-speaking user with an English-defaulted phone
+> sees an English welcome page they may not understand.
+>
+> Two coupled UX entry points needed:
+>
+> 1. **Settings → Language row** — change at any time, persisted
+>    across launches.
+> 2. **Wizard page 0 language picker** — first thing the user sees
+>    on a fresh install, before any other wizard content, so the
+>    rest of the wizard renders in the chosen language.
+>
+> Use `androidx.appcompat`'s
+> `AppCompatDelegate.setApplicationLocales(LocaleListCompat)` —
+> works back to API 21 (the project's minSdk 26 floor is fine),
+> handles activity recreation, and persists to disk via the
+> framework. We mirror the value into our own DataStore key so the
+> rest of the codebase can observe it through `SettingsReader`
+> without touching androidx.appcompat internals.
+
+### Scope
+
+#### Step 1 — `locales_config.xml` + manifest declaration
+
+Cheap-but-load-bearing baseline. Even with the in-app picker
+landing in steps 2-4, declaring the locale config gives Android
+13+ users the OS-level per-app language entry in
+`System Settings → Apps → EV Tracker → Language` automatically.
+
+```xml
+<!-- app/src/main/res/xml/locales_config.xml -->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="en"/>
+    <locale android:name="el"/>
+    <locale android:name="tr"/>
+    <locale android:name="ru"/>
+</locale-config>
+```
+
+```xml
+<!-- AndroidManifest.xml, on <application> -->
+android:localeConfig="@xml/locales_config"
+```
+
+#### Step 2 — DataStore key + narrow IF additions
+
+```kotlin
+// PreferenceKeys
+val LANGUAGE_TAG = stringPreferencesKey("languageTag")
+// Empty string = "follow system" (default).
+// Otherwise an IETF BCP-47 tag: "en", "el", "tr", "ru".
+```
+
+Wire `SettingsReader.languageTag: Flow<String>` (default `""`)
+and `SettingsWriter.setLanguageTag(value: String)` through
+`SettingsRepository`. Update `Fakes.kt` (`FakeSettingsReader`,
+`FakeSettingsWriter`) and the `LinkedSettings` helper in
+`BackupOutcomeReporterTest`.
+
+#### Step 3 — Apply the locale at app start
+
+In `EVTrackerApp.onCreate`, BEFORE Hilt's first activity inflates:
+
+```kotlin
+val tag = runBlocking { settingsReader.languageTag.first() }
+val locales = if (tag.isEmpty()) LocaleListCompat.getEmptyLocaleList()
+              else LocaleListCompat.forLanguageTags(tag)
+AppCompatDelegate.setApplicationLocales(locales)
+```
+
+The `runBlocking` is acceptable here — we MUST have the locale
+resolved before any view inflates, and DataStore reads on a fresh
+process are sub-50ms. Document this trade-off inline in the
+KDoc.
+
+#### Step 4 — Settings → Language row
+
+New row in `fragment_settings.xml` between **Theme** and
+**Currency**. Tap opens a `MaterialAlertDialog.Builder.setSingleChoiceItems`
+with five options:
+
+```
+Follow system          (settings_language_follow_system)
+English                ("English" — autonym, never localised)
+Ελληνικά               ("Ελληνικά" — autonym, never localised)
+Türkçe                 ("Türkçe" — autonym, never localised)
+Русский                ("Русский" — autonym, never localised)
+```
+
+**Display the autonyms (each language's name in itself), not
+translations.** A Greek-speaking user looking for their language
+needs to see "Ελληνικά" written in Greek script — not "Greek"
+or "Yunanca" — because they may not read English or Turkish.
+
+Tag mapping: `""` (follow system) → empty `LocaleListCompat`;
+`"en"` / `"el"` / `"tr"` / `"ru"` → forLanguageTags(tag).
+
+On select:
+1. `settingsWriter.setLanguageTag(tag)` (DataStore source of truth)
+2. `AppCompatDelegate.setApplicationLocales(...)` (triggers Activity recreation; the new instance reads the persisted tag at startup via Step 3)
+
+The `SettingsViewModel` exposes `onLanguageSelected(tag: String)`
+that does both writes inside a single `viewModelScope.launch`.
+
+#### Step 5 — Wizard page 0 picker
+
+Add a language dropdown to the **top** of `WizardPage1Fragment`
+(the welcome page). Options identical to the Settings dialog
+(autonym labels). Default selection: empty string ("follow
+system") — but the dropdown's **displayed** value is the resolved
+locale name so the user sees what they're currently looking at.
+
+Behaviour: selecting an option calls `vm.onLanguageSelected(tag)`,
+which immediately persists the tag and calls
+`AppCompatDelegate.setApplicationLocales(...)`. The Activity
+recreates; `MainActivity` re-routes to the wizard (because
+`setupComplete` is still false), and the wizard renders in the
+new language from page 1 onward. The `Welcome` text on page 1
+itself will be in the new language too, so the user immediately
+sees the effect of their choice.
+
+**Edge case:** if the user picks a language and then taps Back
+to "undo" the choice, `setupComplete` is still false so the
+DataStore tag survives. That's intentional — the choice should
+persist even across mid-wizard kills.
+
+#### Step 6 — Tests
+
+JVM:
+- `SettingsViewModelTest`:
+  - `onLanguageSelected_persistsTagAndAppliesLocale` (verify the
+    DataStore write; the `setApplicationLocales` side-effect is
+    framework-internal but a Mockito spy on a fake `LocaleApplier`
+    interface keeps the test JVM-clean — see "Architectural note"
+    below).
+  - `onLanguageSelected_followSystem_writesEmptyString`.
+- `WizardViewModelTest`: `onLanguageSelected_persistsTag_evenBeforeFinish`
+  (regression guard for the mid-wizard-kill survival).
+
+Instrumented:
+- `SettingsLanguagePickerTest` (new): launch settings, tap
+  Language row, pick "Ελληνικά", assert DataStore now reads
+  `"el"` and the AppCompatDelegate's current locales include
+  `el`.
+- `WizardLanguagePickerTest` (new): launch wizard fresh, change
+  the dropdown to Greek, assert page 1's welcome text is now in
+  Greek (or just assert the locale tag was persisted; the actual
+  string render is tested by Espresso's `withText` matcher).
+
+#### Architectural note — the `LocaleApplier` boundary
+
+`AppCompatDelegate.setApplicationLocales` is a static framework
+call that's hard to verify in JVM tests. Wrap it in a narrow
+domain interface (`domain/locale/LocaleApplier`) bound to an
+Android impl in `data/locale/`. The VM depends on the interface;
+the JVM tests use a `FakeLocaleApplier` that records the last
+applied tag. Mirrors the TASK-12 `WidgetRefresher` pattern.
+
+```kotlin
+// domain/locale/LocaleApplier.kt
+interface LocaleApplier {
+    fun apply(tag: String) // empty string = follow system
+}
+```
+
+```kotlin
+// data/locale/AndroidLocaleApplier.kt
+class AndroidLocaleApplier @Inject constructor() : LocaleApplier {
+    override fun apply(tag: String) {
+        val locales = if (tag.isEmpty()) LocaleListCompat.getEmptyLocaleList()
+                      else LocaleListCompat.forLanguageTags(tag)
+        AppCompatDelegate.setApplicationLocales(locales)
+    }
+}
+```
+
+Bind in a new `LocaleModule` (single-binding, like
+`DataResetModule` from TASK-50 sub-fix C — keeps tests' Hilt
+graph minimal).
+
+### Strings
+
+New string keys (all in canonical `values/`, all marked
+`translatable="true"` except the autonyms):
+
+| Key | English value | translatable |
+|-----|---------------|--------------|
+| `settings_language` | "Language" | true |
+| `settings_language_follow_system` | "Follow system" | true |
+| `settings_language_dialog_title` | "Select language" | true |
+| `wizard_language_label` | "Language" | true |
+| `language_name_en` | "English" | **false** (autonym) |
+| `language_name_el` | "Ελληνικά" | **false** (autonym) |
+| `language_name_tr` | "Türkçe" | **false** (autonym) |
+| `language_name_ru` | "Русский" | **false** (autonym) |
+
+The translatable strings need el/tr/ru entries per the
+`MissingTranslation` error-mode contract (TASK-15).
+
+### Acceptance
+
+- A clean install on an English-defaulted phone shows the wizard
+  with a language dropdown defaulting to "Follow system";
+  selecting "Ελληνικά" causes the rest of the wizard to render in
+  Greek immediately.
+- A user can change the language at any time via Settings →
+  Language. The change persists across app restarts and across
+  device reboots.
+- Android 13+ users can also change the language via System
+  Settings → Apps → EV Tracker → Language (the OS-level entry
+  appears thanks to the `locales_config.xml` declaration).
+- `:app:lint` stays green — the new translatable strings are
+  present in all four locale files; the autonym strings are
+  marked `translatable="false"` so `MissingTranslation` doesn't
+  flag them.
+- All existing tests stay green; ≥ 4 new JVM cases + ≥ 2 new
+  instrumented cases.
+- `./gradlew ktlintCheck :app:lint :app:testDebugUnitTest :app:assembleRelease`
+  green.
+
+### Out of scope
+
+- Adding more languages beyond the four shipped in TASK-15.
+  Future locales (e.g. Arabic) are a TASK-15-class addition and
+  warrant their own task with native-speaker review.
+- A right-to-left layout pass. None of the currently-supported
+  languages need RTL; the day Arabic / Hebrew lands, file a
+  TASK-55 follow-up to audit RTL-sensitive layouts (margins,
+  paddingStart vs paddingLeft, drawableStart, etc.).
+- Localising the autonym labels themselves. They MUST stay in
+  their own script regardless of the current locale; this is the
+  whole point of using autonyms.
