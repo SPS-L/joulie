@@ -724,3 +724,21 @@ A 2×2 `AppWidgetProvider`-based tile (`widget/LastChargeWidget`) renders the mo
 | Drive backup fails (auth) | Repo returns `BackupResult.AuthRequired`; the worker fails fast (no retry) and TASK-19 will surface a re-auth notification once it lands. |
 | Drive backup fails (storage full) | Repo returns `BackupResult.Failure("Drive storage full")`; no retry — retrying won't free Drive quota. |
 | DB migration fails | Destructive fallback with user warning |
+
+---
+
+## 10. Localisation (TASK-15)
+
+The app ships with four locales: English (`values/`, canonical), Greek (`values-el/`), Turkish (`values-tr/`), and Russian (`values-ru/`). The locale set targets Cyprus's resident populations — Greek and Turkish as the two communities, Russian for the significant immigrant community — plus English as the development source.
+
+**Coverage contract.** `:app:lint` runs with `MissingTranslation` in **error** mode. Every `<string>` in `values/strings.xml` must either appear in all three locale files OR carry `translatable="false"`. CI fails on any drift. This is enforced by the existing static-analysis gate (TASK-16).
+
+**`translatable="false"` policy.** Strings marked non-translatable fall into four categories:
+- **Brand / proper names** that should not be localised (`app_name`, `about_acknowledgment_lab`, `about_acknowledgment_cut`).
+- **URL display text** that mirrors the link target (`about_link_sps_lab`, `about_link_cut`).
+- **Standardised unit abbreviations** that the global EV community uses in English regardless of locale (`metric_km_per_kwh`, `metric_kwh_per_100km`, `metric_mi_per_kwh`, and the wizard's compact-form variants).
+- **International technical labels** that are English in every market (`filter_ac` / `filter_dc`, `charge_type_ac` / `charge_type_dc`, `charts_trend_legend_ac` / `charts_trend_legend_dc`).
+
+**Plurals.** Localisation files use Android `<plurals>` with per-locale CLDR rules — `one`/`other` for English / Greek / Turkish; the full `one`/`few`/`many`/`other` set for Russian. The widget's "N week(s) ago" / "N days ago" fallbacks use these.
+
+**Caveat.** The first-pass translations were LLM-produced (TASK-15, 2026-05-04). They cover all 248 translatable strings in lint-clean form, but require review by native speakers of each locale before any production release. Treat the locale files as a starting point, not finished prose.

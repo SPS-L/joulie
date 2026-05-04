@@ -37,6 +37,7 @@ Log every charge — odometer, kWh added, AC/DC, location, optional cost — and
 - **CSV export** — share via the Android share sheet.
 - **Home-screen widget** — 2×2 tile shows the active car's most recent charge: car name, relative date, kWh, efficiency, optional cost. Tap to open the dashboard.
 - **Material 3 theming** — Light / Dark / System; full M3 token system seeded from `#1565C0` with a `#FB8C00` "DC orange" tertiary ramp.
+- **Localisation** — English (default), Greek, Turkish, and Russian translations covering Cyprus's resident populations. First-pass translations are LLM-produced (TASK-15) and pending native-speaker review.
 - **Smart cost handling** — cost left at 0 or blank is stored as `NULL` and excluded from every cost statistic; mixed-currency periods hide cost stats with an explicit banner.
 
 ## Download
@@ -44,7 +45,7 @@ Log every charge — odometer, kWh added, AC/DC, location, optional cost — and
 Signed release APKs are attached to every GitHub Release: see the [Releases page](https://github.com/SPS-L/EV-android-app/releases).
 
 ```bash
-adb install evtracker-v1.3.0.apk
+adb install evtracker-v1.5.0.apk
 ```
 
 You can also open the APK on the device after enabling **Install from unknown sources** for your file manager or browser.
@@ -85,7 +86,7 @@ The debug APK lands at `app/build/outputs/apk/debug/app-debug.apk`.
 ### Tests
 
 ```bash
-./gradlew test                  # JVM unit tests (~398)
+./gradlew test                  # JVM unit tests (~403)
 ./gradlew connectedAndroidTest  # Espresso / Room — needs API 26+ device or emulator
 ```
 
