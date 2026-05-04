@@ -111,6 +111,8 @@ Then:
 
 Without `keystore.properties`, the build still runs but produces an unsigned APK (useful for inspection, not for installing).
 
+If you want a release APK that passes Google's developer-verification check, also place your **Android Developer Verification (ADI) registration token** at `app/src/main/assets/adi-registration.properties` — one line containing the snippet from your registration page. The file is gitignored (sensitivity-class same as `keystore.properties`); each maintainer keeps their own copy. The CI release workflow doesn't bake this asset yet — see backlog TASK-56.
+
 ## Contributing
 
 Contributions are welcome. PRs and pushes to `main` are gated by [`.github/workflows/ci.yml`](.github/workflows/ci.yml), which runs:
