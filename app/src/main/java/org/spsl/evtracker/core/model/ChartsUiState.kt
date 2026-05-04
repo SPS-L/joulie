@@ -41,5 +41,10 @@ sealed class ChartsUiState {
          *  surfaces the exclusion so the user can reconcile event count with
          *  rendered points. */
         val derivedExcludedCount: Int,
+        /** TASK-20: cumulative CO₂ trend (EV-side + ICE counterfactual) across
+         *  the period's events. Empty list when both prefs are 0 / unset —
+         *  the CO₂ tab then shows the empty-state pointing the user to
+         *  Settings → CO₂. */
+        val co2Cumulative: List<org.spsl.evtracker.domain.service.CO2Calculator.CumulativePoint>,
     ) : ChartsUiState()
 }

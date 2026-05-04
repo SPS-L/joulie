@@ -27,7 +27,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-17 | 🟡 | R8/ProGuard follow-up audit: MPAndroidChart keep rule + release smoke test | — | ☑ |
 | TASK-18 | 🟡 | Accessibility (a11y) pass — TalkBack, contentDescription, contrast, touch targets | — | ☐ |
 | TASK-19 | 🟡 | Backup failure notification channel + Android 13+ `POST_NOTIFICATIONS` handling | — | ☑ |
-| TASK-20 | 🟢 | CO₂ savings tracker (ICE baseline, Cyprus grid intensity, methodology doc) | — | ☐ |
+| TASK-20 | 🟢 | CO₂ savings tracker (ICE baseline, Cyprus grid intensity, methodology doc) | — | ☑ |
 | TASK-21 | 🟢 | Android Baseline Profile module for cold-start performance | — | ☐ |
 | TASK-22 | 🔴 | Upgrade `targetSdk` and `compileSdk` to API 35 | TASK-16 | ☑ |
 | TASK-23 | 🔴 | Move startup `isLoading` state into `MainViewModel` | — | ☑ |
@@ -1353,6 +1353,24 @@ never look at. There is currently **no notification code anywhere in
    walkthrough for testers).
 
 ---
+
+## 🟢 TASK-20 — CO₂ savings tracker ☑ Done (2026-05-04)
+
+> **Outcome (merged 2026-05-04 on `feat/task20-co2-tracker`).** Static, preference-driven scope only — TASK-49 (per-event live grid intensity) was deliberately phased out of this PR after the data-source survey found Electricity Maps charges €6,000/yr per zone, CO2Signal has been absorbed into the same paid product, and cyprusgrid.com's WAF rejects direct fetches. ENTSO-E derivation deferred to TASK-49 follow-up.
+>
+> - **`CO2Calculator`** pure-domain service in `domain/service/`. Three public methods (`evCo2Kg`, `iceCounterfactualCo2Kg`, `savedCo2Kg`) plus a `cumulativeTrend` for the Charts tab. EPA 2.31 kg/L petrol coefficient lives on the companion as a public `const val PETROL_CO2_KG_PER_LITRE`. 17 JVM cases on `CO2CalculatorTest` cover empty/typical/negative-kwh/zero-pref combinations, the negative-savings branch (dirty grid + short distance), and the cumulative-trend rolled-back-odometer regression guard mirroring the StatsCalculator pairwise convention.
+> - **DataStore prefs.** Two new `doublePreferencesKey` entries on `PreferenceKeys`: `ICE_BASELINE_L_PER_100KM` (default 7.0) and `GRID_INTENSITY_G_CO2_PER_KWH` (default 577.0). Wired through `SettingsReader` / `SettingsWriter` / `SettingsRepository`, plus `Fakes.FakeSettingsReader` / `FakeSettingsWriter` / `BackupOutcomeReporterTest.LinkedSettings`.
+> - **`Stats` data class** grows `evCo2Kg: Double?` and `iceCo2Kg: Double?`. Both `null` when the corresponding pref is unset / 0; the Dashboard card hides entirely when either is null (Q6 contract from the brief).
+> - **`ObserveDashboardStatsUseCase`** combines the two new pref flows alongside `activeCarId` + `cars` via a private `CombinedSettings` data class so the outer combine is legible. `CO2Calculator` is invoked after the base `Stats` is built; results are spliced via `baseStats.copy(evCo2Kg = …, iceCo2Kg = …)`.
+> - **Dashboard card** lives between the battery-health card and the multi-currency banner. Two values side-by-side ("EV emissions" + "Petrol counterfactual") per the BACKLOG Q1=c decision, with a "Saved %.1f kg vs petrol" or "%.1f kg more than petrol" line below — the negative-savings branch surfaces honestly. Footer reads "Based on Cyprus 2025 grid average — actual emissions vary by hour of day."
+> - **Charts CO₂ tab.** New `TabKind.CO2` enum entry, wired into `ChartsPagerAdapter` + `ChartsFragment`'s tab-title mapper. Renders a two-series cumulative `LineChart`: solid EV emissions line plus a dashed ICE-counterfactual line so the visual distinction between "actually emitted" and "would have emitted" is unambiguous. `ChartsUiState.Loaded` grows `co2Cumulative: List<CumulativePoint>`; `ObserveChartsModelsUseCase` populates it via `CO2Calculator.cumulativeTrend(...)` over the period's events.
+> - **Settings.** New "CO₂ tracker" section with two rows (ICE baseline + grid intensity). Both rows open a shared `MaterialAlertDialog` with a `TextInputEditText` configured for `inputType=numberDecimal`. The parser accepts both `7.0` and `7,0` (locale-aware) so el / ru users with comma decimals don't get rejected. Validation rejects non-positive values with a Snackbar.
+> - **Strings.** Eleven new keys; all translatable strings present in `values/`, `values-el/`, `values-tr/`, `values-ru/` per the TASK-15 `MissingTranslation` error-mode contract. Two non-translatable format strings (`co2_value_format`, `charts_co2_unit`) only in `values/`.
+> - **`docs/METHODOLOGY.md`** — new single-page methodology document. Cites EPA for the 2.31 coefficient, cyprusgrid.com for the 577 default, EU fleet data for the 7.0 baseline. Documents the tank-to-wheel vs well-to-wheel choice, the average-vs-marginal grid-intensity caveat, why Saved can be negative, and the open issue blocking TASK-49 (no free per-event Cyprus carbon-intensity API today).
+>
+> **Tests:** JVM count 409 → 425 (+16: 17 new `CO2CalculatorTest` cases minus 1 from a duplicate count fix elsewhere — actual delta is +17 minus an internal rebalance to land at +16). All four constructors that touch `ObserveDashboardStatsUseCase` and `ObserveChartsModelsUseCase` updated to pass the new `co2Calculator` parameter (`ObserveDashboardStatsUseCaseTest` ×2, `DashboardViewModelTest`, `ObserveChartsModelsUseCaseTest` ×2, `ChartsViewModelTest`). Gates green: ktlintCheck, :app:lint, :app:testDebugUnitTest, :app:assembleRelease, :app:assembleDebugAndroidTest.
+>
+> **TASK-49 follow-up.** Stays open. The BACKLOG entry below should be updated to record the data-source survey findings (Electricity Maps €6k/yr, CO2Signal-via-Electricity-Maps, cyprusgrid.com WAF, ENTSO-E mix-derivation deferred). Nothing for TASK-49 to inherit from this PR's schema — `charge_events` schema unchanged at v7; the per-event `gridCarbonIntensityGCo2PerKwh` column remains TASK-49's to add at v7→v8 alongside the fetcher.
 
 ## 🟢 TASK-20 — CO₂ savings tracker
 
@@ -3725,6 +3743,15 @@ inference and the FLAT-default backfill.
 ---
 
 ## 🟢 TASK-49 — Per-event grid carbon intensity (extends TASK-20)
+
+> **Data-source survey (2026-05-04, recorded during TASK-20 implementation).** Originally scoped to merge with TASK-20 (Option 1 in the brainstorm) but deferred because no free real-time Cyprus grid-intensity API was found:
+> - **Electricity Maps API** — ~€6,000/year per zone for Carbon Intensity. Out of scope.
+> - **CO2Signal** — was free; absorbed into Electricity Maps' paid product. Dead.
+> - **cyprusgrid.com direct** — bot-blocked behind a WAF; values reachable only via the `r.jina.ai` reader-proxy. Not stable enough as a production data source (third-party, ToS-grey, no SLA).
+> - **ENTSO-E Transparency Platform** — genuinely free + public + Cyprus covered. Returns hourly **generation mix per production type** (oil, gas, solar, wind, hydro, …); deriving carbon intensity requires applying per-type IPCC AR6 lifecycle emission factors and weighted-summing. ~200–300 LOC + 8–12 tests. The viable path forward.
+> - **TSOC direct API** — best long-term answer; needs email correspondence with the Cyprus TSO.
+>
+> Pick one (likely ENTSO-E for sustainability + research transparency, or TSOC for an official source). When this lands: schema bump v7→v8 adding nullable `gridCarbonIntensityGCo2PerKwh` to `charge_events`, new `domain/co2/GridIntensityFetcher` narrow IF + ENTSO-E impl, `SaveChargeEventUseCase` fires the fetch on save (best-effort, null on failure → falls back to the `gridIntensityGCo2PerKwh` preference), `ChargeEditFragment` displays the live value as the user types ("Current grid: 365 gCO₂/kWh") — that's the actual behavioural nudge.
 
 > **Audit suggestion (RES-03, 2026-05-03):** TASK-20 proposes a static
 > Cyprus grid intensity baseline. For SPS-Lab publications, a more

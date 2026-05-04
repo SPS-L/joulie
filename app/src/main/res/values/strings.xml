@@ -156,6 +156,11 @@
     <string name="settings_export_csv_range">Export CSV (date range)</string>
     <string name="settings_export_csv_range_summary">Pick a start and end date, then share the matching charge events.</string>
     <string name="settings_export_csv_range_picker_title">Select export range</string>
+    <!-- TASK-20: CO₂ tracker preferences -->
+    <string name="settings_section_co2">CO₂ tracker</string>
+    <string name="settings_co2_ice_baseline">Petrol baseline (L/100km)</string>
+    <string name="settings_co2_grid_intensity">Grid intensity (gCO₂/kWh)</string>
+    <string name="settings_co2_dialog_invalid">Enter a positive number.</string>
     <string name="settings_theme_system">System default</string>
     <string name="settings_theme_light">Light</string>
     <string name="settings_theme_dark">Dark</string>
@@ -240,6 +245,14 @@
     <string name="battery_health_value_format" translatable="false">%1$.0f%%</string>
     <string name="battery_health_estimated_warning">Estimated — heuristic may overestimate</string>
     <string name="battery_health_estimated_warning_a11y">Estimated capacity, may overestimate</string>
+    <!-- TASK-20: CO₂ tracker -->
+    <string name="co2_card_label">CO₂</string>
+    <string name="co2_card_ev_label">EV emissions</string>
+    <string name="co2_card_ice_label">Petrol counterfactual</string>
+    <string name="co2_value_format" translatable="false">%1$.1f kg</string>
+    <string name="co2_saved_format">Saved %1$.1f kg vs petrol</string>
+    <string name="co2_extra_format">%1$.1f kg more than petrol</string>
+    <string name="co2_card_footnote">Based on Cyprus 2025 grid average — actual emissions vary by hour of day.</string>
     <string name="cost_card_per_km">Cost per km</string>
     <string name="cost_card_per_100km">Cost per 100km</string>
     <string name="fab_log_charge">Log charge</string>
@@ -324,6 +337,10 @@
     <string name="charts_tab_ac_dc">AC vs DC</string>
     <string name="charts_tab_locations">Locations</string>
     <string name="charts_tab_degradation">Degradation</string>
+    <string name="charts_tab_co2">CO₂</string>
+    <string name="charts_co2_legend_ev">EV emissions</string>
+    <string name="charts_co2_legend_ice">Petrol counterfactual</string>
+    <string name="charts_co2_unit" translatable="false">kg</string>
     <string name="charts_degradation_legend_effective">Effective capacity</string>
     <string name="charts_degradation_legend_nominal">Nominal</string>
     <string name="charts_degradation_no_battery">Set the car\'s nominal battery capacity in Cars to enable this chart</string>

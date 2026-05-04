@@ -213,6 +213,17 @@
     <string name="battery_health_card_subtitle">En son efektif kapasite ile nominal karşılaştırması</string>
     <string name="battery_health_estimated_warning">Tahmini — sezgisel yöntem aşırı tahmin edebilir</string>
     <string name="battery_health_estimated_warning_a11y">Tahmini kapasite, aşırı tahmin edebilir</string>
+    <!-- TASK-20: CO₂ tracker -->
+    <string name="co2_card_label">CO₂</string>
+    <string name="co2_card_ev_label">EV emisyonları</string>
+    <string name="co2_card_ice_label">Benzin eşdeğeri</string>
+    <string name="co2_saved_format">Benzine göre %1$.1f kg tasarruf</string>
+    <string name="co2_extra_format">Benzinden %1$.1f kg fazla</string>
+    <string name="co2_card_footnote">Kıbrıs 2025 şebeke ortalamasına dayalıdır — gerçek emisyonlar gün içinde değişir.</string>
+    <string name="settings_section_co2">CO₂ takibi</string>
+    <string name="settings_co2_ice_baseline">Benzin tüketimi (L/100km)</string>
+    <string name="settings_co2_grid_intensity">Şebeke yoğunluğu (gCO₂/kWh)</string>
+    <string name="settings_co2_dialog_invalid">Pozitif bir sayı girin.</string>
     <string name="cost_card_per_km">km başına maliyet</string>
     <string name="cost_card_per_100km">100 km başına maliyet</string>
     <string name="fab_log_charge">Şarj kaydet</string>
@@ -295,6 +306,9 @@
     <string name="charts_tab_ac_dc">AC - DC</string>
     <string name="charts_tab_locations">Konumlar</string>
     <string name="charts_tab_degradation">Bozunma</string>
+    <string name="charts_tab_co2">CO₂</string>
+    <string name="charts_co2_legend_ev">EV emisyonları</string>
+    <string name="charts_co2_legend_ice">Benzin eşdeğeri</string>
     <string name="charts_degradation_legend_effective">Efektif kapasite</string>
     <string name="charts_degradation_legend_nominal">Nominal</string>
     <string name="charts_degradation_no_battery">Bu grafiği etkinleştirmek için Araçlar bölümünde aracın nominal pil kapasitesini ayarlayın</string>

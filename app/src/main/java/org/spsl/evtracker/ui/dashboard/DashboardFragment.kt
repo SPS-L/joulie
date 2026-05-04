@@ -130,6 +130,7 @@ class DashboardFragment : Fragment() {
         renderStatsCards(state)
         renderCostCard(state)
         renderBatteryHealthCard(state)
+        renderCo2Card(state)
         renderBanner(state)
     }
 
@@ -254,6 +255,31 @@ class DashboardFragment : Fragment() {
         // entries) doesn't trigger a false alarm.
         binding.dashboardBatteryHealthEstimatedWarning.isVisible =
             stats?.batteryHealthIsOverestimated == true
+    }
+
+    private fun renderCo2Card(state: DashboardScreenState) {
+        // TASK-20: hide the entire card when EITHER pref is unset (Q6 contract).
+        // The two numbers are coupled in meaning — showing only one would be
+        // confusing ("ev = 28 kg" without an ICE comparison says nothing about
+        // savings; "ICE = 161 kg" with no EV figure is even worse).
+        val stats = state.dashboard.stats
+        val ev = stats?.evCo2Kg
+        val ice = stats?.iceCo2Kg
+        val visible = ev != null && ice != null
+        binding.dashboardCardCo2.isVisible = visible
+        if (visible) {
+            binding.dashboardCo2EvValue.text = getString(R.string.co2_value_format, ev)
+            binding.dashboardCo2IceValue.text = getString(R.string.co2_value_format, ice)
+            val savedKg = ice!! - ev!!
+            // Saved can be negative on dirty-grid + short-distance periods —
+            // surface honestly. The "kg vs petrol" suffix anchors the number
+            // to the comparison so a bare "-12 kg" doesn't read as a bug.
+            binding.dashboardCo2Saved.text = if (savedKg >= 0.0) {
+                getString(R.string.co2_saved_format, savedKg)
+            } else {
+                getString(R.string.co2_extra_format, -savedKg)
+            }
+        }
     }
 
     private fun handleEvent(event: DashboardEvent) {

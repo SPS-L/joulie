@@ -98,6 +98,18 @@ class SettingsViewModel @Inject constructor(
             settingsReader.languageTag.collect { v -> _uiState.update { it.copy(languageTag = v) } }
         }
         viewModelScope.launch {
+            // TASK-20: CO₂ tracker preferences. Drive the row summaries +
+            // the dialog's prefilled value.
+            settingsReader.iceBaselineLPer100km.collect { v ->
+                _uiState.update { it.copy(iceBaselineLPer100km = v) }
+            }
+        }
+        viewModelScope.launch {
+            settingsReader.gridIntensityGCo2PerKwh.collect { v ->
+                _uiState.update { it.copy(gridIntensityGCo2PerKwh = v) }
+            }
+        }
+        viewModelScope.launch {
             settingsReader.activeCarId.collect { id ->
                 val name = if (id == -1L) null else carReader.getById(id)?.name
                 _uiState.update { it.copy(activeCarId = id, activeCarName = name) }
@@ -321,6 +333,23 @@ class SettingsViewModel @Inject constructor(
             settingsWriter.setLanguageTag(tag)
             localeApplier.apply(tag)
         }
+    }
+
+    /**
+     * TASK-20: persist the user-edited petrol baseline in L/100km.
+     * Caller (Settings dialog) is responsible for validating > 0 — the
+     * VM-level check here is a defensive last line; sub-zero values get
+     * silently dropped to avoid corrupting Stats math.
+     */
+    fun onIceBaselineSelected(value: Double) {
+        if (value <= 0.0) return
+        viewModelScope.launch { settingsWriter.setIceBaselineLPer100km(value) }
+    }
+
+    /** TASK-20: persist the user-edited grid intensity in gCO₂/kWh. */
+    fun onGridIntensitySelected(value: Double) {
+        if (value <= 0.0) return
+        viewModelScope.launch { settingsWriter.setGridIntensityGCo2PerKwh(value) }
     }
 
     fun onResetPreferences() {

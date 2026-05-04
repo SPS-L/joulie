@@ -239,6 +239,29 @@ Locks in two related contracts: the TASK-52 (2026-05-03) CSV-injection / RFC 418
 | `mixedCurrencyRows_eachRowEmitsItsOwnCurrency` | The exporter does NOT apply mixed-currency aggregation rules (those live in `StatsCalculator` for the dashboard). EUR row + USD row each emit their own currency verbatim — researchers handle aggregation downstream |
 | `rangeFilter_omitsEventsOutsideRange` | Builds a 3-event store (epoch-ms 1000 / 2000 / 3000), calls `export(carId, 1500..2500)`, asserts only the 2000ms event survives the filter. Uses the suspend `export(...)` overload directly via a custom `CsvFileSink` that captures the writer body — exercises the range filter end-to-end rather than going through `writeCsv` |
 
+### 1.18 CO2CalculatorTest.kt
+
+Locks in the pure-domain CO₂ calculator from TASK-20 (2026-05-04). All cases use deterministic numeric fixtures — `event(kwhAdded = 50.0)` × 577 gCO₂/kWh = 28.85 kg, etc. — so the assertions are checkable by hand against the formulas in [`docs/METHODOLOGY.md`](METHODOLOGY.md).
+
+| Test | Description |
+|------|-------------|
+| `evCo2_emptyEvents_returnsZero` | Empty event list → 0.0 kg regardless of intensity |
+| `evCo2_singleEvent_correct` | 50 kWh × 577 / 1000 = 28.85 kg |
+| `evCo2_multipleEvents_sumsTotalKwh` | (10+20+30) × 400 / 1000 = 24.0 kg |
+| `evCo2_negativeKwh_treatedAsZero` | Defensive: a `-5.0` kWh entry doesn't subtract from running total |
+| `evCo2_zeroIntensity_returnsZero` | Hidden-card semantic: pref unset → 0 |
+| `iceCounterfactual_zeroDistance_returnsZero` | Both 0 and negative distance return 0 |
+| `iceCounterfactual_zeroBaseline_returnsZero` | Pref unset → 0 |
+| `iceCounterfactual_typicalCase` | 1000 km × 7.0 / 100 × 2.31 = 161.7 kg |
+| `iceCounterfactual_smallDistance` | 50 km × 5.5 / 100 × 2.31 = 6.3525 kg |
+| `savedCo2_positiveSavings_typicalCypriotEv` | 1000 km / 50 kWh / 577 gCO₂ → saved = 132.85 kg |
+| `savedCo2_canGoNegative_onDirtyGridShortDistance` | 100 km / 50 kWh on a 1000 gCO₂/kWh grid → saved = -33.83 kg. Q1=c contract: card surfaces this honestly |
+| `cumulativeTrend_emptyEvents_returnsEmpty` | No events → no points (Charts tab shows period-empty copy) |
+| `cumulativeTrend_firstEventHasZeroIceRunning` | First event has no prior odometer → ICE running stays 0; EV side accrues immediately |
+| `cumulativeTrend_threeEvents_runningTotalsAdvance` | EV and ICE running totals advance correctly; `prev` advances on every event |
+| `cumulativeTrend_negativeOdometerDelta_skipsIceContribution_butChainAdvances` | Rolled-back odometer contributes 0 to ICE running but the chain still advances so the next valid delta is computed against the rolled-back value (mirrors StatsCalculator pairwise convention) |
+| `cumulativeTrend_unsortedInput_sortsByDate` | Caller may pass events in any order; helper sorts internally |
+
 ---
 
 ## 2. Room Integration Tests (in-memory DB)

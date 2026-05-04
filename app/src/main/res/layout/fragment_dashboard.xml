@@ -274,6 +274,82 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- TASK-20: CO₂ tracker. Hidden when neither pref is configured. -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/dashboard_card_co2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:visibility="gone"
+                tools:visibility="visible">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/co2_card_label"
+                        android:textAppearance="?attr/textAppearanceLabelMedium"/>
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:orientation="horizontal"
+                        android:weightSum="2">
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/co2_card_ev_label"
+                                android:textAppearance="?attr/textAppearanceBodySmall"/>
+                            <TextView
+                                android:id="@+id/dashboard_co2_ev_value"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textAppearance="?attr/textAppearanceTitleMedium"
+                                tools:text="28.9 kg"/>
+                        </LinearLayout>
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/co2_card_ice_label"
+                                android:textAppearance="?attr/textAppearanceBodySmall"/>
+                            <TextView
+                                android:id="@+id/dashboard_co2_ice_value"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textAppearance="?attr/textAppearanceTitleMedium"
+                                tools:text="161.7 kg"/>
+                        </LinearLayout>
+                    </LinearLayout>
+                    <TextView
+                        android:id="@+id/dashboard_co2_saved"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:textAppearance="?attr/textAppearanceBodyMedium"
+                        tools:text="Saved: 132.9 kg vs petrol"/>
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/co2_card_footnote"
+                        android:textAppearance="?attr/textAppearanceBodySmall"
+                        android:textColor="?attr/colorOnSurfaceVariant"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
             <TextView
                 android:id="@+id/dashboard_multi_currency_banner"
                 android:layout_width="match_parent"

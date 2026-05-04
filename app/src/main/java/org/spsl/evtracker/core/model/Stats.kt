@@ -47,4 +47,20 @@ data class Stats(
      * a softer "Estimated" tag without the overestimation warning.
      */
     val batteryHealthIsOverestimated: Boolean = false,
+    /**
+     * TASK-20: kg CO₂ from EV-side energy use across the period
+     * (`Σ kwhAdded × gridIntensityGCo2PerKwh / 1000`). `null` when
+     * the user has not configured the grid-intensity preference (or
+     * set it to 0) — the Dashboard CO₂ card hides entirely in that
+     * case.
+     */
+    val evCo2Kg: Double? = null,
+    /**
+     * TASK-20: kg CO₂ a comparable petrol car would have emitted over
+     * the same period distance, computed as
+     * `(distanceKm / 100) × iceBaselineLPer100km × 2.31`. `null` when
+     * the user has not configured the ICE-baseline preference (or set
+     * it to 0).
+     */
+    val iceCo2Kg: Double? = null,
 )

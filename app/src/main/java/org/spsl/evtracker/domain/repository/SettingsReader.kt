@@ -68,4 +68,17 @@ interface SettingsReader {
      * values: `"en"` / `"el"` / `"tr"` / `"ru"`.
      */
     val languageTag: Flow<String>
+
+    /**
+     * TASK-20: ICE petrol baseline in L/100km (default 7.0). Used as the
+     * counterfactual for CO₂ savings in [CO2Calculator].
+     */
+    val iceBaselineLPer100km: Flow<Double>
+
+    /**
+     * TASK-20: grid carbon intensity in gCO₂/kWh (default 577 — Cyprus
+     * 2025 grid average per cyprusgrid.com). Used by [CO2Calculator] to
+     * compute EV-side emissions per charge event.
+     */
+    val gridIntensityGCo2PerKwh: Flow<Double>
 }

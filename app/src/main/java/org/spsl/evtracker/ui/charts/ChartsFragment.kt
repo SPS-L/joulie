@@ -80,6 +80,7 @@ class ChartsFragment : Fragment() {
                 ChartsTabFragment.TabKind.AC_DC -> getString(R.string.charts_tab_ac_dc)
                 ChartsTabFragment.TabKind.LOCATIONS -> getString(R.string.charts_tab_locations)
                 ChartsTabFragment.TabKind.DEGRADATION -> getString(R.string.charts_tab_degradation)
+                ChartsTabFragment.TabKind.CO2 -> getString(R.string.charts_tab_co2)
             }
         }
         tabMediator.attach()

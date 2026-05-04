@@ -19,6 +19,7 @@ import org.spsl.evtracker.data.local.entity.ChargeEventEntity
 import org.spsl.evtracker.domain.repository.CarReader
 import org.spsl.evtracker.domain.repository.ChargeEventQueries
 import org.spsl.evtracker.domain.repository.SettingsReader
+import org.spsl.evtracker.domain.service.CO2Calculator
 import org.spsl.evtracker.domain.service.CapacityEstimator
 import org.spsl.evtracker.domain.service.DateRangeResolver
 import org.spsl.evtracker.domain.service.StatsCalculator
@@ -31,25 +32,44 @@ class ObserveChartsModelsUseCase @Inject constructor(
     private val settingsReader: SettingsReader,
     private val statsCalculator: StatsCalculator,
     private val capacityEstimator: CapacityEstimator,
+    private val co2Calculator: CO2Calculator,
     private val dateRangeResolver: DateRangeResolver,
     private val now: NowProvider,
     @AggregationDispatcher private val aggregationContext: CoroutineContext,
 ) {
 
+    /**
+     * TASK-20: bundle of pref values folded into the charts stream. Pulled
+     * out as a data class so the outer combine is legible and adding a new
+     * pref doesn't reshuffle the lambda arity.
+     */
+    private data class ChartsSettings(
+        val activeCarId: Long,
+        val cars: List<CarEntity>,
+        val iceBaselineLPer100km: Double,
+        val gridIntensityGCo2PerKwh: Double,
+    )
+
     @OptIn(ExperimentalCoroutinesApi::class)
     fun observe(period: ChartsPeriod): Flow<ChartsUiState> {
-        return combine(settingsReader.activeCarId, carReader.observeAll()) { active, cars ->
-            active to cars
-        }.flatMapLatest { (active, cars) ->
+        return combine(
+            settingsReader.activeCarId,
+            carReader.observeAll(),
+            settingsReader.iceBaselineLPer100km,
+            settingsReader.gridIntensityGCo2PerKwh,
+        ) { active, cars, iceL, gridG ->
+            ChartsSettings(active, cars, iceL, gridG)
+        }.flatMapLatest { settings ->
             when {
-                cars.isEmpty() || active == -1L -> flowOf<ChartsUiState>(ChartsUiState.NoCar)
+                settings.cars.isEmpty() || settings.activeCarId == -1L ->
+                    flowOf<ChartsUiState>(ChartsUiState.NoCar)
                 else -> {
-                    val activeCar = cars.firstOrNull { it.id == active }
-                    chargeEventQueries.observeForCar(active).map { all ->
+                    val activeCar = settings.cars.firstOrNull { it.id == settings.activeCarId }
+                    chargeEventQueries.observeForCar(settings.activeCarId).map { all ->
                         if (all.isEmpty()) {
                             ChartsUiState.NoEvents
                         } else {
-                            build(all, period, activeCar)
+                            build(all, period, activeCar, settings)
                         }
                     }
                 }
@@ -61,6 +81,7 @@ class ObserveChartsModelsUseCase @Inject constructor(
         allEvents: List<ChargeEventEntity>,
         period: ChartsPeriod,
         activeCar: CarEntity?,
+        settings: ChartsSettings,
     ): ChartsUiState.Loaded {
         val range = dateRangeResolver.resolveCharts(period, now.nowMillis())
         val periodEvents = allEvents.filter { it.eventDate in range.startMillis..range.endMillis }
@@ -81,6 +102,18 @@ class ObserveChartsModelsUseCase @Inject constructor(
         // of whether the chart is rendered (banner can also fire when the
         // remaining measured-event count is below the 3-point threshold).
         val derivedExcluded = capacityEstimator.countDerivedEvents(periodEvents)
+        // TASK-20: cumulative CO₂ trend across the period's events.
+        // Empty when both prefs are 0 — the CO₂ tab then renders the
+        // "set baseline + grid intensity" empty state.
+        val co2Cumulative = if (settings.iceBaselineLPer100km > 0.0 || settings.gridIntensityGCo2PerKwh > 0.0) {
+            co2Calculator.cumulativeTrend(
+                events = periodEvents,
+                iceBaselineLPer100km = settings.iceBaselineLPer100km,
+                gridIntensityGCo2PerKwh = settings.gridIntensityGCo2PerKwh,
+            )
+        } else {
+            emptyList()
+        }
         return ChartsUiState.Loaded(
             periodHasEvents = periodEvents.isNotEmpty(),
             mixedCurrency = mixed,
@@ -94,6 +127,7 @@ class ObserveChartsModelsUseCase @Inject constructor(
             capacity = capacityPoints,
             nominalBatteryKwh = nominalBatteryKwh,
             derivedExcludedCount = derivedExcluded,
+            co2Cumulative = co2Cumulative,
         )
     }
 }
