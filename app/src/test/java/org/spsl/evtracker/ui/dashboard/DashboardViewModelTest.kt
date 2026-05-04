@@ -67,6 +67,7 @@ class DashboardViewModelTest {
             settingsReader = settingsReader,
             statsCalculator = StatsCalculator(),
             capacityEstimator = org.spsl.evtracker.domain.service.CapacityEstimator(),
+            co2Calculator = org.spsl.evtracker.domain.service.CO2Calculator(),
             dateRangeResolver = DateRangeResolver(),
             now = FakeNowProvider(System.currentTimeMillis()),
         )

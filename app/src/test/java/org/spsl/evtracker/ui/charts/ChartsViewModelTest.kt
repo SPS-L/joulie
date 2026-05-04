@@ -74,7 +74,9 @@ class ChartsViewModelTest {
         settings = FakeSettingsReader(activeCarIdInit = 1, distanceUnitInit = "km")
         useCase = ObserveChartsModelsUseCase(
             carReader, queries, settings, StatsCalculator(),
-            org.spsl.evtracker.domain.service.CapacityEstimator(), DateRangeResolver(),
+            org.spsl.evtracker.domain.service.CapacityEstimator(),
+            org.spsl.evtracker.domain.service.CO2Calculator(),
+            DateRangeResolver(),
             now = now, aggregationContext = EmptyCoroutineContext,
         )
         vm = ChartsViewModel(useCase, settings)

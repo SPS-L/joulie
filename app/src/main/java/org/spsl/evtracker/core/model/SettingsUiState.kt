@@ -39,6 +39,10 @@ data class SettingsUiState(
      * row's selected-option highlight in the picker dialog.
      */
     val languageTag: String = "",
+    /** TASK-20: petrol baseline (L/100km) for the CO₂ counterfactual. */
+    val iceBaselineLPer100km: Double = 7.0,
+    /** TASK-20: grid carbon intensity (gCO₂/kWh) used for EV-side emissions. */
+    val gridIntensityGCo2PerKwh: Double = 577.0,
     val activeCarId: Long = -1L,
     val activeCarName: String? = null,
     val customLocationCount: Int = 0,

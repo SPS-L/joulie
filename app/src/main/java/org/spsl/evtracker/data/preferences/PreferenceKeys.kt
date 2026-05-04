@@ -5,6 +5,7 @@
 package org.spsl.evtracker.data.preferences
 
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -51,4 +52,20 @@ object PreferenceKeys {
      * applied via `LocaleApplier`.
      */
     val LANGUAGE_TAG = stringPreferencesKey("languageTag")
+
+    /**
+     * TASK-20: ICE petrol baseline in litres per 100 km, used as the
+     * counterfactual for CO₂ savings. Default 7.0 represents the EU
+     * real-world fleet average. User-editable in Settings → CO₂.
+     */
+    val ICE_BASELINE_L_PER_100KM = doublePreferencesKey("iceBaselineLPer100km")
+
+    /**
+     * TASK-20: grid carbon intensity in gCO₂/kWh used to compute the
+     * EV side of the CO₂ tracker. Default 577 = Cyprus 2025 grid
+     * average per cyprusgrid.com. Stays static for this PR; TASK-49
+     * will layer per-event live values on top once a free real-time
+     * data source is wired up.
+     */
+    val GRID_INTENSITY_G_CO2_PER_KWH = doublePreferencesKey("gridIntensityGCo2PerKwh")
 }

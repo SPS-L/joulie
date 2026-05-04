@@ -138,6 +138,8 @@ class FakeSettingsReader(
     notificationPermissionDeniedInit: Boolean = false,
     lastSeenRemoteBackupExportedAtInit: String = "",
     languageTagInit: String = "",
+    iceBaselineLPer100kmInit: Double = 7.0,
+    gridIntensityGCo2PerKwhInit: Double = 577.0,
 ) : SettingsReader {
     private val activeCar = MutableStateFlow(activeCarIdInit)
     private val metric = MutableStateFlow(primaryMetricInit)
@@ -152,6 +154,8 @@ class FakeSettingsReader(
     private val notificationPermissionDeniedFlow = MutableStateFlow(notificationPermissionDeniedInit)
     private val lastSeenRemoteBackupExportedAtFlow = MutableStateFlow(lastSeenRemoteBackupExportedAtInit)
     private val languageTagFlow = MutableStateFlow(languageTagInit)
+    private val iceBaselineFlow = MutableStateFlow(iceBaselineLPer100kmInit)
+    private val gridIntensityFlow = MutableStateFlow(gridIntensityGCo2PerKwhInit)
     override val activeCarId: Flow<Long> = activeCar
     override val primaryMetric: Flow<String> = metric
     override val distanceUnit: Flow<String> = unit
@@ -165,6 +169,8 @@ class FakeSettingsReader(
     override val notificationPermissionDenied: Flow<Boolean> = notificationPermissionDeniedFlow
     override val lastSeenRemoteBackupExportedAt: Flow<String> = lastSeenRemoteBackupExportedAtFlow
     override val languageTag: Flow<String> = languageTagFlow
+    override val iceBaselineLPer100km: Flow<Double> = iceBaselineFlow
+    override val gridIntensityGCo2PerKwh: Flow<Double> = gridIntensityFlow
     fun setActiveCarId(id: Long) {
         activeCar.value = id
     }
@@ -204,6 +210,12 @@ class FakeSettingsReader(
     fun setLanguageTag(value: String) {
         languageTagFlow.value = value
     }
+    fun setIceBaselineLPer100km(value: Double) {
+        iceBaselineFlow.value = value
+    }
+    fun setGridIntensityGCo2PerKwh(value: Double) {
+        gridIntensityFlow.value = value
+    }
 }
 
 class FakeSettingsWriter(
@@ -234,6 +246,10 @@ class FakeSettingsWriter(
     var lastSeenRemoteBackupExportedAt: String = ""
         private set
     var languageTag: String = ""
+        private set
+    var iceBaselineLPer100km: Double = 7.0
+        private set
+    var gridIntensityGCo2PerKwh: Double = 577.0
         private set
 
     override suspend fun setActiveCarId(id: Long) {
@@ -305,6 +321,14 @@ class FakeSettingsWriter(
     override suspend fun setLanguageTag(value: String) {
         callRecorder?.add("setLanguageTag($value)")
         languageTag = value
+    }
+    override suspend fun setIceBaselineLPer100km(value: Double) {
+        callRecorder?.add("setIceBaselineLPer100km($value)")
+        iceBaselineLPer100km = value
+    }
+    override suspend fun setGridIntensityGCo2PerKwh(value: Double) {
+        callRecorder?.add("setGridIntensityGCo2PerKwh($value)")
+        gridIntensityGCo2PerKwh = value
     }
 }
 

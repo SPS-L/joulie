@@ -41,7 +41,7 @@ import java.util.Calendar
 @AndroidEntryPoint
 class ChartsTabFragment : Fragment() {
 
-    enum class TabKind { TREND, MONTHLY_KWH, MONTHLY_COST, AC_DC, LOCATIONS, DEGRADATION }
+    enum class TabKind { TREND, MONTHLY_KWH, MONTHLY_COST, AC_DC, LOCATIONS, DEGRADATION, CO2 }
 
     private var _binding: FragmentChartsTabBinding? = null
     private val binding get() = _binding!!
@@ -115,7 +115,74 @@ class ChartsTabFragment : Fragment() {
                 }
                 renderDegradation(state, charts, container, empty)
             }
+            TabKind.CO2 -> renderCo2(state, charts, container, empty)
         }
+    }
+
+    /**
+     * TASK-20: cumulative EV-emissions vs ICE-counterfactual line chart.
+     * Two series, both running totals, anchored to the period's start —
+     * the user sees the gap between the lines grow over time as the EV
+     * accumulates "saved" CO₂.
+     */
+    private fun renderCo2(
+        state: ChartsScreenState,
+        charts: ChartsUiState.Loaded,
+        container: FrameLayout,
+        empty: TextView,
+    ) {
+        val points = charts.co2Cumulative
+        if (points.isEmpty()) {
+            // Either both prefs are 0 (user hasn't configured Settings → CO₂)
+            // or the period has no events. Both fall through to the period-empty
+            // copy because the user-facing fix is the same: log charges +
+            // configure the prefs.
+            empty.text = getString(R.string.charts_no_data_period)
+            empty.isVisible = true
+            return
+        }
+        val chart = LineChart(requireContext())
+        ChartStyling.configureLineChart(chart)
+        val (acColor, dcColor) = ChartStyling.resolveSeriesColors(requireContext())
+        val windowStart = charts.periodStartMillis
+
+        val evEntries = points.map {
+            val xDays = ((it.eventTimeMillis - windowStart).toDouble() / ChartStyling.MILLIS_PER_DAY).toFloat()
+            Entry(xDays, it.cumulativeEvCo2Kg.toFloat(), it.eventTimeMillis as Any)
+        }
+        val iceEntries = points.map {
+            val xDays = ((it.eventTimeMillis - windowStart).toDouble() / ChartStyling.MILLIS_PER_DAY).toFloat()
+            Entry(xDays, it.cumulativeIceCo2Kg.toFloat(), it.eventTimeMillis as Any)
+        }
+        val evSet = LineDataSet(evEntries, getString(R.string.charts_co2_legend_ev)).apply {
+            color = acColor
+            setCircleColor(acColor)
+            lineWidth = 2f
+            setDrawValues(false)
+        }
+        val iceSet = LineDataSet(iceEntries, getString(R.string.charts_co2_legend_ice)).apply {
+            color = dcColor
+            setCircleColor(dcColor)
+            lineWidth = 2f
+            // ICE counterfactual is dashed to visually distinguish "would have
+            // emitted" from "actually emitted".
+            enableDashedLine(12f, 8f, 0f)
+            setDrawValues(false)
+        }
+        chart.data = LineData(evSet, iceSet)
+        chart.xAxis.valueFormatter = ChartStyling.dateLabelFormatter(windowStart, state.period)
+        chart.marker = ChartsMarkerView(requireContext(), getString(R.string.charts_co2_unit))
+        if (!firstRenderConsumed) {
+            chart.animateY(400)
+            firstRenderConsumed = true
+        }
+        container.addView(
+            chart,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT,
+            ),
+        )
     }
 
     private fun renderDegradation(

@@ -55,6 +55,12 @@ class SettingsRepository @Inject constructor(
     override val languageTag: Flow<String> =
         dataStore.data.map { it[PreferenceKeys.LANGUAGE_TAG] ?: "" }
 
+    override val iceBaselineLPer100km: Flow<Double> =
+        dataStore.data.map { it[PreferenceKeys.ICE_BASELINE_L_PER_100KM] ?: 7.0 }
+
+    override val gridIntensityGCo2PerKwh: Flow<Double> =
+        dataStore.data.map { it[PreferenceKeys.GRID_INTENSITY_G_CO2_PER_KWH] ?: 577.0 }
+
     // ACTIVE_CAR_ID stays an `intPreferencesKey` (TASK-26 didn't touch DataStore
     // backing types — switching `intPreferencesKey` to `longPreferencesKey` with
     // the same key name would silently lose the existing Int value). We widen
@@ -136,6 +142,14 @@ class SettingsRepository @Inject constructor(
 
     override suspend fun setLanguageTag(value: String) {
         dataStore.edit { it[PreferenceKeys.LANGUAGE_TAG] = value }
+    }
+
+    override suspend fun setIceBaselineLPer100km(value: Double) {
+        dataStore.edit { it[PreferenceKeys.ICE_BASELINE_L_PER_100KM] = value }
+    }
+
+    override suspend fun setGridIntensityGCo2PerKwh(value: Double) {
+        dataStore.edit { it[PreferenceKeys.GRID_INTENSITY_G_CO2_PER_KWH] = value }
     }
 
     /** Used by the future Settings → Reset preferences action (Sub-project F). */

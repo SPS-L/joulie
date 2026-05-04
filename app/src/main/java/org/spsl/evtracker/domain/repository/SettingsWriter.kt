@@ -54,4 +54,10 @@ interface SettingsWriter {
      * the running process.
      */
     suspend fun setLanguageTag(value: String)
+
+    /** TASK-20: persist the user-edited ICE petrol baseline in L/100km. */
+    suspend fun setIceBaselineLPer100km(value: Double)
+
+    /** TASK-20: persist the user-edited grid carbon intensity in gCO₂/kWh. */
+    suspend fun setGridIntensityGCo2PerKwh(value: Double)
 }

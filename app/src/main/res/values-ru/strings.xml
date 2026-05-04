@@ -213,6 +213,17 @@
     <string name="battery_health_card_subtitle">Последняя эффективная ёмкость vs номинальная</string>
     <string name="battery_health_estimated_warning">Оценочно — эвристика может завышать значение</string>
     <string name="battery_health_estimated_warning_a11y">Оценочная ёмкость, может завышать значение</string>
+    <!-- TASK-20: CO₂ tracker -->
+    <string name="co2_card_label">CO₂</string>
+    <string name="co2_card_ev_label">Выбросы EV</string>
+    <string name="co2_card_ice_label">Бензиновый эквивалент</string>
+    <string name="co2_saved_format">Сэкономлено %1$.1f кг по сравнению с бензином</string>
+    <string name="co2_extra_format">На %1$.1f кг больше, чем бензин</string>
+    <string name="co2_card_footnote">На основе среднегодового показателя сети Кипра 2025 — фактические выбросы зависят от времени суток.</string>
+    <string name="settings_section_co2">Учёт CO₂</string>
+    <string name="settings_co2_ice_baseline">Расход бензина (L/100km)</string>
+    <string name="settings_co2_grid_intensity">Углеродность сети (gCO₂/kWh)</string>
+    <string name="settings_co2_dialog_invalid">Введите положительное число.</string>
     <string name="cost_card_per_km">Стоимость за км</string>
     <string name="cost_card_per_100km">Стоимость за 100 км</string>
     <string name="fab_log_charge">Записать зарядку</string>
@@ -297,6 +308,9 @@
     <string name="charts_tab_ac_dc">AC против DC</string>
     <string name="charts_tab_locations">Места</string>
     <string name="charts_tab_degradation">Деградация</string>
+    <string name="charts_tab_co2">CO₂</string>
+    <string name="charts_co2_legend_ev">Выбросы EV</string>
+    <string name="charts_co2_legend_ice">Бензиновый эквивалент</string>
     <string name="charts_degradation_legend_effective">Эффективная ёмкость</string>
     <string name="charts_degradation_legend_nominal">Номинальная</string>
     <string name="charts_degradation_no_battery">Укажите номинальную ёмкость батареи в разделе Автомобили, чтобы включить этот график</string>

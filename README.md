@@ -39,6 +39,7 @@ Log every charge — odometer, kWh added, AC/DC, location, optional cost — and
 - **Material 3 theming** — Light / Dark / System; full M3 token system seeded from `#1565C0` with a `#FB8C00` "DC orange" tertiary ramp.
 - **Localisation** — English (default), Greek, Turkish, and Russian translations covering Cyprus's resident populations, switchable in-app via Settings → Language or on the wizard's first page (autonyms always rendered in their own script). On Android 13+, the OS-level per-app language entry under System Settings is also wired automatically. First-pass translations are LLM-produced (TASK-15) and pending native-speaker review.
 - **Smart cost handling** — cost left at 0 or blank is stored as `NULL` and excluded from every cost statistic; mixed-currency periods hide cost stats with an explicit banner.
+- **CO₂ tracker** — Dashboard card and Charts tab show EV-side emissions side-by-side with a petrol-counterfactual baseline; defaults to Cyprus 2025 grid average (577 gCO₂/kWh, configurable in Settings). Methodology + coefficients documented in [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md).
 
 ## Download
 
@@ -86,7 +87,7 @@ The debug APK lands at `app/build/outputs/apk/debug/app-debug.apk`.
 ### Tests
 
 ```bash
-./gradlew test                  # JVM unit tests (~409)
+./gradlew test                  # JVM unit tests (~425)
 ./gradlew connectedAndroidTest  # Espresso / Room — needs API 26+ device or emulator
 ```
 

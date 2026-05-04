@@ -90,6 +90,8 @@ class SettingsFragment : Fragment() {
         binding.rowCurrency.setOnClickListener { showCurrencyDialog() }
         binding.rowTheme.setOnClickListener { showThemeDialog() }
         binding.rowLanguage.setOnClickListener { showLanguageDialog() }
+        binding.rowCo2IceBaseline.setOnClickListener { showIceBaselineDialog() }
+        binding.rowCo2GridIntensity.setOnClickListener { showGridIntensityDialog() }
         binding.rowManageLocations.setOnClickListener {
             findNavController().navigate(R.id.action_settings_to_manage_locations)
         }
@@ -209,6 +211,14 @@ class SettingsFragment : Fragment() {
         // autonym lookup. Autonym strings are translatable=false so they
         // always render in their own script regardless of the current locale.
         binding.summaryLanguage.text = languageLabelFor(state.languageTag)
+        // TASK-20: CO₂ row summaries. Numbers are formatted in the
+        // user's default locale via Locale-aware DecimalFormat — Greek
+        // / Russian readers see comma decimals, English readers see
+        // dot decimals. Units stay non-localised (L/100km, gCO₂/kWh).
+        binding.summaryCo2IceBaseline.text =
+            String.format(java.util.Locale.getDefault(), "%.1f L/100km", state.iceBaselineLPer100km)
+        binding.summaryCo2GridIntensity.text =
+            String.format(java.util.Locale.getDefault(), "%.0f gCO₂/kWh", state.gridIntensityGCo2PerKwh)
         binding.summaryManageLocations.text =
             if (state.customLocationCount == 0) {
                 ""
@@ -318,6 +328,68 @@ class SettingsFragment : Fragment() {
      * their language needs to see "Ελληνικά" written in Greek script
      * regardless of the current app locale.
      */
+    /**
+     * TASK-20: numeric-input dialog shared by the two CO₂ rows.
+     * Material doesn't ship a built-in numeric picker for arbitrary
+     * doubles, so we use an EditText inside a MaterialAlertDialog with
+     * inputType=numberDecimal. The locale-aware parser accepts both
+     * `7.0` and `7,0` so Greek/Russian users with comma decimals
+     * don't get rejected.
+     */
+    private fun showCo2NumberDialog(
+        @androidx.annotation.StringRes titleRes: Int,
+        currentValue: Double,
+        onAccept: (Double) -> Unit,
+    ) {
+        val input = com.google.android.material.textfield.TextInputEditText(requireContext()).apply {
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER or
+                android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+            setText(String.format(java.util.Locale.getDefault(), "%.2f", currentValue))
+            setSelectAllOnFocus(true)
+        }
+        val container = com.google.android.material.textfield.TextInputLayout(requireContext()).apply {
+            setPadding(48, 16, 48, 0)
+            addView(input)
+        }
+        val dialog = MaterialAlertDialogBuilder(requireContext())
+            .setTitle(titleRes)
+            .setView(container)
+            .setNegativeButton(R.string.common_cancel, null)
+            // Positive-button click is handled in setOnShowListener below so
+            // we can validate input without dismissing on bad values.
+            .setPositiveButton(R.string.common_confirm, null)
+            .create()
+        dialog.setOnShowListener {
+            dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).setOnClickListener {
+                val raw = input.text?.toString()?.replace(',', '.')?.trim().orEmpty()
+                val parsed = raw.toDoubleOrNull()
+                if (parsed == null || parsed <= 0.0) {
+                    Snackbar.make(binding.root, R.string.settings_co2_dialog_invalid, Snackbar.LENGTH_SHORT).show()
+                } else {
+                    onAccept(parsed)
+                    dialog.dismiss()
+                }
+            }
+        }
+        dialog.show()
+    }
+
+    private fun showIceBaselineDialog() {
+        showCo2NumberDialog(
+            titleRes = R.string.settings_co2_ice_baseline,
+            currentValue = viewModel.uiState.value.iceBaselineLPer100km,
+            onAccept = { viewModel.onIceBaselineSelected(it) },
+        )
+    }
+
+    private fun showGridIntensityDialog() {
+        showCo2NumberDialog(
+            titleRes = R.string.settings_co2_grid_intensity,
+            currentValue = viewModel.uiState.value.gridIntensityGCo2PerKwh,
+            onAccept = { viewModel.onGridIntensitySelected(it) },
+        )
+    }
+
     private fun showLanguageDialog() {
         val labels = arrayOf(
             getString(R.string.settings_language_follow_system),

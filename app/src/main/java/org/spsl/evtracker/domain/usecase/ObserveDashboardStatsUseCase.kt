@@ -20,6 +20,7 @@ import org.spsl.evtracker.data.local.entity.ChargeEventEntity
 import org.spsl.evtracker.domain.repository.CarReader
 import org.spsl.evtracker.domain.repository.ChargeEventQueries
 import org.spsl.evtracker.domain.repository.SettingsReader
+import org.spsl.evtracker.domain.service.CO2Calculator
 import org.spsl.evtracker.domain.service.CapacityEstimator
 import org.spsl.evtracker.domain.service.DateRangeResolver
 import org.spsl.evtracker.domain.service.StatsCalculator
@@ -31,21 +32,39 @@ class ObserveDashboardStatsUseCase @Inject constructor(
     private val settingsReader: SettingsReader,
     private val statsCalculator: StatsCalculator,
     private val capacityEstimator: CapacityEstimator,
+    private val co2Calculator: CO2Calculator,
     private val dateRangeResolver: DateRangeResolver,
     private val now: NowProvider,
 ) {
+    /**
+     * Bundle of settings flows the use case needs to fold together with the
+     * event stream. Pulled into a data class so the outer `combine` is
+     * legible and adding a new pref doesn't reshuffle the lambda arity.
+     */
+    private data class CombinedSettings(
+        val activeCarId: Long,
+        val cars: List<CarEntity>,
+        val iceBaselineLPer100km: Double,
+        val gridIntensityGCo2PerKwh: Double,
+    )
+
     @OptIn(ExperimentalCoroutinesApi::class)
     fun observe(period: DashboardPeriod, filter: ChargeTypeFilter): Flow<DashboardUiState> {
-        return combine(settingsReader.activeCarId, carReader.observeAll()) { activeCarId, cars ->
-            Pair(activeCarId, cars)
-        }.flatMapLatest { (activeCarId, cars) ->
+        return combine(
+            settingsReader.activeCarId,
+            carReader.observeAll(),
+            settingsReader.iceBaselineLPer100km,
+            settingsReader.gridIntensityGCo2PerKwh,
+        ) { activeCarId, cars, iceL, gridG ->
+            CombinedSettings(activeCarId, cars, iceL, gridG)
+        }.flatMapLatest { settings ->
             when {
-                cars.isEmpty() || activeCarId == -1L ->
+                settings.cars.isEmpty() || settings.activeCarId == -1L ->
                     flowOf(DashboardUiState(emptyState = EmptyState.NoCar))
                 else -> {
-                    val activeCar = cars.firstOrNull { it.id == activeCarId }
-                    chargeEventQueries.observeForCar(activeCarId).map { events ->
-                        buildUiState(events, period, filter, activeCar)
+                    val activeCar = settings.cars.firstOrNull { it.id == settings.activeCarId }
+                    chargeEventQueries.observeForCar(settings.activeCarId).map { events ->
+                        buildUiState(events, period, filter, activeCar, settings)
                     }
                 }
             }
@@ -57,6 +76,7 @@ class ObserveDashboardStatsUseCase @Inject constructor(
         period: DashboardPeriod,
         filter: ChargeTypeFilter,
         activeCar: CarEntity?,
+        settings: CombinedSettings,
     ): DashboardUiState {
         val periodEvents = when (period) {
             DashboardPeriod.SincePreviousCharge -> allEventsForCar.takeLast(2)
@@ -87,13 +107,31 @@ class ObserveDashboardStatsUseCase @Inject constructor(
             val isOverestimated = isHeuristic &&
                 healthPct != null &&
                 healthPct >= CapacityEstimator.HEURISTIC_OVERESTIMATE_THRESHOLD_PERCENT
-            val stats = statsCalculator.computeStats(
+            val baseStats = statsCalculator.computeStats(
                 events = filtered,
                 label = period.toString(),
                 batteryHealthPercent = healthPct,
                 batteryHealthIsHeuristic = isHeuristic,
                 batteryHealthIsOverestimated = isOverestimated,
             )
+            // TASK-20: CO₂ stats. Both numbers null when the user hasn't
+            // configured the corresponding preference (default-zero
+            // contract — see Q6 in the BACKLOG TASK-20 brief). Dashboard
+            // hides the entire CO₂ card if either is null.
+            val evCo2 = if (settings.gridIntensityGCo2PerKwh > 0.0) {
+                co2Calculator.evCo2Kg(filtered, settings.gridIntensityGCo2PerKwh)
+            } else {
+                null
+            }
+            val iceCo2 = if (settings.iceBaselineLPer100km > 0.0 && baseStats.totalDistanceKm > 0.0) {
+                co2Calculator.iceCounterfactualCo2Kg(
+                    distanceKm = baseStats.totalDistanceKm,
+                    iceBaselineLPer100km = settings.iceBaselineLPer100km,
+                )
+            } else {
+                null
+            }
+            val stats = baseStats.copy(evCo2Kg = evCo2, iceCo2Kg = iceCo2)
             DashboardUiState(stats = stats, showMultiCurrencyBanner = stats.mixedCurrency)
         }
     }

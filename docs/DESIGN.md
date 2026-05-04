@@ -493,6 +493,24 @@ Aggregate stats use weighted averages: `Σ d_km / Σ e` for efficiency, `Σ cost
 
 First charge event for a car **cannot** compute efficiency (no prior odometer). Show "—" on card.
 
+### 7.1 CO₂ tracker (TASK-20)
+
+Two numbers, surfaced side-by-side on the Dashboard CO₂ card and as cumulative series on the Charts CO₂ tab:
+
+| Number | Formula |
+|--------|---------|
+| EV emissions (kg) | `Σ kwhAdded over period × gridIntensityGCo2PerKwh / 1000` |
+| ICE counterfactual (kg) | `(periodTotalDistanceKm / 100) × iceBaselineLPer100km × 2.31` |
+| Saved (kg, may be ±) | `iceCounterfactual − evEmissions` |
+
+Coefficients live on `CO2Calculator.companion`. Defaults: `iceBaselineLPer100km = 7.0` (EU real-world fleet average), `gridIntensityGCo2PerKwh = 577.0` (Cyprus 2025 average per cyprusgrid.com), `PETROL_CO2_KG_PER_LITRE = 2.31` (EPA tank-to-wheel). Both prefs are user-editable in **Settings → CO₂ tracker**.
+
+The card hides entirely when either pref is unset / 0 (Q6 contract — never show one number without its companion). Saved can be negative on dirty-grid + short-distance periods; the card surfaces this honestly with a `±X.X kg vs petrol` line rather than hiding the result. Full methodology + caveats (tank-to-wheel vs well-to-wheel, average vs marginal grid intensity) live in [`docs/METHODOLOGY.md`](METHODOLOGY.md).
+
+The Charts CO₂ tab renders cumulative running totals: solid EV line + dashed ICE-counterfactual line. The dashed style visually distinguishes "would have emitted" from "actually emitted". `prevOdo` chain advances unconditionally so a transient odometer rollback doesn't break the chain for subsequent valid deltas (mirrors the StatsCalculator pairwise convention above).
+
+**TASK-49 (per-event live grid intensity) deferred.** No free real-time Cyprus carbon-intensity API is available today. The viable next path is ENTSO-E hourly mix + per-source IPCC AR6 emission factors. See `docs/METHODOLOGY.md` Open Issues for the data-source survey notes.
+
 ---
 
 ## 8. Google Drive Backup
