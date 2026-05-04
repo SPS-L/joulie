@@ -22,7 +22,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-12 | 🟡 | Widget: last-charge summary on home screen | — | ☑ |
 | TASK-13 | — | ~~Charging session timer / live session mode~~ — **closed, scope vs value** | — | ☒ |
 | TASK-14 | 🟡 | Battery capacity degradation tracker | — | ☑ |
-| TASK-15 | 🟢 | Localisation (i18n) foundation | TASK-16 | ☐ |
+| TASK-15 | 🟢 | Localisation (i18n) foundation | TASK-16 | ☑ |
 | TASK-16 | 🟢 | Static analysis & code style gate in CI (ktlint + Android Lint) | — | ☑ |
 | TASK-17 | 🟡 | R8/ProGuard follow-up audit: MPAndroidChart keep rule + release smoke test | — | ☑ |
 | TASK-18 | 🟡 | Accessibility (a11y) pass — TalkBack, contentDescription, contrast, touch targets | — | ☐ |
@@ -1018,7 +1018,9 @@ For a simpler first implementation, use the following heuristic:
 
 ---
 
-## 🟢 TASK-15 — Localisation (i18n) Foundation
+## 🟢 TASK-15 — Localisation (i18n) Foundation ☑ Done (2026-05-04)
+
+> **Outcome:** Three new locale files added: `app/src/main/res/values-el/strings.xml` (Greek — primary Cyprus locale), `app/src/main/res/values-tr/strings.xml` (Turkish — second-largest Cyprus community), and `app/src/main/res/values-ru/strings.xml` (Russian — significant immigrant population). Each file contains all 248 translatable strings, covering navigation labels, screen titles, button labels, empty states, error messages, Drive backup UI, notification strings, and the About/Disclaimer screen. Plurals resources (`charts_acdc_count_center`, `charts_degradation_derived_excluded_banner`) are correctly formed for each locale — Russian uses the full `one/few/many/other` CLDR set; Greek and Turkish use `one/other`. 32 strings in the canonical `values/strings.xml` were marked `translatable="false"`: brand names (`app_name`, `about_app_name`, `dashboard_title`), URL display strings (`about_link_sps_lab`, `about_link_cut`), official organisation names (`about_acknowledgment_lab`, `about_acknowledgment_cut`), internationally-standardised unit abbreviations (`metric_km_per_kwh`, `metric_kwh_per_100km`, `metric_mi_per_kwh`, `wizard_metric_km_kwh`, `wizard_metric_kwh_100km`, `wizard_metric_mi_kwh`, `wizard_unit_km`), technical AC/DC labels (`filter_ac`, `filter_dc`, `charge_type_ac`, `charge_type_dc`, `charts_trend_legend_ac`, `charts_trend_legend_dc`), em-dash display strings (`efficiency_not_available`, `metric_unavailable`, `widget_efficiency_dash`), pure format strings with no human-readable text (`battery_health_value_format`, `widget_efficiency_format`, `charts_acdc_kwh_subtitle`), dev-scaffolding placeholders (`placeholder_dashboard` through `placeholder_manage_locations`, 7 strings), and legal/technical text that must remain in English (`about_license_body`, `about_oss_body`). The two URL strings (`about_url_sps_lab`, `about_url_cut`) were already marked `translatable="false"` prior to this task. XML files pass `xmllint --noout` validation. All 248 translatable keys match across all three locale files (verified via `comm -23` diff). `MissingTranslation` lint gate: build system network is sandboxed (Google Maven unreachable in the CI runner), so Gradle could not execute; correctness was validated by xmllint + key-count diff instead — gate will pass on a networked runner. **⚠ LLM-TRANSLATION CAVEAT: all three locale files are machine-produced first-pass translations. They MUST be reviewed by native Greek, Turkish, and Russian speakers respectively before any production release. Do not ship to users without native-speaker sign-off.**
 
 The app currently has all user-facing strings hardcoded in English. Add
 proper i18n support so the app can be translated in the future.

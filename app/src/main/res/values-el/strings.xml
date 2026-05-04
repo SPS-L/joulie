@@ -1,0 +1,324 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Greek (el) translations — LLM-produced first pass.
+    REQUIRES review by a native Greek speaker before production release.
+-->
+<resources>
+    <!-- Wizard -->
+    <string name="wizard_welcome_title">⚡ Παρακολούθηση Αποδοτικότητας ΗΟΧ</string>
+    <string name="wizard_welcome_body">Ας ρυθμίσουμε τις προτιμήσεις σας — μπορείτε να τις αλλάξετε αργότερα στις Ρυθμίσεις.</string>
+    <string name="wizard_metric_title">Πώς θέλετε να βλέπετε την αποδοτικότητα;</string>
+    <string name="wizard_unit_label">Μονάδα απόστασης</string>
+    <string name="wizard_unit_miles">μίλια</string>
+    <string name="wizard_currency_title">Ποιο νόμισμα χρησιμοποιείτε για το κόστος φόρτισης;</string>
+    <string name="wizard_currency_hint">Η εισαγωγή κόστους είναι προαιρετική — αφήστε 0 για να παραλείψετε.</string>
+    <string name="wizard_btn_get_started">Ξεκινήστε</string>
+    <string name="wizard_btn_next">Επόμενο →</string>
+    <string name="wizard_btn_back">← Πίσω</string>
+    <string name="wizard_btn_finish">Τέλος ✓</string>
+
+    <!-- Location chips -->
+    <string name="location_chip_home">🏠 Σπίτι</string>
+    <string name="location_chip_work">💼 Εργασία</string>
+    <string name="location_chip_public">⚡ Δημόσιος</string>
+    <string name="location_chip_add">+ Προσθήκη</string>
+
+    <!-- Cost form -->
+    <string name="cost_hint_zero">Αφήστε 0 ή κενό για παράλειψη — δεν θα συμπεριληφθεί στα στατιστικά</string>
+    <string name="cost_toggle_total">Συνολικό κόστος</string>
+    <string name="cost_toggle_per_kwh">Τιμή ανά kWh</string>
+
+    <!-- Settings -->
+    <string name="pref_primary_metric">Κύρια μονάδα αποδοτικότητας</string>
+    <string name="pref_distance_unit">Μονάδα απόστασης</string>
+    <string name="pref_currency">Νόμισμα</string>
+    <string name="pref_theme">Θέμα</string>
+    <string name="pref_drive_backup">Αντίγραφο ασφαλείας Google Drive</string>
+    <string name="pref_manage_locations">Διαχείριση προσαρμοσμένων τοποθεσιών</string>
+    <string name="pref_reset_preferences">Επαναφορά προτιμήσεων</string>
+    <string name="pref_reset_data">Επαναφορά όλων των δεδομένων</string>
+    <string name="pref_export_csv">Εξαγωγή CSV</string>
+
+    <!-- Dashboard -->
+    <string name="period_last_charge">Τελευταία φόρτιση</string>
+    <string name="period_year">Έτος</string>
+    <string name="period_custom">Προσαρμοσμένο</string>
+    <string name="filter_all">Όλα</string>
+    <string name="empty_state_title">Δεν υπάρχουν φορτίσεις</string>
+    <string name="empty_state_body">Πατήστε + για καταγραφή της πρώτης φόρτισης</string>
+
+    <!-- Cars -->
+    <string name="add_car">Προσθήκη αυτοκινήτου</string>
+    <string name="car_name_hint">Όνομα αυτοκινήτου (π.χ. Tesla Model 3)</string>
+
+    <!-- Drive -->
+    <string name="drive_found_backup">Βρέθηκε αντίγραφο ασφαλείας από %s. Επαναφορά;</string>
+    <string name="drive_restore">Επαναφορά</string>
+    <string name="drive_skip">Παράλειψη</string>
+    <string name="drive_last_backup">Τελευταίο αντίγραφο: %s</string>
+    <string name="drive_backup_now">Δημιουργία αντιγράφου τώρα</string>
+
+    <!-- Drive (Sub-project E) -->
+    <string name="settings_section_drive">Αντίγραφα ασφαλείας &amp; επαναφορά</string>
+    <string name="settings_drive_label">Αντίγραφο ασφαλείας Google Drive</string>
+    <string name="settings_drive_subtitle_off">Απενεργοποιημένο</string>
+    <string name="settings_drive_subtitle_on">Ενεργό — αυτόματο αντίγραφο σε κάθε αλλαγή</string>
+    <string name="settings_last_backup_never">Ποτέ</string>
+    <string name="settings_last_backup_label">Τελευταίο αντίγραφο: %1$s</string>
+    <string name="drive_restore_dialog_title">Επαναφορά από Drive;</string>
+    <string name="drive_restore_dialog_body">Βρέθηκε αντίγραφο από %1$s. Η επαναφορά θα αντικαταστήσει τα υπάρχοντα δεδομένα στη συσκευή.</string>
+    <string name="drive_restore_dialog_confirm">Επαναφορά</string>
+    <string name="drive_restore_dialog_skip">Παράλειψη</string>
+    <string name="drive_restore_succeeded">Το αντίγραφο ασφαλείας επαναφέρθηκε.</string>
+    <string name="drive_auth_failed">Δεν ήταν δυνατή η σύνδεση στο Google Drive. Δοκιμάστε ξανά.</string>
+    <string name="drive_consent_cancelled">Το αντίγραφο ασφαλείας Drive δεν ενεργοποιήθηκε — η συναίνεση ακυρώθηκε.</string>
+    <string name="drive_network_error">Δεν υπάρχει σύνδεση δικτύου. Το αντίγραφο θα επαναληφθεί όταν συνδεθείτε στο διαδίκτυο.</string>
+    <string name="drive_remote_backup_too_new">Αυτό το αντίγραφο δημιουργήθηκε από νεότερη έκδοση. Ενημερώστε την εφαρμογή για επαναφορά.</string>
+    <string name="drive_restore_failed">Η επαναφορά απέτυχε. Τα τοπικά δεδομένα δεν άλλαξαν.</string>
+
+    <!-- Drive — manual controls -->
+    <string name="drive_backup_now_button">Δημιουργία αντιγράφου τώρα</string>
+    <string name="drive_wipe_button">Διαγραφή απομακρυσμένου αντιγράφου</string>
+    <string name="drive_wipe_confirm_title">Διαγραφή απομακρυσμένου αντιγράφου;</string>
+    <string name="drive_wipe_confirm_body">Αυτό διαγράφει μόνιμα το αρχείο «evtracker_backup.json» από τον φάκελο δεδομένων εφαρμογής του Google Drive. Τα τοπικά δεδομένα στη συσκευή ΔΕΝ επηρεάζονται. Η επόμενη τοπική αλλαγή θα δημιουργήσει αυτόματα νέο αντίγραφο.</string>
+    <string name="drive_wipe_confirm_delete">Διαγραφή</string>
+    <string name="drive_backup_now_success">Αντίγραφο ασφαλείας αναρτήθηκε</string>
+    <string name="drive_wipe_success">Απομακρυσμένο αντίγραφο διαγράφηκε</string>
+    <string name="drive_backup_now_failure">Η δημιουργία αντιγράφου απέτυχε. Δοκιμάστε ξανά.</string>
+    <string name="drive_wipe_failure">Δεν ήταν δυνατή η διαγραφή του απομακρυσμένου αντιγράφου. Δοκιμάστε ξανά.</string>
+    <string name="drive_storage_full">Ο χώρος αποθήκευσης Drive είναι πλήρης. Ελευθερώστε χώρο και δοκιμάστε ξανά.</string>
+
+    <!-- Home-screen widget -->
+    <string name="widget_last_charge_label">Τελευταία φόρτιση</string>
+    <string name="widget_empty_state">Δεν υπάρχουν καταγεγραμμένες φορτίσεις.</string>
+    <string name="widget_kwh_added_format">%1$s kWh προστέθηκε</string>
+    <string name="widget_charge_type_content_description">Τύπος τελευταίας φόρτισης</string>
+
+    <!-- Backup notifications -->
+    <string name="backup_notif_channel_status_name">Κατάσταση αντιγράφου</string>
+    <string name="backup_notif_channel_status_description">Ειδοποιήσεις χαμηλής προτεραιότητας όταν το αντίγραφο Drive αποτυγχάνει επανειλημμένα.</string>
+    <string name="backup_notif_channel_auth_name">Απαιτείται σύνδεση για αντίγραφο</string>
+    <string name="backup_notif_channel_auth_description">Ειδοποιήσεις υψηλότερης προτεραιότητας όταν απαιτείται ανανέωση σύνδεσης Drive.</string>
+    <string name="backup_notif_chronic_failure_title">Αποτυχία αντιγράφου Drive</string>
+    <string name="backup_notif_chronic_failure_body">Πατήστε για άνοιγμα Ρυθμίσεων.</string>
+    <string name="backup_notif_auth_required_title">Απαιτείται σύνδεση στο Drive</string>
+    <string name="backup_notif_auth_required_body">Πατήστε για επανασύνδεση.</string>
+    <string name="backup_notif_permission_rationale_title">Επιτρέψτε ειδοποιήσεις αντιγράφων;</string>
+    <string name="backup_notif_permission_rationale_body">Το EV Tracker χρησιμοποιεί ειδοποιήσεις μόνο για να σας ενημερώνει όταν ένα αντίγραφο Drive αποτυγχάνει. Τίποτα άλλο.</string>
+    <string name="backup_notif_permission_rationale_allow">Επιτρέψτε</string>
+    <string name="backup_notif_permission_rationale_deny">Όχι τώρα</string>
+
+    <!-- Settings (F1) -->
+    <string name="settings_unit_flipped_to_km">Η μονάδα απόστασης άλλαξε επίσης σε km.</string>
+    <string name="settings_unit_flipped_to_miles">Η μονάδα απόστασης άλλαξε επίσης σε μίλια.</string>
+    <string name="settings_metric_flipped_km_per_kwh">Η κύρια μονάδα άλλαξε επίσης σε km / kWh.</string>
+    <string name="settings_metric_flipped_kwh_per_100km">Η κύρια μονάδα άλλαξε επίσης σε kWh / 100 km.</string>
+    <string name="settings_metric_flipped_mi_per_kwh">Η κύρια μονάδα άλλαξε επίσης σε mi / kWh.</string>
+    <string name="settings_export_csv_failed">Η εξαγωγή CSV απέτυχε.</string>
+
+    <!-- Settings (F1) — row labels and summaries -->
+    <string name="settings_primary_metric">Κύρια μονάδα</string>
+    <string name="settings_distance_unit">Μονάδα απόστασης</string>
+    <string name="settings_currency">Νόμισμα</string>
+    <string name="settings_theme">Θέμα</string>
+    <string name="settings_manage_locations">Διαχείριση τοποθεσιών</string>
+    <string name="settings_manage_locations_summary">%d αποθηκευμένες</string>
+    <string name="settings_reset_preferences">Επαναφορά προτιμήσεων</string>
+    <string name="settings_reset_preferences_summary">Θα χρειαστεί να επαναλάβετε τη διαδικασία ρύθμισης.</string>
+    <string name="settings_reset_active_car">Επαναφορά δεδομένων για %1$s</string>
+    <string name="settings_reset_active_car_default">Επαναφορά δεδομένων ενεργού αυτοκινήτου</string>
+    <string name="settings_reset_active_car_summary">Διαγραφή όλων των φορτίσεων για αυτό το αυτοκίνητο. Αυτοκίνητα και τοποθεσίες διατηρούνται.</string>
+    <string name="settings_reset_active_car_confirm">Διαγραφή όλων των φορτίσεων για %1$s; Αυτό δεν μπορεί να αναιρεθεί.</string>
+    <string name="settings_reset_active_car_done">Οι φορτίσεις διαγράφηκαν.</string>
+    <string name="settings_reset_all">Επαναφορά όλων των δεδομένων</string>
+    <string name="settings_reset_all_summary">Διαγραφή όλων των αυτοκινήτων, φορτίσεων και προσαρμοσμένων τοποθεσιών.</string>
+    <string name="settings_reset_all_confirm">Διαγραφή όλων; Αυτό δεν μπορεί να αναιρεθεί.</string>
+    <string name="settings_reset_all_confirm_drive_on">Διαγραφή όλων; Αυτό δεν μπορεί να αναιρεθεί, και το αντίγραφο ασφαλείας Google Drive θα αντικατασταθεί με κενά δεδομένα. Για να διατηρήσετε το απομακρυσμένο αντίγραφο, απενεργοποιήστε πρώτα το Drive.</string>
+    <string name="settings_export_csv">Εξαγωγή CSV</string>
+    <string name="settings_export_csv_summary">Κοινοποίηση φορτίσεων ως αρχείο CSV.</string>
+    <string name="settings_export_csv_range">Εξαγωγή CSV (εύρος ημερομηνιών)</string>
+    <string name="settings_export_csv_range_summary">Επιλέξτε ημερομηνία έναρξης και λήξης, και κοινοποιήστε τις αντίστοιχες φορτίσεις.</string>
+    <string name="settings_export_csv_range_picker_title">Επιλογή εύρους εξαγωγής</string>
+    <string name="settings_theme_system">Προεπιλογή συστήματος</string>
+    <string name="settings_theme_light">Φωτεινό</string>
+    <string name="settings_theme_dark">Σκοτεινό</string>
+
+    <!-- ManageLocations (F1) -->
+    <string name="manage_locations_title">Διαχείριση προσαρμοσμένων τοποθεσιών</string>
+    <string name="manage_locations_empty">Οι τοποθεσίες που αποθηκεύετε σε φορτίσεις θα εμφανιστούν εδώ.</string>
+    <string name="manage_locations_row_count">Χρησιμοποιήθηκε %1$d φορά(ές) · τελευταία %2$s</string>
+    <string name="manage_locations_row_count_zero">Τελευταία %1$s</string>
+    <string name="manage_locations_undo_snackbar">Διαγράφηκε «%1$s»</string>
+
+    <!-- F1 common -->
+    <string name="common_undo">Αναίρεση</string>
+    <string name="common_cancel">Ακύρωση</string>
+    <string name="common_confirm">Επιβεβαίωση</string>
+
+    <!-- F1 startup recovery -->
+    <string name="recovery_failure_title">Αποτυχία ανάκτησης επαναφοράς</string>
+    <string name="recovery_failure_body">Δεν ήταν δυνατή η ολοκλήρωση της τελευταίας επαναφοράς.\n\n%1$s\n\nΔοκιμάστε ξανά, ή διαγράψτε τα δεδομένα εφαρμογής από τις Ρυθμίσεις συστήματος εάν το πρόβλημα επιμένει.</string>
+    <string name="recovery_failure_retry">Δοκιμάστε ξανά</string>
+
+    <!-- Misc -->
+    <string name="confirm_reset">Αυτό θα διαγράψει μόνιμα όλα τα δεδομένα. Συνέχεια;</string>
+    <string name="reset_per_car">Επαναφορά αυτού του αυτοκινήτου</string>
+    <string name="reset_all">Επαναφορά όλων των αυτοκινήτων</string>
+
+    <!-- Wizard (Task 7 additions) -->
+    <string name="wizard_metric_question">Πώς θέλετε να βλέπετε την αποδοτικότητα;</string>
+    <string name="wizard_metric_km_per_kwh">km / kWh (απόσταση / ενέργεια)</string>
+    <string name="wizard_metric_kwh_per_100km">kWh / 100 km (ενέργεια / απόσταση)</string>
+    <string name="wizard_metric_mi_per_kwh">mi / kWh (μίλια)</string>
+    <string name="wizard_currency_question">Ποιο νόμισμα χρησιμοποιείτε για το κόστος φόρτισης;</string>
+    <string name="wizard_button_back">← Πίσω</string>
+    <string name="wizard_button_next">Επόμενο →</string>
+    <string name="wizard_button_get_started">Ξεκινήστε</string>
+    <string name="wizard_button_finish">Τέλος ✓</string>
+
+    <!-- Wizard page 4 -->
+    <string name="wizard_about_title">Σχετικά με αυτήν την εφαρμογή &amp; όροι</string>
+    <string name="wizard_disclaimer_accept">Έχω διαβάσει και αποδέχομαι την αποποίηση ευθύνης</string>
+
+    <!-- History -->
+    <string name="history_title">Ιστορικό</string>
+    <string name="history_empty">Δεν υπάρχουν φορτίσεις — πατήστε + στον Πίνακα για καταγραφή</string>
+    <string name="snackbar_charge_deleted">Φόρτιση διαγράφηκε</string>
+    <string name="undo">Αναίρεση</string>
+
+    <!-- Bottom nav -->
+    <string name="nav_dashboard">Πίνακας</string>
+    <string name="nav_history">Ιστορικό</string>
+    <string name="nav_charts">Γραφήματα</string>
+    <string name="nav_settings">Ρυθμίσεις</string>
+
+    <!-- Period tabs -->
+    <string name="period_since_previous">Από προηγούμενη</string>
+
+    <!-- Dashboard -->
+    <string name="empty_no_car_headline">Προσθέστε ένα αυτοκίνητο για να ξεκινήσετε</string>
+    <string name="empty_no_car_cta">Προσθήκη αυτοκινήτου</string>
+    <string name="empty_no_events_headline">Καταγράψτε την πρώτη σας φόρτιση για να δείτε στατιστικά</string>
+    <string name="empty_no_events_cta">Καταγραφή φόρτισης</string>
+    <string name="multi_currency_banner">Περίοδος με πολλαπλά νομίσματα — στατιστικά κόστους κρυφά</string>
+    <string name="manage_cars">Διαχείριση αυτοκινήτων…</string>
+    <string name="metric_need_two_charges">Απαιτούνται 2+ φορτίσεις</string>
+    <string name="cost_card_total">Συνολικό κόστος</string>
+    <string name="battery_health_card_label">Κατάσταση μπαταρίας</string>
+    <string name="battery_health_card_subtitle">Τελευταία ενεργός χωρητικότητα έναντι ονομαστικής</string>
+    <string name="battery_health_estimated_warning">Εκτιμώμενο — η ευρετική μέθοδος μπορεί να υπερεκτιμά</string>
+    <string name="battery_health_estimated_warning_a11y">Εκτιμώμενη χωρητικότητα, μπορεί να υπερεκτιμά</string>
+    <string name="cost_card_per_km">Κόστος ανά km</string>
+    <string name="cost_card_per_100km">Κόστος ανά 100 km</string>
+    <string name="fab_log_charge">Καταγραφή φόρτισης</string>
+
+    <!-- Charge edit error messages -->
+    <string name="error_odometer_required">Εισάγετε έγκυρη ένδειξη χιλιομέτρων</string>
+    <string name="error_odometer_must_be_higher">Το οδόμετρο πρέπει να είναι μεγαλύτερο από την προηγούμενη εγγραφή</string>
+    <string name="error_odometer_must_be_greater_than">Πρέπει να είναι μεγαλύτερο από την τελευταία εγγραφή (%1$s %2$s)</string>
+    <string name="error_odometer_must_be_less_than">Πρέπει να είναι μικρότερο από την επόμενη εγγραφή (%1$s %2$s)</string>
+    <string name="error_kwh_required">Εισάγετε έγκυρη τιμή kWh</string>
+    <string name="error_soc_both_required">Εισάγετε και τις δύο τιμές SoC ή αφήστε και τις δύο κενές</string>
+    <string name="error_soc_range">Οι τιμές SoC πρέπει να είναι μεταξύ 0 και 100</string>
+    <string name="error_soc_after_must_exceed_before">Το SoC μετά πρέπει να είναι μεγαλύτερο από το SoC πριν</string>
+
+    <!-- Charge edit -->
+    <string name="charge_edit_create_title">Προσθήκη φόρτισης</string>
+    <string name="charge_edit_edit_title">Επεξεργασία φόρτισης</string>
+    <string name="hint_odometer_km">Οδόμετρο (km)</string>
+    <string name="hint_odometer_mi">Οδόμετρο (mi)</string>
+    <string name="hint_kwh">kWh που προστέθηκε</string>
+    <string name="hint_location">Τοποθεσία</string>
+    <string name="hint_cost">Κόστος</string>
+    <string name="hint_note">Σημείωση (προαιρετικό)</string>
+    <string name="hint_date_time">Ημερομηνία &amp; ώρα</string>
+    <string name="cost_section_header">Κόστος (προαιρετικό)</string>
+    <string name="soc_section_header">Δεδομένα SoC (προαιρετικό)</string>
+    <string name="hint_soc_before">SoC πριν (%)</string>
+    <string name="hint_soc_after">SoC μετά (%)</string>
+
+    <!-- TASK-43: kWh-from-SoC calculator -->
+    <string name="kwh_calculator_link">Δεν γνωρίζετε kWh; Υπολογισμός από SoC %</string>
+    <string name="kwh_calculator_banner">Το kWh εκτιμάται από τη μεταβολή SoC × ονομαστική χωρητικότητα. Αποκλείεται από την παρακολούθηση υποβάθμισης μπαταρίας.</string>
+    <string name="history_kwh_estimated_badge">Εκτ.</string>
+    <string name="history_kwh_estimated_badge_content_desc">kWh εκτιμάται από κατάσταση φόρτισης</string>
+    <plurals name="charts_degradation_derived_excluded_banner">
+        <item quantity="one">%1$d εκτιμώμενο συμβάν εξαιρέθηκε από την παρακολούθηση υποβάθμισης (υπολογίστηκε από SoC %%).</item>
+        <item quantity="other">%1$d εκτιμώμενα συμβάντα εξαιρέθηκαν από την παρακολούθηση υποβάθμισης (υπολογίστηκε από SoC %%).</item>
+    </plurals>
+    <string name="cost_mode_total">Σύνολο</string>
+    <string name="cost_mode_per_kwh">Ανά kWh</string>
+    <string name="charge_save">Αποθήκευση</string>
+
+    <!-- Location chips -->
+    <string name="location_home">Σπίτι</string>
+    <string name="location_work">Εργασία</string>
+    <string name="location_public">Δημόσιο</string>
+    <string name="chip_add_location">+ Προσθήκη</string>
+
+    <!-- Cars error messages -->
+    <string name="error_car_name_required">Το όνομα είναι υποχρεωτικό</string>
+
+    <!-- Cars -->
+    <string name="cars_title">Αυτοκίνητα</string>
+    <string name="car_active">Ενεργό</string>
+    <string name="car_action_set_active">Ορισμός ως ενεργό</string>
+    <string name="car_action_edit">Επεξεργασία</string>
+    <string name="car_action_delete">Διαγραφή</string>
+    <string name="car_delete_title">Διαγραφή αυτοκινήτου;</string>
+    <string name="car_delete_message">Θα διαγραφούν επίσης όλες οι φορτίσεις αυτού του αυτοκινήτου.</string>
+    <string name="car_delete_confirm">Διαγραφή</string>
+    <string name="car_dialog_add_title">Προσθήκη αυτοκινήτου</string>
+    <string name="car_dialog_edit_title">Επεξεργασία αυτοκινήτου</string>
+    <string name="car_dialog_save">Αποθήκευση</string>
+    <string name="car_dialog_cancel">Ακύρωση</string>
+    <string name="car_form_name">Όνομα</string>
+    <string name="car_form_make">Μάρκα</string>
+    <string name="car_form_model">Μοντέλο</string>
+    <string name="car_form_year">Έτος</string>
+    <string name="car_form_battery_kwh">Μπαταρία (kWh)</string>
+
+    <!-- F2 — Charts -->
+    <string name="charts_title">Γραφήματα</string>
+    <string name="charts_period_last_6_months">Τελευταίοι 6 μήνες</string>
+    <string name="charts_period_last_12_months">Τελευταίοι 12 μήνες</string>
+    <string name="charts_period_all_time">Όλη την περίοδο</string>
+    <string name="charts_period_custom">Προσαρμοσμένο…</string>
+    <string name="charts_tab_trend">Τάση</string>
+    <string name="charts_tab_monthly_kwh">Μηνιαία ενέργεια</string>
+    <string name="charts_tab_monthly_cost">Μηνιαίο κόστος</string>
+    <string name="charts_tab_ac_dc">AC έναντι DC</string>
+    <string name="charts_tab_locations">Τοποθεσίες</string>
+    <string name="charts_tab_degradation">Υποβάθμιση</string>
+    <string name="charts_degradation_legend_effective">Ενεργός χωρητικότητα</string>
+    <string name="charts_degradation_legend_nominal">Ονομαστική</string>
+    <string name="charts_degradation_no_battery">Ορίστε την ονομαστική χωρητικότητα μπαταρίας στα Αυτοκίνητα για να ενεργοποιήσετε αυτό το γράφημα</string>
+    <string name="charts_degradation_need_three">Απαιτούνται τουλάχιστον 3 καταλληλές φορτίσεις (πλήρης φόρτιση ή φορτίσεις με καταχωρισμένες τιμές SoC)</string>
+    <string name="charts_trend_y_kmh">Αποδοτικότητα (km/kWh)</string>
+    <string name="charts_trend_y_mi">Αποδοτικότητα (mi/kWh)</string>
+    <string name="charts_trend_y_kwh100">Αποδοτικότητα (kWh/100km)</string>
+    <string name="charts_trend_need_two">Απαιτούνται τουλάχιστον 2 φορτίσεις για εμφάνιση τάσης</string>
+    <string name="charts_no_data_period">Δεν υπάρχουν δεδομένα για αυτήν την περίοδο</string>
+    <string name="charts_no_cost_period">Δεν υπάρχουν δεδομένα κόστους για αυτήν την περίοδο</string>
+    <string name="charts_no_locations_period">Δεν υπάρχουν δεδομένα τοποθεσίας για αυτήν την περίοδο</string>
+    <string name="charts_locations_other">Άλλο</string>
+    <plurals name="charts_acdc_count_center">
+        <item quantity="one">%d φόρτιση</item>
+        <item quantity="other">%d φορτίσεις</item>
+    </plurals>
+
+    <!-- TASK-10 — About / Info screen -->
+    <string name="about_title">Σχετικά</string>
+    <string name="about_version_label">Έκδοση %1$s (build %2$d)</string>
+    <string name="about_acknowledgment_title">Αναπτύχθηκε από</string>
+    <string name="about_acknowledgment_location">Λεμεσός, Κύπρος</string>
+    <string name="about_open_link_failed">Δεν βρέθηκε εφαρμογή προγράμματος περιήγησης για άνοιγμα του συνδέσμου.</string>
+    <string name="about_license_title">Άδεια</string>
+    <string name="about_disclaimer_title">Αποποίηση ευθύνης</string>
+    <string name="about_disclaimer_body">Αυτή η εφαρμογή παρέχεται αποκλειστικά για ερευνητική και προσωπική χρήση. Οι εκτιμήσεις αποδοτικότητας και κόστους βασίζονται σε δεδομένα που εισάγει ο χρήστης και δεν αποτελούν επαγγελματικές ενεργειακές ή χρηματοοικονομικές συμβουλές. Το SPS-Lab και το Τεχνολογικό Πανεπιστήμιο Κύπρου δεν φέρουν καμία ευθύνη για αποφάσεις που λαμβάνονται βάσει δεδομένων που καταγράφονται ή εμφανίζονται από αυτήν την εφαρμογή.</string>
+    <string name="about_oss_title">Βιβλιοθήκες ανοιχτού κώδικα</string>
+
+    <!-- Settings — About entry point -->
+    <string name="settings_about">Σχετικά</string>
+    <string name="settings_about_summary">Έκδοση, άδεια, αναγνωρίσεις</string>
+</resources>
