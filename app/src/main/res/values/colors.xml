@@ -1,10 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Joulie brand palette (docs/branding/joulie-style-guide.png):
+    <!-- Joulie brand palette (docs/branding/brand_palette.png):
          #0D47FF vibrant blue · #00C2D1 teal · #A6F43C green · #FFD54D yellow.
          M3 tone ramps below are derived from these seeds; they are an
          approximation of Material Theme Builder output and should be
          regenerated through MTB if pixel-precise tokens are required. -->
+
+    <!-- Adaptive launcher-icon background: solid Joulie brand blue.
+         Referenced from mipmap-anydpi-v26/ic_launcher{,_round}.xml so
+         Android 8+ shows the logo on a brand-blue tile. The legacy
+         (pre-O) ic_launcher.png mipmaps render the logo on white per
+         the master ic_launcher_512.png. -->
+    <color name="joulie_brand_blue">#0D47FF</color>
 
     <!-- M3 — Primary (seeded #0D47FF — Joulie vibrant blue) -->
     <color name="md_theme_light_primary">#1F3DCC</color>

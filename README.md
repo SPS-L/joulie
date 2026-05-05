@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/branding/joulie-style-guide.png" alt="Joulie — Log every charge. Understand every kilometre." width="320" />
+  <img src="docs/branding/joulie_logo_transparent.png" alt="Joulie — Log every charge. Understand every kilometre." width="320" />
 </p>
 
 # Joulie
