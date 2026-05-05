@@ -17,6 +17,33 @@ import javax.inject.Inject
 
 class StatsCalculator @Inject constructor() {
 
+    /**
+     * TASK-53: defense-in-depth guard for the single-car invariant. Every
+     * aggregation in this class except [detectMixedCurrency] assumes its
+     * input shares a single `carId` — the odometer-delta loops in
+     * [computeStats] / [computeEfficiencyTrend] produce nonsense numbers
+     * across a car-switch boundary if two cars happen to have similar
+     * odometer readings, and [computeMonthlyBuckets] / [computeAcDcSplit]
+     * / [computeLocationDistribution] would silently roll two cars'
+     * histories into one indistinguishable summary.
+     *
+     * Today every call site (`ObserveDashboardStatsUseCase`,
+     * `ObserveChartsModelsUseCase`) passes a single-car list, but the
+     * invariant is unenforced. A future cross-car comparison view would
+     * trip this require with a clear failure rather than silently
+     * producing wrong numbers; if cross-car aggregation ever becomes a
+     * legitimate use case, add a parallel method (`computeStatsAcrossCars`,
+     * etc.) rather than relaxing the existing contract.
+     *
+     * Empty input passes the guard — `distinct().size == 0` is `<= 1`.
+     */
+    private fun requireSingleCar(events: List<ChargeEventEntity>) {
+        val distinctCars = events.map { it.carId }.distinct()
+        require(distinctCars.size <= 1) {
+            "expects a single-car event list; got carIds=$distinctCars"
+        }
+    }
+
     fun computeStats(
         events: List<ChargeEventEntity>,
         label: String,
@@ -24,6 +51,7 @@ class StatsCalculator @Inject constructor() {
         batteryHealthIsHeuristic: Boolean = false,
         batteryHealthIsOverestimated: Boolean = false,
     ): Stats {
+        requireSingleCar(events)
         val totalKwhAll = events.sumOf { it.kwhAdded }
         val chargeCount = events.size
 
@@ -97,6 +125,7 @@ class StatsCalculator @Inject constructor() {
     }
 
     fun computeMonthlyBuckets(events: List<ChargeEventEntity>): List<MonthBucket> {
+        requireSingleCar(events)
         val costedCurrencies = events.mapNotNull { e -> e.costTotal?.let { e.currency } }.distinct()
         val singleCurrency = costedCurrencies.singleOrNull()
         val groups = events.groupBy { ev ->
@@ -122,10 +151,20 @@ class StatsCalculator @Inject constructor() {
         }.sortedWith(compareBy({ it.year }, { it.month }))
     }
 
+    /**
+     * TASK-53 exemption: this function semantically does NOT depend on
+     * car identity — it is asking "are there ≥ 2 distinct currencies
+     * among costed events". A future cross-car aggregator (e.g. a
+     * fleet-level summary view) might legitimately call this on a
+     * multi-car list to check currency homogeneity, so the
+     * single-car guard is intentionally NOT applied here. Every other
+     * aggregation in this class enforces the guard via [requireSingleCar].
+     */
     fun detectMixedCurrency(events: List<ChargeEventEntity>): Boolean =
         events.mapNotNull { e -> e.costTotal?.let { e.currency } }.distinct().size > 1
 
     fun computeEfficiencyTrend(events: List<ChargeEventEntity>): EfficiencySeries {
+        requireSingleCar(events)
         fun seriesFor(predicate: (ChargeEventEntity) -> Boolean): List<EfficiencyPoint> {
             val sorted = events.filter(predicate).sortedBy { it.eventDate }
             val out = ArrayList<EfficiencyPoint>(sorted.size)
@@ -147,6 +186,7 @@ class StatsCalculator @Inject constructor() {
     }
 
     fun computeAcDcSplit(events: List<ChargeEventEntity>): AcDcSplit {
+        requireSingleCar(events)
         val ac = events.filter { it.chargeType == ChargeType.AC }
         val dc = events.filter { it.chargeType.isDc }
         return AcDcSplit(
@@ -158,6 +198,7 @@ class StatsCalculator @Inject constructor() {
     }
 
     fun computeLocationDistribution(events: List<ChargeEventEntity>): List<LocationSlice> {
+        requireSingleCar(events)
         val counts = events
             .mapNotNull { it.location?.trim()?.takeIf(String::isNotBlank) }
             .groupingBy { it }
