@@ -31,13 +31,18 @@
             app:expandedTitleMarginEnd="0dp"
             app:title="@string/about_title">
 
-            <!-- Hero banner: drawable/about_hero (PNG copied from the brand pack).
-                 Fallback: bg_brand_gradient ensures the header still looks branded
-                 if the PNG is missing. -->
+            <!-- Hero banner: drawable/about_hero (1600x480 PNG from the brand
+                 pack). scaleType="fitCenter" so the bolt-J + wordmark +
+                 tagline stay fully visible at any phone width; the
+                 bg_brand_gradient background fills the top / bottom gaps
+                 so the banner reads as one branded block rather than a
+                 letterboxed image. centerCrop was wrong here: at 240 dp
+                 height the 3.33:1 source overflows the viewport width and
+                 the bolt-J got cropped off the left edge. -->
             <ImageView
                 android:layout_width="match_parent"
                 android:layout_height="240dp"
-                android:scaleType="centerCrop"
+                android:scaleType="fitCenter"
                 android:contentDescription="@string/about_app_name"
                 android:background="@drawable/bg_brand_gradient"
                 android:src="@drawable/about_hero"
@@ -97,15 +102,7 @@
                         android:gravity="center_horizontal"
                         android:textAppearance="?attr/textAppearanceBodyMedium"
                         android:textColor="?attr/colorOnSurfaceVariant"
-                        tools:text="Version 1.8.3 (build 42)"/>
-
-                    <ImageView
-                        android:layout_width="240dp"
-                        android:layout_height="60dp"
-                        android:layout_gravity="center_horizontal"
-                        android:layout_marginTop="16dp"
-                        android:contentDescription="@string/about_acknowledgment_lab"
-                        android:src="@drawable/ic_spslab_badge"/>
+                        tools:text="Version 1.9.3 (build 19)"/>
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
