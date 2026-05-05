@@ -1,22 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- M3 — Primary (seeded #1565C0) -->
-    <color name="md_theme_light_primary">#0061A4</color>
+    <!-- Joulie brand palette (docs/branding/joulie-style-guide.png):
+         #0D47FF vibrant blue · #00C2D1 teal · #A6F43C green · #FFD54D yellow.
+         M3 tone ramps below are derived from these seeds; they are an
+         approximation of Material Theme Builder output and should be
+         regenerated through MTB if pixel-precise tokens are required. -->
+
+    <!-- M3 — Primary (seeded #0D47FF — Joulie vibrant blue) -->
+    <color name="md_theme_light_primary">#1F3DCC</color>
     <color name="md_theme_light_onPrimary">#FFFFFF</color>
-    <color name="md_theme_light_primaryContainer">#D1E4FF</color>
-    <color name="md_theme_light_onPrimaryContainer">#001D36</color>
+    <color name="md_theme_light_primaryContainer">#DCE1FF</color>
+    <color name="md_theme_light_onPrimaryContainer">#001255</color>
 
-    <!-- M3 — Secondary (algorithmic, seeded #1565C0) -->
-    <color name="md_theme_light_secondary">#535F70</color>
+    <!-- M3 — Secondary (seeded #00C2D1 — Joulie teal) -->
+    <color name="md_theme_light_secondary">#006874</color>
     <color name="md_theme_light_onSecondary">#FFFFFF</color>
-    <color name="md_theme_light_secondaryContainer">#D7E3F8</color>
-    <color name="md_theme_light_onSecondaryContainer">#101C2B</color>
+    <color name="md_theme_light_secondaryContainer">#9EEFFD</color>
+    <color name="md_theme_light_onSecondaryContainer">#001F24</color>
 
-    <!-- M3 — Tertiary (overridden orange ramp anchored on #FB8C00 — DESIGN §6 "DC orange") -->
-    <color name="md_theme_light_tertiary">#A04E00</color>
+    <!-- M3 — Tertiary (seeded #FFD54D — Joulie yellow; replaces the
+         pre-rebrand "DC orange" #FB8C00 ramp). DC chart series and the
+         provenance "Est." badge surface in this ramp. -->
+    <color name="md_theme_light_tertiary">#7F5700</color>
     <color name="md_theme_light_onTertiary">#FFFFFF</color>
-    <color name="md_theme_light_tertiaryContainer">#FFDCC0</color>
-    <color name="md_theme_light_onTertiaryContainer">#341000</color>
+    <color name="md_theme_light_tertiaryContainer">#FFE082</color>
+    <color name="md_theme_light_onTertiaryContainer">#281900</color>
 
     <!-- M3 — Error -->
     <color name="md_theme_light_error">#BA1A1A</color>
@@ -37,27 +45,27 @@
     <!-- M3 — Inverse + scrim -->
     <color name="md_theme_light_inverseSurface">#2F3033</color>
     <color name="md_theme_light_inverseOnSurface">#F1F0F4</color>
-    <color name="md_theme_light_inversePrimary">#9ECAFF</color>
+    <color name="md_theme_light_inversePrimary">#B7C4FF</color>
     <color name="md_theme_light_scrim">#000000</color>
 
-    <!-- F2 — Chart palette (kept verbatim from F2; non-theme product colors) -->
-    <color name="chart_1">#1565C0</color>
-    <color name="chart_2">#00796B</color>
-    <color name="chart_3">#F57F17</color>
-    <color name="chart_4">#AD1457</color>
+    <!-- Chart palette (non-theme product colors). chart_1 anchors on
+         the Joulie primary blue; chart_2/3/4/5 are visually-distinct
+         hues retained for series ≥ 2. -->
+    <color name="chart_1">#0D47FF</color>
+    <color name="chart_2">#00C2D1</color>
+    <color name="chart_3">#FFD54D</color>
+    <color name="chart_4">#A6F43C</color>
     <color name="chart_5">#6A1B9A</color>
 
-    <!-- F2 — Chart series fallback colors. Used only when theme attrs
-         (?attr/colorPrimary, ?attr/colorTertiary) cannot be resolved. With the
-         M3 theme rewrite the theme attrs *do* resolve, but the fallbacks remain
-         for defensive code paths. -->
-    <color name="chart_ac_fallback">#1E88E5</color>
-    <color name="chart_dc_fallback">#FB8C00</color>
+    <!-- Chart series fallback colors. Used only when theme attrs
+         (?attr/colorPrimary, ?attr/colorTertiary) cannot be resolved.
+         AC = primary blue, DC = tertiary yellow. -->
+    <color name="chart_ac_fallback">#0D47FF</color>
+    <color name="chart_dc_fallback">#FFD54D</color>
 
     <!-- Defensive fallbacks for chart axis text and gridlines. Used only
-         when ?attr/colorOnSurface and ?attr/colorOutlineVariant cannot be
-         resolved (which the M3 theme always provides). The values match the
-         light-theme M3 surface roles approximately. -->
+         when ?attr/colorOnSurface and ?attr/colorOutlineVariant cannot
+         be resolved (which the M3 theme always provides). -->
     <color name="chart_axis_text_fallback">#1C1B1F</color>
     <color name="chart_axis_grid_fallback">#79747E</color>
 </resources>

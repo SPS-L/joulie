@@ -426,7 +426,7 @@ Recommended package layout for long-term maintainability:
 - Save → validates odometer > last entry, persists, updates `custom_locations`
 
 ### Charts
-- Line chart: efficiency trend over time, AC series (blue) vs DC series (orange).
+- Line chart: efficiency trend over time, AC series (Joulie blue `#0D47FF`) vs DC series (Joulie yellow `#FFD54D` — pre-rebrand: orange `#FB8C00`).
   The Y-axis follows `primaryMetric`: `km_per_kwh` plots raw `kmPerKwh`,
   `kwh_per_100km` plots `100 / kmPerKwh` (skipping rows with `kmPerKwh ≤ 0`),
   and `mi_per_kwh` plots `UnitConverter.kmPerKwhToMiPerKwh(kmPerKwh)`.
