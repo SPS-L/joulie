@@ -23,6 +23,9 @@ Android app (`org.spsl.evtracker`) for logging EV charge events and analyzing ef
 
 Repo root holds only `README.md`, `CLAUDE.md`, and build/config files. All project documentation lives under `docs/`:
 
+- `README.md` — user-facing landing page (About / Download / Privacy / License).
+- `CONTRIBUTING.md` — contributor entry point: architecture, build, test, CI gate, releasing, SPDX-header rule, project-doc index.
+- `PRIVACY.md` — privacy policy (referenced from the Play Store listing).
 - `docs/DESIGN.md` — canonical product + technical spec (v3). Source of truth when in conflict with anything else.
 - `docs/GOOGLE_CLOUD_SETUP.md` — Drive API + OAuth Android client setup.
 - `docs/BACKLOG.md` — open backlog of post-v1 refactors and new features (live).
