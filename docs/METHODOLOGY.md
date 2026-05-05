@@ -1,4 +1,4 @@
-# Joulie — CO₂ Tracker Methodology
+# Joulie, CO₂ Tracker Methodology
 
 This document explains how the **Settings → CO₂** card and the **Charts → CO₂ tab** compute their numbers, where the default coefficients come from, and what caveats matter when interpreting them. It is the canonical reference for the constants in [`CO2Calculator`](../app/src/main/java/org/spsl/evtracker/domain/service/CO2Calculator.kt).
 
@@ -33,28 +33,28 @@ The Charts CO₂ tab renders the cumulative running totals over the period's eve
 
 ## Coefficients
 
-### Petrol (gasoline) CO₂ emission factor — **2.31 kg CO₂ per litre**
+### Petrol (gasoline) CO₂ emission factor, **2.31 kg CO₂ per litre**
 
 Source: US Environmental Protection Agency, *Greenhouse Gas Emissions from a Typical Passenger Vehicle*. The EPA quotes 8.887 kg CO₂ per gallon of motor gasoline; converted to litres at 3.78541 L/gal that's 2.348 kg/L. The 2.31 figure used here matches the EU reporting convention (which assumes a slightly lower carbon density per litre because of lower ethanol content and tighter regulation on aromatics).
 
-This is a **tank-to-wheel** factor — it counts only the CO₂ released when the petrol burns in the engine, not the upstream refining and transport emissions (which would add ~17%). The EV side uses tank-equivalent (grid intensity at point-of-charge), keeping the comparison apples-to-apples.
+This is a **tank-to-wheel** factor, it counts only the CO₂ released when the petrol burns in the engine, not the upstream refining and transport emissions (which would add ~17%). The EV side uses tank-equivalent (grid intensity at point-of-charge), keeping the comparison apples-to-apples.
 
-### Petrol baseline — **7.0 L/100 km (default)**
+### Petrol baseline, **7.0 L/100 km (default)**
 
-Source: European Environment Agency, *Real-world fuel consumption of new passenger cars in the EU*. The 7.0 L/100km figure represents the EU real-world fleet average — what an existing petrol car a household might already own actually consumes in mixed driving. New-car NEDC/WLTP averages are lower (around 5.0 L/100km) but those are aspirational; the 7.0 figure is the more honest counterfactual for "the car the user might have driven instead."
+Source: European Environment Agency, *Real-world fuel consumption of new passenger cars in the EU*. The 7.0 L/100km figure represents the EU real-world fleet average, what an existing petrol car a household might already own actually consumes in mixed driving. New-car NEDC/WLTP averages are lower (around 5.0 L/100km) but those are aspirational; the 7.0 figure is the more honest counterfactual for "the car the user might have driven instead."
 
 The user can edit this value in **Settings → CO₂ tracker → Petrol baseline** to match their specific vehicle.
 
-### Grid carbon intensity — **577 gCO₂/kWh (default)**
+### Grid carbon intensity, **577 gCO₂/kWh (default)**
 
-Source: [cyprusgrid.com](https://cyprusgrid.com/realtime), the publicly-published live Cyprus grid-intensity tracker. The 577 figure is the 2025 annual average — Cyprus's electricity mix is still dominated by oil-fired generation (heavy fuel oil and diesel) but PV penetration has grown rapidly, so historical TSOC/IEA figures (around 600 gCO₂/kWh) understate the renewable share by about 4%.
+Source: [cyprusgrid.com](https://cyprusgrid.com/realtime), the publicly-published live Cyprus grid-intensity tracker. The 577 figure is the 2025 annual average, Cyprus's electricity mix is still dominated by oil-fired generation (heavy fuel oil and diesel) but PV penetration has grown rapidly, so historical TSOC/IEA figures (around 600 gCO₂/kWh) understate the renewable share by about 4%.
 
 Real Cyprus grid intensity varies meaningfully by hour of day:
 
 - **Morning solar peak (10am–4pm)** can drop below 350 gCO₂/kWh on clear summer days.
 - **Evening peak (7pm–11pm)** can exceed 700 gCO₂/kWh when oil-fired plants ramp to cover residential demand without solar.
 
-TASK-20 uses a static yearly average; the per-event variation will land in **TASK-49** (deferred — see *Open issues* below).
+TASK-20 uses a static yearly average; the per-event variation will land in **TASK-49** (deferred, see *Open issues* below).
 
 The user can edit this value in **Settings → CO₂ tracker → Grid intensity** to reflect their charging habits or a different region.
 
@@ -68,15 +68,15 @@ Both sides of the comparison are tank-to-wheel. **Well-to-wheel** numbers (which
 
 ### Average vs marginal grid intensity
 
-The 577 gCO₂/kWh default is an **average** intensity — what a kWh "looks like" on the Cyprus grid as a whole. But every additional kWh the user draws is met by the **marginal** plant on the margin at that moment, which is almost always the most expensive (typically oil-fired) generator in the merit order. Marginal intensity in Cyprus is often *higher* than average. Researchers comparing EV impact should treat the 577 figure as a lower bound for genuinely-induced emissions.
+The 577 gCO₂/kWh default is an **average** intensity, what a kWh "looks like" on the Cyprus grid as a whole. But every additional kWh the user draws is met by the **marginal** plant on the margin at that moment, which is almost always the most expensive (typically oil-fired) generator in the merit order. Marginal intensity in Cyprus is often *higher* than average. Researchers comparing EV impact should treat the 577 figure as a lower bound for genuinely-induced emissions.
 
 ### Period scoping
 
-The Dashboard CO₂ card honours the same period chips as the rest of the Dashboard (7 days / 30 days / year / custom). The Charts CO₂ tab uses the Charts period chips. Both numbers in the card recompute when the user changes period — they are not lifetime totals.
+The Dashboard CO₂ card honours the same period chips as the rest of the Dashboard (7 days / 30 days / year / custom). The Charts CO₂ tab uses the Charts period chips. Both numbers in the card recompute when the user changes period, they are not lifetime totals.
 
 ### Saved can be negative
 
-On a high-grid-intensity period with low driven distance, EV emissions can exceed the petrol counterfactual. The card surfaces this honestly with a "*X.X kg more than petrol*" label rather than hiding the number — that's a real signal that the user's recent charging happened during dirty grid hours.
+On a high-grid-intensity period with low driven distance, EV emissions can exceed the petrol counterfactual. The card surfaces this honestly with a "*X.X kg more than petrol*" label rather than hiding the number, that's a real signal that the user's recent charging happened during dirty grid hours.
 
 ---
 
@@ -86,11 +86,11 @@ On a high-grid-intensity period with low driven distance, EV emissions can excee
 
 The deferred TASK-49 will replace the static `gridIntensityGCo2PerKwh` preference with a per-event live value fetched at save time. The intent is to surface "charge during the solar peak for cleaner CO₂" as a behavioural nudge. Required: a free real-time Cyprus grid-mix data source. Candidates evaluated and not yet adopted:
 
-- **Electricity Maps API** — closest fit functionally, but priced at €6,000/year per zone for Carbon Intensity. Out of budget.
-- **CO2Signal** — was free; absorbed into Electricity Maps' paid product.
-- **cyprusgrid.com direct** — bot-blocked behind a WAF; not stable enough as a production data source.
-- **ENTSO-E Transparency Platform** — free, registered API, Cyprus covered, but returns hourly generation mix per production type (not pre-computed carbon intensity). Would require deriving intensity from per-source CO₂ emission factors. Real work; deferred.
-- **TSOC direct API access** — best long-term answer; needs email correspondence.
+- **Electricity Maps API**, closest fit functionally, but priced at €6,000/year per zone for Carbon Intensity. Out of budget.
+- **CO2Signal**, was free; absorbed into Electricity Maps' paid product.
+- **cyprusgrid.com direct**, bot-blocked behind a WAF; not stable enough as a production data source.
+- **ENTSO-E Transparency Platform**, free, registered API, Cyprus covered, but returns hourly generation mix per production type (not pre-computed carbon intensity). Would require deriving intensity from per-source CO₂ emission factors. Real work; deferred.
+- **TSOC direct API access**, best long-term answer; needs email correspondence.
 
 When TASK-49 lands, this document will be extended with the per-event source's methodology and emission factors.
 
@@ -108,5 +108,5 @@ The ICE counterfactual assumes the user drives the petrol car the same way they 
 
 1. US EPA. *Greenhouse Gas Emissions from a Typical Passenger Vehicle.* https://www.epa.gov/greenvehicles/greenhouse-gas-emissions-typical-passenger-vehicle
 2. European Environment Agency. *Real-world fuel consumption of new passenger cars in the EU.* https://www.eea.europa.eu/
-3. cyprusgrid.com. *Cyprus electricity grid carbon intensity (live).* https://cyprusgrid.com/realtime — accessed 2026-05-04, 365 gCO₂eq/kWh "last hour"; 577 gCO₂/kWh used as the 2025 annual average.
+3. cyprusgrid.com. *Cyprus electricity grid carbon intensity (live).* https://cyprusgrid.com/realtime, accessed 2026-05-04, 365 gCO₂eq/kWh "last hour"; 577 gCO₂/kWh used as the 2025 annual average.
 4. ENTSO-E. *Transparency Platform.* https://transparency.entsoe.eu/

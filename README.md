@@ -1,5 +1,8 @@
 <p align="center">
-  <img src="docs/branding/joulie_logo_transparent.png" alt="Joulie — Log every charge. Understand every kilometre." width="320" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/branding/joulie_logo_dark.png" />
+    <img alt="Joulie. Log every charge. Understand every kilometre." src="docs/branding/joulie_logo_light.png" width="520" />
+  </picture>
 </p>
 
 # Joulie
@@ -13,7 +16,7 @@
 [![Min SDK](https://img.shields.io/badge/minSdk-26-brightgreen)](https://developer.android.com/about/versions/oreo)
 [![Kotlin](https://img.shields.io/badge/kotlin-1.9.21-blueviolet)](https://kotlinlang.org)
 
-Track EV charging sessions, efficiency, cost, and CO₂ — one joule at a time. Built and maintained by the [Sustainable Power Systems Lab (SPS-Lab)](https://sps-lab.org/) at Cyprus University of Technology.
+Track EV charging sessions, efficiency, cost, and CO₂, one joule at a time. Built and maintained by the [Sustainable Power Systems Lab (SPS-Lab)](https://sps-lab.org/) at Cyprus University of Technology.
 
 ## About
 
@@ -23,7 +26,7 @@ Joulie is a clean, no-nonsense Android app for electric vehicle drivers who want
 
 - Odometer reading, kWh added, AC or DC session
 - Location (quick-chips or free text), and optional cost
-- State-of-charge percentages — if your charger only shows %, Joulie does the kWh math for you
+- State-of-charge percentages, if your charger only shows %, Joulie does the kWh math for you
 
 **What Joulie shows you:**
 
@@ -59,7 +62,7 @@ You can also open the APK on the device after enabling **Install from unknown so
 
 - The app does not collect analytics, telemetry, or crash reports.
 - All charge data is stored locally in the app's private Room database.
-- Google Drive backup is **opt-in**. When enabled, a JSON snapshot is written to the app's private **App Data folder** on your Drive, hidden from the Drive UI and accessible only to this app's signing certificate. The scope is `https://www.googleapis.com/auth/drive.appdata` — the app cannot read or modify any other files on your Drive.
+- Google Drive backup is **opt-in**. When enabled, a JSON snapshot is written to the app's private **App Data folder** on your Drive, hidden from the Drive UI and accessible only to this app's signing certificate. The scope is `https://www.googleapis.com/auth/drive.appdata`, the app cannot read or modify any other files on your Drive.
 - CSV export writes to the app's external-files directory and is shared only via the Android share sheet at your request.
 
 Full policy: [`PRIVACY.md`](PRIVACY.md).

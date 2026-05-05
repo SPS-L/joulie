@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Joulie horizontal lockup — LIGHT surface variant.
+     Wordmark uses #0A1B5E (deep ink, never pure black) so it sits
+     comfortably on white/near-white surfaces without harsh contrast. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 480" width="1600" height="480">
+  <defs>
+    <linearGradient id="tileL" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"  stop-color="#1F3DCC"/>
+      <stop offset="55%" stop-color="#0D47FF"/>
+      <stop offset="100%" stop-color="#0A2FB0"/>
+    </linearGradient>
+    <linearGradient id="boltL" x1="0.2" y1="0" x2="0.7" y2="1">
+      <stop offset="0%"  stop-color="#FFFFFF"/>
+      <stop offset="40%" stop-color="#A6F43C"/>
+      <stop offset="100%" stop-color="#00C2D1"/>
+    </linearGradient>
+    <radialGradient id="glowL" cx="0.5" cy="0.4" r="0.6">
+      <stop offset="0%"  stop-color="#FFFFFF" stop-opacity="0.20"/>
+      <stop offset="55%" stop-color="#FFFFFF" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Mark tile (left) -->
+  <g transform="translate(40,40) scale(0.39)">
+    <rect x="0" y="0" width="1024" height="1024" rx="230" ry="230" fill="url(#tileL)"/>
+    <rect x="0" y="0" width="1024" height="1024" rx="230" ry="230" fill="url(#glowL)"/>
+    <path fill="url(#boltL)"
+          d="M 360 200 L 712 200 L 712 318 L 600 318 L 540 470 L 660 470
+             L 470 760 C 432 818, 380 840, 332 840 C 248 840, 196 786, 196 706
+             L 312 706 C 312 738, 332 758, 360 758 C 380 758, 396 748, 410 728
+             L 488 608 L 360 608 Z"/>
+    <path fill="#FFFFFF" opacity="0.32"
+          d="M 360 200 L 712 200 L 712 248 L 360 248 Z"/>
+  </g>
+
+  <!-- Wordmark "joulie" — geometric sans, lowercase, custom-drawn -->
+  <g transform="translate(490,180)" fill="#0A1B5E">
+    <!-- j -->
+    <path d="M 18 0 h 60 v 200 c 0 38 -18 60 -52 60 c -18 0 -32 -4 -42 -10 v -52 c 6 4 14 6 22 6 c 8 0 12 -4 12 -14 v -190 z
+             M 48 -60 c 18 0 32 14 32 32 c 0 18 -14 32 -32 32 c -18 0 -32 -14 -32 -32 c 0 -18 14 -32 32 -32 z"/>
+    <!-- o -->
+    <path d="M 220 0 c 56 0 100 44 100 100 c 0 56 -44 100 -100 100 c -56 0 -100 -44 -100 -100 c 0 -56 44 -100 100 -100 z
+             M 220 50 c -28 0 -50 22 -50 50 c 0 28 22 50 50 50 c 28 0 50 -22 50 -50 c 0 -28 -22 -50 -50 -50 z"/>
+    <!-- u -->
+    <path d="M 360 4 h 60 v 110 c 0 22 14 36 36 36 c 22 0 36 -14 36 -36 v -110 h 60 v 192 h -60 v -22
+             c -14 18 -34 26 -56 26 c -44 0 -76 -30 -76 -78 v -118 z"/>
+    <!-- l -->
+    <path d="M 600 -60 h 60 v 256 h -60 z"/>
+    <!-- i -->
+    <path d="M 700 4 h 60 v 192 h -60 z
+             M 730 -60 c 18 0 32 14 32 32 c 0 18 -14 32 -32 32 c -18 0 -32 -14 -32 -32 c 0 -18 14 -32 32 -32 z"/>
+    <!-- e -->
+    <path d="M 800 100 c 0 -58 42 -100 100 -100 c 56 0 96 40 96 96 c 0 8 -2 18 -2 22 h -134 c 6 22 22 36 46 36
+             c 16 0 30 -6 40 -16 l 36 32 c -18 22 -46 34 -78 34 c -60 0 -104 -42 -104 -104 z
+             M 858 80 h 76 c -4 -20 -20 -32 -38 -32 c -18 0 -32 12 -38 32 z"/>
+  </g>
+
+  <!-- Tagline -->
+  <text x="490" y="430" fill="#43474E" font-family="-apple-system, 'Segoe UI', Roboto, sans-serif"
+        font-size="42" font-weight="500" letter-spacing="1">
+    Log every charge. Understand every kilometre.
+  </text>
+</svg>

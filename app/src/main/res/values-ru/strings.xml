@@ -1,17 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Russian (ru) translations — LLM-produced first pass.
+    Russian (ru) translations, LLM-produced first pass.
     REQUIRES review by a native Russian speaker before production release.
 -->
 <resources>
     <!-- Wizard -->
     <string name="wizard_welcome_title">⚡ Joulie</string>
-    <string name="wizard_welcome_body">Давайте настроим ваши предпочтения — их можно изменить позже в Настройках.</string>
+    <string name="wizard_page1_intro_title">Добро пожаловать в Joulie</string>
+    <string name="wizard_welcome_body">Давайте настроим ваши предпочтения, их можно изменить позже в Настройках.</string>
     <string name="wizard_metric_title">Как вы хотите видеть эффективность?</string>
     <string name="wizard_unit_label">Единица расстояния</string>
     <string name="wizard_unit_miles">мили</string>
     <string name="wizard_currency_title">Какую валюту вы используете для расходов на зарядку?</string>
-    <string name="wizard_currency_hint">Ввод стоимости необязателен — оставьте 0, чтобы пропустить.</string>
+    <string name="wizard_currency_hint">Ввод стоимости необязателен, оставьте 0, чтобы пропустить.</string>
     <string name="wizard_btn_get_started">Начать</string>
     <string name="wizard_btn_next">Далее →</string>
     <string name="wizard_btn_back">← Назад</string>
@@ -24,7 +25,7 @@
     <string name="location_chip_add">+ Добавить</string>
 
     <!-- Cost form -->
-    <string name="cost_hint_zero">Оставьте 0 или пустым для пропуска — не войдёт в статистику</string>
+    <string name="cost_hint_zero">Оставьте 0 или пустым для пропуска, не войдёт в статистику</string>
     <string name="cost_toggle_total">Общая стоимость</string>
     <string name="cost_toggle_per_kwh">Цена за kWh</string>
 
@@ -62,7 +63,7 @@
     <string name="settings_section_drive">Резервное копирование &amp; восстановление</string>
     <string name="settings_drive_label">Резервное копирование Google Drive</string>
     <string name="settings_drive_subtitle_off">Отключено</string>
-    <string name="settings_drive_subtitle_on">Включено — автокопирование при каждом изменении</string>
+    <string name="settings_drive_subtitle_on">Включено, автокопирование при каждом изменении</string>
     <string name="settings_last_backup_never">Никогда</string>
     <string name="settings_last_backup_label">Последнее копирование: %1$s</string>
     <string name="drive_restore_dialog_title">Восстановить из Drive?</string>
@@ -71,12 +72,12 @@
     <string name="drive_restore_dialog_skip">Пропустить</string>
     <string name="drive_restore_succeeded">Резервная копия восстановлена.</string>
     <string name="drive_auth_failed">Не удалось войти в Google Drive. Повторите попытку.</string>
-    <string name="drive_consent_cancelled">Резервное копирование Drive не включено — согласие отменено.</string>
+    <string name="drive_consent_cancelled">Резервное копирование Drive не включено, согласие отменено.</string>
     <string name="drive_network_error">Нет сетевого подключения. Копирование повторится при подключении к интернету.</string>
     <string name="drive_remote_backup_too_new">Эта резервная копия создана более новой версией. Обновите приложение для восстановления.</string>
     <string name="drive_restore_failed">Не удалось восстановить резервную копию. Локальные данные не изменены.</string>
 
-    <!-- Drive — manual controls -->
+    <!-- Drive, manual controls -->
     <string name="drive_backup_now_button">Создать копию сейчас</string>
     <string name="drive_wipe_button">Удалить удалённую копию</string>
     <string name="drive_wipe_confirm_title">Удалить удалённую резервную копию?</string>
@@ -116,7 +117,7 @@
     <string name="settings_metric_flipped_mi_per_kwh">Основной показатель также изменён на mi / kWh.</string>
     <string name="settings_export_csv_failed">Экспорт CSV не удался.</string>
 
-    <!-- Settings (F1) — row labels and summaries -->
+    <!-- Settings (F1), row labels and summaries -->
     <string name="settings_primary_metric">Основной показатель</string>
     <string name="settings_distance_unit">Единица расстояния</string>
     <string name="settings_currency">Валюта</string>
@@ -187,7 +188,7 @@
 
     <!-- History -->
     <string name="history_title">История</string>
-    <string name="history_empty">Зарядок пока нет — нажмите + на Панели для записи</string>
+    <string name="history_empty">Зарядок пока нет, нажмите + на Панели для записи</string>
     <string name="snackbar_charge_deleted">Зарядка удалена</string>
     <string name="undo">Отменить</string>
 
@@ -205,13 +206,13 @@
     <string name="empty_no_car_cta">Добавить автомобиль</string>
     <string name="empty_no_events_headline">Запишите первую зарядку, чтобы увидеть статистику</string>
     <string name="empty_no_events_cta">Записать зарядку</string>
-    <string name="multi_currency_banner">Период с несколькими валютами — статистика расходов скрыта</string>
+    <string name="multi_currency_banner">Период с несколькими валютами, статистика расходов скрыта</string>
     <string name="manage_cars">Управление автомобилями…</string>
     <string name="metric_need_two_charges">Нужно 2+ зарядки</string>
     <string name="cost_card_total">Общая стоимость</string>
     <string name="battery_health_card_label">Состояние батареи</string>
     <string name="battery_health_card_subtitle">Последняя эффективная ёмкость vs номинальная</string>
-    <string name="battery_health_estimated_warning">Оценочно — эвристика может завышать значение</string>
+    <string name="battery_health_estimated_warning">Оценочно, эвристика может завышать значение</string>
     <string name="battery_health_estimated_warning_a11y">Оценочная ёмкость, может завышать значение</string>
     <!-- TASK-20: CO₂ tracker -->
     <string name="co2_card_label">CO₂</string>
@@ -219,7 +220,7 @@
     <string name="co2_card_ice_label">Бензиновый эквивалент</string>
     <string name="co2_saved_format">Сэкономлено %1$.1f кг по сравнению с бензином</string>
     <string name="co2_extra_format">На %1$.1f кг больше, чем бензин</string>
-    <string name="co2_card_footnote">На основе среднегодового показателя сети Кипра 2025 — фактические выбросы зависят от времени суток.</string>
+    <string name="co2_card_footnote">На основе среднегодового показателя сети Кипра 2025, фактические выбросы зависят от времени суток.</string>
     <string name="settings_section_co2">Учёт CO₂</string>
     <string name="settings_co2_ice_baseline">Расход бензина (L/100km)</string>
     <string name="settings_co2_grid_intensity">Углеродность сети (gCO₂/kWh)</string>
@@ -296,7 +297,7 @@
     <string name="car_form_year">Год</string>
     <string name="car_form_battery_kwh">Батарея (kWh)</string>
 
-    <!-- F2 — Charts -->
+    <!-- F2, Charts -->
     <string name="charts_title">Графики</string>
     <string name="charts_period_last_6_months">Последние 6 месяцев</string>
     <string name="charts_period_last_12_months">Последние 12 месяцев</string>
@@ -330,7 +331,7 @@
         <item quantity="other">%d зарядки</item>
     </plurals>
 
-    <!-- TASK-10 — About / Info screen -->
+    <!-- TASK-10, About / Info screen -->
     <string name="about_title">О приложении</string>
     <string name="about_version_label">Версия %1$s (сборка %2$d)</string>
     <string name="about_acknowledgment_title">Разработано</string>
@@ -341,7 +342,7 @@
     <string name="about_disclaimer_body">Это приложение предназначено исключительно для исследовательского и личного использования. Оценки эффективности и стоимости основаны на данных, введённых пользователем, и не являются профессиональными энергетическими или финансовыми рекомендациями. SPS-Lab и Кипрский технологический университет не несут ответственности за решения, принятые на основе данных, записанных или отображённых этим приложением.</string>
     <string name="about_oss_title">Библиотеки с открытым исходным кодом</string>
 
-    <!-- Settings — About entry point -->
+    <!-- Settings, About entry point -->
     <string name="settings_about">О приложении</string>
     <string name="settings_about_summary">Версия, лицензия, благодарности</string>
 </resources>

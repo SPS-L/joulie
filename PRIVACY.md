@@ -1,4 +1,4 @@
-# Privacy Policy — Joulie
+# Privacy Policy, Joulie
 
 **Last updated: May 2026**
 **Developed by:** [Sustainable Power Systems Lab (SPS-Lab)](https://sps-lab.org/),
@@ -33,7 +33,7 @@ This data never leaves your device unless you explicitly enable one of the opt-i
 
 Drive backup is **disabled by default**. If you choose to enable it:
 
-- A JSON snapshot of your charge log is written to your Google Drive **App Data folder** — a private, hidden folder accessible only to this app's signing certificate. The file is not visible in the regular Drive UI.
+- A JSON snapshot of your charge log is written to your Google Drive **App Data folder**, a private, hidden folder accessible only to this app's signing certificate. The file is not visible in the regular Drive UI.
 - The OAuth scope used is `https://www.googleapis.com/auth/drive.appdata` only. Joulie cannot read, modify, or access any other files or folders on your Google Drive.
 - You can disable backup, trigger a manual backup, or permanently wipe the remote copy at any time via **Settings → Google Drive backup** (toggle, **Back up now**, and **Wipe remote backup**).
 - Drive backup operations are logged locally for failure diagnostics (`android.util.Log`) but are not transmitted anywhere.
@@ -58,7 +58,7 @@ The CO₂ tracker computes emission estimates using two values you can configure
 | Permission | Why it is needed |
 |---|---|
 | `INTERNET` | Google Drive backup only (when enabled) |
-| `POST_NOTIFICATIONS` | Drive-backup failure alerts only — requested after the third consecutive failure, never on launch, never re-prompted after a denial |
+| `POST_NOTIFICATIONS` | Drive-backup failure alerts only, requested after the third consecutive failure, never on launch, never re-prompted after a denial |
 | No location permission | Location labels are free text you type or pick from chips; the app does not access GPS, Wi-Fi-derived location, or any other location signal |
 | No contacts / camera / microphone | The app does not request any of these |
 
@@ -71,7 +71,7 @@ All charge data is stored locally on your device. You can:
 - Delete individual charge events from **History** (swipe to delete, with a 5-second undo)
 - Reset the active car's history via **Settings → Reset active car**
 - Wipe everything via **Settings → Reset all data**
-- Uninstall the app — Android removes all local app data automatically
+- Uninstall the app, Android removes all local app data automatically
 
 If Drive backup is enabled, use **Settings → Wipe remote backup** before uninstalling to remove the cloud copy. Toggling Drive backup OFF does not delete the remote snapshot; only the explicit wipe does.
 

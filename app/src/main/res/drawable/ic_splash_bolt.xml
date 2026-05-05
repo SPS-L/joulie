@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Splash-screen bolt drawable.
+     The SplashScreen API renders this at ~192dp inside a 432dp safe
+     window, so the drawable's intrinsic size is 432x432 with the bolt
+     occupying the central 192. We fill the icon white because the
+     splash background is the solid brand-blue tile. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="432dp"
+    android:height="432dp"
+    android:viewportWidth="432"
+    android:viewportHeight="432">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M151.88,84.38 L300.36,84.38 L300.36,134.16 L253.12,134.16 L227.81,198.21 L278.44,198.21 L198.28,320.53 C182.27,344.99 160.31,354.27 140.06,354.27 C104.62,354.27 82.69,331.51 82.69,297.74 L131.66,297.74 C131.66,311.27 140.06,319.69 151.88,319.69 C160.31,319.69 167.06,315.47 173.0,307.03 L205.88,256.41 L151.88,256.41 Z"/>
+</vector>

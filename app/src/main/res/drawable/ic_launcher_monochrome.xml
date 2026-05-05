@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Monochrome variant of the bolt-J for Android 13+ themed icons.
+     The system tints fillColor='#FFFFFF' to match the user's chosen
+     wallpaper accent (Material You). Bounds match the adaptive-icon
+     108x108dp canvas; the bolt sits inside the 72x72dp safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M37.97,21.09 L75.09,21.09 L75.09,33.54 L63.28,33.54 L56.95,49.55 L69.61,49.55 L49.57,80.13 C45.57,86.25 40.08,88.57 35.02,88.57 C26.16,88.57 20.67,82.88 20.67,74.43 L32.91,74.43 C32.91,77.81 35.02,79.91 37.97,79.91 C40.08,79.91 41.77,78.86 43.25,76.75 L51.47,64.10 L37.97,64.10 Z"/>
+</vector>
