@@ -1,14 +1,14 @@
-# Google Cloud Setup — Drive API & OAuth for Joulie
+# Google Cloud Setup, Drive API & OAuth for Joulie
 
 Follow these steps **in order**.
 
-> **Scope used:** `drive.appdata` — non-sensitive, no Google verification required.
+> **Scope used:** `drive.appdata`, non-sensitive, no Google verification required.
 >
-> **No Firebase, no `google-services.json`.** This app uses the Authorization API (`Identity.getAuthorizationClient`) directly. The OAuth client is bound to your Android package name + signing certificate SHA-1 — that is the entire setup.
+> **No Firebase, no `google-services.json`.** This app uses the Authorization API (`Identity.getAuthorizationClient`) directly. The OAuth client is bound to your Android package name + signing certificate SHA-1, that is the entire setup.
 
 ---
 
-## Step 1 — Get your debug SHA-1 fingerprint
+## Step 1, Get your debug SHA-1 fingerprint
 
 You need this before anything else.
 
@@ -32,11 +32,11 @@ Find the line that starts with `SHA1:` and copy the fingerprint. It looks like:
 SHA1: AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD
 ```
 
-Keep it handy — you will paste it in Step 4.
+Keep it handy, you will paste it in Step 4.
 
 ---
 
-## Step 2 — Create or pick a Google Cloud project
+## Step 2, Create or pick a Google Cloud project
 
 1. Go to [https://console.cloud.google.com/](https://console.cloud.google.com/)
 2. Top-left project picker → **New Project**
@@ -45,7 +45,7 @@ Keep it handy — you will paste it in Step 4.
 
 ---
 
-## Step 3 — Enable the Google Drive API
+## Step 3, Enable the Google Drive API
 
 1. In the left menu go to **APIs & Services → Library**
 2. Search for **Google Drive API**
@@ -53,7 +53,7 @@ Keep it handy — you will paste it in Step 4.
 
 ---
 
-## Step 4 — Configure the OAuth consent screen
+## Step 4, Configure the OAuth consent screen
 
 1. **APIs & Services → OAuth consent screen**
 2. Choose **External** → **Create**
@@ -67,21 +67,21 @@ Keep it handy — you will paste it in Step 4.
 7. **Test users** → **+ Add users** → enter your Google account → **Add**
 8. **Save and Continue** → **Back to Dashboard**
 
-You can leave the consent screen in "Testing" status indefinitely — Drive AppData scope is non-sensitive and does not require Google verification.
+You can leave the consent screen in "Testing" status indefinitely, Drive AppData scope is non-sensitive and does not require Google verification.
 
 ---
 
-## Step 5 — Create the Android OAuth 2.0 Client ID
+## Step 5, Create the Android OAuth 2.0 Client ID
 
 1. **APIs & Services → Credentials**
 2. **+ Create Credentials → OAuth client ID**
 3. **Application type:** Android
-4. **Name:** Joulie (debug) — create one per keystore SHA-1
+4. **Name:** Joulie (debug), create one per keystore SHA-1
 5. **Package name:** `org.spsl.evtracker`
 6. **SHA-1 certificate fingerprint:** paste the value from Step 1
 7. **Create**
 
-Repeat this step for the **release** keystore SHA-1 — debug and release each need their own client. To get the release keystore's SHA-1:
+Repeat this step for the **release** keystore SHA-1, debug and release each need their own client. To get the release keystore's SHA-1:
 
 ```bash
 keytool -list -v -keystore /path/to/release.jks -alias <your-alias> | grep SHA1
@@ -89,15 +89,15 @@ keytool -list -v -keystore /path/to/release.jks -alias <your-alias> | grep SHA1
 
 Console expects it colon-separated and uppercase, e.g. `A3:9F:ED:12:1D:AE:...`. The same SHA-1 is used for both locally-built signed APKs and APKs produced by the `.github/workflows/release.yml` CI workflow, since CI signs with the same release keystore (uploaded as a base64 secret).
 
-That's the entire OAuth setup. There is no JSON file to download. The Authorization API client looks up the OAuth client at runtime by your app's package name + signing certificate — no `google-services.json`, no Gradle plugin needed.
+That's the entire OAuth setup. There is no JSON file to download. The Authorization API client looks up the OAuth client at runtime by your app's package name + signing certificate, no `google-services.json`, no Gradle plugin needed.
 
 ---
 
-## Step 5b — Register a third client for the debug `applicationId` suffix
+## Step 5b, Register a third client for the debug `applicationId` suffix
 
 After **TASK-29** (merged 2026-05-01) the **debug** build type uses
 `applicationId = org.spsl.evtracker.debug` (release stays at
-`org.spsl.evtracker` — Step 5 above still applies for release builds).
+`org.spsl.evtracker`, Step 5 above still applies for release builds).
 The OAuth Android client created in Step 5 is bound to a fixed package
 name, so debug builds need their own client:
 
@@ -113,7 +113,7 @@ builds are unaffected.
 
 ---
 
-## Step 6 — Build and verify
+## Step 6, Build and verify
 
 1. Build and install the debug APK:
    ```bash
@@ -136,6 +136,6 @@ builds are unaffected.
 | Authorization sheet never appears | Wrong package name on the OAuth client. Must be exactly `org.spsl.evtracker`. |
 | Switching keystore (debug ↔ release) breaks sign-in | Each keystore SHA-1 needs its own OAuth client. Repeat Step 5 for the release SHA-1. |
 | Sign-in fails on **debug** specifically (release works) | Missing the `org.spsl.evtracker.debug` OAuth client. Run Step 5b. |
-| Backup file not visible in Drive web UI | Expected — the App Data folder is hidden. Use the Drive API explorer with `spaces=appDataFolder`. |
-| Auth was revoked from your Google Account but the app keeps trying to back up | TASK-19 surfaces this: after the next backup attempt the user gets a `backup_auth` notification ("Drive sign-in required — Tap to reconnect"). Tapping deep-links to Settings; toggle Drive off and on to re-authorise. Test users on a fresh device get this card the first time their token can't be silently renewed. |
+| Backup file not visible in Drive web UI | Expected, the App Data folder is hidden. Use the Drive API explorer with `spaces=appDataFolder`. |
+| Auth was revoked from your Google Account but the app keeps trying to back up | TASK-19 surfaces this: after the next backup attempt the user gets a `backup_auth` notification ("Drive sign-in required, Tap to reconnect"). Tapping deep-links to Settings; toggle Drive off and on to re-authorise. Test users on a fresh device get this card the first time their token can't be silently renewed. |
 | Repeated backup failures with no notification | On Android 13+, `POST_NOTIFICATIONS` is gated behind a runtime permission. The app requests it the first time consecutive failures hit the threshold (3) and **never re-prompts after a denial**. To re-grant, go to system **Settings → Apps → Joulie → Notifications** and re-enable. |

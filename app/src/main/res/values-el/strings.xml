@@ -1,17 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Greek (el) translations — LLM-produced first pass.
+    Greek (el) translations, LLM-produced first pass.
     REQUIRES review by a native Greek speaker before production release.
 -->
 <resources>
     <!-- Wizard -->
     <string name="wizard_welcome_title">⚡ Joulie</string>
-    <string name="wizard_welcome_body">Ας ρυθμίσουμε τις προτιμήσεις σας — μπορείτε να τις αλλάξετε αργότερα στις Ρυθμίσεις.</string>
+    <string name="wizard_page1_intro_title">Καλώς ήρθες στο Joulie</string>
+    <string name="wizard_welcome_body">Ας ρυθμίσουμε τις προτιμήσεις σας, μπορείτε να τις αλλάξετε αργότερα στις Ρυθμίσεις.</string>
     <string name="wizard_metric_title">Πώς θέλετε να βλέπετε την αποδοτικότητα;</string>
     <string name="wizard_unit_label">Μονάδα απόστασης</string>
     <string name="wizard_unit_miles">μίλια</string>
     <string name="wizard_currency_title">Ποιο νόμισμα χρησιμοποιείτε για το κόστος φόρτισης;</string>
-    <string name="wizard_currency_hint">Η εισαγωγή κόστους είναι προαιρετική — αφήστε 0 για να παραλείψετε.</string>
+    <string name="wizard_currency_hint">Η εισαγωγή κόστους είναι προαιρετική, αφήστε 0 για να παραλείψετε.</string>
     <string name="wizard_btn_get_started">Ξεκινήστε</string>
     <string name="wizard_btn_next">Επόμενο →</string>
     <string name="wizard_btn_back">← Πίσω</string>
@@ -24,7 +25,7 @@
     <string name="location_chip_add">+ Προσθήκη</string>
 
     <!-- Cost form -->
-    <string name="cost_hint_zero">Αφήστε 0 ή κενό για παράλειψη — δεν θα συμπεριληφθεί στα στατιστικά</string>
+    <string name="cost_hint_zero">Αφήστε 0 ή κενό για παράλειψη, δεν θα συμπεριληφθεί στα στατιστικά</string>
     <string name="cost_toggle_total">Συνολικό κόστος</string>
     <string name="cost_toggle_per_kwh">Τιμή ανά kWh</string>
 
@@ -62,7 +63,7 @@
     <string name="settings_section_drive">Αντίγραφα ασφαλείας &amp; επαναφορά</string>
     <string name="settings_drive_label">Αντίγραφο ασφαλείας Google Drive</string>
     <string name="settings_drive_subtitle_off">Απενεργοποιημένο</string>
-    <string name="settings_drive_subtitle_on">Ενεργό — αυτόματο αντίγραφο σε κάθε αλλαγή</string>
+    <string name="settings_drive_subtitle_on">Ενεργό, αυτόματο αντίγραφο σε κάθε αλλαγή</string>
     <string name="settings_last_backup_never">Ποτέ</string>
     <string name="settings_last_backup_label">Τελευταίο αντίγραφο: %1$s</string>
     <string name="drive_restore_dialog_title">Επαναφορά από Drive;</string>
@@ -71,12 +72,12 @@
     <string name="drive_restore_dialog_skip">Παράλειψη</string>
     <string name="drive_restore_succeeded">Το αντίγραφο ασφαλείας επαναφέρθηκε.</string>
     <string name="drive_auth_failed">Δεν ήταν δυνατή η σύνδεση στο Google Drive. Δοκιμάστε ξανά.</string>
-    <string name="drive_consent_cancelled">Το αντίγραφο ασφαλείας Drive δεν ενεργοποιήθηκε — η συναίνεση ακυρώθηκε.</string>
+    <string name="drive_consent_cancelled">Το αντίγραφο ασφαλείας Drive δεν ενεργοποιήθηκε, η συναίνεση ακυρώθηκε.</string>
     <string name="drive_network_error">Δεν υπάρχει σύνδεση δικτύου. Το αντίγραφο θα επαναληφθεί όταν συνδεθείτε στο διαδίκτυο.</string>
     <string name="drive_remote_backup_too_new">Αυτό το αντίγραφο δημιουργήθηκε από νεότερη έκδοση. Ενημερώστε την εφαρμογή για επαναφορά.</string>
     <string name="drive_restore_failed">Η επαναφορά απέτυχε. Τα τοπικά δεδομένα δεν άλλαξαν.</string>
 
-    <!-- Drive — manual controls -->
+    <!-- Drive, manual controls -->
     <string name="drive_backup_now_button">Δημιουργία αντιγράφου τώρα</string>
     <string name="drive_wipe_button">Διαγραφή απομακρυσμένου αντιγράφου</string>
     <string name="drive_wipe_confirm_title">Διαγραφή απομακρυσμένου αντιγράφου;</string>
@@ -116,7 +117,7 @@
     <string name="settings_metric_flipped_mi_per_kwh">Η κύρια μονάδα άλλαξε επίσης σε mi / kWh.</string>
     <string name="settings_export_csv_failed">Η εξαγωγή CSV απέτυχε.</string>
 
-    <!-- Settings (F1) — row labels and summaries -->
+    <!-- Settings (F1), row labels and summaries -->
     <string name="settings_primary_metric">Κύρια μονάδα</string>
     <string name="settings_distance_unit">Μονάδα απόστασης</string>
     <string name="settings_currency">Νόμισμα</string>
@@ -187,7 +188,7 @@
 
     <!-- History -->
     <string name="history_title">Ιστορικό</string>
-    <string name="history_empty">Δεν υπάρχουν φορτίσεις — πατήστε + στον Πίνακα για καταγραφή</string>
+    <string name="history_empty">Δεν υπάρχουν φορτίσεις, πατήστε + στον Πίνακα για καταγραφή</string>
     <string name="snackbar_charge_deleted">Φόρτιση διαγράφηκε</string>
     <string name="undo">Αναίρεση</string>
 
@@ -205,13 +206,13 @@
     <string name="empty_no_car_cta">Προσθήκη αυτοκινήτου</string>
     <string name="empty_no_events_headline">Καταγράψτε την πρώτη σας φόρτιση για να δείτε στατιστικά</string>
     <string name="empty_no_events_cta">Καταγραφή φόρτισης</string>
-    <string name="multi_currency_banner">Περίοδος με πολλαπλά νομίσματα — στατιστικά κόστους κρυφά</string>
+    <string name="multi_currency_banner">Περίοδος με πολλαπλά νομίσματα, στατιστικά κόστους κρυφά</string>
     <string name="manage_cars">Διαχείριση αυτοκινήτων…</string>
     <string name="metric_need_two_charges">Απαιτούνται 2+ φορτίσεις</string>
     <string name="cost_card_total">Συνολικό κόστος</string>
     <string name="battery_health_card_label">Κατάσταση μπαταρίας</string>
     <string name="battery_health_card_subtitle">Τελευταία ενεργός χωρητικότητα έναντι ονομαστικής</string>
-    <string name="battery_health_estimated_warning">Εκτιμώμενο — η ευρετική μέθοδος μπορεί να υπερεκτιμά</string>
+    <string name="battery_health_estimated_warning">Εκτιμώμενο, η ευρετική μέθοδος μπορεί να υπερεκτιμά</string>
     <string name="battery_health_estimated_warning_a11y">Εκτιμώμενη χωρητικότητα, μπορεί να υπερεκτιμά</string>
     <!-- TASK-20: CO₂ tracker -->
     <string name="co2_card_label">CO₂</string>
@@ -219,7 +220,7 @@
     <string name="co2_card_ice_label">Αντίστοιχη βενζίνης</string>
     <string name="co2_saved_format">Εξοικονόμηση %1$.1f kg έναντι βενζίνης</string>
     <string name="co2_extra_format">%1$.1f kg περισσότερα από βενζίνη</string>
-    <string name="co2_card_footnote">Βάσει του μέσου όρου του δικτύου Κύπρου 2025 — οι πραγματικές εκπομπές διαφέρουν ανά ώρα της ημέρας.</string>
+    <string name="co2_card_footnote">Βάσει του μέσου όρου του δικτύου Κύπρου 2025, οι πραγματικές εκπομπές διαφέρουν ανά ώρα της ημέρας.</string>
     <string name="settings_section_co2">Παρακολούθηση CO₂</string>
     <string name="settings_co2_ice_baseline">Βενζινοκίνητη κατανάλωση (L/100km)</string>
     <string name="settings_co2_grid_intensity">Ένταση δικτύου (gCO₂/kWh)</string>
@@ -294,7 +295,7 @@
     <string name="car_form_year">Έτος</string>
     <string name="car_form_battery_kwh">Μπαταρία (kWh)</string>
 
-    <!-- F2 — Charts -->
+    <!-- F2, Charts -->
     <string name="charts_title">Γραφήματα</string>
     <string name="charts_period_last_6_months">Τελευταίοι 6 μήνες</string>
     <string name="charts_period_last_12_months">Τελευταίοι 12 μήνες</string>
@@ -326,7 +327,7 @@
         <item quantity="other">%d φορτίσεις</item>
     </plurals>
 
-    <!-- TASK-10 — About / Info screen -->
+    <!-- TASK-10, About / Info screen -->
     <string name="about_title">Σχετικά</string>
     <string name="about_version_label">Έκδοση %1$s (build %2$d)</string>
     <string name="about_acknowledgment_title">Αναπτύχθηκε από</string>
@@ -337,7 +338,7 @@
     <string name="about_disclaimer_body">Αυτή η εφαρμογή παρέχεται αποκλειστικά για ερευνητική και προσωπική χρήση. Οι εκτιμήσεις αποδοτικότητας και κόστους βασίζονται σε δεδομένα που εισάγει ο χρήστης και δεν αποτελούν επαγγελματικές ενεργειακές ή χρηματοοικονομικές συμβουλές. Το SPS-Lab και το Τεχνολογικό Πανεπιστήμιο Κύπρου δεν φέρουν καμία ευθύνη για αποφάσεις που λαμβάνονται βάσει δεδομένων που καταγράφονται ή εμφανίζονται από αυτήν την εφαρμογή.</string>
     <string name="about_oss_title">Βιβλιοθήκες ανοιχτού κώδικα</string>
 
-    <!-- Settings — About entry point -->
+    <!-- Settings, About entry point -->
     <string name="settings_about">Σχετικά</string>
     <string name="settings_about_summary">Έκδοση, άδεια, αναγνωρίσεις</string>
 </resources>

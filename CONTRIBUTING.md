@@ -2,7 +2,7 @@
 
 Thanks for your interest in working on Joulie. This document covers everything you need to build the app from source, run the tests, ship a release, and find your way around the codebase. The user-facing description lives in [`README.md`](README.md); the canonical product + technical design lives in [`docs/DESIGN.md`](docs/DESIGN.md).
 
-Joulie is licensed under **GPL-3.0-or-later** — by submitting a contribution you agree to release it under the same terms.
+Joulie is licensed under **GPL-3.0-or-later**, by submitting a contribution you agree to release it under the same terms.
 
 ## Table of Contents
 
@@ -50,7 +50,7 @@ The debug APK lands at `app/build/outputs/apk/debug/app-debug.apk`.
 
 ```bash
 ./gradlew test                  # JVM unit tests (~430)
-./gradlew connectedAndroidTest  # Espresso / Room — needs API 26+ device or emulator
+./gradlew connectedAndroidTest  # Espresso / Room, needs API 26+ device or emulator
 ```
 
 The full test specification is in [`docs/TEST_PLAN.md`](docs/TEST_PLAN.md). The nightly managed-AVD job (API 26 + API 35 matrix) runs the instrumented suite from `.github/workflows/nightly-instrumented.yml`; failure is informational only and does not block PRs.
@@ -75,7 +75,7 @@ Then:
 
 Without `keystore.properties`, the build still runs but produces an unsigned APK (useful for inspection, not for installing).
 
-If you want a release APK that passes Google's developer-verification check, also place your **Android Developer Verification (ADI) registration token** at `app/src/main/assets/adi-registration.properties` — one line containing the snippet from your registration page. The file is gitignored (sensitivity-class same as `keystore.properties`); each maintainer keeps their own copy. The CI release workflow doesn't bake this asset yet — see backlog TASK-56.
+If you want a release APK that passes Google's developer-verification check, also place your **Android Developer Verification (ADI) registration token** at `app/src/main/assets/adi-registration.properties`, one line containing the snippet from your registration page. The file is gitignored (sensitivity-class same as `keystore.properties`); each maintainer keeps their own copy. The CI release workflow doesn't bake this asset yet, see backlog TASK-56.
 
 Drive backup on debug and release builds requires Google Cloud OAuth Android clients registered against your keystore SHA-1s. See [`docs/GOOGLE_CLOUD_SETUP.md`](docs/GOOGLE_CLOUD_SETUP.md) for the full walkthrough.
 
@@ -83,9 +83,9 @@ Drive backup on debug and release builds requires Google Cloud OAuth Android cli
 
 PRs and pushes to `main` are gated by [`.github/workflows/ci.yml`](.github/workflows/ci.yml), which runs:
 
-- `./gradlew ktlintCheck` — code style.
-- `./gradlew :app:lint` — Android Lint, with `HardcodedText`, `MissingTranslation`, `TypographyDashes`, and `UnusedResources` promoted to errors.
-- `./gradlew :app:testDebugUnitTest` — JVM unit tests.
+- `./gradlew ktlintCheck`, code style.
+- `./gradlew :app:lint`, Android Lint, with `HardcodedText`, `MissingTranslation`, `TypographyDashes`, and `UnusedResources` promoted to errors.
+- `./gradlew :app:testDebugUnitTest`, JVM unit tests.
 
 Run the full gate locally before opening a PR:
 
@@ -94,7 +94,7 @@ Run the full gate locally before opening a PR:
 ./gradlew ktlintFormat   # auto-fix style violations
 ```
 
-Style is anchored by [`.editorconfig`](.editorconfig) (Kotlin official / IntelliJ style, 4-space indent), so the IDE's reformat output and `ktlintCheck` agree. Pre-existing lint offenses are absorbed by [`app/lint-baseline.xml`](app/lint-baseline.xml); **only new violations break the build**. Regenerate the baseline only when retiring a rule, never to "clean up" — it's append-by-omission by design.
+Style is anchored by [`.editorconfig`](.editorconfig) (Kotlin official / IntelliJ style, 4-space indent), so the IDE's reformat output and `ktlintCheck` agree. Pre-existing lint offenses are absorbed by [`app/lint-baseline.xml`](app/lint-baseline.xml); **only new violations break the build**. Regenerate the baseline only when retiring a rule, never to "clean up", it's append-by-omission by design.
 
 New Kotlin files under `app/src/main/java/org/spsl/evtracker/` must carry the SPDX header (TASK-51 relicense convention):
 
@@ -131,7 +131,7 @@ The workflow can also be triggered manually from the **Actions** tab via `workfl
 | [`docs/DESIGN.md`](docs/DESIGN.md) | Canonical product + technical design spec |
 | [`docs/GOOGLE_CLOUD_SETUP.md`](docs/GOOGLE_CLOUD_SETUP.md) | Drive API + OAuth 2.0 Android client setup |
 | [`docs/TEST_PLAN.md`](docs/TEST_PLAN.md) | Test specification |
-| [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) | CO₂ tracker methodology — coefficients, sources, and caveats (TASK-20) |
+| [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) | CO₂ tracker methodology, coefficients, sources, and caveats (TASK-20) |
 | [`docs/BACKLOG.md`](docs/BACKLOG.md) | Post-v1 refactors and feature backlog |
 | [`PRIVACY.md`](PRIVACY.md) | Privacy policy (also reachable from the Play Store listing) |
 | [`CLAUDE.md`](CLAUDE.md) | Architecture summary, invariants, and conventions for AI agents |

@@ -75,4 +75,11 @@
          be resolved (which the M3 theme always provides). -->
     <color name="chart_axis_text_fallback">#1C1B1F</color>
     <color name="chart_axis_grid_fallback">#79747E</color>
+
+    <!-- Brand-pack v1.0 additions (Brand Guide §3 Palette).
+         joulie_ink_deep is the wordmark colour on light surfaces (avoid
+         pure black). joulie_spark_green is the accent for the SPS-Lab
+         credit and "fresh" affordances; aligned with chart_4. -->
+    <color name="joulie_ink_deep">#0A1B5E</color>
+    <color name="joulie_spark_green">#A6F43C</color>
 </resources>

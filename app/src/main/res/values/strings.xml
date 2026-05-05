@@ -4,7 +4,8 @@
 
     <!-- Wizard -->
     <string name="wizard_welcome_title" translatable="false">⚡ Joulie</string>
-    <string name="wizard_welcome_body">Let\u2019s set up your preferences \u2014 you can change these later in Settings at any time.</string>
+    <string name="wizard_page1_intro_title">Welcome to Joulie</string>
+    <string name="wizard_welcome_body">Let\u2019s set up your preferences, you can change these later in Settings at any time.</string>
     <string name="wizard_metric_title">How do you like to see efficiency?</string>
     <string name="wizard_metric_km_kwh" translatable="false">km / kWh</string>
     <string name="wizard_metric_kwh_100km" translatable="false">kWh / 100 km</string>
@@ -13,7 +14,7 @@
     <string name="wizard_unit_km" translatable="false">km</string>
     <string name="wizard_unit_miles">miles</string>
     <string name="wizard_currency_title">What currency do you use for charging costs?</string>
-    <string name="wizard_currency_hint">Cost entry is optional \u2014 leave 0 to skip tracking.</string>
+    <string name="wizard_currency_hint">Cost entry is optional, leave 0 to skip tracking.</string>
     <string name="wizard_btn_get_started">Get Started</string>
     <string name="wizard_btn_next">Next \u2192</string>
     <string name="wizard_btn_back">\u2190 Back</string>
@@ -26,7 +27,7 @@
     <string name="location_chip_add">+ Add</string>
 
     <!-- Cost form -->
-    <string name="cost_hint_zero">Leave 0 or blank to skip \u2014 won\u2019t be counted in statistics</string>
+    <string name="cost_hint_zero">Leave 0 or blank to skip, won\u2019t be counted in statistics</string>
     <string name="cost_toggle_total">Total cost</string>
     <string name="cost_toggle_per_kwh">Price per kWh</string>
 
@@ -68,7 +69,7 @@
     <string name="settings_section_drive">Backup &amp; restore</string>
     <string name="settings_drive_label">Google Drive backup</string>
     <string name="settings_drive_subtitle_off">Off</string>
-    <string name="settings_drive_subtitle_on">On — auto-backup on every change</string>
+    <string name="settings_drive_subtitle_on">On, auto-backup on every change</string>
     <string name="settings_last_backup_never">Never</string>
     <string name="settings_last_backup_label">Last backup: %1$s</string>
     <string name="drive_restore_dialog_title">Restore from Drive?</string>
@@ -77,12 +78,12 @@
     <string name="drive_restore_dialog_skip">Skip</string>
     <string name="drive_restore_succeeded">Backup restored.</string>
     <string name="drive_auth_failed">Couldn’t sign in to Google Drive. Try again.</string>
-    <string name="drive_consent_cancelled">Drive backup not enabled — consent was cancelled.</string>
+    <string name="drive_consent_cancelled">Drive backup not enabled, consent was cancelled.</string>
     <string name="drive_network_error">No network connection. Backup will retry when you’re online.</string>
     <string name="drive_remote_backup_too_new">This backup was created by a newer version. Update the app to restore.</string>
     <string name="drive_restore_failed">Couldn’t restore backup. Local data is unchanged.</string>
 
-    <!-- Drive — manual controls (TASK-31) -->
+    <!-- Drive, manual controls (TASK-31) -->
     <string name="drive_backup_now_button">Back up now</string>
     <string name="drive_wipe_button">Wipe remote backup</string>
     <string name="drive_wipe_confirm_title">Delete remote backup?</string>
@@ -124,7 +125,7 @@
     <string name="settings_metric_flipped_mi_per_kwh">Primary metric also changed to mi / kWh.</string>
     <string name="settings_export_csv_failed">CSV export failed.</string>
 
-    <!-- Settings (F1) — row labels and summaries -->
+    <!-- Settings (F1), row labels and summaries -->
     <string name="settings_primary_metric">Primary metric</string>
     <string name="settings_distance_unit">Distance unit</string>
     <string name="settings_currency">Currency</string>
@@ -199,21 +200,21 @@
     <string name="wizard_button_get_started">Get Started</string>
     <string name="wizard_button_finish">Finish \u2713</string>
 
-    <!-- Wizard page 4 \u2014 About + Disclaimer acceptance gate -->
+    <!-- Wizard page 4, About + Disclaimer acceptance gate -->
     <string name="wizard_about_title">About this app &amp; terms</string>
     <string name="wizard_disclaimer_accept">I have read and accept the disclaimer</string>
 
-    <string name="placeholder_dashboard" translatable="false">Dashboard \u2014 coming soon</string>
-    <string name="placeholder_charge_edit" translatable="false">Charge Edit \u2014 coming soon</string>
-    <string name="placeholder_cars" translatable="false">Cars \u2014 coming soon</string>
-    <string name="placeholder_settings" translatable="false">Settings \u2014 coming soon</string>
-    <string name="placeholder_charts" translatable="false">Charts \u2014 coming soon</string>
-    <string name="placeholder_history" translatable="false">History \u2014 coming soon</string>
-    <string name="placeholder_manage_locations" translatable="false">Manage Locations \u2014 coming soon</string>
+    <string name="placeholder_dashboard" translatable="false">Dashboard, coming soon</string>
+    <string name="placeholder_charge_edit" translatable="false">Charge Edit, coming soon</string>
+    <string name="placeholder_cars" translatable="false">Cars, coming soon</string>
+    <string name="placeholder_settings" translatable="false">Settings, coming soon</string>
+    <string name="placeholder_charts" translatable="false">Charts, coming soon</string>
+    <string name="placeholder_history" translatable="false">History, coming soon</string>
+    <string name="placeholder_manage_locations" translatable="false">Manage Locations, coming soon</string>
 
     <!-- History -->
     <string name="history_title">History</string>
-    <string name="history_empty">No charges yet — tap + on Dashboard to log one</string>
+    <string name="history_empty">No charges yet, tap + on Dashboard to log one</string>
     <string name="snackbar_charge_deleted">Charge deleted</string>
     <string name="undo">Undo</string>
 
@@ -232,7 +233,7 @@
     <string name="empty_no_car_cta">Add car</string>
     <string name="empty_no_events_headline">Log your first charge to see stats here</string>
     <string name="empty_no_events_cta">Log charge</string>
-    <string name="multi_currency_banner">Multi-currency period — cost stats hidden</string>
+    <string name="multi_currency_banner">Multi-currency period, cost stats hidden</string>
     <string name="manage_cars">Manage cars…</string>
     <string name="metric_km_per_kwh" translatable="false">km/kWh</string>
     <string name="metric_kwh_per_100km" translatable="false">kWh/100km</string>
@@ -243,7 +244,7 @@
     <string name="battery_health_card_label">Battery health</string>
     <string name="battery_health_card_subtitle">Latest effective capacity vs nominal</string>
     <string name="battery_health_value_format" translatable="false">%1$.0f%%</string>
-    <string name="battery_health_estimated_warning">Estimated — heuristic may overestimate</string>
+    <string name="battery_health_estimated_warning">Estimated, heuristic may overestimate</string>
     <string name="battery_health_estimated_warning_a11y">Estimated capacity, may overestimate</string>
     <!-- TASK-20: CO₂ tracker -->
     <string name="co2_card_label">CO₂</string>
@@ -252,7 +253,7 @@
     <string name="co2_value_format" translatable="false">%1$.1f kg</string>
     <string name="co2_saved_format">Saved %1$.1f kg vs petrol</string>
     <string name="co2_extra_format">%1$.1f kg more than petrol</string>
-    <string name="co2_card_footnote">Based on Cyprus 2025 grid average — actual emissions vary by hour of day.</string>
+    <string name="co2_card_footnote">Based on Cyprus 2025 grid average, actual emissions vary by hour of day.</string>
     <string name="cost_card_per_km">Cost per km</string>
     <string name="cost_card_per_100km">Cost per 100km</string>
     <string name="fab_log_charge">Log charge</string>
@@ -325,7 +326,7 @@
     <string name="car_form_year">Year</string>
     <string name="car_form_battery_kwh">Battery (kWh)</string>
 
-    <!-- F2 — Charts -->
+    <!-- F2, Charts -->
     <string name="charts_title">Charts</string>
     <string name="charts_period_last_6_months">Last 6 months</string>
     <string name="charts_period_last_12_months">Last 12 months</string>
@@ -361,7 +362,7 @@
         <item quantity="other">%d charges</item>
     </plurals>
 
-    <!-- TASK-10 — About / Info screen -->
+    <!-- TASK-10, About / Info screen -->
     <string name="about_title">About</string>
     <string name="about_app_name" translatable="false">Joulie</string>
     <string name="about_version_label">Version %1$s (build %2$d)</string>
@@ -381,7 +382,7 @@
     <string name="about_oss_title">Open Source Libraries</string>
     <string name="about_oss_body" translatable="false">• Room (Apache 2.0)\n• Hilt / Dagger (Apache 2.0)\n• MPAndroidChart (Apache 2.0)\n• Kotlin Coroutines (Apache 2.0)\n• Google Drive API client (Apache 2.0)</string>
 
-    <!-- Settings — About entry point -->
+    <!-- Settings, About entry point -->
     <string name="settings_about">About</string>
     <string name="settings_about_summary">Version, license, acknowledgments</string>
 </resources>

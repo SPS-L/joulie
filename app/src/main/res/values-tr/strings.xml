@@ -1,17 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Turkish (tr) translations — LLM-produced first pass.
+    Turkish (tr) translations, LLM-produced first pass.
     REQUIRES review by a native Turkish speaker before production release.
 -->
 <resources>
     <!-- Wizard -->
     <string name="wizard_welcome_title">⚡ Joulie</string>
-    <string name="wizard_welcome_body">Tercihlerinizi ayarlayalım — bunları daha sonra istediğiniz zaman Ayarlar\'dan değiştirebilirsiniz.</string>
+    <string name="wizard_page1_intro_title">Joulie\'ye hoş geldin</string>
+    <string name="wizard_welcome_body">Tercihlerinizi ayarlayalım, bunları daha sonra istediğiniz zaman Ayarlar\'dan değiştirebilirsiniz.</string>
     <string name="wizard_metric_title">Verimliliği nasıl görmek istersiniz?</string>
     <string name="wizard_unit_label">Mesafe birimi</string>
     <string name="wizard_unit_miles">mil</string>
     <string name="wizard_currency_title">Şarj maliyetleri için hangi para birimini kullanıyorsunuz?</string>
-    <string name="wizard_currency_hint">Maliyet girişi isteğe bağlıdır — izlemeyi atlamak için 0 bırakın.</string>
+    <string name="wizard_currency_hint">Maliyet girişi isteğe bağlıdır, izlemeyi atlamak için 0 bırakın.</string>
     <string name="wizard_btn_get_started">Başlayın</string>
     <string name="wizard_btn_next">İleri →</string>
     <string name="wizard_btn_back">← Geri</string>
@@ -24,7 +25,7 @@
     <string name="location_chip_add">+ Ekle</string>
 
     <!-- Cost form -->
-    <string name="cost_hint_zero">Atlamak için 0 veya boş bırakın — istatistiklere dahil edilmez</string>
+    <string name="cost_hint_zero">Atlamak için 0 veya boş bırakın, istatistiklere dahil edilmez</string>
     <string name="cost_toggle_total">Toplam maliyet</string>
     <string name="cost_toggle_per_kwh">kWh başına fiyat</string>
 
@@ -62,7 +63,7 @@
     <string name="settings_section_drive">Yedekleme &amp; geri yükleme</string>
     <string name="settings_drive_label">Google Drive yedeklemesi</string>
     <string name="settings_drive_subtitle_off">Kapalı</string>
-    <string name="settings_drive_subtitle_on">Açık — her değişiklikte otomatik yedekleme</string>
+    <string name="settings_drive_subtitle_on">Açık, her değişiklikte otomatik yedekleme</string>
     <string name="settings_last_backup_never">Hiç</string>
     <string name="settings_last_backup_label">Son yedek: %1$s</string>
     <string name="drive_restore_dialog_title">Drive\'dan geri yüklensin mi?</string>
@@ -71,12 +72,12 @@
     <string name="drive_restore_dialog_skip">Atla</string>
     <string name="drive_restore_succeeded">Yedek geri yüklendi.</string>
     <string name="drive_auth_failed">Google Drive\'a giriş yapılamadı. Tekrar deneyin.</string>
-    <string name="drive_consent_cancelled">Drive yedeklemesi etkinleştirilmedi — izin iptal edildi.</string>
+    <string name="drive_consent_cancelled">Drive yedeklemesi etkinleştirilmedi, izin iptal edildi.</string>
     <string name="drive_network_error">Ağ bağlantısı yok. Yedekleme çevrimiçi olduğunuzda yeniden deneyecek.</string>
     <string name="drive_remote_backup_too_new">Bu yedek daha yeni bir sürüm tarafından oluşturuldu. Geri yüklemek için uygulamayı güncelleyin.</string>
     <string name="drive_restore_failed">Yedek geri yüklenemedi. Yerel veriler değişmedi.</string>
 
-    <!-- Drive — manual controls -->
+    <!-- Drive, manual controls -->
     <string name="drive_backup_now_button">Şimdi yedekle</string>
     <string name="drive_wipe_button">Uzak yedeği sil</string>
     <string name="drive_wipe_confirm_title">Uzak yedek silinsin mi?</string>
@@ -116,7 +117,7 @@
     <string name="settings_metric_flipped_mi_per_kwh">Birincil ölçüt mi / kWh olarak da değiştirildi.</string>
     <string name="settings_export_csv_failed">CSV dışa aktarma başarısız.</string>
 
-    <!-- Settings (F1) — row labels and summaries -->
+    <!-- Settings (F1), row labels and summaries -->
     <string name="settings_primary_metric">Birincil ölçüt</string>
     <string name="settings_distance_unit">Mesafe birimi</string>
     <string name="settings_currency">Para birimi</string>
@@ -187,7 +188,7 @@
 
     <!-- History -->
     <string name="history_title">Geçmiş</string>
-    <string name="history_empty">Henüz şarj yok — kaydetmek için Dashboard\'da + düğmesine dokunun</string>
+    <string name="history_empty">Henüz şarj yok, kaydetmek için Dashboard\'da + düğmesine dokunun</string>
     <string name="snackbar_charge_deleted">Şarj silindi</string>
     <string name="undo">Geri al</string>
 
@@ -205,13 +206,13 @@
     <string name="empty_no_car_cta">Araç ekle</string>
     <string name="empty_no_events_headline">İstatistikleri görmek için ilk şarjınızı kaydedin</string>
     <string name="empty_no_events_cta">Şarj kaydet</string>
-    <string name="multi_currency_banner">Çok para birimli dönem — maliyet istatistikleri gizlendi</string>
+    <string name="multi_currency_banner">Çok para birimli dönem, maliyet istatistikleri gizlendi</string>
     <string name="manage_cars">Araçları yönet…</string>
     <string name="metric_need_two_charges">2+ şarj gerekli</string>
     <string name="cost_card_total">Toplam maliyet</string>
     <string name="battery_health_card_label">Pil durumu</string>
     <string name="battery_health_card_subtitle">En son efektif kapasite ile nominal karşılaştırması</string>
-    <string name="battery_health_estimated_warning">Tahmini — sezgisel yöntem aşırı tahmin edebilir</string>
+    <string name="battery_health_estimated_warning">Tahmini, sezgisel yöntem aşırı tahmin edebilir</string>
     <string name="battery_health_estimated_warning_a11y">Tahmini kapasite, aşırı tahmin edebilir</string>
     <!-- TASK-20: CO₂ tracker -->
     <string name="co2_card_label">CO₂</string>
@@ -219,7 +220,7 @@
     <string name="co2_card_ice_label">Benzin eşdeğeri</string>
     <string name="co2_saved_format">Benzine göre %1$.1f kg tasarruf</string>
     <string name="co2_extra_format">Benzinden %1$.1f kg fazla</string>
-    <string name="co2_card_footnote">Kıbrıs 2025 şebeke ortalamasına dayalıdır — gerçek emisyonlar gün içinde değişir.</string>
+    <string name="co2_card_footnote">Kıbrıs 2025 şebeke ortalamasına dayalıdır, gerçek emisyonlar gün içinde değişir.</string>
     <string name="settings_section_co2">CO₂ takibi</string>
     <string name="settings_co2_ice_baseline">Benzin tüketimi (L/100km)</string>
     <string name="settings_co2_grid_intensity">Şebeke yoğunluğu (gCO₂/kWh)</string>
@@ -294,7 +295,7 @@
     <string name="car_form_year">Yıl</string>
     <string name="car_form_battery_kwh">Pil (kWh)</string>
 
-    <!-- F2 — Charts -->
+    <!-- F2, Charts -->
     <string name="charts_title">Grafikler</string>
     <string name="charts_period_last_6_months">Son 6 ay</string>
     <string name="charts_period_last_12_months">Son 12 ay</string>
@@ -326,7 +327,7 @@
         <item quantity="other">%d şarj</item>
     </plurals>
 
-    <!-- TASK-10 — About / Info screen -->
+    <!-- TASK-10, About / Info screen -->
     <string name="about_title">Hakkında</string>
     <string name="about_version_label">Sürüm %1$s (derleme %2$d)</string>
     <string name="about_acknowledgment_title">Geliştiren</string>
@@ -337,7 +338,7 @@
     <string name="about_disclaimer_body">Bu uygulama yalnızca araştırma ve kişisel kullanım için sağlanmaktadır. Verimlilik ve maliyet tahminleri kullanıcı tarafından girilen verilere dayanmakta olup profesyonel enerji veya finansal tavsiye niteliği taşımaz. SPS-Lab ve Kıbrıs Teknoloji Üniversitesi, bu uygulama tarafından kaydedilen veya görüntülenen verilere dayanılarak alınan kararlardan doğacak hiçbir zarardan sorumlu tutulamaz.</string>
     <string name="about_oss_title">Açık kaynak kütüphaneleri</string>
 
-    <!-- Settings — About entry point -->
+    <!-- Settings, About entry point -->
     <string name="settings_about">Hakkında</string>
     <string name="settings_about_summary">Sürüm, lisans, teşekkürler</string>
 </resources>

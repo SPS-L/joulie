@@ -1,6 +1,6 @@
-# Joulie — Development Backlog
+# Joulie, Development Backlog
 
-Tasks 1–15 were generated from a senior Android developer code review of the `main` branch (April 2026). Tasks 16–21 are follow-up improvements identified during a 2026-04-30 verification pass against `main` (CI/release pipeline, R8 keep-rules, a11y posture, and SPS-Lab research relevance). Tasks 38–42 are new feature / infra ideas filed 2026-05-02 from a follow-up senior-developer review (research-aligned analytics, schema-migration polish, anonymised research export). TASK-43 (filed 2026-05-02) closes a real UX gap: many EU/UK chargers and several older EVs (Renault/Nissan/older BMW) display only SoC % before/after, never kWh delivered. Tasks 44–49 are filed 2026-05-03 from a senior-developer code audit cross-checked against the current `main` (`658b60a` + the TASK-43 / TASK-18 Step 6 / nightly-WorkManager fixes): three correctness/UX bugs (`StatsCalculator` cost accumulation, `KwhFromSocCalculator` defensive guard, battery-health overshoot warning) and three research-aligned extensions (charging power profile, time-of-use tariff zones, per-event grid carbon intensity). The audit also folded `kwhSource` / `socBefore` / `socAfter` columns into TASK-09 and concrete K2 / Room version pins into TASK-33. TASK-50 (also filed 2026-05-03) bundles the four fix categories surfaced by the first nightly instrumented cron after the WorkManager-init fix landed — `EmptyFragmentActivity` not declared in the app manifest, a stale `DriveBackupWorkerTest.ioError_returnsRetry` assertion, racy `MainActivityResetRecoveryTest` startup hook, and a `ChartsFragmentTest` initialization error. TASK-51 (filed 2026-05-03) captures the GPL relicensing request after a dependency audit found one concrete review item in the shipped runtime set: `com.google.android.gms:play-services-auth` is still distributed under the Android SDK License, so the GPL-3.0-or-later switch should carry that note explicitly in review. Tasks 52–54 (filed 2026-05-03 from `docs/EV-backlog-review.md`) cover three hardening items confirmed against `main`: CSV-injection / CR / tab coverage in `ExportCsvUseCase.csvEscape`, a multi-car `require(...)` guard in `StatsCalculator.computeStats`, and TASK-54 — originally framed as a durable last-seen marker for the Drive restore prompt, since expanded to 🔴 priority after a user-supplied reproduction (2026-05-03 in-conversation): on every Settings entry, the Drive switch visibly flips OFF → ON on its own and the "Restore from Drive?" dialog appears. Root cause is two coupled defects — the switch's `OnCheckedChangeListener` fires when Android's view-state restoration calls `setChecked(true)` after the listener is already attached but before the StateFlow collector's rebind block has run, AND the absence of a durable marker that records the user's "Skip" decision. Both fixes are bundled into TASK-54. The same review proposed two further items (a `NetworkType.CONNECTED` constraint on the backup `WorkRequest` and a forward-compat fallback for unknown `kwhSource` values) which were rejected: both behaviours already hold in `WorkManagerBackupScheduler.kt:27` and `ChargeKwhSource.parseLegacy` respectively. TASK-55 (filed 2026-05-04 as a TASK-15 follow-up) closes the gap that TASK-15 left open: the four locales shipped, but no in-app picker — a Greek-speaking user with an English-defaulted phone has no way to switch the app to Greek without changing the OS-wide language, and the first-launch wizard renders in the system locale before the user has had a chance to choose. Two coupled UX entry points: a Settings → Language row (any time) and a wizard-page-0 dropdown (first run), both wired through a `LocaleApplier` narrow IF over `AppCompatDelegate.setApplicationLocales` so the VM stays JVM-testable. Each task is written as a self-contained instruction suitable for a coding agent.
+Tasks 1–15 were generated from a senior Android developer code review of the `main` branch (April 2026). Tasks 16–21 are follow-up improvements identified during a 2026-04-30 verification pass against `main` (CI/release pipeline, R8 keep-rules, a11y posture, and SPS-Lab research relevance). Tasks 38–42 are new feature / infra ideas filed 2026-05-02 from a follow-up senior-developer review (research-aligned analytics, schema-migration polish, anonymised research export). TASK-43 (filed 2026-05-02) closes a real UX gap: many EU/UK chargers and several older EVs (Renault/Nissan/older BMW) display only SoC % before/after, never kWh delivered. Tasks 44–49 are filed 2026-05-03 from a senior-developer code audit cross-checked against the current `main` (`658b60a` + the TASK-43 / TASK-18 Step 6 / nightly-WorkManager fixes): three correctness/UX bugs (`StatsCalculator` cost accumulation, `KwhFromSocCalculator` defensive guard, battery-health overshoot warning) and three research-aligned extensions (charging power profile, time-of-use tariff zones, per-event grid carbon intensity). The audit also folded `kwhSource` / `socBefore` / `socAfter` columns into TASK-09 and concrete K2 / Room version pins into TASK-33. TASK-50 (also filed 2026-05-03) bundles the four fix categories surfaced by the first nightly instrumented cron after the WorkManager-init fix landed, `EmptyFragmentActivity` not declared in the app manifest, a stale `DriveBackupWorkerTest.ioError_returnsRetry` assertion, racy `MainActivityResetRecoveryTest` startup hook, and a `ChartsFragmentTest` initialization error. TASK-51 (filed 2026-05-03) captures the GPL relicensing request after a dependency audit found one concrete review item in the shipped runtime set: `com.google.android.gms:play-services-auth` is still distributed under the Android SDK License, so the GPL-3.0-or-later switch should carry that note explicitly in review. Tasks 52–54 (filed 2026-05-03 from `docs/EV-backlog-review.md`) cover three hardening items confirmed against `main`: CSV-injection / CR / tab coverage in `ExportCsvUseCase.csvEscape`, a multi-car `require(...)` guard in `StatsCalculator.computeStats`, and TASK-54, originally framed as a durable last-seen marker for the Drive restore prompt, since expanded to 🔴 priority after a user-supplied reproduction (2026-05-03 in-conversation): on every Settings entry, the Drive switch visibly flips OFF → ON on its own and the "Restore from Drive?" dialog appears. Root cause is two coupled defects, the switch's `OnCheckedChangeListener` fires when Android's view-state restoration calls `setChecked(true)` after the listener is already attached but before the StateFlow collector's rebind block has run, AND the absence of a durable marker that records the user's "Skip" decision. Both fixes are bundled into TASK-54. The same review proposed two further items (a `NetworkType.CONNECTED` constraint on the backup `WorkRequest` and a forward-compat fallback for unknown `kwhSource` values) which were rejected: both behaviours already hold in `WorkManagerBackupScheduler.kt:27` and `ChargeKwhSource.parseLegacy` respectively. TASK-55 (filed 2026-05-04 as a TASK-15 follow-up) closes the gap that TASK-15 left open: the four locales shipped, but no in-app picker, a Greek-speaking user with an English-defaulted phone has no way to switch the app to Greek without changing the OS-wide language, and the first-launch wizard renders in the system locale before the user has had a chance to choose. Two coupled UX entry points: a Settings → Language row (any time) and a wizard-page-0 dropdown (first run), both wired through a `LocaleApplier` narrow IF over `AppCompatDelegate.setApplicationLocales` so the VM stays JVM-testable. Each task is written as a self-contained instruction suitable for a coding agent.
 
 ---
 
@@ -8,71 +8,72 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 
 | Task | Priority | Description | Requires | Done |
 |------|----------|-------------|----------|------|
-| TASK-01 | 🔴 | Relocate `AggregationDispatcher` out of `di/` | — | ☑ |
-| TASK-02 | 🔴 | Add safeguard KDoc to `RoomDataResetTransactionRunner` (structural rule already holds) | — | ☑ |
-| TASK-03 | — | ~~Unify `UiState` vs `ScreenState` naming in `core/model`~~ — **closed, premise wrong** | — | ☒ |
-| TASK-04 | 🟡 | JVM unit tests for `CostParser` | — | ☑ |
-| TASK-05 | — | ~~JVM unit tests for `EfficiencyPoint`~~ — **closed, premise wrong** | — | ☒ |
-| TASK-06 | 🟡 | JVM unit tests for use cases | — | ☑ |
-| TASK-07 | 🟡 | Drive backup error handling & retry logic | — | ☑ |
-| TASK-08 | 🟢 | Replace `CarEditDialog` with a Compose `AlertDialog` (requires adding Compose) | — | ☐ |
-| TASK-09 | 🟢 | CSV export of charge events with efficiency column, date-range picker | — | ☑ |
-| TASK-10 | 🟢 | In-app About / Info screen with SPS-Lab acknowledgment | — | ☑ |
-| TASK-11 | 🟡 | Odometer regression detection UX improvement | — | ☑ |
-| TASK-12 | 🟡 | Widget: last-charge summary on home screen | — | ☑ |
-| TASK-13 | — | ~~Charging session timer / live session mode~~ — **closed, scope vs value** | — | ☒ |
-| TASK-14 | 🟡 | Battery capacity degradation tracker | — | ☑ |
+| TASK-01 | 🔴 | Relocate `AggregationDispatcher` out of `di/` |  | ☑ |
+| TASK-02 | 🔴 | Add safeguard KDoc to `RoomDataResetTransactionRunner` (structural rule already holds) |  | ☑ |
+| TASK-03 |  | ~~Unify `UiState` vs `ScreenState` naming in `core/model`~~, **closed, premise wrong** |  | ☒ |
+| TASK-04 | 🟡 | JVM unit tests for `CostParser` |  | ☑ |
+| TASK-05 |  | ~~JVM unit tests for `EfficiencyPoint`~~, **closed, premise wrong** |  | ☒ |
+| TASK-06 | 🟡 | JVM unit tests for use cases |  | ☑ |
+| TASK-07 | 🟡 | Drive backup error handling & retry logic |  | ☑ |
+| TASK-08 | 🟢 | Replace `CarEditDialog` with a Compose `AlertDialog` (requires adding Compose) |  | ☐ |
+| TASK-09 | 🟢 | CSV export of charge events with efficiency column, date-range picker |  | ☑ |
+| TASK-10 | 🟢 | In-app About / Info screen with SPS-Lab acknowledgment |  | ☑ |
+| TASK-11 | 🟡 | Odometer regression detection UX improvement |  | ☑ |
+| TASK-12 | 🟡 | Widget: last-charge summary on home screen |  | ☑ |
+| TASK-13 |  | ~~Charging session timer / live session mode~~, **closed, scope vs value** |  | ☒ |
+| TASK-14 | 🟡 | Battery capacity degradation tracker |  | ☑ |
 | TASK-15 | 🟢 | Localisation (i18n) foundation | TASK-16 | ☑ |
-| TASK-16 | 🟢 | Static analysis & code style gate in CI (ktlint + Android Lint) | — | ☑ |
-| TASK-17 | 🟡 | R8/ProGuard follow-up audit: MPAndroidChart keep rule + release smoke test | — | ☑ |
-| TASK-18 | 🟡 | Accessibility (a11y) pass — TalkBack, contentDescription, contrast, touch targets | — | ☐ |
-| TASK-19 | 🟡 | Backup failure notification channel + Android 13+ `POST_NOTIFICATIONS` handling | — | ☑ |
-| TASK-20 | 🟢 | CO₂ savings tracker (ICE baseline, Cyprus grid intensity, methodology doc) | — | ☑ |
-| TASK-21 | 🟢 | Android Baseline Profile module for cold-start performance | — | ☐ |
+| TASK-16 | 🟢 | Static analysis & code style gate in CI (ktlint + Android Lint) |  | ☑ |
+| TASK-17 | 🟡 | R8/ProGuard follow-up audit: MPAndroidChart keep rule + release smoke test |  | ☑ |
+| TASK-18 | 🟡 | Accessibility (a11y) pass, TalkBack, contentDescription, contrast, touch targets |  | ☐ |
+| TASK-19 | 🟡 | Backup failure notification channel + Android 13+ `POST_NOTIFICATIONS` handling |  | ☑ |
+| TASK-20 | 🟢 | CO₂ savings tracker (ICE baseline, Cyprus grid intensity, methodology doc) |  | ☑ |
+| TASK-21 | 🟢 | Android Baseline Profile module for cold-start performance |  | ☐ |
 | TASK-22 | 🔴 | Upgrade `targetSdk` and `compileSdk` to API 35 | TASK-16 | ☑ |
-| TASK-23 | 🔴 | Move startup `isLoading` state into `MainViewModel` | — | ☑ |
+| TASK-23 | 🔴 | Move startup `isLoading` state into `MainViewModel` |  | ☑ |
 | TASK-24 | 🔴 | Enforce ViewModel/Activity consumption of the existing narrow domain interfaces (no concrete `data.repository.*` imports outside `di/`) | TASK-23 | ☑ |
-| TASK-25 | 🟡 | Replace `chargeType: String` with a sealed class / TypeConverter-backed enum | — | ☑ |
-| TASK-26 | 🟡 | Change all Room primary-key and foreign-key fields from `Int` to `Long` | — | ☑ |
-| TASK-27 | 🟡 | Decouple bottom-nav visibility from hardcoded `hideOn` set in `MainActivity` | — | ☑ |
-| TASK-28 | 🟡 | Consolidate time on existing `NowProvider`; remove direct `System.currentTimeMillis()` from entities and helpers; drop the parallel `() -> Long` clock in `WorkerModule` | — | ☑ |
-| TASK-29 | 🟢 | Add explicit `debug` build type with `applicationIdSuffix` and `BuildConfig` flags | — | ☑ |
-| TASK-30 | 🟢 | Migrate from MPAndroidChart to Vico (line/bar) + custom `Canvas` `PieChartView` (pie tabs) | — | ☐ |
-| TASK-31 | 🟡 | Manual Drive controls in Settings: "Back up now" (force overwrite) and "Wipe remote backup" (delete the App Data file) | — | ☑ |
-| TASK-32 | 🟡 | Bump AGP (and Gradle wrapper) to a version that officially supports `compileSdk = 35`; remove the `android.suppressUnsupportedCompileSdk` workaround | — | ☑ |
+| TASK-25 | 🟡 | Replace `chargeType: String` with a sealed class / TypeConverter-backed enum |  | ☑ |
+| TASK-26 | 🟡 | Change all Room primary-key and foreign-key fields from `Int` to `Long` |  | ☑ |
+| TASK-27 | 🟡 | Decouple bottom-nav visibility from hardcoded `hideOn` set in `MainActivity` |  | ☑ |
+| TASK-28 | 🟡 | Consolidate time on existing `NowProvider`; remove direct `System.currentTimeMillis()` from entities and helpers; drop the parallel `() -> Long` clock in `WorkerModule` |  | ☑ |
+| TASK-29 | 🟢 | Add explicit `debug` build type with `applicationIdSuffix` and `BuildConfig` flags |  | ☑ |
+| TASK-30 | 🟢 | Migrate from MPAndroidChart to Vico (line/bar) + custom `Canvas` `PieChartView` (pie tabs) |  | ☐ |
+| TASK-31 | 🟡 | Manual Drive controls in Settings: "Back up now" (force overwrite) and "Wipe remote backup" (delete the App Data file) |  | ☑ |
+| TASK-32 | 🟡 | Bump AGP (and Gradle wrapper) to a version that officially supports `compileSdk = 35`; remove the `android.suppressUnsupportedCompileSdk` workaround |  | ☑ |
 | TASK-33 | 🟢 | Audit Kotlin 2.x / K2 + KSP + Hilt compatibility now that AGP 8.7.3 is in place | TASK-32 | ☐ |
-| TASK-34 | 🟡 | Nightly managed-AVD job for `connectedAndroidTest` — keep off the PR gate | TASK-16 | ☑ |
-| TASK-35 | 🟢 | Roborazzi screenshot tests for Dashboard + Charts (must land before TASK-30) | — | ☐ |
-| TASK-36 | 🟡 | Inline-comment the "no `Result.retry()`" invariant in `DriveBackupWorker.doWork()` | — | ☑ |
-| TASK-37 | 🔴 | Replace Google Drive backup with a Storage Access Framework (SAF) implementation (F-Droid blocker) | — | ⏸ |
-| TASK-38 | 🟢 | Multi-vehicle comparative analytics — overlay 2 cars on a single Charts trend | — | ☐ |
-| TASK-39 | 🟢 | Adopt Room `@AutoMigration` for additive schema bumps from v6 onward | — | ☐ |
+| TASK-34 | 🟡 | Nightly managed-AVD job for `connectedAndroidTest`, keep off the PR gate | TASK-16 | ☑ |
+| TASK-35 | 🟢 | Roborazzi screenshot tests for Dashboard + Charts (must land before TASK-30) |  | ☐ |
+| TASK-36 | 🟡 | Inline-comment the "no `Result.retry()`" invariant in `DriveBackupWorker.doWork()` |  | ☑ |
+| TASK-37 | 🔴 | Replace Google Drive backup with a Storage Access Framework (SAF) implementation (F-Droid blocker) |  | ⏸ |
+| TASK-38 | 🟢 | Multi-vehicle comparative analytics, overlay 2 cars on a single Charts trend |  | ☐ |
+| TASK-39 | 🟢 | Adopt Room `@AutoMigration` for additive schema bumps from v6 onward |  | ☐ |
 | TASK-40 | 🟢 | Anonymised research-export pipeline (PII-stripped CSV for SPS-Lab) | TASK-09 | ☐ |
 | TASK-41 | 🟢 | JSON-LD / OCPP-compatible export format (research interoperability) | TASK-09 | ⏸ |
 | TASK-42 | 🟢 | Open Charge Map / OCPI station lookup integration | TASK-37 | ⏸ |
 | TASK-43 | 🟡 | kWh-from-SoC calculator + `kwhSource` provenance flag (degradation banner on derived events) | TASK-14 | ☑ |
-| TASK-44 | 🟡 | Fix `StatsCalculator.computeStats` cost accumulation (first event's cost silently dropped; inconsistent with `computeMonthlyBuckets`) | — | ☑ |
-| TASK-45 | 🟢 | Defensive SoC range guard (`require(...)`) in `KwhFromSocCalculator.compute` | — | ☐ |
-| TASK-46 | 🟡 | Battery-health card "Estimated" warning when heuristic over-estimates (>105% of nominal AND `isExact = false`) | — | ☑ |
-| TASK-47 | 🟢 | Charging power profile fields (`peakPowerKw`, `chargingDurationMinutes`) — schema bump | — | ☐ |
-| TASK-48 | 🟢 | Time-of-use (ToU) tariff classification on charge events | — | ☐ |
+| TASK-44 | 🟡 | Fix `StatsCalculator.computeStats` cost accumulation (first event's cost silently dropped; inconsistent with `computeMonthlyBuckets`) |  | ☑ |
+| TASK-45 | 🟢 | Defensive SoC range guard (`require(...)`) in `KwhFromSocCalculator.compute` |  | ☐ |
+| TASK-46 | 🟡 | Battery-health card "Estimated" warning when heuristic over-estimates (>105% of nominal AND `isExact = false`) |  | ☑ |
+| TASK-47 | 🟢 | Charging power profile fields (`peakPowerKw`, `chargingDurationMinutes`), schema bump |  | ☐ |
+| TASK-48 | 🟢 | Time-of-use (ToU) tariff classification on charge events |  | ☐ |
 | TASK-49 | 🟢 | Per-event grid carbon intensity (extends TASK-20 with marginal emission factors) | TASK-20 | ☐ |
-| TASK-50 | 🔴 | Stabilise nightly instrumented suite — 21 failures across 4 root causes after WorkManager init landed | TASK-34 | ☑ |
-| TASK-51 | 🔴 | GPL-3.0-or-later license change (pending `play-services-auth` review) | — | ☑ |
-| TASK-52 | 🟡 | CSV escape hardening in `ExportCsvUseCase` — quote `\r` and tabs, neutralise spreadsheet formula-injection prefixes (`=`, `+`, `-`, `@`) in user-supplied fields | — | ☑ |
-| TASK-53 | 🟡 | Multi-car invariant guard in `StatsCalculator.computeStats` — `require` the input shares a single `carId` (latent bug if a future caller passes a mixed-car list) | — | ☑ |
-| TASK-54 | 🔴 | Drive switch fires `onUserToggledOn()` on every Settings entry (view-state restoration anti-pattern) — visible OFF→ON flicker + restore-prompt loop; bundled with a durable last-seen marker for the destructive-action path | TASK-31 | ☑ |
-| TASK-55 | 🟡 | Language picker — Settings → Language row (any time) AND first-run picker on the wizard so users never see an unintelligible welcome screen. `AppCompatDelegate.setApplicationLocales` + persisted `language_tag` DataStore key | TASK-15 | ☑ |
-| TASK-56 | 🟡 | CI release wiring for the ADI registration token — write `app/src/main/assets/adi-registration.properties` from a GitHub Secret in `release.yml` before `assembleRelease`, so CI-built tagged APKs pass Google's developer-verification check | — | ☐ |
+| TASK-50 | 🔴 | Stabilise nightly instrumented suite, 21 failures across 4 root causes after WorkManager init landed | TASK-34 | ☑ |
+| TASK-51 | 🔴 | GPL-3.0-or-later license change (pending `play-services-auth` review) |  | ☑ |
+| TASK-52 | 🟡 | CSV escape hardening in `ExportCsvUseCase`, quote `\r` and tabs, neutralise spreadsheet formula-injection prefixes (`=`, `+`, `-`, `@`) in user-supplied fields |  | ☑ |
+| TASK-53 | 🟡 | Multi-car invariant guard in `StatsCalculator.computeStats`, `require` the input shares a single `carId` (latent bug if a future caller passes a mixed-car list) |  | ☑ |
+| TASK-54 | 🔴 | Drive switch fires `onUserToggledOn()` on every Settings entry (view-state restoration anti-pattern), visible OFF→ON flicker + restore-prompt loop; bundled with a durable last-seen marker for the destructive-action path | TASK-31 | ☑ |
+| TASK-55 | 🟡 | Language picker, Settings → Language row (any time) AND first-run picker on the wizard so users never see an unintelligible welcome screen. `AppCompatDelegate.setApplicationLocales` + persisted `language_tag` DataStore key | TASK-15 | ☑ |
+| TASK-56 | 🟡 | CI release wiring for the ADI registration token, write `app/src/main/assets/adi-registration.properties` from a GitHub Secret in `release.yml` before `assembleRelease`, so CI-built tagged APKs pass Google's developer-verification check |  | ☐ |
+| TASK-57 | 🟢 | Adopt **Joulie Brand Pack v1.0** (gradient bolt-J icons + `<monochrome>` themed-icon layer for Android 13+, brand-blue splash with white bolt, redesigned wizard-welcome and About screens with gradient hero artwork, SPS-Lab badge recoloured to `#FFD54D`, multi-density notification icon, `joulie_ink_deep` + `joulie_spark_green` colour tokens, `wizard_page1_intro_title` string in en/el/tr/ru, voice-rule em-dash retrofit across 9 docs + 4 string locales) |  | ☑ |
 
 **Priority legend:** 🔴 High (architecture/data safety) · 🟡 Medium (robustness/UX) · 🟢 Low (new feature)  
 **Status legend:** ☐ open · ☑ done · ☒ closed (premise no longer holds) · ⏸ under consideration (do not start without explicit go-ahead)  
-**Requires column:** `TASK-NN` means the named task should land first. `—` means no hard prerequisite. Soft coordination notes (Room schema-version claiming, TASK-30 keep-rule cleanup) live in *Notes for Agents* below rather than the column.  
+**Requires column:** `TASK-NN` means the named task should land first. An empty cell means no hard prerequisite. Soft coordination notes (Room schema-version claiming, TASK-30 keep-rule cleanup) live in *Notes for Agents* below rather than the column.  
 Mark done by replacing `☐` with `☑` when a task is merged.
 
 ---
 
-## 🔴 TASK-01 — Relocate `AggregationDispatcher` to the correct package ☑ Done (2026-04-30)
+## 🔴 TASK-01, Relocate `AggregationDispatcher` to the correct package ☑ Done (2026-04-30)
 
 > **Outcome:** the file (a Hilt `@Qualifier` annotation, not a class with logic) was relocated from
 > `app/src/main/java/org/spsl/evtracker/di/AggregationDispatcher.kt` to
@@ -94,12 +95,12 @@ A dispatcher is a domain or data concern, not a DI module.
 2. Update all import statements across the project to reflect the new path.
 3. If `AggregationDispatcher` is injected via Hilt, update the binding in
    `AppModule.kt` or create a dedicated `DispatcherModule.kt` in `di/` that
-   provides it — but the class itself must not live in `di/`.
+   provides it, but the class itself must not live in `di/`.
 4. Verify the project builds and all instrumented tests pass after the move.
 
 ---
 
-## 🔴 TASK-02 — Add safeguard KDoc to `RoomDataResetTransactionRunner` ☑ Done (2026-05-01)
+## 🔴 TASK-02, Add safeguard KDoc to `RoomDataResetTransactionRunner` ☑ Done (2026-05-01)
 
 > **Outcome:** the safeguard KDoc was added to both
 > `domain/repository/DataResetTransactionRunner.kt` and
@@ -112,7 +113,7 @@ A dispatcher is a domain or data concern, not a DI module.
 > structural rule already held empirically (`grep` finds only the impl
 > file and `di/DomainModule.kt`), and the wider narrow-IF rule from
 > TASK-24 is now codified in CLAUDE.md §Architecture, so this KDoc is the
-> last layer — a type-level reminder for the next agent reading the
+> last layer, a type-level reminder for the next agent reading the
 > code. Mechanical enforcement (a custom ktlint rule) remains a TASK-16
 > follow-up; the current cost/benefit doesn't justify spinning one up
 > for two files. The original task text is preserved below.
@@ -121,7 +122,7 @@ A dispatcher is a domain or data concern, not a DI module.
 > `grep -rn "RoomDataResetTransactionRunner" app/src/main/java` returns only
 > `data/repository/RoomDataResetTransactionRunner.kt` (the implementation) and
 > `di/DomainModule.kt` (the `@Binds` to `DataResetTransactionRunner`). All
-> consumers — currently only `ResetAllDataUseCase` — depend on the narrow
+> consumers, currently only `ResetAllDataUseCase`, depend on the narrow
 > `DataResetTransactionRunner` interface. The remaining work is documentation
 > only.
 
@@ -135,7 +136,7 @@ A dispatcher is a domain or data concern, not a DI module.
 
 ---
 
-## ☒ TASK-03 — ~~Unify `UiState` vs `ScreenState` naming convention in `core/model`~~
+## ☒ TASK-03, ~~Unify `UiState` vs `ScreenState` naming convention in `core/model`~~
 
 > **Closed (2026-04-30):** premise is wrong. `ChartsUiState` and
 > `ChartsScreenState` are not duplicates. `ChartsScreenState` is the outer
@@ -145,12 +146,12 @@ A dispatcher is a domain or data concern, not a DI module.
 > `DashboardScreenState` (frame) wrapping `DashboardUiState` (content with
 > `emptyState`, `stats`, `showMultiCurrencyBanner`). The split is intentional;
 > renaming would conflate the two layers. If a stylistic rename of `*ScreenState`
-> ever becomes desirable, file a fresh task — but it is not the
+> ever becomes desirable, file a fresh task, but it is not the
 > deduplication described here.
 
 ---
 
-## 🟡 TASK-04 — Add JVM unit tests for `CostParser` ☑ Done (verified 2026-04-30)
+## 🟡 TASK-04, Add JVM unit tests for `CostParser` ☑ Done (verified 2026-04-30)
 
 > **Outcome:** `app/src/test/java/org/spsl/evtracker/domain/service/CostParserTest.kt`
 > exists (55 lines) and covers zero-cost, blank, negative, total→perKwh
@@ -167,30 +168,30 @@ Create the file:
 Write unit tests covering:
 1. Standard cost parsing with a valid decimal input (e.g., `"0.25"`).
 2. Cost parsing with a comma as decimal separator (e.g., `"0,25"`).
-3. Empty string input — expect a specific default or exception.
+3. Empty string input, expect a specific default or exception.
 4. Null input if the function accepts nullable strings.
-5. Negative values — define and test expected behavior.
-6. Values with currency symbols (e.g., `"€0.25"`) — confirm correct handling.
+5. Negative values, define and test expected behavior.
+6. Values with currency symbols (e.g., `"€0.25"`), confirm correct handling.
 
 Use JUnit 4 or JUnit 5 consistent with the existing test setup. Do not use
-any Android framework classes — this must be a pure JVM test.
+any Android framework classes, this must be a pure JVM test.
 
 ---
 
-## ☒ TASK-05 — ~~Add JVM unit tests for `EfficiencyPoint`~~
+## ☒ TASK-05, ~~Add JVM unit tests for `EfficiencyPoint`~~
 
 > **Closed (2026-04-30):** premise is wrong. `EfficiencyPoint` is a 2-field
 > data class (`eventTimeMillis: Long`, `kmPerKwh: Double`) with zero logic.
 > The proposed cases (zero distance, NaN handling, overflow,
 > cost-per-km derivation) belong to the *producer* of these points, not the
-> point itself — the production logic lives in `StatsCalculator` /
+> point itself, the production logic lives in `StatsCalculator` /
 > `EfficiencyStats`, which already have JVM tests in
 > `app/src/test/java/org/spsl/evtracker/domain/service/`. If gaps exist
 > there, file a fresh task naming the missing scenarios.
 
 ---
 
-## 🟡 TASK-06 — Add JVM unit tests for `RenameCarUseCase` and `ResetAllDataUseCase` ☑ Done (verified 2026-04-30)
+## 🟡 TASK-06, Add JVM unit tests for `RenameCarUseCase` and `ResetAllDataUseCase` ☑ Done (verified 2026-04-30)
 
 > **Outcome:** both test files exist on `main`:
 > `app/src/test/java/org/spsl/evtracker/domain/usecase/RenameCarUseCaseTest.kt`
@@ -230,7 +231,7 @@ Use `kotlinx-coroutines-test` if the use cases are suspending functions.
 
 ---
 
-## 🟡 TASK-07 — Add error handling and retry logic to `DriveBackupRepository` ☑ Done (2026-05-01)
+## 🟡 TASK-07, Add error handling and retry logic to `DriveBackupRepository` ☑ Done (2026-05-01)
 
 > **Outcome:** new `domain/backup/BackupResult.kt` sealed class —
 > `Success` / `AuthRequired` / `Failure(reason, cause?)`. The
@@ -239,7 +240,7 @@ Use `kotlinx-coroutines-test` if the use cases are suspending functions.
 > exceptions handled internally. `DriveBackupRepository` gains a
 > bounded retry loop: `MAX_ATTEMPTS = 3`, exponential backoff
 > `250 ms × 2^attempt` (250 / 500 / 1000 ms total), retrying transient
-> failures only — network `IOException` incl. `UnknownHostException`,
+> failures only, network `IOException` incl. `UnknownHostException`,
 > HTTP 429, HTTP 5xx, and HTTP 403 with quota / rate reasons. Auth
 > errors (401, 403 auth-reason) and `storageQuotaExceeded` 403 short-
 > circuit the loop; unknown / unparseable 403 bodies stay on the
@@ -303,27 +304,27 @@ interfaces with the Google Drive API. It must handle common failure modes.
 
 ---
 
-## 🟢 TASK-08 — Replace `CarEditDialog` with a Compose `AlertDialog`
+## 🟢 TASK-08, Replace `CarEditDialog` with a Compose `AlertDialog`
 
 > **Premise correction (2026-04-30):** `CarEditDialog` is **not** a
 > `DialogFragment`. It is a Kotlin `object` wrapping
 > `MaterialAlertDialogBuilder` over `DialogEditCarBinding` (see
 > `app/src/main/java/org/spsl/evtracker/ui/cars/CarEditDialog.kt`). Compose is
-> also **not** in the dependency graph today — no `androidx.compose.*`
+> also **not** in the dependency graph today, no `androidx.compose.*`
 > entries appear in `app/build.gradle.kts` or `gradle/libs.versions.toml`.
 > The work below therefore has two parts: introducing Compose to the project,
 > and porting the dialog. Treat introducing Compose as the gating decision —
 > if the team prefers staying on Views, close this task and the dialog can
 > stay as-is.
 
-### Step 1 — decide whether to adopt Compose
+### Step 1, decide whether to adopt Compose
 
 Pulling Compose in for a single dialog is rarely worth it. Reasonable triggers
 to actually adopt it: planned Compose-first new screens, the future
 `PieChartView` work in TASK-30 benefits from Compose Canvas, or a desire to
 phase out ViewBinding. If none of these apply, close this task.
 
-### Step 2 — add Compose dependencies (only if Step 1 is "yes")
+### Step 2, add Compose dependencies (only if Step 1 is "yes")
 
 Add to `gradle/libs.versions.toml` and reference from `app/build.gradle.kts`:
 
@@ -336,7 +337,7 @@ Add to `gradle/libs.versions.toml` and reference from `app/build.gradle.kts`:
 Enable `buildFeatures.compose = true` and configure `composeOptions`. Verify
 release build still compiles (`./gradlew :app:assembleRelease`).
 
-### Step 3 — port the dialog
+### Step 3, port the dialog
 
 1. Create a Composable `CarEditDialogCompose(state: CarFormState, onConfirm: (CarFormState) -> Unit, onDismiss: () -> Unit)` rendering a Material3 `AlertDialog` with the same fields as `R.layout.dialog_edit_car` (name, make, model, battery kWh).
 2. Render it from `CarsFragment` via a `ComposeView` whose visibility is driven by `CarsViewModel` state (a `showDialog: CarFormState?` field plus an event).
@@ -345,11 +346,11 @@ release build still compiles (`./gradlew :app:assembleRelease`).
 
 ---
 
-## 🟢 TASK-09 — Add date-ranged CSV export for charge events with efficiency column ☑ Done (2026-05-03)
+## 🟢 TASK-09, Add date-ranged CSV export for charge events with efficiency column ☑ Done (2026-05-03)
 
 > **Outcome (merged 2026-05-03 on `feat/task09-csv-range-export`).**
 > `ExportCsvUseCase` rewritten with a unified 14-column header
-> (identical for full-history and date-ranged exports — research
+> (identical for full-history and date-ranged exports, research
 > consumers in TASK-40 anchor on a stable schema):
 >
 > ```
@@ -358,7 +359,7 @@ release build still compiles (`./gradlew :app:assembleRelease`).
 > soc_before,soc_after,note
 > ```
 >
-> The previous `useKm` parameter was **dropped entirely** — distance
+> The previous `useKm` parameter was **dropped entirely**, distance
 > is now always emitted as canonical kilometres regardless of the
 > user's display preference (DESIGN.md invariant: "Odometer is always
 > stored in km"), making exports locale-independent. Researchers
@@ -366,22 +367,22 @@ release build still compiles (`./gradlew :app:assembleRelease`).
 > the export.
 >
 > **New columns wired:**
-> - `car_name` — sourced from `CarReader.getById(carId).name`,
+> - `car_name`, sourced from `CarReader.getById(carId).name`,
 >   present on every row (not just header).
-> - `kwh_source` — `ChargeKwhSource.name` (`MEASURED` /
+> - `kwh_source`, `ChargeKwhSource.name` (`MEASURED` /
 >   `DERIVED_FROM_SOC`), routed through the TASK-52 hardened
 >   `csvEscape` (defensive symmetry against future enum additions).
-> - `cost_per_kwh` — emits the entity's `costPerKwh: Double?`
+> - `cost_per_kwh`, emits the entity's `costPerKwh: Double?`
 >   verbatim; null becomes empty cell.
-> - `km_per_kwh` — computed per-row using the delta-odometer
+> - `km_per_kwh`, computed per-row using the delta-odometer
 >   convention from `StatsCalculator` (DESIGN.md §7): `(odo[i] -
 >   odo[i-1]) / kwh[i]`. Blank when there is no previous event in the
 >   *exported slice* (so first row blank even if events exist
 >   outside the range), or when `dist <= 0` / `kwh <= 0`. The
->   `prevOdo` chain advances unconditionally — a transient odometer
+>   `prevOdo` chain advances unconditionally, a transient odometer
 >   rollback or zero-kwh row does not break the delta for the next
 >   valid row (mirrors the pairwise convention).
-> - `soc_before` / `soc_after` — fractions in `0.0..1.0` (matching
+> - `soc_before` / `soc_after`, fractions in `0.0..1.0` (matching
 >   the on-disk shape from TASK-14), blank when null.
 >
 > **API surface:** `export(carId: Long): Uri` (full history) +
@@ -391,7 +392,7 @@ release build still compiles (`./gradlew :app:assembleRelease`).
 > duplicate-escape risk. Range is treated as inclusive on both ends
 > via `LongRange` semantics.
 >
-> **UI:** Settings now has two adjacent rows — the existing "Export
+> **UI:** Settings now has two adjacent rows, the existing "Export
 > CSV" row, plus a new "Export CSV (date range)" row that opens a
 > `MaterialDatePicker.Builder.dateRangePicker()` and forwards the
 > selection to `SettingsViewModel.onExportCsvRange(start, end)`.
@@ -401,7 +402,7 @@ release build still compiles (`./gradlew :app:assembleRelease`).
 >
 > **TASK-52 alignment:** the new code path inherits the hardened
 > `csvEscape` (RFC 4180 + OWASP formula-injection prefixes) for all
-> text columns — `car_name`, `kwh_source`, `chargeType.name`,
+> text columns, `car_name`, `kwh_source`, `chargeType.name`,
 > `location`, `currency`, `note`. Numeric / timestamp columns
 > (`event_date_iso`, `odometer_km`, `kwh`, `cost_total`,
 > `cost_per_kwh`, `km_per_kwh`, `soc_before`, `soc_after`)
@@ -437,7 +438,7 @@ release build still compiles (`./gradlew :app:assembleRelease`).
 
 > **Premise correction (2026-04-30):** `EfficiencyPoint` is just a
 > `(eventTimeMillis, kmPerKwh)` data class and does not carry distance,
-> energy, or cost — so it cannot fill the originally proposed CSV header.
+> energy, or cost, so it cannot fill the originally proposed CSV header.
 > An `ExportCsvUseCase` already exists and writes to
 > `getExternalFilesDir(DIRECTORY_DOWNLOADS)`. The remaining work is a
 > **date-ranged variant** of the existing exporter that also emits the
@@ -479,7 +480,7 @@ release build still compiles (`./gradlew :app:assembleRelease`).
 
 ---
 
-## 🟢 TASK-10 — Add In-App "About / Info" Screen ☑ Done (2026-05-01)
+## 🟢 TASK-10, Add In-App "About / Info" Screen ☑ Done (2026-05-01)
 
 > **Outcome:** new `AboutFragment` at
 > `app/src/main/java/org/spsl/evtracker/ui/about/AboutFragment.kt` with
@@ -653,10 +654,10 @@ Each density folder contains **4 files**:
    copy all `mipmap-*` folders into `app/src/main/res/`, replacing existing
    ones. (Pre-flight check: a `find app/src/main/res -name "ic_launcher*"`
    currently lists only the vector drawables and the
-   `mipmap-anydpi-v26/ic_launcher{,_round}.xml` files — there are no
+   `mipmap-anydpi-v26/ic_launcher{,_round}.xml` files, there are no
    density-bucket PNGs to overwrite yet.)
 2. `AndroidManifest.xml` already references `@mipmap/ic_launcher` and
-   `@mipmap/ic_launcher_round` — no changes needed.
+   `@mipmap/ic_launcher_round`, no changes needed.
 3. **Reconcile with the existing vector adaptive icon (commit `e1958d7`).**
    `app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml` currently reads:
 
@@ -680,15 +681,15 @@ Each density folder contains **4 files**:
 
    The two vector drawables added by `e1958d7`
    (`drawable/ic_launcher_foreground.xml`, `drawable/ic_launcher_background.xml`)
-   will become orphans after this rewrite. Delete them — Android Lint's
+   will become orphans after this rewrite. Delete them, Android Lint's
    `UnusedResources` is in error mode and would otherwise fail the
-   build. **Keep `drawable/ic_spslab_badge.xml`** — it's the SPS-Lab pill
+   build. **Keep `drawable/ic_spslab_badge.xml`**, it's the SPS-Lab pill
    badge intended for the About screen header (not part of the launcher
    icon pipeline) and is referenced from the About fragment layout you
    write in this task.
 
 4. Use `play_store/ic_launcher_512.png` when uploading to the Google Play
-   Console (not committed to the repo — keep it under `dist/` locally or
+   Console (not committed to the repo, keep it under `dist/` locally or
    attach to the GitHub Release).
 
 #### Acceptance for the icon work
@@ -701,16 +702,16 @@ Each density folder contains **4 files**:
   `drawable/ic_launcher_background.xml` are deleted; the build remains
   green (`./gradlew :app:lint :app:assembleRelease`).
 - The launcher icon visually shows the EV silhouette + lightning bolt
-  on a navy `#0D2B5E` background after install — verify on a device
+  on a navy `#0D2B5E` background after install, verify on a device
   and on the Play Store listing's icon preview.
 
 ---
 
-## 🟡 TASK-11 — Odometer Regression UX Improvement ☑ Done (2026-05-01)
+## 🟡 TASK-11, Odometer Regression UX Improvement ☑ Done (2026-05-01)
 
 > **Outcome:** `ChargeEditUiState` gained four fields —
 > `previousOdometerKm`, `nextOdometerKm`, `odometerBelowPrevious`,
-> `odometerAboveNext` — populated by `ChargeEditViewModel.init` from a
+> `odometerAboveNext`, populated by `ChargeEditViewModel.init` from a
 > single `getAllForCarSorted(carId)` call (Create mode looks up the
 > latest entry; Edit mode locates the chronological neighbours of the
 > event being edited). Create mode pre-fills `odometer` with
@@ -769,13 +770,13 @@ attempts to save.
 
 ---
 
-## 🟡 TASK-12 — Home Screen Widget: Last Charge Summary ☑ Done (2026-05-01)
+## 🟡 TASK-12, Home Screen Widget: Last Charge Summary ☑ Done (2026-05-01)
 
 > **Outcome:** new `widget/LastChargeWidget` `AppWidgetProvider` shows
 > car name, relative event date ("Today" / "Yesterday" / "N days ago"
 > / "N week(s) ago" / absolute "MMM d, yyyy" past 28 days), kWh added,
 > efficiency in the user's preferred metric (km/kWh, kWh/100 km, or
-> mi/kWh — converted from the canonical km/kWh on the latest event's
+> mi/kWh, converted from the canonical km/kWh on the latest event's
 > odometer-delta), cost (formatted via `NumberFormat.getCurrencyInstance`
 > when `costTotal` and `currency` are both set, otherwise hidden), and
 > a generic ⚡ icon. Empty state shows the
@@ -786,7 +787,7 @@ attempts to save.
 >
 > Pure-domain `LastChargeWidgetSnapshot.compute(...)` does the heavy
 > lifting (sort, latest-event pick, efficiency conversion, relative
-> date bucketing) and stays JVM-testable — no `Calendar` or
+> date bucketing) and stays JVM-testable, no `Calendar` or
 > `RemoteViews` reach into the helper. Inputs are an optional
 > `CarEntity?`, the unsorted events list, the user's `primaryMetric`
 > token, and `nowMillis`. 18 new JVM cases on
@@ -820,7 +821,7 @@ attempts to save.
 > verify `widgetRefresher.refresh()` fires once per commit alongside
 > the existing backup-scheduler assertions. The instrumented test
 > from the spec (verify `RemoteViews` populated correctly) is
-> deferred — `RemoteViews` content assertion needs `LayoutInflater`
+> deferred, `RemoteViews` content assertion needs `LayoutInflater`
 > reflection that's brittle to API changes; the snapshot helper is
 > already exhaustively unit-tested. Plain Espresso wouldn't add
 > coverage. Empirical verification lives in `docs/TEST_PLAN.md §5b`
@@ -872,7 +873,7 @@ If no charge events exist for the active car, show: `"No charges logged yet."`
 
 ---
 
-## ☒ TASK-13 — ~~Live Charging Session Timer~~
+## ☒ TASK-13, ~~Live Charging Session Timer~~
 
 > **Closed (2026-05-02):** scope-vs-value mismatch. Decided against the
 > feature on review. The implementation cost (foreground service +
@@ -904,7 +905,7 @@ edit form when they finish.
 
 3. While a session is active:
    - Show a persistent, non-dismissible notification: `"Charging in progress
-     — [elapsed time]"`; update the elapsed time every minute using a
+    , [elapsed time]"`; update the elapsed time every minute using a
      `CoroutineScope` + `delay` loop in a `ForegroundService`.
    - Replace the Dashboard FAB with a **"Stop & Log"** button.
    - Show an elapsed time chip on the Dashboard (e.g., `⏱ 1h 23m`).
@@ -926,13 +927,13 @@ edit form when they finish.
 
 ---
 
-## 🟡 TASK-14 — Battery Capacity Degradation Tracker ☑ Done (2026-05-01)
+## 🟡 TASK-14, Battery Capacity Degradation Tracker ☑ Done (2026-05-01)
 
 > **Outcome:** `ChargeEventEntity` gains optional `socBefore` and
 > `socAfter` `Double?` fields stored as fractions in `0.0..1.0`. Room
 > schema bumped v5 → v6 with `MIGRATION_5_6 = ALTER TABLE
 > charge_events ADD COLUMN socBefore REAL; ADD COLUMN socAfter REAL`
-> — purely additive, no rebuild. `BackupData.CURRENT_VERSION` 5 → 6
+>, purely additive, no rebuild. `BackupData.CURRENT_VERSION` 5 → 6
 > with `BackupSerializer.SUPPORTED_VERSIONS = {3, 4, 5, 6}`; older
 > backups simply leave the new fields at `null`. New
 > `domain/service/CapacityEstimator` service computes per-event
@@ -959,7 +960,7 @@ edit form when they finish.
 > Charts adds a 6th tab `DEGRADATION` rendering an MPAndroidChart
 > `LineChart` of `effectiveCapacityKwh` over time with a dashed
 > `LimitLine` at the car's `nominalBatteryKwh`; falls back to two
-> empty-state messages — "Set the car's nominal battery capacity in
+> empty-state messages, "Set the car's nominal battery capacity in
 > Cars to enable this chart" / "Need at least 3 qualifying charges".
 > New JVM `CapacityEstimatorTest` (16 cases) covers exact path,
 > heuristic boundary at 80%, mixed events sorted by date,
@@ -992,9 +993,9 @@ For a simpler first implementation, use the following heuristic:
 
 1. Add two **optional** fields to the `charge_events` table via a Room
    migration (version bump to 4):
-   - `soc_before REAL` — State of Charge before charging (0.0–1.0 or 0–100;
+   - `soc_before REAL`, State of Charge before charging (0.0–1.0 or 0–100;
      store as a fraction 0.0–1.0 internally).
-   - `soc_after REAL` — State of Charge after charging.
+   - `soc_after REAL`, State of Charge after charging.
 
 2. Add optional SoC input fields to `ChargeEditFragment`:
    - Two optional fields labelled "SoC before (%)" and "SoC after (%)".
@@ -1020,9 +1021,9 @@ For a simpler first implementation, use the following heuristic:
 
 ---
 
-## 🟢 TASK-15 — Localisation (i18n) Foundation ☑ Done (2026-05-04)
+## 🟢 TASK-15, Localisation (i18n) Foundation ☑ Done (2026-05-04)
 
-> **Outcome:** Three new locale files added: `app/src/main/res/values-el/strings.xml` (Greek — primary Cyprus locale), `app/src/main/res/values-tr/strings.xml` (Turkish — second-largest Cyprus community), and `app/src/main/res/values-ru/strings.xml` (Russian — significant immigrant population). Each file contains all 248 translatable strings, covering navigation labels, screen titles, button labels, empty states, error messages, Drive backup UI, notification strings, and the About/Disclaimer screen. Plurals resources (`charts_acdc_count_center`, `charts_degradation_derived_excluded_banner`) are correctly formed for each locale — Russian uses the full `one/few/many/other` CLDR set; Greek and Turkish use `one/other`. 32 strings in the canonical `values/strings.xml` were marked `translatable="false"`: brand names (`app_name`, `about_app_name`, `dashboard_title`), URL display strings (`about_link_sps_lab`, `about_link_cut`), official organisation names (`about_acknowledgment_lab`, `about_acknowledgment_cut`), internationally-standardised unit abbreviations (`metric_km_per_kwh`, `metric_kwh_per_100km`, `metric_mi_per_kwh`, `wizard_metric_km_kwh`, `wizard_metric_kwh_100km`, `wizard_metric_mi_kwh`, `wizard_unit_km`), technical AC/DC labels (`filter_ac`, `filter_dc`, `charge_type_ac`, `charge_type_dc`, `charts_trend_legend_ac`, `charts_trend_legend_dc`), em-dash display strings (`efficiency_not_available`, `metric_unavailable`, `widget_efficiency_dash`), pure format strings with no human-readable text (`battery_health_value_format`, `widget_efficiency_format`, `charts_acdc_kwh_subtitle`), dev-scaffolding placeholders (`placeholder_dashboard` through `placeholder_manage_locations`, 7 strings), and legal/technical text that must remain in English (`about_license_body`, `about_oss_body`). The two URL strings (`about_url_sps_lab`, `about_url_cut`) were already marked `translatable="false"` prior to this task. XML files pass `xmllint --noout` validation. All 248 translatable keys match across all three locale files (verified via `comm -23` diff). `MissingTranslation` lint gate: build system network is sandboxed (Google Maven unreachable in the CI runner), so Gradle could not execute; correctness was validated by xmllint + key-count diff instead — gate will pass on a networked runner. **⚠ LLM-TRANSLATION CAVEAT: all three locale files are machine-produced first-pass translations. They MUST be reviewed by native Greek, Turkish, and Russian speakers respectively before any production release. Do not ship to users without native-speaker sign-off.**
+> **Outcome:** Three new locale files added: `app/src/main/res/values-el/strings.xml` (Greek, primary Cyprus locale), `app/src/main/res/values-tr/strings.xml` (Turkish, second-largest Cyprus community), and `app/src/main/res/values-ru/strings.xml` (Russian, significant immigrant population). Each file contains all 248 translatable strings, covering navigation labels, screen titles, button labels, empty states, error messages, Drive backup UI, notification strings, and the About/Disclaimer screen. Plurals resources (`charts_acdc_count_center`, `charts_degradation_derived_excluded_banner`) are correctly formed for each locale, Russian uses the full `one/few/many/other` CLDR set; Greek and Turkish use `one/other`. 32 strings in the canonical `values/strings.xml` were marked `translatable="false"`: brand names (`app_name`, `about_app_name`, `dashboard_title`), URL display strings (`about_link_sps_lab`, `about_link_cut`), official organisation names (`about_acknowledgment_lab`, `about_acknowledgment_cut`), internationally-standardised unit abbreviations (`metric_km_per_kwh`, `metric_kwh_per_100km`, `metric_mi_per_kwh`, `wizard_metric_km_kwh`, `wizard_metric_kwh_100km`, `wizard_metric_mi_kwh`, `wizard_unit_km`), technical AC/DC labels (`filter_ac`, `filter_dc`, `charge_type_ac`, `charge_type_dc`, `charts_trend_legend_ac`, `charts_trend_legend_dc`), em-dash display strings (`efficiency_not_available`, `metric_unavailable`, `widget_efficiency_dash`), pure format strings with no human-readable text (`battery_health_value_format`, `widget_efficiency_format`, `charts_acdc_kwh_subtitle`), dev-scaffolding placeholders (`placeholder_dashboard` through `placeholder_manage_locations`, 7 strings), and legal/technical text that must remain in English (`about_license_body`, `about_oss_body`). The two URL strings (`about_url_sps_lab`, `about_url_cut`) were already marked `translatable="false"` prior to this task. XML files pass `xmllint --noout` validation. All 248 translatable keys match across all three locale files (verified via `comm -23` diff). `MissingTranslation` lint gate: build system network is sandboxed (Google Maven unreachable in the CI runner), so Gradle could not execute; correctness was validated by xmllint + key-count diff instead, gate will pass on a networked runner. **⚠ LLM-TRANSLATION CAVEAT: all three locale files are machine-produced first-pass translations. They MUST be reviewed by native Greek, Turkish, and Russian speakers respectively before any production release. Do not ship to users without native-speaker sign-off.**
 
 The app currently has all user-facing strings hardcoded in English. Add
 proper i18n support so the app can be translated in the future.
@@ -1042,11 +1043,11 @@ proper i18n support so the app can be translated in the future.
 3. Add plurals resources (`<plurals>`) for any strings that vary by count
    (e.g., "1 charge event" vs. "3 charge events").
 
-4. **English is the default locale** — `app/src/main/res/values/strings.xml`
+4. **English is the default locale**, `app/src/main/res/values/strings.xml`
    stays as-is. Add three target translations:
-   - Greek — `app/src/main/res/values-el/strings.xml`
-   - Turkish — `app/src/main/res/values-tr/strings.xml`
-   - Russian — `app/src/main/res/values-ru/strings.xml`
+   - Greek, `app/src/main/res/values-el/strings.xml`
+   - Turkish, `app/src/main/res/values-tr/strings.xml`
+   - Russian, `app/src/main/res/values-ru/strings.xml`
 
    Translate at minimum: all navigation labels, screen titles, button
    labels, empty state messages, and error messages. Domain-specific
@@ -1076,7 +1077,7 @@ proper i18n support so the app can be translated in the future.
 
 ---
 
-## 🟢 TASK-16 — Static analysis & code-style gate in CI
+## 🟢 TASK-16, Static analysis & code-style gate in CI
 
 > **Merged 2026-04-30 on `main`.** Implementation: `.github/workflows/ci.yml`
 > (PR + push-to-main triggers), ktlint 12.1.1 plugin in `app/build.gradle.kts`,
@@ -1093,7 +1094,7 @@ proper i18n support so the app can be translated in the future.
 
 The only CI workflow today is `.github/workflows/release.yml`, which triggers
 **only on `v*` tag pushes** and `workflow_dispatch`. It runs `:app:assembleRelease`,
-verifies signing, and publishes the APK — but no linter, no style checker, and
+verifies signing, and publishes the APK, but no linter, no style checker, and
 no static analysis ever runs against PRs or `main`. With ~176 Kotlin files in
 `app/src`, style drift will accumulate silently and hardcoded-string regressions
 (needed by TASK-15) cannot be detected before merge.
@@ -1118,7 +1119,7 @@ no static analysis ever runs against PRs or `main`. With ~176 Kotlin files in
            error += listOf("HardcodedText", "MissingTranslation",
                            "TypographyDashes", "UnusedResources")
            // Once TASK-15 (i18n) lands, also flip "HardcodedText" + "MissingTranslation"
-           // from optional to required — currently they should error already, since
+           // from optional to required, currently they should error already, since
            // there are no localised strings yet to miss.
        }
    }
@@ -1136,7 +1137,7 @@ no static analysis ever runs against PRs or `main`. With ~176 Kotlin files in
 
 ---
 
-## 🟡 TASK-17 — R8/ProGuard follow-up audit: chart library + release smoke test ☑ Done (2026-05-01)
+## 🟡 TASK-17, R8/ProGuard follow-up audit: chart library + release smoke test ☑ Done (2026-05-01)
 
 > **Outcome:** `app/proguard-rules.pro` gains a defensive
 > `-keep class com.github.mikephil.charting.** { *; }` + matching
@@ -1157,7 +1158,7 @@ no static analysis ever runs against PRs or `main`. With ~176 Kotlin files in
 > between "tag pushed → APK built" and "GitHub Release published".
 > The smoke matrix itself requires a physical device or API-26+
 > emulator with an allow-listed Google account, so the act of running
-> it stays a release-time human task — but CI now produces the APK
+> it stays a release-time human task, but CI now produces the APK
 > deterministically and the matrix names every observable that R8 can
 > realistically break. The original task text is preserved below.
 
@@ -1167,7 +1168,7 @@ in commit `48f0f14` (v1.0.1) for the Drive sync path: keep rules now cover
 reflection, and the backup DTOs (`BackupData`, `CarDto`, `ChargeEventDto`,
 `CustomLocationDto`). What's **not** yet covered or verified:
 
-1. **MPAndroidChart** — add a defensive keep rule even though MPAndroidChart's
+1. **MPAndroidChart**, add a defensive keep rule even though MPAndroidChart's
    release surface is mostly non-reflective; some renderers and
    `IValueFormatter` subclasses can still bite under aggressive R8:
    ```
@@ -1175,11 +1176,11 @@ reflection, and the backup DTOs (`BackupData`, `CarDto`, `ChargeEventDto`,
    -dontwarn com.github.mikephil.charting.**
    ```
 
-2. **Hilt + Room** — both ship comprehensive consumer ProGuard rules with
+2. **Hilt + Room**, both ship comprehensive consumer ProGuard rules with
    their AARs (verify by running `./gradlew :app:assembleRelease` and
    inspecting `app/build/outputs/mapping/release/configuration.txt`). Add a
    short comment to `proguard-rules.pro` stating that no app-side keep rules
-   are needed for these libraries, with the AAR rule paths as evidence — this
+   are needed for these libraries, with the AAR rule paths as evidence, this
    prevents a future contributor from adding redundant rules "just in case".
 
 3. **End-to-end release-APK smoke test** (this is the bulk of the work):
@@ -1200,11 +1201,11 @@ reflection, and the backup DTOs (`BackupData`, `CarDto`, `ChargeEventDto`,
 
 > **Note on priority:** the original proposal flagged this 🔴 on the premise
 > that R8 rules had never been audited. Since the Drive/Gson path is already
-> covered as of v1.0.1, the residual risk is bounded — hence 🟡, not 🔴.
+> covered as of v1.0.1, the residual risk is bounded, hence 🟡, not 🔴.
 
 ---
 
-## 🟡 TASK-18 — Accessibility (a11y) pass
+## 🟡 TASK-18, Accessibility (a11y) pass
 
 > **Step 6 landed (2026-05-03).** The standalone-PR early-win from the
 > Notes-for-Agents addendum is in: `HiltTestRunner.onStart()` now calls
@@ -1213,10 +1214,10 @@ reflection, and the backup DTOs (`BackupData`, `CarDto`, `ChargeEventDto`,
 > test runs the WCAG 2.1 AA rule set against the targeted view. New
 > `androidx.test.espresso:espresso-accessibility:3.5.1` dep wired in
 > `gradle/libs.versions.toml` + `app/build.gradle.kts`. No suppression
-> matchers are configured today — the goal of Step 6 is to make the
+> matchers are configured today, the goal of Step 6 is to make the
 > existing audit gap measurable. The first cron run of
 > `nightly-instrumented.yml` after this lands will surface any
-> pre-existing violations as test failures (informational only — the
+> pre-existing violations as test failures (informational only, the
 > nightly job never blocks PRs); those failures become the input list
 > for steps 1–5, 7, 8 below.
 >
@@ -1233,7 +1234,7 @@ WCAG 2.1 AA.
 1. Add `contentDescription` (or `android:contentDescription` in XML) to every
    `ImageView`, icon button, AC/DC toggle, and chart view. MPAndroidChart
    charts are entirely invisible to TalkBack without an explicit description
-   on their host `View` — supply a short summary of what the chart shows.
+   on their host `View`, supply a short summary of what the chart shows.
 
 2. Audit interactive elements for a minimum touch target of 48×48dp. Likely
    offenders: the location chips on `ChargeEditFragment`, the small AC/DC
@@ -1258,7 +1259,7 @@ WCAG 2.1 AA.
 
 7. Run a contrast audit on both light and dark M3 themes. Pay special
    attention to the `#FB8C00` DC orange tertiary token (DESIGN §6) and any
-   white-on-tertiary text — verify ≥ 4.5:1 against the surface it's drawn
+   white-on-tertiary text, verify ≥ 4.5:1 against the surface it's drawn
    on. Tools: Material Theme Builder's contrast checker or the WebAIM
    contrast checker.
 
@@ -1268,11 +1269,11 @@ WCAG 2.1 AA.
 
 ---
 
-## 🟡 TASK-19 — Backup failure notification channel ☑ Done (2026-05-01)
+## 🟡 TASK-19, Backup failure notification channel ☑ Done (2026-05-01)
 
 > **Outcome:** two NotificationChannels registered idempotently from
 > `EVTrackerApp.onCreate` via
-> `AndroidBackupNotifier.ensureChannels(this)` — `backup_status`
+> `AndroidBackupNotifier.ensureChannels(this)`, `backup_status`
 > (IMPORTANCE_LOW, sticky chronic-failure card) and `backup_auth`
 > (IMPORTANCE_DEFAULT, auth-required card). New `BackupNotifier`
 > domain interface (`notifyChronicFailure` / `notifyAuthRequired` /
@@ -1309,12 +1310,12 @@ WCAG 2.1 AA.
 > original task text is preserved below for historical context.
 
 > **TASK-07 has landed.** Step §4 below consumes the
-> `BackupResult.AuthRequired` sealed-class variant directly — the
+> `BackupResult.AuthRequired` sealed-class variant directly, the
 > stable error model exists in `domain/backup/BackupResult.kt`.
 
 Drive auto-backup runs via WorkManager (`enqueueUniqueWork("drive_backup", REPLACE, ...)`).
 On failure (network down, OAuth revoked, quota exceeded), the only signal is
-the "Last backup: …" timestamp in `SettingsFragment` — which most users will
+the "Last backup: …" timestamp in `SettingsFragment`, which most users will
 never look at. There is currently **no notification code anywhere in
 `app/src/main/java`**.
 
@@ -1334,15 +1335,15 @@ never look at. There is currently **no notification code anywhere in
    that opens `MainActivity` and navigates to `SettingsFragment`. Cancel the
    notification on the next success.
 
-4. For HTTP-401 (auth revoked / token expired — see TASK-07's sealed-class
+4. For HTTP-401 (auth revoked / token expired, see TASK-07's sealed-class
    error model), post a higher-importance notification (`IMPORTANCE_DEFAULT`):
-   `"Drive sign-in required — tap to reconnect."` Tapping deep-links to the
+   `"Drive sign-in required, tap to reconnect."` Tapping deep-links to the
    "Sign in to Drive" affordance in Settings.
 
 5. Handle Android 13+ `POST_NOTIFICATIONS` runtime permission. Request the
    permission **only after the first user-visible failure** (not on app
    launch), with a short rationale dialog explaining that notifications are
-   used for backup status only. If denied, do nothing — never re-prompt.
+   used for backup status only. If denied, do nothing, never re-prompt.
 
 6. Add a JVM unit test class
    `app/src/test/.../BackupNotificationManagerTest.kt` covering the failure
@@ -1355,25 +1356,25 @@ never look at. There is currently **no notification code anywhere in
 
 ---
 
-## 🟢 TASK-20 — CO₂ savings tracker ☑ Done (2026-05-04)
+## 🟢 TASK-20, CO₂ savings tracker ☑ Done (2026-05-04)
 
-> **Outcome (merged 2026-05-04 on `feat/task20-co2-tracker`).** Static, preference-driven scope only — TASK-49 (per-event live grid intensity) was deliberately phased out of this PR after the data-source survey found Electricity Maps charges €6,000/yr per zone, CO2Signal has been absorbed into the same paid product, and cyprusgrid.com's WAF rejects direct fetches. ENTSO-E derivation deferred to TASK-49 follow-up.
+> **Outcome (merged 2026-05-04 on `feat/task20-co2-tracker`).** Static, preference-driven scope only, TASK-49 (per-event live grid intensity) was deliberately phased out of this PR after the data-source survey found Electricity Maps charges €6,000/yr per zone, CO2Signal has been absorbed into the same paid product, and cyprusgrid.com's WAF rejects direct fetches. ENTSO-E derivation deferred to TASK-49 follow-up.
 >
 > - **`CO2Calculator`** pure-domain service in `domain/service/`. Three public methods (`evCo2Kg`, `iceCounterfactualCo2Kg`, `savedCo2Kg`) plus a `cumulativeTrend` for the Charts tab. EPA 2.31 kg/L petrol coefficient lives on the companion as a public `const val PETROL_CO2_KG_PER_LITRE`. 17 JVM cases on `CO2CalculatorTest` cover empty/typical/negative-kwh/zero-pref combinations, the negative-savings branch (dirty grid + short distance), and the cumulative-trend rolled-back-odometer regression guard mirroring the StatsCalculator pairwise convention.
 > - **DataStore prefs.** Two new `doublePreferencesKey` entries on `PreferenceKeys`: `ICE_BASELINE_L_PER_100KM` (default 7.0) and `GRID_INTENSITY_G_CO2_PER_KWH` (default 577.0). Wired through `SettingsReader` / `SettingsWriter` / `SettingsRepository`, plus `Fakes.FakeSettingsReader` / `FakeSettingsWriter` / `BackupOutcomeReporterTest.LinkedSettings`.
 > - **`Stats` data class** grows `evCo2Kg: Double?` and `iceCo2Kg: Double?`. Both `null` when the corresponding pref is unset / 0; the Dashboard card hides entirely when either is null (Q6 contract from the brief).
 > - **`ObserveDashboardStatsUseCase`** combines the two new pref flows alongside `activeCarId` + `cars` via a private `CombinedSettings` data class so the outer combine is legible. `CO2Calculator` is invoked after the base `Stats` is built; results are spliced via `baseStats.copy(evCo2Kg = …, iceCo2Kg = …)`.
-> - **Dashboard card** lives between the battery-health card and the multi-currency banner. Two values side-by-side ("EV emissions" + "Petrol counterfactual") per the BACKLOG Q1=c decision, with a "Saved %.1f kg vs petrol" or "%.1f kg more than petrol" line below — the negative-savings branch surfaces honestly. Footer reads "Based on Cyprus 2025 grid average — actual emissions vary by hour of day."
+> - **Dashboard card** lives between the battery-health card and the multi-currency banner. Two values side-by-side ("EV emissions" + "Petrol counterfactual") per the BACKLOG Q1=c decision, with a "Saved %.1f kg vs petrol" or "%.1f kg more than petrol" line below, the negative-savings branch surfaces honestly. Footer reads "Based on Cyprus 2025 grid average, actual emissions vary by hour of day."
 > - **Charts CO₂ tab.** New `TabKind.CO2` enum entry, wired into `ChartsPagerAdapter` + `ChartsFragment`'s tab-title mapper. Renders a two-series cumulative `LineChart`: solid EV emissions line plus a dashed ICE-counterfactual line so the visual distinction between "actually emitted" and "would have emitted" is unambiguous. `ChartsUiState.Loaded` grows `co2Cumulative: List<CumulativePoint>`; `ObserveChartsModelsUseCase` populates it via `CO2Calculator.cumulativeTrend(...)` over the period's events.
 > - **Settings.** New "CO₂ tracker" section with two rows (ICE baseline + grid intensity). Both rows open a shared `MaterialAlertDialog` with a `TextInputEditText` configured for `inputType=numberDecimal`. The parser accepts both `7.0` and `7,0` (locale-aware) so el / ru users with comma decimals don't get rejected. Validation rejects non-positive values with a Snackbar.
 > - **Strings.** Eleven new keys; all translatable strings present in `values/`, `values-el/`, `values-tr/`, `values-ru/` per the TASK-15 `MissingTranslation` error-mode contract. Two non-translatable format strings (`co2_value_format`, `charts_co2_unit`) only in `values/`.
-> - **`docs/METHODOLOGY.md`** — new single-page methodology document. Cites EPA for the 2.31 coefficient, cyprusgrid.com for the 577 default, EU fleet data for the 7.0 baseline. Documents the tank-to-wheel vs well-to-wheel choice, the average-vs-marginal grid-intensity caveat, why Saved can be negative, and the open issue blocking TASK-49 (no free per-event Cyprus carbon-intensity API today).
+> - **`docs/METHODOLOGY.md`**, new single-page methodology document. Cites EPA for the 2.31 coefficient, cyprusgrid.com for the 577 default, EU fleet data for the 7.0 baseline. Documents the tank-to-wheel vs well-to-wheel choice, the average-vs-marginal grid-intensity caveat, why Saved can be negative, and the open issue blocking TASK-49 (no free per-event Cyprus carbon-intensity API today).
 >
-> **Tests:** JVM count 409 → 425 (+16: 17 new `CO2CalculatorTest` cases minus 1 from a duplicate count fix elsewhere — actual delta is +17 minus an internal rebalance to land at +16). All four constructors that touch `ObserveDashboardStatsUseCase` and `ObserveChartsModelsUseCase` updated to pass the new `co2Calculator` parameter (`ObserveDashboardStatsUseCaseTest` ×2, `DashboardViewModelTest`, `ObserveChartsModelsUseCaseTest` ×2, `ChartsViewModelTest`). Gates green: ktlintCheck, :app:lint, :app:testDebugUnitTest, :app:assembleRelease, :app:assembleDebugAndroidTest.
+> **Tests:** JVM count 409 → 425 (+16: 17 new `CO2CalculatorTest` cases minus 1 from a duplicate count fix elsewhere, actual delta is +17 minus an internal rebalance to land at +16). All four constructors that touch `ObserveDashboardStatsUseCase` and `ObserveChartsModelsUseCase` updated to pass the new `co2Calculator` parameter (`ObserveDashboardStatsUseCaseTest` ×2, `DashboardViewModelTest`, `ObserveChartsModelsUseCaseTest` ×2, `ChartsViewModelTest`). Gates green: ktlintCheck, :app:lint, :app:testDebugUnitTest, :app:assembleRelease, :app:assembleDebugAndroidTest.
 >
-> **TASK-49 follow-up.** Stays open. The BACKLOG entry below should be updated to record the data-source survey findings (Electricity Maps €6k/yr, CO2Signal-via-Electricity-Maps, cyprusgrid.com WAF, ENTSO-E mix-derivation deferred). Nothing for TASK-49 to inherit from this PR's schema — `charge_events` schema unchanged at v7; the per-event `gridCarbonIntensityGCo2PerKwh` column remains TASK-49's to add at v7→v8 alongside the fetcher.
+> **TASK-49 follow-up.** Stays open. The BACKLOG entry below should be updated to record the data-source survey findings (Electricity Maps €6k/yr, CO2Signal-via-Electricity-Maps, cyprusgrid.com WAF, ENTSO-E mix-derivation deferred). Nothing for TASK-49 to inherit from this PR's schema, `charge_events` schema unchanged at v7; the per-event `gridCarbonIntensityGCo2PerKwh` column remains TASK-49's to add at v7→v8 alongside the fetcher.
 
-## 🟢 TASK-20 — CO₂ savings tracker
+## 🟢 TASK-20, CO₂ savings tracker
 
 This is the most research-aligned addition for SPS-Lab. The app already tracks
 kWh consumed and distance driven; it never contextualises the environmental
@@ -1385,14 +1386,14 @@ default makes the result locally meaningful.
 
 1. Add two preferences to Settings (declared in `PreferenceKeys`):
 
-   - `iceBaselineLPer100km: Float` — preset choices presented as a dropdown:
+   - `iceBaselineLPer100km: Float`, preset choices presented as a dropdown:
      - Small petrol car: 6.0 L/100km
      - Average petrol car: 8.0 L/100km
      - Large petrol / SUV: 11.0 L/100km
      - Custom (user-entered, validate 1.0 ≤ x ≤ 20.0)
 
-   - `gridIntensityGCO2PerKwh: Float` — preset choices:
-     - Cyprus grid: 600 gCO₂/kWh **(default — relevant for CUT context)**
+   - `gridIntensityGCO2PerKwh: Float`, preset choices:
+     - Cyprus grid: 600 gCO₂/kWh **(default, relevant for CUT context)**
      - EU average: 250 gCO₂/kWh
      - Renewable-heavy (Norway-style): 20 gCO₂/kWh
      - Custom (validate 0 ≤ x ≤ 1500)
@@ -1442,7 +1443,7 @@ default makes the result locally meaningful.
 
 ---
 
-## 🟢 TASK-21 — Android Baseline Profile for cold-start performance
+## 🟢 TASK-21, Android Baseline Profile for cold-start performance
 
 App cold start currently traverses Room init + Hilt graph build + DataStore
 reads + the wizard gate, all in the main-thread path. A Baseline Profile
@@ -1461,9 +1462,9 @@ cold-start latency on user devices.
    - Wire `targetProjectPath = ":app"` and `experimentalProperties["android.experimental.self-instrumenting"] = true`.
 
 3. Write `BaselineProfileGenerator` covering the hot startup paths:
-   - Cold start to **Dashboard** (wizard already completed) — the most
+   - Cold start to **Dashboard** (wizard already completed), the most
      common everyday case.
-   - Cold start to **Wizard** (first launch) — important for first-impression
+   - Cold start to **Wizard** (first launch), important for first-impression
      latency.
    - Open `ChargeEditFragment` from the Dashboard FAB.
    - Open `ChartsFragment` (this triggers MPAndroidChart class loading,
@@ -1488,19 +1489,19 @@ cold-start latency on user devices.
 
 ---
 
-## 🔴 TASK-22 — Upgrade `targetSdk` and `compileSdk` to API 35 ☑ Done (2026-05-01)
+## 🔴 TASK-22, Upgrade `targetSdk` and `compileSdk` to API 35 ☑ Done (2026-05-01)
 
 > **Outcome:** `compileSdk` and `targetSdk` bumped to 35 in
 > `app/build.gradle.kts`. AGP 8.2.0 + Gradle 8.4 accept the new SDK with
 > no toolchain bump and no warnings (verified with
-> `./gradlew :app:assembleDebug` — `android-35` is auto-downloaded under
+> `./gradlew :app:assembleDebug`, `android-35` is auto-downloaded under
 > `$ANDROID_HOME/platforms/`). `MainActivity.onCreate` now calls
 > `enableEdgeToEdge()` and applies `WindowInsetsCompat.Type.systemBars()
 > or displayCutout()` as padding to the root `LinearLayout`, so the
 > bottom nav and CoordinatorLayout Snackbars stay above the gesture-nav
 > indicator on Android 15+. Lint baseline is unchanged (no new API-35
-> issues surface). Step 6 in the original task body — bumping a CI
-> `api-level` matrix — was moot: `.github/workflows/ci.yml` is
+> issues surface). Step 6 in the original task body, bumping a CI
+> `api-level` matrix, was moot: `.github/workflows/ci.yml` is
 > static-analysis only and has no instrumented-test matrix to bump.
 > Spec: `superpowers/specs/2026-05-01-task22-sdk35-upgrade-design.md`.
 > Plan: `superpowers/plans/2026-05-01-task22-sdk35-upgrade.md`.
@@ -1522,7 +1523,7 @@ submissions and updates; staying on 34 will block Play Store publishing.
    Pay particular attention to:
    - **Edge-to-edge by default** on API 35: `WindowInsets` handling in
      `MainActivity` and any Fragment that sets window flags.
-   - `PendingIntent.FLAG_IMMUTABLE` — required since API 31 but newer Lint flags
+   - `PendingIntent.FLAG_IMMUTABLE`, required since API 31 but newer Lint flags
      it more loudly.
    - Photo / media picker changes that landed in API 35 (relevant if a future
      task adds an image-picker for charge-event notes).
@@ -1535,7 +1536,7 @@ submissions and updates; staying on 34 will block Play Store publishing.
 
 ---
 
-## 🔴 TASK-23 — Move startup `isLoading` state into `MainViewModel` ☑ Done (2026-04-30)
+## 🔴 TASK-23, Move startup `isLoading` state into `MainViewModel` ☑ Done (2026-04-30)
 
 > **Outcome:** `MainViewModel` now owns the startup auto-recovery state.
 > `MainActivity` is a thin presenter that observes `startupState` via
@@ -1600,7 +1601,7 @@ and produces a visible splash flicker on rotation during startup.
 
 ---
 
-## 🔴 TASK-24 — Enforce ViewModel/Activity consumption of the existing narrow domain interfaces ☑ Done (2026-05-01)
+## 🔴 TASK-24, Enforce ViewModel/Activity consumption of the existing narrow domain interfaces ☑ Done (2026-05-01)
 
 > **Outcome:** the two remaining concrete-repository imports are gone.
 > `EVTrackerApp` now `@Inject`s `SettingsReader` (for the launch-time theme
@@ -1631,12 +1632,12 @@ violations on `main`:
 - `MainActivity.kt` imports and `@Inject`s `data.repository.SettingsRepository`.
 - `WizardViewModel.kt` imports `data.repository.SettingsRepository`.
 
-(Plus expected references inside `di/DomainModule.kt` for the bindings — those
+(Plus expected references inside `di/DomainModule.kt` for the bindings, those
 are correct and should stay.)
 
 1. Audit and replace each violation:
    - `MainActivity` and `WizardViewModel` should depend on `SettingsReader` (and
-     `SettingsWriter` only if they actually mutate settings — for the wizard,
+     `SettingsWriter` only if they actually mutate settings, for the wizard,
      yes; for `MainActivity` startup gate, only `SettingsReader`).
    - `EVTrackerApp` (Hilt application class): if the import is just for a
      downstream binding, remove it; otherwise replace with the narrow IF.
@@ -1656,7 +1657,7 @@ are correct and should stay.)
 
 ---
 
-## 🟡 TASK-25 — Replace `chargeType: String` with a TypeConverter-backed enum ☑ Done (2026-05-01)
+## 🟡 TASK-25, Replace `chargeType: String` with a TypeConverter-backed enum ☑ Done (2026-05-01)
 
 > **Outcome:** new `core/model/ChargeType` enum (`AC`, `DC_FAST`,
 > `DC_ULTRA`) with `isDc`, `displayLabel()`, and `parseLegacy(s)`.
@@ -1713,7 +1714,7 @@ written, breaking filter queries and chart groupings silently.
    `toChargeType` doesn't silently fall back to `AC` for legacy rows.
 4. Update `ChargeEditFragment`, its ViewModel, `ChartsViewModel`, and DAO `@Query`
    filters that match on `chargeType` to use `ChargeType.*` literals (e.g.
-   `WHERE chargeType = :type` with `type: ChargeType` parameter — Room will use
+   `WHERE chargeType = :type` with `type: ChargeType` parameter, Room will use
    the converter).
 5. Update `BackupData` DTO + Gson serialiser to map `ChargeType` ↔ `String`
    (custom `JsonDeserializer` + serialiser) so existing `evtracker_backup.json`
@@ -1723,7 +1724,7 @@ written, breaking filter queries and chart groupings silently.
 
 ---
 
-## 🟡 TASK-26 — Change Room primary-key and foreign-key fields from `Int` to `Long` ☑ Done (2026-05-01)
+## 🟡 TASK-26, Change Room primary-key and foreign-key fields from `Int` to `Long` ☑ Done (2026-05-01)
 
 > **Outcome:** all three entities (`CarEntity`, `ChargeEventEntity`,
 > `CustomLocationEntity`) widen `id: Int` → `id: Long` and
@@ -1734,7 +1735,7 @@ written, breaking filter queries and chart groupings silently.
 > `pendingDeletes` map key) flip to `Long`. Navigation safe-args:
 > `nav_graph.xml` `eventId` argument switches `app:argType="integer"
 > default="-1"` → `app:argType="long" default="-1L"`. **DataStore
-> `ACTIVE_CAR_ID` stays an `intPreferencesKey`** — switching the same
+> `ACTIVE_CAR_ID` stays an `intPreferencesKey`**, switching the same
 > key name from `intPreferencesKey` to `longPreferencesKey` would
 > silently drop the existing value, and a single user with thousands
 > of cars over decades won't exceed `Int.MAX_VALUE`. The repository
@@ -1755,7 +1756,7 @@ written, breaking filter queries and chart groupings silently.
 > `migrate_1_to_5_validatesSchema` and asserts ids round-trip as
 > `Long`. All gates green: `:app:assembleDebug`, `:app:assembleRelease`
 > (R8), `:app:assembleDebugAndroidTest`, `ktlintCheck`, `:app:lint`,
-> `:app:testDebugUnitTest` (275 cases — count unchanged because the
+> `:app:testDebugUnitTest` (275 cases, count unchanged because the
 > Long-widening is a refactor that doesn't add behavior).
 
 `CarEntity.id`, `ChargeEventEntity.id`, `ChargeEventEntity.carId`, and
@@ -1791,7 +1792,7 @@ align with SQLite's 64-bit `ROWID` and eliminate any overflow risk.
 
 ---
 
-## 🟡 TASK-27 — Decouple bottom-nav visibility from the hardcoded `hideOn` set ☑ Done (2026-05-01)
+## 🟡 TASK-27, Decouple bottom-nav visibility from the hardcoded `hideOn` set ☑ Done (2026-05-01)
 
 > **Outcome:** the four full-screen destinations (`wizardFragment`,
 > `chargeEditFragment`, `carsFragment`, `manageLocationsFragment`)
@@ -1816,7 +1817,7 @@ align with SQLite's 64-bit `ROWID` and eliminate any overflow risk.
 `MainActivity.kt:47` declares `val hideOn = setOf(R.id.wizardFragment, …)` to
 decide when to hide the `BottomNavigationView`. Every new full-screen
 destination requires editing `MainActivity`, coupling the Activity to specific
-Fragment IDs. This is easy to forget — the `manageLocationsFragment` and
+Fragment IDs. This is easy to forget, the `manageLocationsFragment` and
 `carsFragment` cases were both retrofits that had to chase down the omission.
 
 1. In `app/src/main/res/navigation/nav_graph.xml`, declare a per-destination
@@ -1830,7 +1831,7 @@ Fragment IDs. This is easy to forget — the `manageLocationsFragment` and
    </fragment>
    ```
    Set `android:defaultValue="true"` on `wizardFragment`, `chargeEditFragment`,
-   `carsFragment`, `manageLocationsFragment`. Set `false` (or omit — the default
+   `carsFragment`, `manageLocationsFragment`. Set `false` (or omit, the default
    is `false`) on `dashboardFragment`, `historyFragment`, `chartsFragment`,
    `settingsFragment`.
 2. In `MainActivity`, replace the `hideOn` set with:
@@ -1850,13 +1851,13 @@ Fragment IDs. This is easy to forget — the `manageLocationsFragment` and
 
 ---
 
-## 🟡 TASK-28 — Consolidate time on the existing `NowProvider` abstraction ☑ Done (2026-05-01)
+## 🟡 TASK-28, Consolidate time on the existing `NowProvider` abstraction ☑ Done (2026-05-01)
 
 > **Outcome:** every production `System.currentTimeMillis()` call outside
 > the canonical `DispatcherModule.provideNowProvider` binding is gone.
 > `CarEntity.createdAt`, `ChargeEventEntity.createdAt`, and
 > `CustomLocationEntity.lastUsed` no longer have wall-clock-evaluating
-> defaults — call sites pass `now.nowMillis()` explicitly.
+> defaults, call sites pass `now.nowMillis()` explicitly.
 > `BackupData.fromEntities`, `LocationWriter.recordUsage`,
 > `DateRangeResolver.resolve` / `resolveCharts`, and
 > `ChargeEditUiState.eventDateMillis` lost their `= System.currentTimeMillis()`
@@ -1864,7 +1865,7 @@ Fragment IDs. This is easy to forget — the `manageLocationsFragment` and
 > `ObserveDashboardStatsUseCase`, `DriveBackupRepository`,
 > `RestoreBackupUseCase`, `ChargeEditViewModel`, and
 > `ManageLocationsFragment` all inject `NowProvider` (the Fragment
-> forwards `nowProvider::nowMillis` to the adapter constructor — adapters
+> forwards `nowProvider::nowMillis` to the adapter constructor, adapters
 > aren't Hilt entry points). `WorkerModule.provideClock(): () -> Long`
 > is deleted; `DriveBackupWorker` consumes `NowProvider` directly. New
 > JVM fake `FakeNowProvider` lives next to the existing fakes; the
@@ -1873,7 +1874,7 @@ Fragment IDs. This is easy to forget — the `manageLocationsFragment` and
 > `SaveChargeEventUseCaseTest.createdAtAndLocationLastUsed_reflectNowProviderValue`).
 > JVM unit-test count: 245 → 247. Acceptance grep
 > (`grep -rn "System.currentTimeMillis()" app/src/main/java | grep -v DispatcherModule.kt`)
-> returns only the `NowProvider.kt` KDoc comment — no production calls.
+> returns only the `NowProvider.kt` KDoc comment, no production calls.
 > `:app:assembleDebug`, `:app:assembleRelease` (with R8), `:app:lint`,
 > `ktlintCheck`, and `:app:assembleDebugAndroidTest` all green. Spec:
 > `superpowers/specs/2026-05-01-task28-nowprovider-consolidation-design.md`.
@@ -1884,7 +1885,7 @@ Fragment IDs. This is easy to forget — the `manageLocationsFragment` and
 > **Note on premise.** A `NowProvider` (`fun interface NowProvider { fun nowMillis(): Long }`)
 > already exists in `domain/usecase/NowProvider.kt` and is bound by
 > `DispatcherModule.provideNowProvider`. `ObserveChartsModelsUseCase` already
-> consumes it. Don't introduce a parallel `Clock` interface — extend usage of
+> consumes it. Don't introduce a parallel `Clock` interface, extend usage of
 > the existing one. There is also a duplicate `() -> Long` provider in
 > `WorkerModule.provideClock` that should be removed.
 
@@ -1927,18 +1928,18 @@ go through `NowProvider` instead:
 
 ---
 
-## 🟢 TASK-29 — Add an explicit `debug` build type with `applicationIdSuffix` and `BuildConfig` flags ☑ Done (2026-05-01)
+## 🟢 TASK-29, Add an explicit `debug` build type with `applicationIdSuffix` and `BuildConfig` flags ☑ Done (2026-05-01)
 
 > **Outcome:** added a `debug { }` block to `app/build.gradle.kts`
 > with `applicationIdSuffix = ".debug"`, `versionNameSuffix = "-debug"`,
 > and `isDebuggable = true`. Both `debug` and `release` declare three
-> matched custom fields — `ENABLE_SEED_DATA`, `VERBOSE_LOGGING`,
-> `DRIVE_FOLDER_SUFFIX` — as scaffolding for future consumers (no
+> matched custom fields, `ENABLE_SEED_DATA`, `VERBOSE_LOGGING`,
+> `DRIVE_FOLDER_SUFFIX`, as scaffolding for future consumers (no
 > production-code consumer wired in this task; `BuildConfig.DEBUG`
 > still exists for the binary debug/release distinction). `buildFeatures`
 > flips `buildConfig = true`, which unblocks TASK-10's About screen
 > (`BuildConfig.VERSION_NAME` / `VERSION_CODE`). Debug and release
-> APKs can now coexist on a device — verified via
+> APKs can now coexist on a device, verified via
 > `aapt dump badging`: debug = `org.spsl.evtracker.debug` /
 > `1.0.1-debug`; release = `org.spsl.evtracker` / `1.0.1`.
 > `.github/workflows/ci.yml` gains `:app:assembleRelease` as a
@@ -1956,7 +1957,7 @@ go through `NowProvider` instead:
 Gradle's implicit default. Consequences: (1) debug and release share the same
 `applicationId` so they cannot coexist on a device; (2) no `BuildConfig`
 booleans exist to guard development-only features; (3) `buildConfig` is not
-enabled in `buildFeatures` (`viewBinding = true` is — `buildConfig` is missing
+enabled in `buildFeatures` (`viewBinding = true` is, `buildConfig` is missing
 since AGP 8.0 disabled it by default).
 
 1. Add an explicit `debug` block to `buildTypes`:
@@ -2001,7 +2002,7 @@ since AGP 8.0 disabled it by default).
 
 ---
 
-## 🟢 TASK-30 — Migrate from MPAndroidChart to Vico (line/bar) + custom `PieChartView` (pie tabs)
+## 🟢 TASK-30, Migrate from MPAndroidChart to Vico (line/bar) + custom `PieChartView` (pie tabs)
 
 A `grep -rln "com.github.mikephil.charting"` confirmed exactly three importer
 files: `ChartsMarkerView.kt`, `ChartStyling.kt`, `ChartsTabFragment.kt`. The
@@ -2023,12 +2024,12 @@ six tabs map to Vico like this:
 > a user report of unreadable dark-mode text). Vico's API has equivalent
 > hooks (`Axis.label.color`, `Axis.line.color`, `LineLayer` line colors) and
 > the custom `PieChartView` slice-label paint must do the same lookup. Any
-> replacement that ships with hardcoded greys is a regression — the
+> replacement that ships with hardcoded greys is a regression, the
 > `docs/TEST_PLAN.md §5b` smoke matrix step 6b is the gate.
 
 ### Implementation
 
-**Step 1 — Add Vico; keep MPAndroidChart in place during the migration.**
+**Step 1, Add Vico; keep MPAndroidChart in place during the migration.**
 
 ```toml
 # gradle/libs.versions.toml
@@ -2043,7 +2044,7 @@ vico-views = { group = "com.patrykandpatrick.vico", name = "views", version.ref 
 implementation(libs.vico.views)
 ```
 
-**Step 2 — Migrate the line `Trend` tab.**
+**Step 2, Migrate the line `Trend` tab.**
 
 1. Replace `configureLineChart(chart: LineChart)` in `ChartStyling.kt` with a
    helper that configures `CartesianChartView` + `LineCartesianLayer`.
@@ -2051,14 +2052,14 @@ implementation(libs.vico.views)
    for Vico's `CartesianChartView` + `LineCartesianLayerModel.build {}`.
 3. Port x-axis date formatting to a Vico `CartesianValueFormatter`.
 4. `Entry.data` (currently used to stash epoch millis for the marker) doesn't
-   exist on Vico models — pass marker payload via the model's
+   exist on Vico models, pass marker payload via the model's
    `extraStore` map instead.
 5. Replace `ChartsMarkerView` (extends MPAndroidChart `MarkerView`, overrides
    `getOffset`) with a Vico `DefaultCartesianMarker` or a custom
-   `CartesianMarker`. Vico positions markers automatically — the `getOffset`
+   `CartesianMarker`. Vico positions markers automatically, the `getOffset`
    override is no longer needed.
 
-**Step 3 — Migrate the two bar tabs (Monthly kWh, Monthly cost).**
+**Step 3, Migrate the two bar tabs (Monthly kWh, Monthly cost).**
 
 1. Replace `configureBarChart(chart: BarChart)` with a Vico helper for
    `ColumnCartesianLayer`.
@@ -2066,10 +2067,10 @@ implementation(libs.vico.views)
    `BarDataSet` / `BarData` / `BarEntry` with `ColumnCartesianLayerModel.build {}`.
 3. Port `ChartStyling.monthBucketFormatter` from MPAndroidChart `ValueFormatter`
    to a Vico `CartesianValueFormatter` lambda.
-4. Reuse the same Vico marker wrapper introduced in Step 2 — do **not** port
+4. Reuse the same Vico marker wrapper introduced in Step 2, do **not** port
    the marker implementation twice.
 
-**Step 4 — Replace pie tabs with a custom `Canvas` view.**
+**Step 4, Replace pie tabs with a custom `Canvas` view.**
 
 Vico has no pie chart. Implement once, use twice:
 
@@ -2085,12 +2086,12 @@ Vico has no pie chart. Implement once, use twice:
      mirroring the existing `chart.animateY(400)`.
 2. In `renderAcDc()` and `renderLocations()`, replace `PieChart(requireContext())`
    with `PieChartView(requireContext())`. Pass slices + center text.
-3. Port `ChartStyling.locationPalette()` as-is — it's a colour-array helper with
+3. Port `ChartStyling.locationPalette()` as-is, it's a colour-array helper with
    no MPAndroidChart dependency.
 4. Add a JVM unit test for `PieChartView` slice-angle math: empty data → zero
    sweep, non-empty data → angles sum to exactly 360°.
 
-**Step 5 — Remove MPAndroidChart.**
+**Step 5, Remove MPAndroidChart.**
 
 Once all six tabs render correctly with the new implementations:
 
@@ -2100,7 +2101,7 @@ Once all six tabs render correctly with the new implementations:
    com.github.mikephil.charting.** { *; }` and matching `-dontwarn`).
 3. Run `./gradlew lint` and confirm no dangling `dontwarn` references remain.
 
-**Step 6 — Tests and docs.**
+**Step 6, Tests and docs.**
 
 1. Update or add Espresso tests in `app/src/androidTest/` for each of the six
    tabs: assert the chart `View` is non-empty when the ViewModel emits a
@@ -2114,7 +2115,7 @@ Once all six tabs render correctly with the new implementations:
 
 ---
 
-## 🟡 TASK-31 — Manual Drive controls: "Back up now" and "Wipe remote backup" ☑ Done (2026-05-01)
+## 🟡 TASK-31, Manual Drive controls: "Back up now" and "Wipe remote backup" ☑ Done (2026-05-01)
 
 > **Outcome:** `BackupRepository` interface gains
 > `deleteRemoteBackup(): BackupResult`; `DriveBackupRepository`
@@ -2129,7 +2130,7 @@ Once all six tabs render correctly with the new implementations:
 > `BackupScheduler` for synchronous-feeling feedback; only updates
 > `lastBackupAt` on `Success`) and `WipeRemoteBackupUseCase` (clears
 > `lastBackupAt = 0L` on `Success` so the UI's stale-timestamp hint
-> reverts). Both return `BackupResult` directly — the spec's
+> reverts). Both return `BackupResult` directly, the spec's
 > throw-based examples were pre-TASK-07. **Spec deviation noted**:
 > use cases return `BackupResult` instead of throwing per the
 > TASK-07 contract; otherwise faithful to the spec.
@@ -2141,14 +2142,14 @@ Once all six tabs render correctly with the new implementations:
 > `WipeSucceeded` / `WipeFailed(@StringRes msgRes)`), and
 > `onPushBackupClicked` / `onConfirmWipeClicked` methods. The two
 > running flags are mutually-exclusive guards at the start of each
-> method — a duplicate tap on the same action is also a no-op.
+> method, a duplicate tap on the same action is also a no-op.
 > Failure messages map per-action: `BackupResult.AuthRequired` →
 > `drive_auth_failed`; `Failure("Drive storage full")` →
 > `drive_storage_full`; other `Failure` reasons →
 > `drive_backup_now_failure` / `drive_wipe_failure`.
 >
 > `fragment_settings.xml` gains two `MaterialButton`s under
-> `text_last_backup` — primary tone "Back up now" and outlined
+> `text_last_backup`, primary tone "Back up now" and outlined
 > destructive-tone "Wipe remote backup" using `?attr/colorError` for
 > both `textColor` and `app:strokeColor`. Both rows hide via
 > `View.GONE` (not just disabled) when `driveEnabled = false`. Wipe
@@ -2161,7 +2162,7 @@ Once all six tabs render correctly with the new implementations:
 > `drive_wipe_confirm_title`, `drive_wipe_confirm_body`,
 > `drive_wipe_confirm_delete`, `drive_backup_now_success`,
 > `drive_wipe_success`, `drive_backup_now_failure`,
-> `drive_wipe_failure`, `drive_storage_full`) — all in
+> `drive_wipe_failure`, `drive_storage_full`), all in
 > `values/strings.xml`, ready for TASK-15 i18n.
 >
 > 14 new JVM cases: 4 on `PushBackupNowUseCaseTest`, 4 on
@@ -2186,7 +2187,7 @@ user to (a) force an immediate sync without waiting for WorkManager, or
 (b) explicitly delete the snapshot stored in the App Data folder. Both gaps
 matter:
 
-- **Force-push** is the standard user-trust affordance — "I just made changes,
+- **Force-push** is the standard user-trust affordance, "I just made changes,
   I want to confirm they reached the cloud right now." Today the only signal
   is the "Last backup at …" timestamp, which only updates after the worker
   completes and the user has no way to drive the worker.
@@ -2196,7 +2197,7 @@ matter:
   flow; (3) honour a "delete my data from the cloud" request without forcing
   the user to disable Drive globally and lose the local-write trigger.
 
-Both are local-only actions in Settings — they do **not** change the
+Both are local-only actions in Settings, they do **not** change the
 auto-backup contract elsewhere.
 
 ### Domain layer
@@ -2208,7 +2209,7 @@ auto-backup contract elsewhere.
    /**
     * Deletes the remote snapshot file ("evtracker_backup.json") from the
     * App Data folder. No-op if the file does not exist. Drive must be
-    * authorised before calling — callers verify that via SettingsReader.driveEnabled
+    * authorised before calling, callers verify that via SettingsReader.driveEnabled
     * and the auth state.
     */
    suspend fun deleteRemoteBackup()
@@ -2255,12 +2256,12 @@ auto-backup contract elsewhere.
    `PushBackupNowUseCase` deliberately bypasses `BackupScheduler` so the
    user gets synchronous-feeling feedback: success or failure surfaces in
    the UI as soon as the upload completes. The auto-backup worker remains
-   the only writer through WorkManager — manual push is one extra path,
+   the only writer through WorkManager, manual push is one extra path,
    not a replacement.
 
    **Note on TASK-28 sequencing:** `PushBackupNowUseCase` injects `NowProvider`.
    If TASK-28 has not yet consolidated `lastBackupAt` writes onto `NowProvider`,
-   that's fine — this task introduces the pattern for one new caller; TASK-28
+   that's fine, this task introduces the pattern for one new caller; TASK-28
    sweeps the rest.
 
 ### Settings UI
@@ -2268,11 +2269,11 @@ auto-backup contract elsewhere.
 4. In `app/src/main/res/layout/fragment_settings.xml`, add two new rows in the
    Drive section, **only visible when `driveEnabled = true`**:
 
-   - **"Back up now"** — `MaterialButton`, primary tone. Tapping triggers
+   - **"Back up now"**, `MaterialButton`, primary tone. Tapping triggers
      the use case and disables itself with a `CircularProgressIndicator`
      overlay until completion. On success, show a Snackbar `"Backup
      uploaded"`. On failure, show a Snackbar with the error message.
-   - **"Wipe remote backup"** — `MaterialButton`, **destructive tone**
+   - **"Wipe remote backup"**, `MaterialButton`, **destructive tone**
      (`?attr/colorError`). Tapping shows a `MaterialAlertDialog`:
 
      ```
@@ -2287,7 +2288,7 @@ auto-backup contract elsewhere.
      Only on confirm, invoke `WipeRemoteBackupUseCase`. Snackbar feedback
      on both success and failure.
 
-5. Both rows must be hidden (View.GONE) — not merely disabled — when
+5. Both rows must be hidden (View.GONE), not merely disabled, when
    `driveEnabled = false`, since neither makes sense without an authorised
    client.
 
@@ -2317,7 +2318,7 @@ auto-backup contract elsewhere.
 ### Strings (i18n-ready)
 
 8. All user-visible strings go in `app/src/main/res/values/strings.xml` —
-   never hardcoded — so TASK-15 can translate them without rework. Names
+   never hardcoded, so TASK-15 can translate them without rework. Names
    follow the existing `drive_*` prefix convention, e.g.
    `drive_backup_now_button`, `drive_wipe_button`,
    `drive_wipe_confirm_title`, `drive_wipe_confirm_body`,
@@ -2373,7 +2374,7 @@ auto-backup contract elsewhere.
 ### Out of scope
 
 - Per-entity selective wipe (e.g., "delete only my charge events from
-  Drive"). The remote snapshot is a single file by design — partial wipe
+  Drive"). The remote snapshot is a single file by design, partial wipe
   is not supported.
 - A full backup history with revisions on Drive. Drive's built-in
   revision history is opaque to App Data scope; surfacing it is a separate
@@ -2406,7 +2407,7 @@ The change is complete when **all** of the following hold:
 
 ---
 
-## 🟡 TASK-32 — Bump AGP + Gradle wrapper for official `compileSdk = 35` support ☑ Done (2026-05-01)
+## 🟡 TASK-32, Bump AGP + Gradle wrapper for official `compileSdk = 35` support ☑ Done (2026-05-01)
 
 > **Outcome:** AGP bumped `8.2.0` → `8.7.3` in
 > `gradle/libs.versions.toml`; Gradle wrapper bumped `8.4-bin` → `8.9-bin`
@@ -2414,12 +2415,12 @@ The change is complete when **all** of the following hold:
 > requires Gradle 8.9+ per the AGP↔Gradle compatibility table). The
 > workaround block in `gradle.properties` —
 > `android.suppressUnsupportedCompileSdk=35` plus its explanatory
-> comment — was deleted; AGP 8.7.3 officially supports `compileSdk = 35`
+> comment, was deleted; AGP 8.7.3 officially supports `compileSdk = 35`
 > so neither the "tested up to compileSdk = 34" advisory nor the
 > "SDK XML version 4" parser warning fires anymore (verified by
 > `./gradlew :app:assembleDebug --warning-mode all 2>&1 | grep -iE
 > "(warning|tested up to|SDK XML)"` returning empty). Kotlin 1.9.21 +
-> KSP 1.9.21-1.0.16 + Hilt 2.50 are all compatible with AGP 8.7.3 — no
+> KSP 1.9.21-1.0.16 + Hilt 2.50 are all compatible with AGP 8.7.3, no
 > language-version bump required, and the K2 / Kotlin 2.x migration
 > stays out of scope as planned. After a `clean` rebuild on the new
 > toolchain, all gates green: `:app:assembleDebug`,
@@ -2429,7 +2430,7 @@ The change is complete when **all** of the following hold:
 > (265 cases). `README.md` toolchain line updated to "Gradle 8.9 · AGP
 > 8.7.3 · Kotlin 1.9.21". Historical specs/plans under
 > `docs/superpowers/` keep their original AGP 8.2.0 / Gradle 8.4
-> references — those are snapshots in time, not live docs. The
+> references, those are snapshots in time, not live docs. The
 > original task text is preserved below.
 
 After TASK-22 merged (`compileSdk` and `targetSdk` set to 35), AGP 8.2.0
@@ -2475,7 +2476,7 @@ that officially supports `compileSdk = 35` and remove the workaround.
    known-good with AGP 8.2.0; AGP 8.6+ may surface KSP plugin order
    warnings or new lint rules. Triage anything that fires.
 6. **Kotlin/KSP version coordination:** AGP 8.7+ may want Kotlin 1.9.24+
-   or 2.0.x. Bumping Kotlin is its own risk surface — prefer staying on
+   or 2.0.x. Bumping Kotlin is its own risk surface, prefer staying on
    1.9.21 if the chosen AGP version permits it; otherwise bump together
    in this task and document the new Kotlin/KSP versions.
 7. **Lint baseline:** if AGP's bundled Lint version changes, new lint
@@ -2504,10 +2505,10 @@ that officially supports `compileSdk = 35` and remove the workaround.
 
 ---
 
-## 🟢 TASK-33 — Audit Kotlin 2.x / K2 + KSP + Hilt compatibility
+## 🟢 TASK-33, Audit Kotlin 2.x / K2 + KSP + Hilt compatibility
 
 TASK-32 bumped AGP to 8.7.3 and Gradle to 8.9 but explicitly deferred any
-Kotlin language-version change — the toolchain stays at Kotlin 1.9.21 +
+Kotlin language-version change, the toolchain stays at Kotlin 1.9.21 +
 KSP 1.9.21-1.0.16 + Hilt 2.50. There is no other tracking task for the
 Kotlin 2.x / K2 migration, which means the deferral risks becoming
 permanent through inertia rather than a deliberate "stay on 1.9" decision.
@@ -2515,7 +2516,7 @@ The audit half is cheap and worth doing now while the AGP bump is fresh.
 
 The migration itself is a multi-day investigation (K2's compiler
 behaviour differs from K1 around inline classes, sealed types, and
-generic inference) and stays out of scope for this task — TASK-33 is the
+generic inference) and stays out of scope for this task, TASK-33 is the
 audit, not the bump.
 
 ### Scope
@@ -2534,7 +2535,7 @@ audit, not the bump.
      errors during the trial build. Room 2.7.x also unlocks the
      `@AutoMigration` work in TASK-39, so the two upgrades pair
      naturally.
-   - **Concrete pin shortlist** (audit 2026-05-03 — re-verify "latest
+   - **Concrete pin shortlist** (audit 2026-05-03, re-verify "latest
      stable" at execution time): `kotlin = "2.0.21"`,
      `ksp = "2.0.21-1.0.27"`, `hilt = "2.52"+`, `room = "2.7.x"`. Treat
      these as the audit hypothesis to confirm or refute, not as fixed
@@ -2552,7 +2553,7 @@ audit, not the bump.
    `kotlin = "..."` and `ksp = "..."` in `gradle/libs.versions.toml`, run
    `./gradlew clean :app:assembleDebug :app:testDebugUnitTest
    :app:assembleDebugAndroidTest :app:lint`. Capture failures verbatim.
-   Do **not** open a PR — this branch's only output is the audit findings.
+   Do **not** open a PR, this branch's only output is the audit findings.
 
 ### Out of scope
 
@@ -2576,14 +2577,14 @@ The audit branch is then deleted; no production change lands in this task.
 
 ---
 
-## 🟡 TASK-34 — Nightly managed-AVD job for `connectedAndroidTest` ☑ Done (2026-05-01)
+## 🟡 TASK-34, Nightly managed-AVD job for `connectedAndroidTest` ☑ Done (2026-05-01)
 
 > **Outcome:** new `.github/workflows/nightly-instrumented.yml` runs
 > `:app:connectedDebugAndroidTest --no-daemon --stacktrace` on a
 > `reactivecircus/android-emulator-runner@v2` matrix covering API 26
 > (matches `minSdk`) and API 35 (matches `targetSdk`), `default`
 > system image with `arch: x86_64`. Triggers are `schedule: cron '0
-> 2 * * *'` (02:00 UTC) and `workflow_dispatch` only — explicitly no
+> 2 * * *'` (02:00 UTC) and `workflow_dispatch` only, explicitly no
 > `pull_request` / `push` triggers, so the PR gate's runtime stays
 > unchanged. KVM permissions are unlocked at the start of each job
 > via the standard `udev` rule incantation so the emulator boots
@@ -2593,29 +2594,29 @@ The audit branch is then deleted; no production change lands in this task.
 > `avd-${api-level}-default-x86_64-v1` and pre-warmed in a
 > snapshot-generating step that runs only on cache miss; the actual
 > test step launches with `-no-snapshot-save` so the cache stays
-> stable across runs. Both reports — HTML at
+> stable across runs. Both reports, HTML at
 > `app/build/reports/androidTests/connected/` and raw XML at
-> `app/build/outputs/androidTest-results/connected/` — upload as
+> `app/build/outputs/androidTest-results/connected/`, upload as
 > Actions artifacts on every run (`if: always()`) for triage. Failure
 > is informational; the workflow does not block PR merges.
 > `fail-fast: false` on the matrix so an API-26 regression doesn't
 > mask an API-35 one. `concurrency.cancel-in-progress: true` keeps
 > long-failing builds from queueing across midnight cron firings. The
 > optional commit-comment step from the spec is intentionally
-> deferred — the spec calls it out as "can be deferred if the matrix
+> deferred, the spec calls it out as "can be deferred if the matrix
 > proves too noisy initially," and GitHub Actions' default email
 > notifications already cover the maintainer until the matrix
 > stabilises. The original task text is preserved below.
 
 The repository has accumulated 10+ instrumented test files that the PR
 gate (`.github/workflows/ci.yml`) never executes. The current set
-includes — at minimum — the migration suite (`MigrationTest` with cases
+includes, at minimum, the migration suite (`MigrationTest` with cases
 covering 1→2→3→4→5→6), `AboutFragmentTest`, `MainActivityBottomNavTest`,
 the wizard flow tests, and several Charts/Settings Espresso tests. They
 compile via `:app:assembleDebugAndroidTest` on every PR (the existing
 gate does enforce that), but failure modes that need a running device —
 schema validation, navigation transitions, edge-to-edge insets, real
-DataStore round-trips — only surface locally or at release-tag time.
+DataStore round-trips, only surface locally or at release-tag time.
 
 Adding instrumented tests to the PR gate is rejected up front: emulator
 boot dwarfs the rest of the gate's runtime and would push every PR cycle
@@ -2639,7 +2640,7 @@ GitHub Actions' managed Android emulator action.
 4. **Failure surface.** On failure, upload `app/build/reports/androidTests/connected/`
    as an Actions artifact (HTML report is the primary debugging surface)
    and `app/build/outputs/androidTest-results/connected/` for the raw
-   XML. Do not fail the merge queue — this workflow is informational.
+   XML. Do not fail the merge queue, this workflow is informational.
 5. **Notification.** Post a failure comment on the most recent commit
    on `main` via the `actions/github-script` action so failures are
    visible without the maintainer needing to open the Actions tab.
@@ -2662,15 +2663,15 @@ GitHub Actions' managed Android emulator action.
    `main` HEAD on both API 26 and API 35.
 3. The PR gate's runtime is unchanged (no new step added to `ci.yml`).
 4. `CLAUDE.md` Build & Test section gains one line under the existing
-   "connectedAndroidTest — needs API 26+ device or emulator" note,
+   "connectedAndroidTest, needs API 26+ device or emulator" note,
    pointing at the nightly workflow as the canonical CI execution.
 
 ---
 
-## 🟢 TASK-35 — Roborazzi screenshot tests for Dashboard + Charts
+## 🟢 TASK-35, Roborazzi screenshot tests for Dashboard + Charts
 
 The `#FB8C00` DC orange (M3 tertiary palette seed, `docs/DESIGN.md §6`)
-ships a known-untested contrast risk on dark surfaces — TASK-18 (a11y
+ships a known-untested contrast risk on dark surfaces, TASK-18 (a11y
 pass) calls it out as a manual review item. The 2026-05-01 dark-mode
 chart text bug (`c677a2b` fix) is a recent, concrete instance of how
 theme-coupled rendering regressions slip through both unit and Espresso
@@ -2685,7 +2686,7 @@ This task is the **prerequisite** for TASK-30 (MPAndroidChart → Vico
 migration). Without baseline screenshots locked in **before** the
 rendering stack swap, TASK-30's "looks identical" acceptance criterion
 becomes a manual eyeball comparison across six tabs × two themes ×
-multiple data shapes — i.e., unverified.
+multiple data shapes, i.e., unverified.
 
 ### Scope
 
@@ -2708,10 +2709,10 @@ multiple data shapes — i.e., unverified.
    - Dashboard with mixed AC + DC events, single currency.
    - Dashboard with multi-currency banner.
    - Charts → Trend (line chart, kWh primary metric).
-   - Charts → AC vs DC (pie tab — high contrast risk on dark surfaces).
+   - Charts → AC vs DC (pie tab, high contrast risk on dark surfaces).
    - Charts → Locations (pie tab, ≥ 2 slices using `LOCATION_PALETTE`).
    - Charts → Degradation (TASK-14 line chart with the dashed nominal
-     reference line — the dashed line's contrast on dark surfaces is
+     reference line, the dashed line's contrast on dark surfaces is
      the second known unverified risk).
 
    Total: ~14 baseline images (7 screens × 2 themes). Store under
@@ -2725,7 +2726,7 @@ multiple data shapes — i.e., unverified.
 4. **Update flow.** Document in `CLAUDE.md` the recapture command
    (`./gradlew recordRoborazziDebug`) and the convention that recapture
    commits must be a separate PR with a one-line "screenshot baseline
-   refresh" body — never bundled with feature changes — so reviewers
+   refresh" body, never bundled with feature changes, so reviewers
    can scan the diff for unintended regressions.
 
 ### Out of scope
@@ -2752,7 +2753,7 @@ multiple data shapes — i.e., unverified.
 
 ---
 
-## 🟡 TASK-36 — Inline-comment the "no `Result.retry()`" invariant in `DriveBackupWorker` ☑ Done (2026-05-01)
+## 🟡 TASK-36, Inline-comment the "no `Result.retry()`" invariant in `DriveBackupWorker` ☑ Done (2026-05-01)
 
 > **Outcome:** folded into the TASK-19 commit since the same
 > `DriveBackupWorker.doWork()` block was being touched. Both
@@ -2766,10 +2767,10 @@ multiple data shapes — i.e., unverified.
 
 `DriveBackupWorker.doWork()` deliberately translates `BackupResult.Failure`
 and `BackupResult.AuthRequired` to `Result.failure()` rather than
-`Result.retry()`. The reasoning — that `DriveBackupRepository` already
+`Result.retry()`. The reasoning, that `DriveBackupRepository` already
 exhausted a bounded retry budget (TASK-07: `MAX_ATTEMPTS = 3`,
 exponential backoff) and returning `Result.retry()` would let
-WorkManager amplify that budget exponentially — currently lives in:
+WorkManager amplify that budget exponentially, currently lives in:
 
 - The function-level KDoc on `doWork()` (one paragraph).
 - The TASK-07 outcome block in this BACKLOG.
@@ -2796,7 +2797,7 @@ without reading the function-level KDoc, breaking the invariant.
        // Repository already exhausted its retry budget (TASK-07);
        // returning Result.retry() would let WorkManager re-amplify it.
        BackupResult.AuthRequired -> Result.failure()
-       // Same invariant — see KDoc above and TASK-07 / TASK-36.
+       // Same invariant, see KDoc above and TASK-07 / TASK-36.
        is BackupResult.Failure -> Result.failure()
    }
    ```
@@ -2806,7 +2807,7 @@ without reading the function-level KDoc, breaking the invariant.
    inline comments name TASK-07 by number so a curious reader can
    trace the rationale.
 
-3. **No behaviour change.** This is a comment-only edit — `git diff`
+3. **No behaviour change.** This is a comment-only edit, `git diff`
    should show only added comments.
 
 ### Out of scope
@@ -2816,7 +2817,7 @@ without reading the function-level KDoc, breaking the invariant.
   `DriveBackupRepositoryTest` retry-exhaustion cases.
 - A custom ktlint rule that rejects `Result.retry()` in this file.
   Mechanical enforcement for one symbol in one file is over-engineered.
-- Generalising the comment style across other workers — the project
+- Generalising the comment style across other workers, the project
   has exactly one `CoroutineWorker`; revisit if a second one lands.
 
 ### Acceptance criteria
@@ -2829,16 +2830,16 @@ without reading the function-level KDoc, breaking the invariant.
 
 ---
 
-## 🔴 TASK-37 — Replace Google Drive backup with SAF-based backup ⏸ Under consideration (2026-05-01)
+## 🔴 TASK-37, Replace Google Drive backup with SAF-based backup ⏸ Under consideration (2026-05-01)
 
-> **⏸ Deferred — do not start without an explicit go-ahead.** The task
+> **⏸ Deferred, do not start without an explicit go-ahead.** The task
 > body below is preserved as a complete implementation sketch for when
 > the decision flips, but the project is **not** committed to a SAF
 > migration today. Reasons to revisit: (1) F-Droid distribution becomes
 > a target (the body's premise); (2) Drive auth friction (separate
 > OAuth client per keystore SHA-1, tester allow-list on the consent
 > screen) becomes a blocker for new contributors; (3) Drive API
-> deprecation. Until then, leave the Drive code path in place — the
+> deprecation. Until then, leave the Drive code path in place, the
 > error model (TASK-07), failure notifications (TASK-19), and manual
 > controls (TASK-31) all build on it; future backup work routes through
 > the same path.
@@ -2848,13 +2849,13 @@ without reading the function-level KDoc, breaking the invariant.
 `NonFreeNet` by the F-Droid scanner. Replace `DriveBackupRepository`
 with a Storage Access Framework implementation. The domain layer
 (`BackupRepository`, `BackupResult`, `BackupSerializer`,
-`RestoreBackupUseCase`) is unchanged — only `data/backup/` and Settings
+`RestoreBackupUseCase`) is unchanged, only `data/backup/` and Settings
 UI change.
 
 > **Sequencing note.** This task **obsoletes** the Drive-specific UI
 > shipped in TASK-31 ("Back up now" / "Wipe remote backup", merged
 > 2026-05-01). When TASK-37 is revived, the existing
-> `PushBackupNowUseCase` becomes `PushBackupUseCase` (or stays — name
+> `PushBackupNowUseCase` becomes `PushBackupUseCase` (or stays, name
 > is incidental) and `WipeRemoteBackupUseCase` becomes
 > `ClearBackupLocationUseCase`; the Settings rows / dialog / VM
 > mutual-exclusion logic carry over with minor renames. The
@@ -2862,7 +2863,7 @@ UI change.
 > delete the Drive code path (`DriveBackupRepository`,
 > `GoogleDriveRemoteSource`, `AndroidDriveAuthManager`,
 > `DriveBackupWorker` → renamed `BackupWorker`) and rebind
-> `BackupRepository` to the new SAF impl in a single PR — the domain
+> `BackupRepository` to the new SAF impl in a single PR, the domain
 > layer is untouched.
 
 ### Scope
@@ -2882,7 +2883,7 @@ UI change.
    `BackupRepository`. `backupCurrentData()` opens the stored URI with
    `contentResolver.openOutputStream(uri, "wt")`; returns
    `BackupResult.AuthRequired` when the URI is null or a
-   `SecurityException` is thrown (permission revoked — also clears the
+   `SecurityException` is thrown (permission revoked, also clears the
    stored URI); returns `BackupResult.Failure` on `IOException`.
    `readRemoteBackup()` opens the URI for reading.
    `deleteRemoteBackup()` calls `DocumentsContract.deleteDocument()`
@@ -2920,7 +2921,7 @@ UI change.
 
 ---
 
-## 🟢 TASK-38 — Multi-vehicle comparative analytics on Charts
+## 🟢 TASK-38, Multi-vehicle comparative analytics on Charts
 
 The data model already supports multiple cars per user, but the Charts
 screen scopes every series to the `activeCarId`. For SPS-Lab fleet-level
@@ -2940,7 +2941,7 @@ compare efficiency, cost, and degradation curves side-by-side.
    optional second `carId`; when present, runs the same aggregation
    pipeline twice (different `carId` filter) and emits both series.
    Reuse the existing `StatsCalculator` / `DateRangeResolver`
-   pipeline — this is a query-fan-out, not a new metric.
+   pipeline, this is a query-fan-out, not a new metric.
 
 3. Render both series on the same `LineChart` / `BarChart`. Use the
    primary container colour for series A and the tertiary container
@@ -2950,7 +2951,7 @@ compare efficiency, cost, and degradation curves side-by-side.
 
 4. The **Degradation** tab (TASK-14) gets the same overlay, but only
    when both cars have a `nominalBatteryKwh`. Otherwise fall back to
-   single-car mode and show a small "compare unavailable — second
+   single-car mode and show a small "compare unavailable, second
    car has no nominal capacity" hint.
 
 5. Compare mode is irrelevant for the **Pie** tabs (single-car
@@ -2967,7 +2968,7 @@ compare efficiency, cost, and degradation curves side-by-side.
 
 ### Notes
 
-- This is **not** a multi-currency feature — the existing
+- This is **not** a multi-currency feature, the existing
   multi-currency-period rule (cost stats hidden when more than one
   currency is present) applies independently to each series. If A
   and B are in different currencies, hide the cost trend overlay
@@ -2976,7 +2977,7 @@ compare efficiency, cost, and degradation curves side-by-side.
 
 ---
 
-## 🟢 TASK-39 — Adopt Room `@AutoMigration` for additive bumps from v6 onward
+## 🟢 TASK-39, Adopt Room `@AutoMigration` for additive bumps from v6 onward
 
 The project hand-writes a migration class for every schema bump
 (currently `MIGRATION_1_2` through `MIGRATION_5_6`). Several of those
@@ -2988,7 +2989,7 @@ purely additive change.
 
 ### Scope
 
-1. Confirm `app/schemas/` is checked in (it is — `app/build.gradle.kts`
+1. Confirm `app/schemas/` is checked in (it is, `app/build.gradle.kts`
    already wires `schemaDirectory` via the KSP arg). `@AutoMigration`
    reads the JSON snapshots from this directory at compile time.
 
@@ -2997,15 +2998,15 @@ purely additive change.
    array for every additive bump. Reserve hand-written
    `Migration` objects for destructive or rewrite operations
    (`MIGRATION_3_4`'s `'DC' → 'DC_FAST'` rewrite is the canonical
-   example — keep that pattern hand-written).
+   example, keep that pattern hand-written).
 
-3. Document the rule in `CLAUDE.md` "Database — Room v7" section: a new
+3. Document the rule in `CLAUDE.md` "Database, Room v7" section: a new
    bullet "Additive bumps (new nullable columns, new tables, new
    indices) use `@AutoMigration`. Hand-written migrations are reserved
    for destructive or rewrite operations." Add a short example.
 
 4. **Do not retrofit existing migrations.** `MIGRATION_1_2` through
-   `MIGRATION_5_6` stay as hand-written for stability — replacing
+   `MIGRATION_5_6` stay as hand-written for stability, replacing
    them carries no value and risks subtle behaviour differences
    (Room's auto-migration uses a different DDL strategy that creates
    shadow tables and copies data; switching mid-life is risky).
@@ -3014,7 +3015,7 @@ purely additive change.
 
 5. Add an instrumented `migrate_6_to_7_isAutoMigration` test once the
    first `@AutoMigration` lands, asserting the auto-migration runs
-   end-to-end and preserves data — same shape as the existing
+   end-to-end and preserves data, same shape as the existing
    `MigrationTest` cases.
 
 ### Notes
@@ -3022,13 +3023,13 @@ purely additive change.
 - `@AutoMigration` cannot be combined with `@DeleteColumn` /
   `@RenameColumn` without the manual `AutoMigrationSpec` callback.
   When that's needed, use a hand-written migration instead.
-- This task is infrastructure polish — there is no user-visible
+- This task is infrastructure polish, there is no user-visible
   behaviour change. Land it when the next additive schema change
   is queued so the test gets exercised end-to-end.
 
 ---
 
-## 🟢 TASK-40 — Anonymised research-export pipeline for SPS-Lab
+## 🟢 TASK-40, Anonymised research-export pipeline for SPS-Lab
 
 Bridge the app from a personal-use tool to a research data collection
 instrument: add an opt-in, privacy-preserving export mode that strips
@@ -3041,14 +3042,14 @@ the schema in `METHODOLOGY.md` for transparency.
 1. New `domain/usecase/ExportAnonymisedCsvUseCase.kt` parallel to the
    existing `ExportCsvUseCase`. Output schema (one row per charge
    event, all units canonical):
-   - `event_id` (anonymised — derive a stable per-export hash from
+   - `event_id` (anonymised, derive a stable per-export hash from
      the row id, NOT the raw `Long` id; resets per export so the
      hash chain is non-correlatable across exports)
-   - `car_anon_id` (per-export hash of `carId`; same scheme — A, B,
+   - `car_anon_id` (per-export hash of `carId`; same scheme, A, B,
      C ordering preserved within an export, opaque between exports)
    - `event_timestamp_utc` (ISO 8601, UTC)
    - `kwh_added`
-   - `odometer_km` (canonical km — stored unit)
+   - `odometer_km` (canonical km, stored unit)
    - `charge_type` (`AC` / `DC_FAST` / `DC_ULTRA`)
    - `cost_total` (or empty)
    - `currency` (or empty)
@@ -3065,7 +3066,7 @@ the schema in `METHODOLOGY.md` for transparency.
    sharing path as `ExportCsvUseCase`.
 
 3. Schema authoritatively documented in `docs/METHODOLOGY.md` (new
-   file — same one TASK-20 will create, so coordinate). Include:
+   file, same one TASK-20 will create, so coordinate). Include:
    field list, units, anonymisation guarantees, what is *not*
    exported, and a citation example.
 
@@ -3080,10 +3081,10 @@ the schema in `METHODOLOGY.md` for transparency.
 
 - This is **opt-in per export** (no persistent flag). Researcher
   asks the user to email the file; user runs the export and shares.
-  No background pipeline, no upload — same surface as TASK-09.
-- Coordinate with TASK-09 — if both land, share the
+  No background pipeline, no upload, same surface as TASK-09.
+- Coordinate with TASK-09, if both land, share the
   `CsvFileSink` infrastructure and the date-range picker.
-- Coordinate with TASK-20 — both create `docs/METHODOLOGY.md`. The
+- Coordinate with TASK-20, both create `docs/METHODOLOGY.md`. The
   first to land creates the file; the second appends a section.
 - **Audit follow-up (RES-04, 2026-05-03):** before the use case
   lands, draft an `AnonymisedExportPolicy` domain object that holds
@@ -3101,9 +3102,9 @@ the schema in `METHODOLOGY.md` for transparency.
 
 ---
 
-## 🟢 TASK-41 — JSON-LD / OCPP-compatible export format ⏸ Under consideration (2026-05-02)
+## 🟢 TASK-41, JSON-LD / OCPP-compatible export format ⏸ Under consideration (2026-05-02)
 
-> **⏸ Deferred — do not start without an explicit go-ahead.** Depends
+> **⏸ Deferred, do not start without an explicit go-ahead.** Depends
 > on TASK-09 (date-range CSV) and TASK-40 (anonymised pipeline)
 > landing first; the value is interoperability with grid-side
 > energy-management research, which is a niche surface. Revisit when
@@ -3114,7 +3115,7 @@ Beyond CSV, add an export to **JSON-LD** (schema.org `Vehicle` +
 `QuantitativeValue`) or an **OCPP-compatible** transaction format for
 interoperability with grid-side energy-management research and tooling.
 
-### Scope (sketch — to be refined when revived)
+### Scope (sketch, to be refined when revived)
 
 1. New `domain/usecase/ExportJsonLdUseCase.kt`. Output one JSON-LD
    document with `@context` set to `https://schema.org`, root type
@@ -3138,7 +3139,7 @@ interoperability with grid-side energy-management research and tooling.
 ### Notes
 
 - **No new third-party dependency.** Hand-roll the JSON-LD with the
-  existing Gson dep — schema.org JSON-LD does not require a
+  existing Gson dep, schema.org JSON-LD does not require a
   framework, just the `@context` / `@type` keys.
 - Decision pending: JSON-LD-only, OCPP-only, or both. Default to
   JSON-LD on revival (lower scope, broader applicability) and add
@@ -3146,10 +3147,10 @@ interoperability with grid-side energy-management research and tooling.
 
 ---
 
-## 🟢 TASK-42 — Open Charge Map / OCPI station lookup integration ⏸ Under consideration (2026-05-02)
+## 🟢 TASK-42, Open Charge Map / OCPI station lookup integration ⏸ Under consideration (2026-05-02)
 
-> **⏸ Deferred — do not start without an explicit go-ahead.** Two
-> reasons to hold: (1) the F-Droid implications mirror TASK-37 — Open
+> **⏸ Deferred, do not start without an explicit go-ahead.** Two
+> reasons to hold: (1) the F-Droid implications mirror TASK-37, Open
 > Charge Map is reachable via plain HTTPS, but adding a network
 > dependency for charging-station enrichment broadens the privacy
 > surface and the F-Droid review checklist; (2) the value depends on
@@ -3162,7 +3163,7 @@ charging-station tag sourced from the
 [Open Charge Map API](https://openchargemap.org/site/develop/api) or
 an OCPI feed. Free text remains the fallback.
 
-### Scope (sketch — to be refined when revived)
+### Scope (sketch, to be refined when revived)
 
 1. Add a "Search station" affordance to the location chip row in
    `ChargeEditFragment`. Tapping opens a modal with a text search
@@ -3179,7 +3180,7 @@ an OCPI feed. Free text remains the fallback.
 3. Add an API key configuration step to `docs/BACKUP_SETUP.md` (or
    a new `docs/OCM_SETUP.md`). The key lives in `local.properties`
    (gitignored), surfaced via `BuildConfig`, and is **not** required
-   for the app to run — the search affordance hides when missing.
+   for the app to run, the search affordance hides when missing.
 
 4. Backup serializer bumps `BackupData.CURRENT_VERSION` and adds the
    new fields to `SUPPORTED_VERSIONS = {3, 4, 5, 6, 7}`.
@@ -3189,17 +3190,17 @@ an OCPI feed. Free text remains the fallback.
 - **Privacy:** the station lookup is an outbound HTTPS call to a
   third party. Document this clearly in the wizard and in
   `DESIGN.md`. The lookup is opt-in per event (the user has to
-  tap "Search station" — typing free text never leaves the device).
+  tap "Search station", typing free text never leaves the device).
 - **F-Droid:** OCM API is plain REST over HTTPS, no Google Play
   Services dependency; this *should* be F-Droid-compatible. Verify
   during the revival review.
 - **OCPI alternative:** if a research partner runs an OCPI feed,
-  swap the OCM client for an OCPI client of the same shape — the
+  swap the OCM client for an OCPI client of the same shape, the
   three new entity columns are provider-agnostic.
 
 ---
 
-## 🟡 TASK-43 — kWh-from-SoC calculator + `kwhSource` provenance flag ☑ Done (2026-05-03)
+## 🟡 TASK-43, kWh-from-SoC calculator + `kwhSource` provenance flag ☑ Done (2026-05-03)
 
 > **Outcome:** new `core/model/ChargeKwhSource` enum (`MEASURED` /
 > `DERIVED_FROM_SOC`) with `parseLegacy` defensive fallback, paired
@@ -3229,7 +3230,7 @@ an OCPI feed. Free text remains the fallback.
 > `state.nominalBatteryKwh != null`) and an info banner inside the SoC
 > card surfaces while the calculator stays active. Charts degradation
 > tab shows a plurals-aware banner when `derivedExcludedCount > 0` in
-> the visible period — count comes from new
+> the visible period, count comes from new
 > `CapacityEstimator.countDerivedEvents()`. History rows render a
 > tertiary-container "Est." badge for `DERIVED_FROM_SOC` events. JVM
 > unit-test count: **332 → 360** (+5 `CapacityEstimatorTest`, +4
@@ -3239,7 +3240,7 @@ an OCPI feed. Free text remains the fallback.
 > `ObserveChargsModelsUseCaseTest`); new instrumented
 > `migrate_6_to_7_addsKwhSourceColumn` test, `migrate_1_to_6` renamed
 > to `migrate_1_to_7`. Charging-loss caveat (battery-side vs.
-> charger-delivered kWh — ~10% AC, ~5% DC) documented inline on the
+> charger-delivered kWh, ~10% AC, ~5% DC) documented inline on the
 > `KwhFromSocCalculator` KDoc. The original task text is preserved
 > below.
 
@@ -3252,7 +3253,7 @@ but a value derived this way feeds back tautologically into TASK-14's
 degradation tracker (`capacity = kwhAdded / Δsoc = nominalBatteryKwh`
 exactly). The fix is provenance: store every event with a source flag,
 let derived events count for cost and efficiency, and exclude them
-from degradation — with a visible warning so the user understands why
+from degradation, with a visible warning so the user understands why
 the chart is sparser than the event count suggests.
 
 ### Scope
@@ -3278,8 +3279,8 @@ the chart is sparser than the event count suggests.
    `MEASURED`. Adapter mirrors `ChargeTypeJsonAdapter`.
 
 4. **`CapacityEstimator` filter (TASK-14 follow-up).** Both code
-   paths — the exact `kwhAdded / (socAfter - socBefore)` route and
-   the `kwhAdded ≥ 0.8 × nominalBatteryKwh` heuristic route — must
+   paths, the exact `kwhAdded / (socAfter - socBefore)` route and
+   the `kwhAdded ≥ 0.8 × nominalBatteryKwh` heuristic route, must
    skip events where `kwhSource == DERIVED_FROM_SOC`. Otherwise the
    exact path returns the nominal capacity verbatim, and the
    heuristic path trivially qualifies. Add three `CapacityEstimatorTest`
@@ -3301,7 +3302,7 @@ the chart is sparser than the event count suggests.
 
 6. **Override semantics.** If the user manually edits the kWh field
    after the calculator filled it, flip the source flag back to
-   `MEASURED` (track via a `ViewModel` flag — once the user touches
+   `MEASURED` (track via a `ViewModel` flag, once the user touches
    the kWh field post-calculator, treat the value as user-entered).
    Conversely, re-tapping the calculator link with both SoC fields
    populated re-derives kWh and re-flips the flag to `DERIVED_FROM_SOC`.
@@ -3330,7 +3331,7 @@ the chart is sparser than the event count suggests.
 10. New `SaveChargeEventUseCaseTest` cases asserting that
     `kwhSource` round-trips through the use case unchanged. Update
     existing fakes / fixtures to construct events with the explicit
-    source field (default `MEASURED` — most tests don't care).
+    source field (default `MEASURED`, most tests don't care).
 
 ### Notes
 
@@ -3342,7 +3343,7 @@ the chart is sparser than the event count suggests.
   documenting the caveat in `DESIGN.md` is enough; a charging-loss
   factor column would be over-engineering until a researcher asks.
 - **Why not nullable `kwhAdded`?** Considered (Option C in the
-  brainstorm transcript). Rejected — it would touch every aggregate,
+  brainstorm transcript). Rejected, it would touch every aggregate,
   every chart, every backup version. The provenance flag gets 80%
   of the value at 20% of the cost, with a clean upgrade path if the
   app ever needs first-class SoC-only events later.
@@ -3354,7 +3355,7 @@ the chart is sparser than the event count suggests.
   to enter later.
 
   **Update (2026-05-03):** the calculator now also auto-activates at
-  *input time* — the moment the user has typed both SoC fields with
+  *input time*, the moment the user has typed both SoC fields with
   a valid range AND kWh is blank, kWh is derived live and provenance
   flips to `DERIVED_FROM_SOC`. The "save-time silent auto-derive"
   argued against above is still rejected (the user wouldn't see it
@@ -3368,17 +3369,17 @@ the chart is sparser than the event count suggests.
 - **Coordination with TASK-25 / TASK-39.** TASK-25 introduced the
   `ChargeType` enum + converter pattern; mirror that exactly for
   `ChargeKwhSource`. TASK-39 (Room `@AutoMigration`) is the natural
-  vehicle for this migration if it lands first — see Step 2.
+  vehicle for this migration if it lands first, see Step 2.
 
 ---
 
-## 🟡 TASK-44 — Fix `StatsCalculator.computeStats` cost accumulation ☑ Done (2026-05-03)
+## 🟡 TASK-44, Fix `StatsCalculator.computeStats` cost accumulation ☑ Done (2026-05-03)
 
 > **Outcome:** the cost-accumulation block in
 > `StatsCalculator.computeStats` is now hoisted above the `events.size
 > < 2` early-return and computes `totalCost = events.mapNotNull {
 > it.costTotal }.sum()` once for the whole period (mixed-currency
-> rule still wins — `totalCost = null`, `costPerKm = null` whenever
+> rule still wins, `totalCost = null`, `costPerKm = null` whenever
 > two distinct currencies appear). The delta-pair odometer loop now
 > only accumulates `pairKwh` and `totalDist`; `costPerKm = totalCost /
 > totalDist` keeps its existing formula but sources `totalCost` from
@@ -3386,7 +3387,7 @@ the chart is sparser than the event count suggests.
 > (previously hard-coded to `null` in the early-return branch); their
 > `costPerKm` stays `null` because delta distance is undefined for
 > one event. The Dashboard total-cost surface and the monthly cost
-> chart now agree on the sum for any single period — the audit's
+> chart now agree on the sum for any single period, the audit's
 > 33–50% undercount on 2–3 session histories is gone. Four new
 > regression cases added to `StatsCalculatorCostTest`
 > (`firstAndSecondEventBothCosted_totalCostSumsBoth`,
@@ -3396,7 +3397,7 @@ the chart is sparser than the event count suggests.
 > existing 7 cases pass unchanged because their fixtures all use the
 > "anchor event with zero cost" pattern that carefully avoided the
 > bug. JVM unit-test count 360 → 364. `DESIGN.md §7` already stated
-> `Σ cost / Σ d_km` (line 488); no doc text change needed — the code
+> `Σ cost / Σ d_km` (line 488); no doc text change needed, the code
 > was the deviation.
 
 > **Audit finding (BUG-03, 2026-05-03):** `computeStats` accumulates
@@ -3406,7 +3407,7 @@ the chart is sparser than the event count suggests.
 > (`bucketEvents.mapNotNull { it.costTotal }.sum()`), so the Dashboard
 > "Total cost" card and the monthly cost chart disagree on the same
 > period. The undercount is negligible in long histories but is a
-> 33–50% error for fresh users with 2–3 sessions — exactly the audience
+> 33–50% error for fresh users with 2–3 sessions, exactly the audience
 > most likely to spot the inconsistency between the two surfaces.
 
 ### Scope
@@ -3420,7 +3421,7 @@ the chart is sparser than the event count suggests.
        events.mapNotNull { it.costTotal }.sum().takeIf { it > 0.0 }
    ```
 
-   The mixed-currency rule still wins — when `mixedCurrency = true`,
+   The mixed-currency rule still wins, when `mixedCurrency = true`,
    every cost-derived field returns `null` (per the existing invariant
    documented in `CLAUDE.md`'s "Smart cost handling" section).
 2. Update the early-return branch for `events.size < 2`. Single-event
@@ -3452,7 +3453,7 @@ increases by ≥ 4. No existing test regresses.
 
 ---
 
-## 🟢 TASK-45 — Defensive SoC range guard in `KwhFromSocCalculator`
+## 🟢 TASK-45, Defensive SoC range guard in `KwhFromSocCalculator`
 
 > **Audit finding (BUG-01, 2026-05-03):**
 > `KwhFromSocCalculator.compute(socBefore, socAfter, nominalBatteryKwh)`
@@ -3495,7 +3496,7 @@ unit-test count gains ≥ 4 cases.
 
 ---
 
-## 🟡 TASK-46 — Battery-health card "Estimated" warning when heuristic over-estimates ☑ Done (2026-05-04)
+## 🟡 TASK-46, Battery-health card "Estimated" warning when heuristic over-estimates ☑ Done (2026-05-04)
 
 > **Outcome (merged 2026-05-04 on `feat/task46-battery-health-estimated-chip`).**
 >
@@ -3518,24 +3519,24 @@ unit-test count gains ≥ 4 cases.
 >   the early-return branch and the main return branch.
 > - **`ObserveDashboardStatsUseCase`** computes the booleans
 >   inline: `isHeuristic = capacityEstimator.latestIsExact(points)
->   == false` (the `== false` literal is intentional — it returns
+>   == false` (the `== false` literal is intentional, it returns
 >   `false` for an explicitly heuristic latest point AND for the
 >   null/empty case, which collapses both to "no warning"); then
 >   `isOverestimated = isHeuristic && healthPct != null && healthPct
 >   >= HEURISTIC_OVERESTIMATE_THRESHOLD_PERCENT`.
 > - **Layout** adds a new TextView (`@id/dashboard_battery_health_estimated_warning`)
 >   inside the existing `dashboard_card_battery_health` card, styled
->   as a TASK-43-style chip — `?attr/colorTertiaryContainer`
+>   as a TASK-43-style chip, `?attr/colorTertiaryContainer`
 >   background, `?attr/colorOnTertiaryContainer` text, label-medium
 >   text appearance, 8dp top margin, hidden by default. Carries
 >   `android:contentDescription="@string/battery_health_estimated_warning_a11y"`
 >   ("Estimated capacity, may overestimate") so TalkBack reads a
->   self-contained sentence — coordinates with TASK-18 a11y scope.
+>   self-contained sentence, coordinates with TASK-18 a11y scope.
 > - **`DashboardFragment.renderBatteryHealthCard`** flips the chip's
 >   visibility from `stats?.batteryHealthIsOverestimated == true`
 >   (the strict `== true` keeps null safe).
 > - **Strings** add two new keys: `battery_health_estimated_warning`
->   ("Estimated — heuristic may overestimate") and
+>   ("Estimated, heuristic may overestimate") and
 >   `battery_health_estimated_warning_a11y` ("Estimated capacity,
 >   may overestimate"). Two strings instead of one because the chip
 >   text is intentionally terse for visual density while TalkBack
@@ -3548,13 +3549,13 @@ unit-test count gains ≥ 4 cases.
 > → 116.67%, both flags), `heuristicLatestPoint_underThreshold_setsHeuristicButNotOverestimated`
 > (kwhAdded = 50 → 83.3%, only heuristic),
 > `heuristicAtExactly105Percent_setsOverestimated_boundaryGuard`
-> (kwhAdded = 63 → 105.0% exactly — pins the `>=` semantic),
+> (kwhAdded = 63 → 105.0% exactly, pins the `>=` semantic),
 > `exactLatestPoint_evenAboveThreshold_setsNeitherFlag` (SoC delta
 > 0.2→0.7 over 33 kWh = 110% via the exact path; chip stays hidden
 > per the BACKLOG contract that exact readings are trusted), and
 > `nullNominal_setsNeitherFlag` (regression guard for cars with no
 > `batteryKwh`). The existing `CapacityEstimatorTest` >100%
-> computation case unchanged — no new estimator-level tests needed
+> computation case unchanged, no new estimator-level tests needed
 > per the BACKLOG checklist. JVM unit-test count 398 → 403.
 
 > **Audit finding (BUG-02, 2026-05-03):**
@@ -3571,7 +3572,7 @@ unit-test count gains ≥ 4 cases.
 
 ### Scope
 
-1. Surface heuristic provenance in `Stats` — add a derived field on
+1. Surface heuristic provenance in `Stats`, add a derived field on
    `Stats` (or a parallel field on `DashboardScreenState.stats`) such
    as `batteryHealthIsHeuristic: Boolean` and
    `batteryHealthIsOverestimated: Boolean`, populated from the latest
@@ -3579,13 +3580,13 @@ unit-test count gains ≥ 4 cases.
    respectively.
 2. In `DashboardFragment.bindBatteryHealth(...)`, render a
    tertiary-container chip (or supporting text below the percentage)
-   reading "Estimated — heuristic may overestimate" when **both**
+   reading "Estimated, heuristic may overestimate" when **both**
    `latest.isExact = false` AND
    `batteryHealthPercent ≥ HEURISTIC_OVERESTIMATE_THRESHOLD_PERCENT`
    (≥ 105). Reuse the TASK-43 "Est." badge styling
    (`?attr/colorTertiaryContainer`).
 3. Add `contentDescription` for the warning chip so TalkBack reads
-   "estimated capacity, may overestimate" — coordinate with TASK-18.
+   "estimated capacity, may overestimate", coordinate with TASK-18.
 4. JVM tests:
    - `CapacityEstimatorTest` already covers the >100% computation;
      no new estimator tests needed.
@@ -3604,7 +3605,7 @@ unit-test count gains ≥ 4 cases.
   when MPAndroidChart is replaced; the same warning should appear
   above the chart on the degradation tab if the latest point exceeds
   nominal. Defer the chart-side change to TASK-30 if it lands first
-  — the audit explicitly suggests bundling the two.
+ , the audit explicitly suggests bundling the two.
 - Coordinate with TASK-43. Derived events (`DERIVED_FROM_SOC`) are
   already excluded by `CapacityEstimator.estimateOne`, so the
   heuristic path is the only over-estimation source.
@@ -3618,19 +3619,19 @@ tests cover the threshold transition.
 
 ---
 
-## 🟢 TASK-47 — Charging power profile fields (`peakPowerKw`, `chargingDurationMinutes`)
+## 🟢 TASK-47, Charging power profile fields (`peakPowerKw`, `chargingDurationMinutes`)
 
 > **Audit suggestion (RES-01, 2026-05-03):** The app records energy
 > (`kwhAdded`) but not charging *power over time*. Even a simple
 > nullable `peakPowerKw` field would enable downstream research on
-> charging-infrastructure demand patterns — SPS-Lab grid-integration
+> charging-infrastructure demand patterns, SPS-Lab grid-integration
 > studies care about peak charger draw distributions, not just total
 > energy. Bundling duration in the same schema bump enables a derived
 > `avgPowerKw` without further storage.
 
 ### Scope
 
-1. Schema **v7 → v8** (next migration claim — coordinate with
+1. Schema **v7 → v8** (next migration claim, coordinate with
    TASK-39's `@AutoMigration` rollout):
    - Add `peakPowerKw: Double?` to `ChargeEventEntity`.
    - Add `chargingDurationMinutes: Int?` to `ChargeEventEntity`.
@@ -3640,7 +3641,7 @@ tests cover the threshold transition.
 2. Backup format `BackupData.CURRENT_VERSION` 7 → 8. Append v8 to
    `BackupSerializer.SUPPORTED_VERSIONS`. Both DTO fields nullable
    for legacy v3..v7 compatibility (Gson `Unsafe.allocateInstance`
-   caveat — see TASK-43 outcome banner: nullable DTO + coalesce in
+   caveat, see TASK-43 outcome banner: nullable DTO + coalesce in
    `toEntity()` is the established pattern).
 3. ChargeEdit form: optional fields under a new collapsible
    "Charging power" card (mirrors the SoC card UX from TASK-14 /
@@ -3672,9 +3673,9 @@ tests cover the threshold transition.
 - Charging duration cannot reliably be derived from `eventDate`
   (which is wall-clock when the user logged the session, not session
   start). An explicit field is required.
-- Coordinate with TASK-40 — the anonymised research export must
+- Coordinate with TASK-40, the anonymised research export must
   include both new fields when present.
-- Coordinate with TASK-48 — both touch the schema; bundling them
+- Coordinate with TASK-48, both touch the schema; bundling them
   into a single v7 → v8 bump avoids two consecutive additive bumps.
 
 ### Acceptance
@@ -3686,7 +3687,7 @@ count increases by ≥ 6 cases. No regression in existing tests.
 
 ---
 
-## 🟢 TASK-48 — Time-of-use (ToU) tariff classification on charge events
+## 🟢 TASK-48, Time-of-use (ToU) tariff classification on charge events
 
 > **Audit suggestion (RES-02, 2026-05-03):** Cost field captures total
 > cost but not *when* the charge occurred relative to grid tariff
@@ -3712,7 +3713,7 @@ count increases by ≥ 6 cases. No regression in existing tests.
    schedule. Manual override on the form beats auto-inference.
 4. Wizard / Settings UI: optional "I have time-of-use billing"
    toggle that opens a tariff editor (start time, end time, zone
-   label). Default off — most users keep `FLAT` and never see the
+   label). Default off, most users keep `FLAT` and never see the
    ToU surface.
 5. Charts: filter chip on the trend / monthly-cost tabs to limit
    series to a single zone. Multi-vehicle overlay (TASK-38) gains a
@@ -3726,13 +3727,13 @@ count increases by ≥ 6 cases. No regression in existing tests.
   automatic per-zone cost rate suggestion, dynamic ToU (sub-day
   variation beyond 4 zones). This task lands the *classification*;
   rate modeling stays user-entered as today.
-- Coordinate with TASK-49 (grid carbon intensity) — both extend the
+- Coordinate with TASK-49 (grid carbon intensity), both extend the
   per-event metadata; ideally merged in a single schema bump if both
   land in the same release window.
 - Local-time inference must use the device's current zone (not the
   zone of `eventDate`). A user logging a charge while travelling
   abroad will typically still want the home-tariff schedule applied
-  — flag this as a known caveat in the methodology doc.
+ , flag this as a known caveat in the methodology doc.
 
 ### Acceptance
 
@@ -3743,16 +3744,16 @@ inference and the FLAT-default backfill.
 
 ---
 
-## 🟢 TASK-49 — Per-event grid carbon intensity (extends TASK-20)
+## 🟢 TASK-49, Per-event grid carbon intensity (extends TASK-20)
 
 > **Data-source survey (2026-05-04, recorded during TASK-20 implementation).** Originally scoped to merge with TASK-20 (Option 1 in the brainstorm) but deferred because no free real-time Cyprus grid-intensity API was found:
-> - **Electricity Maps API** — ~€6,000/year per zone for Carbon Intensity. Out of scope.
-> - **CO2Signal** — was free; absorbed into Electricity Maps' paid product. Dead.
-> - **cyprusgrid.com direct** — bot-blocked behind a WAF; values reachable only via the `r.jina.ai` reader-proxy. Not stable enough as a production data source (third-party, ToS-grey, no SLA).
-> - **ENTSO-E Transparency Platform** — genuinely free + public + Cyprus covered. Returns hourly **generation mix per production type** (oil, gas, solar, wind, hydro, …); deriving carbon intensity requires applying per-type IPCC AR6 lifecycle emission factors and weighted-summing. ~200–300 LOC + 8–12 tests. The viable path forward.
-> - **TSOC direct API** — best long-term answer; needs email correspondence with the Cyprus TSO.
+> - **Electricity Maps API**, ~€6,000/year per zone for Carbon Intensity. Out of scope.
+> - **CO2Signal**, was free; absorbed into Electricity Maps' paid product. Dead.
+> - **cyprusgrid.com direct**, bot-blocked behind a WAF; values reachable only via the `r.jina.ai` reader-proxy. Not stable enough as a production data source (third-party, ToS-grey, no SLA).
+> - **ENTSO-E Transparency Platform**, genuinely free + public + Cyprus covered. Returns hourly **generation mix per production type** (oil, gas, solar, wind, hydro, …); deriving carbon intensity requires applying per-type IPCC AR6 lifecycle emission factors and weighted-summing. ~200–300 LOC + 8–12 tests. The viable path forward.
+> - **TSOC direct API**, best long-term answer; needs email correspondence with the Cyprus TSO.
 >
-> Pick one (likely ENTSO-E for sustainability + research transparency, or TSOC for an official source). When this lands: schema bump v7→v8 adding nullable `gridCarbonIntensityGCo2PerKwh` to `charge_events`, new `domain/co2/GridIntensityFetcher` narrow IF + ENTSO-E impl, `SaveChargeEventUseCase` fires the fetch on save (best-effort, null on failure → falls back to the `gridIntensityGCo2PerKwh` preference), `ChargeEditFragment` displays the live value as the user types ("Current grid: 365 gCO₂/kWh") — that's the actual behavioural nudge.
+> Pick one (likely ENTSO-E for sustainability + research transparency, or TSOC for an official source). When this lands: schema bump v7→v8 adding nullable `gridCarbonIntensityGCo2PerKwh` to `charge_events`, new `domain/co2/GridIntensityFetcher` narrow IF + ENTSO-E impl, `SaveChargeEventUseCase` fires the fetch on save (best-effort, null on failure → falls back to the `gridIntensityGCo2PerKwh` preference), `ChargeEditFragment` displays the live value as the user types ("Current grid: 365 gCO₂/kWh"), that's the actual behavioural nudge.
 
 > **Audit suggestion (RES-03, 2026-05-03):** TASK-20 proposes a static
 > Cyprus grid intensity baseline. For SPS-Lab publications, a more
@@ -3766,7 +3767,7 @@ inference and the FLAT-default backfill.
 1. Add nullable `gridCarbonGCo2PerKwh: Int?` to `ChargeEventEntity`
    (or `Double?` if sub-integer precision matters for marginal
    factors). Schema bump as part of the same window as TASK-20 /
-   TASK-47 / TASK-48 when possible — three additive nullable
+   TASK-47 / TASK-48 when possible, three additive nullable
    columns in one migration is cleaner than three sequential bumps.
 2. **Backfill mode**: a Settings → "Carbon data" → "Backfill
    historical carbon intensity" action that calls a configurable API
@@ -3781,7 +3782,7 @@ inference and the FLAT-default backfill.
    `(baselineICE_kgCo2 - actualGridIntensity_kgCo2) × distance` per
    event, summed across the period. Per-event flag whenever the
    marginal-vs-baseline delta is negative ("charged on a dirtier-
-   than-typical hour") — useful smart-charging signal.
+   than-typical hour"), useful smart-charging signal.
 5. Methodology doc `docs/METHODOLOGY.md` (created in TASK-20):
    append a section explaining the marginal-vs-average distinction,
    the API source, the freshness/lag of the data, and the citation
@@ -3795,10 +3796,10 @@ inference and the FLAT-default backfill.
   adds the per-event refinement on top.
 - Free-tier API call budgets are tight (Electricity Maps free tier:
   ~50 requests/day). Batch backfill must respect rate limits and
-  surface a "Quota exceeded — retry later" Snackbar.
+  surface a "Quota exceeded, retry later" Snackbar.
 - Optional API-key configuration in Settings; no key bundled in
   source (consumer-API-key-in-source is a security smell).
-- Coordinate with TASK-48 — both extend per-event metadata; bundle
+- Coordinate with TASK-48, both extend per-event metadata; bundle
   schema bumps when timing allows.
 
 ### Acceptance
@@ -3811,7 +3812,7 @@ rate-limit handling.
 
 ---
 
-## 🔴 TASK-50 — Stabilise nightly instrumented suite (post-WorkManager-init) ☑ Done (2026-05-03)
+## 🔴 TASK-50, Stabilise nightly instrumented suite (post-WorkManager-init) ☑ Done (2026-05-03)
 
 > **Outcome:** all four sub-fixes landed on `fix/task50-nightly-greenup`
 > in a single PR. **Sub-fix A** added
@@ -3825,7 +3826,7 @@ rate-limit handling.
 > (verified via `grep EmptyFragmentActivity app/build/intermediates/merged_manifests/debug/processDebugManifest/AndroidManifest.xml`).
 > **Sub-fix B** renamed `DriveBackupWorkerTest.ioError_returnsRetry` to
 > `ioError_recoversAfterTransientRetry_returnsSuccess` (asserts
-> `Result.success()` with `failTimes = 1` — relies on the repo's
+> `Result.success()` with `failTimes = 1`, relies on the repo's
 > 3-attempt retry budget) and added a sister case
 > `ioError_exceedsRetryBudget_returnsFailure` (`failTimes = 4`,
 > asserts `Result.failure()`); the instrumented-side
@@ -3833,7 +3834,7 @@ rate-limit handling.
 > `failTimes` / `attemptCount` / `failuresRaised` budget design so
 > both halves of TASK-07's contract are testable on the same fixtures.
 > **Sub-fix C** root-caused `MainActivityResetRecoveryTest`'s
-> `clearCalls = 0` assertion to a Hilt binding mistake — the original
+> `clearCalls = 0` assertion to a Hilt binding mistake, the original
 > `@BindValue val testRunner: TestableResetRunner` bound the *concrete*
 > class while the use case injected the *interface*
 > `DataResetTransactionRunner` (which still resolved to the production
@@ -3854,19 +3855,19 @@ rate-limit handling.
 > (this was instrumented-side only); instrumented-test count grows
 > by +1 (the new `ioError_exceedsRetryBudget_returnsFailure` case).
 > The `WizardFlowTest` 24dp TabView a11y failure is intentionally
-> still red — that's the TASK-18 Step 6 discovery signal feeding
+> still red, that's the TASK-18 Step 6 discovery signal feeding
 > the TASK-18 follow-up scope.
 
 > **Context (2026-05-03):** the nightly cron after the WorkManager-init
-> fix (`444b7a2`) ran the full 58-test suite to completion — the
-> process-level crash is gone — but exposed 21 distinct failures
+> fix (`444b7a2`) ran the full 58-test suite to completion, the
+> process-level crash is gone, but exposed 21 distinct failures
 > across **four** root causes plus the intentional TASK-18 a11y
 > discovery signal. Logs: GitHub Actions run `nightly-instrumented`
 > on `main` after `444b7a2`. Bundle all four sub-fixes in one branch
 > so the next cron flips fully green; the a11y signal stays as
 > follow-up work for TASK-18.
 
-### Sub-fix A — `EmptyFragmentActivity` not declared in app manifest
+### Sub-fix A, `EmptyFragmentActivity` not declared in app manifest
 
 **Affects (~14 of 21 failures):** `AboutFragmentTest`,
 `ChargeEditFragmentTest`, `ManageLocationsFragmentTest`,
@@ -3903,22 +3904,22 @@ debugImplementation(libs.androidx.fragment.testing.manifest)
 ```
 **Fix (alternative, hand-rolled):** create
 `app/src/debug/AndroidManifest.xml` with the activity declaration
-verbatim. The library approach is preferred — it auto-tracks
+verbatim. The library approach is preferred, it auto-tracks
 versions and avoids drift.
 
-### Sub-fix B — `DriveBackupWorkerTest.ioError_returnsRetry` is stale post-TASK-07
+### Sub-fix B, `DriveBackupWorkerTest.ioError_returnsRetry` is stale post-TASK-07
 
 **Failure:** `expected:<Retry> but was:<Success>`.
 
 **Root cause:** the test asserts `ListenableWorker.Result.retry()`
 on a transient `IOException`. TASK-07 (merged 2026-05-01) explicitly
-removed `Result.retry()` from `DriveBackupWorker.doWork()` — the
+removed `Result.retry()` from `DriveBackupWorker.doWork()`, the
 repo now runs its own bounded retry loop (3 attempts, exponential
 backoff) and the worker is a thin `when (result)` translator that
 emits `Result.success()` or `Result.failure()` only. With the
 default `FakeDriveRemoteSource.failTimes = 1`, the IOException is
 raised once, the repo retries, attempt 2 succeeds, the worker
-returns `Result.success()` — exactly what the failing test sees.
+returns `Result.success()`, exactly what the failing test sees.
 TASK-36's inline-comment on the no-`retry()` invariant is the
 companion record of the same contract change.
 
@@ -3928,7 +3929,7 @@ test `ioError_exceedsRetryBudget_returnsFailure` that sets
 `failTimes = 4` (above `MAX_ATTEMPTS = 3`) and asserts
 `Result.failure()`. This codifies both halves of TASK-07's contract.
 
-### Sub-fix C — `MainActivityResetRecoveryTest` recovery flow not invoked
+### Sub-fix C, `MainActivityResetRecoveryTest` recovery flow not invoked
 
 **Affects:**
 `startup_resetInProgressTrue_runsUseCase_clearsFlag_beforeUiVisible`
@@ -3936,11 +3937,11 @@ test `ioError_exceedsRetryBudget_returnsFailure` that sets
 `startup_resetRecoveryThrows_showsRetryDialog_doesNotMountNavGraph`
 (`NoMatchingRootException`: retry dialog never appears).
 
-**Likely root cause(s) — investigate before fixing:**
+**Likely root cause(s), investigate before fixing:**
 1. The recovery hook in `MainActivity` / `MainViewModel` runs on a
    coroutine that isn't reaching the test's `awaitNavMounted` poll
    under the new `WorkManagerTestInitHelper.initializeTestWorkManager`
-   bring-up timing — i.e., the test process starts WorkManager
+   bring-up timing, i.e., the test process starts WorkManager
    first, the recovery hook second, racing against the dialog
    inflation.
 2. The `@BindValue testRunner` is not actually overriding the
@@ -3959,7 +3960,7 @@ fires at all. If it fires but the assertion is racy, replace
 gate. If the use case doesn't fire, audit the
 `@BindValue` interaction with the post-TASK-24 graph.
 
-### Sub-fix D — `ChartsFragmentTest.initializationError`
+### Sub-fix D, `ChartsFragmentTest.initializationError`
 
 **Failure:** `RuntimeException: Failed to instantiate test runner
 class androidx.test.internal.runner.junit4.AndroidJUnit4ClassRunner`.
@@ -3980,7 +3981,7 @@ hides the real exception) and patch accordingly.
 ### Out of scope for this task
 
 - **WizardFlowTest a11y failure** (`TabView width is 24dp.
-  Consider making the width 48dp or larger`) — this is the
+  Consider making the width 48dp or larger`), this is the
   intentional TASK-18 Step 6 discovery signal, not a regression.
   Track it under TASK-18 follow-up scope (steps 1–5, 7, 8). The
   nightly run is informational only and does not block PRs.
@@ -4001,7 +4002,7 @@ is instrumented-only work); instrumented-test count may grow by
 
 > Sequencing notes for **TASK-07, TASK-12, TASK-16, TASK-19, TASK-22,
 > TASK-23, TASK-24, TASK-25, TASK-28, TASK-29, TASK-31, TASK-34,
-> TASK-36** are obsolete — all thirteen landed. The static-analysis CI gate (TASK-16) is in place; the SDK
+> TASK-36** are obsolete, all thirteen landed. The static-analysis CI gate (TASK-16) is in place; the SDK
 > bump to 35 (TASK-22) merged with no `connectedAndroidTest` matrix to
 > coordinate; TASK-23 → TASK-24 ran in the prescribed order; TASK-25
 > claimed Room v3 → v4 + `MIGRATION_3_4` and bumped `backup_version`
@@ -4016,7 +4017,7 @@ is instrumented-only work); instrumented-test count may grow by
 
 - **TASK-30 marker reuse:** complete the Vico marker wrapper once in Step 2
   and reuse in Step 3. Do not port `ChartsMarkerView` twice.
-- **TASK-18 early-win:** ☑ landed 2026-05-03 — Step 6
+- **TASK-18 early-win:** ☑ landed 2026-05-03, Step 6
   (`AccessibilityChecks.enable()` in `HiltTestRunner.onStart`) is in;
   see the TASK-18 outcome banner for details. Steps 1–5, 7, 8 remain
   open and should be tackled as follow-up PRs that close violations
@@ -4051,36 +4052,36 @@ is instrumented-only work); instrumented-test count may grow by
 
 ---
 
-## 🔴 TASK-51 — GPL-3.0-or-later license change (pending `play-services-auth` review) ☑ Done (2026-05-03)
+## 🔴 TASK-51, GPL-3.0-or-later license change (pending `play-services-auth` review) ☑ Done (2026-05-03)
 
 > **Outcome (merged 2026-05-03 on `feat/task51-gpl-license`).**
 >
-> - **`LICENSE`** — new repo-root file with the canonical
+> - **`LICENSE`**, new repo-root file with the canonical
 >   `GPL-3.0-or-later` text (674 lines, fetched verbatim from
 >   `https://www.gnu.org/licenses/gpl-3.0.txt`). GitHub will now
 >   classify the repository as `GPL-3.0-or-later` automatically once
 >   the merge lands.
-> - **`README.md`** — license badge flipped from MIT-green to
+> - **`README.md`**, license badge flipped from MIT-green to
 >   GPL-3.0-or-later-blue and points at `LICENSE` (not the in-page
 >   anchor). Footer License section rewritten to the standard GPL
 >   "free software; redistribute and/or modify; distributed in the
 >   hope that it will be useful WITHOUT WARRANTY" preamble plus a
 >   pointer to `LICENSE`.
-> - **`app/src/main/res/values/strings.xml`** — `about_license_body`
+> - **`app/src/main/res/values/strings.xml`**, `about_license_body`
 >   replaced with a concise GPL acknowledgment (full GPL text would
 >   be ~30K and hostile inside a TextView). The body still names
 >   the SPS-Lab copyright holder, the SPDX identifier, the standard
 >   warranty disclaimer, and a URL out to gnu.org for the full text.
 > - **`AboutFragmentTest.licenseCard_containsMit`** renamed to
 >   `licenseCard_containsGplIdentifier` and now asserts the substring
->   `"GPL-3.0-or-later"` (the SPDX identifier in the card body — a
+>   `"GPL-3.0-or-later"` (the SPDX identifier in the card body, a
 >   stable anchor that survives prose tweaks).
 > - **`CLAUDE.md`** TASK-10 historical entry annotated to note the
 >   relicense ("originally MIT, relicensed to GPL-3.0-or-later in
->   TASK-51") instead of being silently rewritten — preserves the
+>   TASK-51") instead of being silently rewritten, preserves the
 >   "what shipped at TASK-10 time" reading while pointing forward.
 > - **SPDX headers on every production Kotlin source file** under
->   `app/src/main/java/org/spsl/evtracker/` — 145 files. Header
+>   `app/src/main/java/org/spsl/evtracker/`, 145 files. Header
 >   format (per the BACKLOG spec):
 >   ```kotlin
 >   // SPDX-FileCopyrightText: 2026 Cyprus University of Technology,
@@ -4103,7 +4104,7 @@ is instrumented-only work); instrumented-test count may grow by
 > binary), but anyone building or redistributing this app should
 > review their distribution channel's policy. For F-Droid
 > compatibility specifically, **TASK-37** (replace Drive backup
-> with SAF) is the canonical follow-up — it removes the GMS
+> with SAF) is the canonical follow-up, it removes the GMS
 > dependency entirely. This task did NOT block on TASK-37 because
 > the GPL switch is independently valuable and TASK-37 will land
 > on its own timeline.
@@ -4186,13 +4187,13 @@ one.
 
 ---
 
-## 🟡 TASK-52 — CSV escape hardening (`\r`, tabs, formula-injection prefixes) ☑ Done (2026-05-03)
+## 🟡 TASK-52, CSV escape hardening (`\r`, tabs, formula-injection prefixes) ☑ Done (2026-05-03)
 
 > **Outcome (merged 2026-05-03 on `feat/task52-csv-escape-hardening`).**
 > `ExportCsvUseCase.csvEscape` rewritten to:
 >
 > 1. Quote on `,`, `"`, `\n`, `\r`, **`\t`** (extends RFC 4180's required
->    set with bare `\r` and the tab heuristic — Excel auto-detects TSV
+>    set with bare `\r` and the tab heuristic, Excel auto-detects TSV
 >    when a tab appears in the first row, which corrupts column
 >    alignment).
 > 2. Prefix the field with a single quote `'` when the first character
@@ -4231,7 +4232,7 @@ one.
 > `note_existingCommaAndQuoteCases_stayGreen` (RFC 4180 baseline
 > coverage), `currency_isAlsoEscaped`. The test helper `rowFor(...)`
 > slices on the FIRST `\n` (header terminator) and `trimEnd('\n')` —
-> not `lineSequence().drop(1).first()` — so embedded `\r` / `\n`
+> not `lineSequence().drop(1).first()`, so embedded `\r` / `\n`
 > inside a quoted note doesn't truncate the captured row. JVM
 > unit-test count 377 → 387.
 
@@ -4239,14 +4240,14 @@ one.
 > `ExportCsvUseCase.csvEscape(...)` quotes a field only when it contains
 > `,`, `"`, or `\n`. Three real cases slip through:
 >
-> 1. **Lone `\r`** — RFC 4180 requires CR to be quoted just like LF.
+> 1. **Lone `\r`**, RFC 4180 requires CR to be quoted just like LF.
 >    A `note` containing `"line1\rline2"` will produce a malformed row
 >    when parsed by strict consumers (TASK-40 anonymised export consumers,
 >    SPS-Lab pipelines).
-> 2. **Tabs in `note` / `location`** — quietly accepted today but trip up
+> 2. **Tabs in `note` / `location`**, quietly accepted today but trip up
 >    spreadsheet importers that auto-detect TSV when a tab appears in the
 >    first row.
-> 3. **Formula injection** — when a user-supplied field starts with `=`,
+> 3. **Formula injection**, when a user-supplied field starts with `=`,
 >    `+`, `-`, or `@`, Excel / LibreOffice / Numbers all execute it as a
 >    formula on open. A `note` of `=cmd|'/c calc'!A1` is the canonical
 >    proof-of-concept. Researchers (TASK-40 consumers) opening the CSV
@@ -4255,7 +4256,7 @@ one.
 > The fix is a one-line change in `csvEscape` (broaden the trigger set,
 > prefix dangerous-leading-char fields with a single quote `'` before
 > quoting), plus unit-test coverage. No schema, no API change, no UX
-> change. Coordinates with TASK-09 (column extension) — both touch the
+> change. Coordinates with TASK-09 (column extension), both touch the
 > same writer; land TASK-52 first so the new columns inherit the harder
 > escape rules.
 
@@ -4287,12 +4288,12 @@ one.
 CSV export survives a malicious `note` field without producing executable
 formulas in mainstream spreadsheet apps. RFC 4180 conformance for `\r`
 holds. Existing CSV consumers (the share-sheet flow, TASK-40 pipeline)
-see no header / column-count change — only the escaping is stricter.
+see no header / column-count change, only the escaping is stricter.
 JVM unit-test count gains ≥ 5 cases.
 
 ---
 
-## 🟡 TASK-53 — Multi-car invariant guard in `StatsCalculator.computeStats` ☑ Done (2026-05-03)
+## 🟡 TASK-53, Multi-car invariant guard in `StatsCalculator.computeStats` ☑ Done (2026-05-03)
 
 > **Outcome (merged 2026-05-03 on `feat/task53-multi-car-invariant`).** Single-line guard expanded to a tight private helper so each guarded aggregation reads as one line of intent at the top:
 >
@@ -4305,13 +4306,13 @@ JVM unit-test count gains ≥ 5 cases.
 > }
 > ```
 >
-> Applied to **five** aggregations: `computeStats`, `computeMonthlyBuckets`, `computeEfficiencyTrend`, `computeAcDcSplit`, `computeLocationDistribution`. Each call site (`ObserveDashboardStatsUseCase`, `ObserveChartsModelsUseCase`) was audited and confirmed single-car already — the guard fires only on a future bug, never on existing flows. The error message names the offending `carIds` so a stack-trace bug report points straight at the wrong call.
+> Applied to **five** aggregations: `computeStats`, `computeMonthlyBuckets`, `computeEfficiencyTrend`, `computeAcDcSplit`, `computeLocationDistribution`. Each call site (`ObserveDashboardStatsUseCase`, `ObserveChartsModelsUseCase`) was audited and confirmed single-car already, the guard fires only on a future bug, never on existing flows. The error message names the offending `carIds` so a stack-trace bug report points straight at the wrong call.
 >
-> **`detectMixedCurrency` is intentionally exempt** — its semantic question ("are there ≥ 2 distinct currencies among costed events") doesn't depend on car identity, and a future fleet-level cross-car aggregator might legitimately call it on a multi-car list. The exemption is documented in the function KDoc rather than buried in a TODO.
+> **`detectMixedCurrency` is intentionally exempt**, its semantic question ("are there ≥ 2 distinct currencies among costed events") doesn't depend on car identity, and a future fleet-level cross-car aggregator might legitimately call it on a multi-car list. The exemption is documented in the function KDoc rather than buried in a TODO.
 >
-> Empty input passes (`distinct().size == 0` is `<= 1`) — every aggregation is reachable on an empty period filter, which is a routine state, not an error.
+> Empty input passes (`distinct().size == 0` is `<= 1`), every aggregation is reachable on an empty period filter, which is a routine state, not an error.
 >
-> **Tests:** new `StatsCalculatorInvariantTest` with 8 cases — five `*_throws_onMixedCarIds` tests (one per guarded method), `computeStats_succeeds_onEmptyList` smoke, `allGuardedAggregations_succeed_onEmptyList` smoke, and `detectMixedCurrency_acceptsMixedCarIds_byDesign` regression guard for the exemption. The first test asserts the offending carIds string `[1, 2]` appears in the message so the diagnostic surface is part of the contract. JVM unit-test count 425 → 433. Gates green: ktlintCheck, :app:lint, :app:testDebugUnitTest, :app:assembleRelease, :app:assembleDebugAndroidTest.
+> **Tests:** new `StatsCalculatorInvariantTest` with 8 cases, five `*_throws_onMixedCarIds` tests (one per guarded method), `computeStats_succeeds_onEmptyList` smoke, `allGuardedAggregations_succeed_onEmptyList` smoke, and `detectMixedCurrency_acceptsMixedCarIds_byDesign` regression guard for the exemption. The first test asserts the offending carIds string `[1, 2]` appears in the message so the diagnostic surface is part of the contract. JVM unit-test count 425 → 433. Gates green: ktlintCheck, :app:lint, :app:testDebugUnitTest, :app:assembleRelease, :app:assembleDebugAndroidTest.
 
 > **Audit finding (`docs/EV-backlog-review.md`, 2026-05-03):**
 > `computeStats` calls `events.sumOf { it.kwhAdded }` on the full input
@@ -4319,7 +4320,7 @@ JVM unit-test count gains ≥ 5 cases.
 > list shares a single car's odometer sequence. The current call site
 > (`ObserveDashboardStatsUseCase.computeFor(...)` →
 > `allEventsForCar.filter { it.eventDate in range… }`) always passes a
-> single-car list, so the invariant holds today — but it is **unenforced**.
+> single-car list, so the invariant holds today, but it is **unenforced**.
 > A future caller (a per-car comparison view, or a refactor that flattens
 > two cars into one stats card) would silently produce nonsense
 > `totalDistanceKm` and every efficiency metric without any signal: the
@@ -4341,15 +4342,15 @@ JVM unit-test count gains ≥ 5 cases.
 2. Mirror the same guard at the top of `computeMonthlyBuckets`,
    `computeEfficiencyTrend`, `computeAcDcSplit`, and
    `computeLocationDistribution` if they're ever called with a list
-   that's expected to be single-car (audit each call site first — some
+   that's expected to be single-car (audit each call site first, some
    chart-side aggregations may legitimately accept cross-car input;
    in that case, leave them alone and document the intentional
    exemption in the function KDoc).
 3. JVM test on `StatsCalculatorTest` (or a new `StatsCalculatorInvariantTest`):
-   - `computeStats_throws_onMixedCarIds` — feeds events with `carId = 1`
+   - `computeStats_throws_onMixedCarIds`, feeds events with `carId = 1`
      and `carId = 2`; asserts `IllegalArgumentException` with the
      expected message snippet.
-   - `computeStats_succeeds_onEmptyList` — empty list passes the guard
+   - `computeStats_succeeds_onEmptyList`, empty list passes the guard
      (`distinct().size == 0 <= 1`); preserves existing empty-period
      behaviour.
 
@@ -4361,12 +4362,12 @@ test asserts the guard fires on mixed input. JVM unit-test count gains
 
 ---
 
-## 🔴 TASK-54 — Drive switch fires `onUserToggledOn()` on every Settings entry (+ durable restore-skip marker) ☑ Done (2026-05-03)
+## 🔴 TASK-54, Drive switch fires `onUserToggledOn()` on every Settings entry (+ durable restore-skip marker) ☑ Done (2026-05-03)
 
 > **Outcome (merged 2026-05-03 on `feat/task54-drive-switch-fix`).** Both
 > coupled defects landed in one PR.
 >
-> **Step 0 — listener-attach hardening (Option A, lazy attach in
+> **Step 0, listener-attach hardening (Option A, lazy attach in
 > collector).** The listener attachment in `SettingsFragment.onViewCreated`
 > at the old line 69 is removed entirely; the StateFlow collector now
 > tracks a local `var driveListenerAttached = false` and on the first
@@ -4378,7 +4379,7 @@ test asserts the guard fires on mixed input. JVM unit-test count gains
 > restoration calling `setChecked()` between `onCreateView` and
 > `onStart` as the reason the listener cannot live there.
 >
-> **Steps 1–5 — durable last-seen-snapshot marker.** New
+> **Steps 1–5, durable last-seen-snapshot marker.** New
 > `LAST_SEEN_REMOTE_BACKUP_EXPORTED_AT = stringPreferencesKey(...)` on
 > `PreferenceKeys`; `SettingsReader.lastSeenRemoteBackupExportedAt:
 > Flow<String>` (default `""`); `SettingsWriter.setLastSeenRemoteBackupExportedAt(value: String)`
@@ -4386,7 +4387,7 @@ test asserts the guard fires on mixed input. JVM unit-test count gains
 > `LinkedSettings` test plumbing. `SettingsViewModel.onDriveAuthGranted`
 > now reads the marker via `settingsReader.lastSeenRemoteBackupExportedAt.first()`
 > and silently flips `driveEnabled = true` + enqueues backup when the
-> remote snapshot's `exported_at` matches the marker — no
+> remote snapshot's `exported_at` matches the marker, no
 > `ShowRestorePrompt` event fires. `parseExportedAtLabel(json)` becomes
 > `parseRemoteSnapshot(json): RemoteBackupSnapshot` returning both the
 > raw `exportedAt` (for the marker) and the formatted label (for the
@@ -4396,7 +4397,7 @@ test asserts the guard fires on mixed input. JVM unit-test count gains
 > clears the marker (`setLastSeenRemoteBackupExportedAt("")`) on
 > `BackupResult.Success` so a fresh upload + Drive re-toggle prompts
 > exactly once for the new snapshot. `onRestorePromptDismissed` does
-> NOT write the marker (dismiss ≠ Skip — neither accept nor decline).
+> NOT write the marker (dismiss ≠ Skip, neither accept nor decline).
 >
 > **Tests.** New JVM cases: 6 in `SettingsViewModelTest`
 > (`onDriveAuthGranted_remoteExists_firstTime_emitsPrompt`,
@@ -4410,7 +4411,7 @@ test asserts the guard fires on mixed input. JVM unit-test count gains
 > `authRequired_doesNotClearLastSeenMarker`). New instrumented file
 > `SettingsDriveSwitchEntryTest` with two cases —
 > `firstEntry_withDriveEnabled_doesNotCallAuthorize` and
-> `reEntry_viaActivityRecreation_doesNotCallAuthorize` — both gated on
+> `reEntry_viaActivityRecreation_doesNotCallAuthorize`, both gated on
 > a new `authorizeCallCount` field on the instrumented
 > `FakeDriveAuthManager`. The reproduction trigger is
 > `FragmentScenario.recreate()` (full activity recreation, the
@@ -4426,7 +4427,7 @@ test asserts the guard fires on mixed input. JVM unit-test count gains
 > and avoids a parallel "programmatic-change guard flag" that future
 > edits could drop. Option C
 > (`isSaveEnabled = false` on the switch) was tempting but relies on
-> the StateFlow being the single source of truth at all times — a
+> the StateFlow being the single source of truth at all times, a
 > contract the tests don't currently enforce.
 
 > **Filed 2026-05-03** (user-reported reproduction).
@@ -4462,7 +4463,7 @@ test asserts the guard fires on mixed input. JVM unit-test count gains
 >    pre-collector window. Even with the durable marker (defect #2)
 >    landed, the user would still see the unwanted OFF → ON visual
 >    flicker AND a wasted `auth.authorize()` round-trip on every
->    entry — so this defect needs a real fix, not just suppression.
+>    entry, so this defect needs a real fix, not just suppression.
 > 2. **No durable marker that "Skip" was tapped.**
 >    `SettingsViewModel.onSkipRestore()` writes
 >    `pendingRestoreLabel = null` in `_uiState` and calls
@@ -4481,11 +4482,11 @@ test asserts the guard fires on mixed input. JVM unit-test count gains
 
 ### Scope
 
-#### Step 0 — Stop the switch listener from firing on view-state restoration
+#### Step 0, Stop the switch listener from firing on view-state restoration
 
 The fix is to **never have a live listener attached when the view
 framework or the StateFlow collector first sets `isChecked`.** Pick one
-of the following — they're equivalent in correctness, listed by
+of the following, they're equivalent in correctness, listed by
 preference:
 
 **Option A (preferred): defer first attach until after the first state
@@ -4537,7 +4538,7 @@ override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 in `onViewCreated`, but set a `var programmaticDriveSwitch = false`
 flag and have the listener short-circuit when it's true. Set the flag
 around any programmatic `isChecked = ...` write, and ALSO around the
-implicit write that `onRestoreInstanceState` performs — which means
+implicit write that `onRestoreInstanceState` performs, which means
 flipping the flag in `onViewStateRestored(savedInstanceState: Bundle?)`
 *before* `super.onViewStateRestored(...)` and clearing it after. This
 is more code than Option A and easier to get wrong if a future edit
@@ -4555,17 +4556,17 @@ inline if you pick this.
 
 Whichever option lands: the existing line-69 listener attachment must
 be removed (Options A and C) or accompanied by the guard flag (Option
-B). Do not leave the line-69 attach in place untouched — that's the
+B). Do not leave the line-69 attach in place untouched, that's the
 defect.
 
-#### Step 1 — New DataStore key in `PreferenceKeys`
+#### Step 1, New DataStore key in `PreferenceKeys`
 
 ```kotlin
 val LAST_SEEN_REMOTE_BACKUP_EXPORTED_AT =
     stringPreferencesKey("last_seen_remote_backup_exported_at")
 // ISO-8601 string from BackupData.exported_at. Empty string = never seen.
 // String (not Long) so we can compare verbatim against the JSON field
-// without re-parsing — Instant.parse is the only conversion needed and
+// without re-parsing, Instant.parse is the only conversion needed and
 // only on the label-formatting path that already exists today.
 ```
 
@@ -4574,7 +4575,7 @@ Wire `SettingsReader.lastSeenRemoteBackupExportedAt: Flow<String>` and
 follow the existing TASK-24 narrow-IF rule (do **not** add a concrete
 `SettingsRepository` reference outside `di/`).
 
-#### Step 2 — Plumb `exportedAt` into `SettingsUiState`
+#### Step 2, Plumb `exportedAt` into `SettingsUiState`
 
 Today, `parseExportedAtLabel(json)` only formats the date for display.
 Replace it with a small helper that returns `(exportedAt: String,
@@ -4595,7 +4596,7 @@ private fun parseRemoteSnapshot(json: String): RemoteBackupSnapshot {
 Add `pendingRestoreExportedAt: String?` to `SettingsUiState` next to
 the existing `pendingRestoreLabel: String?`.
 
-#### Step 3 — Guard in `onDriveAuthGranted()`
+#### Step 3, Guard in `onDriveAuthGranted()`
 
 ```kotlin
 fun onDriveAuthGranted() {
@@ -4632,7 +4633,7 @@ fun onDriveAuthGranted() {
 }
 ```
 
-#### Step 4 — Persist on Skip and on Restore success
+#### Step 4, Persist on Skip and on Restore success
 
 ```kotlin
 fun onSkipRestore() {
@@ -4654,7 +4655,7 @@ restore also records the snapshot identity. (After a restore, the local
 DB equals the remote backup, so re-prompting would offer the user a
 restore of the data they already have.)
 
-#### Step 5 — Clear on wipe
+#### Step 5, Clear on wipe
 
 `WipeRemoteBackupUseCase.invoke()` already resets `lastBackupAt = 0L`
 on `BackupResult.Success`. Mirror that with
@@ -4666,28 +4667,28 @@ correctly.
 
 Add to `SettingsViewModelTest`:
 
-1. `onDriveAuthGranted_remoteExists_firstTime_emitsPrompt` — `exportedAt
+1. `onDriveAuthGranted_remoteExists_firstTime_emitsPrompt`, `exportedAt
    = "2026-04-01T..."`, `lastSeen = ""` → `ShowRestorePrompt` emitted,
    `driveEnabled` not yet flipped.
-2. `onDriveAuthGranted_remoteExists_alreadySeen_skipsSilently` — same
+2. `onDriveAuthGranted_remoteExists_alreadySeen_skipsSilently`, same
    `exportedAt` written to `lastSeen` → no event, `driveEnabled = true`,
    `enqueueBackup()` called once.
 3. `onDriveAuthGranted_remoteWithDifferentExportedAt_promptsAgain` —
    `exportedAt` differs from `lastSeen` (new remote upload after wipe)
    → prompt emitted.
-4. `onSkipRestore_persistsLastSeenExportedAt` — after skip, the
+4. `onSkipRestore_persistsLastSeenExportedAt`, after skip, the
    `FakeSettingsReader` reads back the same `exportedAt`.
-5. `onConfirmRestore_success_persistsLastSeenExportedAt` — after a
+5. `onConfirmRestore_success_persistsLastSeenExportedAt`, after a
    successful restore, the marker is written.
-6. `onWipe_success_clearsLastSeenExportedAt` — after `WipeRemoteBackupUseCase`
+6. `onWipe_success_clearsLastSeenExportedAt`, after `WipeRemoteBackupUseCase`
    succeeds, the marker is reset to the empty string.
-7. `onDriveAuthGranted_noRemote_keepsExistingMarker` — no remote backup
+7. `onDriveAuthGranted_noRemote_keepsExistingMarker`, no remote backup
    path enables Drive without touching the marker (regression guard).
 
 Extend `FakeSettingsReader` / `FakeSettingsWriter` with the new key.
 The new `WipeRemoteBackupUseCase` test belongs in `WipeRemoteBackupUseCaseTest`.
 
-#### Instrumented test — Step 0 regression guard
+#### Instrumented test, Step 0 regression guard
 
 Add to `SettingsFragmentTest` (or a new `SettingsDriveSwitchEntryTest`):
 
@@ -4697,7 +4698,7 @@ fun reEntry_withDriveEnabled_doesNotFireOnUserToggledOn() {
     // Pre-state: DataStore says driveEnabled = true.
     settingsWriter.setDriveEnabled(true)
 
-    // First entry — let the fragment mount and the collector run.
+    // First entry, let the fragment mount and the collector run.
     val scenario = launchFragmentInHiltContainer<SettingsFragment>()
     scenario.moveToState(Lifecycle.State.RESUMED)
 
@@ -4720,7 +4721,7 @@ fun reEntry_withDriveEnabled_doesNotFireOnUserToggledOn() {
 `FakeDriveAuthManager` already exists in `app/src/androidTest/java/.../testing/`;
 add an `authorizeCalls: Int` counter incremented on every `authorize()`
 invocation if it isn't there. This test is the regression guard for
-Step 0 — the durable-marker JVM tests don't cover it because they don't
+Step 0, the durable-marker JVM tests don't cover it because they don't
 exercise the view-state-restoration window.
 
 ### Acceptance
@@ -4755,7 +4756,7 @@ exercise the view-state-restoration window.
 
 ---
 
-## 🟡 TASK-55 — Language picker (Settings + first-run wizard) ☑ Done (2026-05-04)
+## 🟡 TASK-55, Language picker (Settings + first-run wizard) ☑ Done (2026-05-04)
 
 > **Outcome (merged 2026-05-04 on `feat/task55-language-picker`).** Two
 > coupled UX entry points + the architectural plumbing for both:
@@ -4802,21 +4803,21 @@ exercise the view-state-restoration window.
 >   apply are atomic from the caller's perspective.
 > - **String resources:** new translatable keys `settings_language`,
 >   `settings_language_dialog_title`, `settings_language_follow_system`,
->   `wizard_language_label` — present in all four locale files
+>   `wizard_language_label`, present in all four locale files
 >   (en/el/tr/ru) per the TASK-15 `MissingTranslation` error-mode
 >   contract. The four `language_name_*` autonym strings are present
 >   only in `values/` with `translatable="false"`.
 > - **`SettingsUiState.languageTag`** (default `""`) gets populated
 >   from `SettingsReader.languageTag` in the VM's init block.
 >
-> **Tests:** 6 new JVM cases — 3 in `SettingsViewModelTest`
+> **Tests:** 6 new JVM cases, 3 in `SettingsViewModelTest`
 > (`onLanguageSelected_persistsTagAndAppliesLocale`,
 > `onLanguageSelected_followSystem_writesEmptyString`,
 > `languageTag_collectedFromSettingsReader_intoUiState`) and 3 in
 > `WizardViewModelTest`
 > (`onLanguageSelected_persistsTagAndAppliesLocale`,
 > `onLanguageSelected_followSystem_writesEmptyString`,
-> `onLanguageSelected_persistsTag_evenBeforeFinish` — mid-wizard-kill
+> `onLanguageSelected_persistsTag_evenBeforeFinish`, mid-wizard-kill
 > survival regression guard). `WizardViewModelTest` gained
 > `Dispatchers.setMain` / `resetMain` setup because the VM's init now
 > launches a `viewModelScope` collector for `languageTag`. JVM
@@ -4824,7 +4825,7 @@ exercise the view-state-restoration window.
 >
 > **Instrumented coverage gap (deferred follow-up):** the BACKLOG spec
 > called for ≥2 instrumented cases (`SettingsLanguagePickerTest`,
-> `WizardLanguagePickerTest`). Both deferred — the JVM tests cover the
+> `WizardLanguagePickerTest`). Both deferred, the JVM tests cover the
 > VM contract end-to-end (DataStore write + LocaleApplier call + UiState
 > roundtrip), and the dialog/Fragment wiring is mechanical
 > (`MaterialAlertDialog.Builder.setSingleChoiceItems`). File a follow-up
@@ -4832,7 +4833,7 @@ exercise the view-state-restoration window.
 > Activity recreation becomes load-bearing.
 
 > **Filed 2026-05-04 as a TASK-15 follow-up.** TASK-15 shipped four
-> locales (en/el/tr/ru) but no in-app language switcher — the app
+> locales (en/el/tr/ru) but no in-app language switcher, the app
 > falls back to whichever locale the device's system language reports.
 > A user whose phone is set to English but who reads Greek has no
 > way to switch the app to Greek without changing the OS-wide
@@ -4842,9 +4843,9 @@ exercise the view-state-restoration window.
 >
 > Two coupled UX entry points needed:
 >
-> 1. **Settings → Language row** — change at any time, persisted
+> 1. **Settings → Language row**, change at any time, persisted
 >    across launches.
-> 2. **Wizard page 0 language picker** — first thing the user sees
+> 2. **Wizard page 0 language picker**, first thing the user sees
 >    on a fresh install, before any other wizard content, so the
 >    rest of the wizard renders in the chosen language.
 >
@@ -4858,7 +4859,7 @@ exercise the view-state-restoration window.
 
 ### Scope
 
-#### Step 1 — `locales_config.xml` + manifest declaration
+#### Step 1, `locales_config.xml` + manifest declaration
 
 Cheap-but-load-bearing baseline. Even with the in-app picker
 landing in steps 2-4, declaring the locale config gives Android
@@ -4880,7 +4881,7 @@ landing in steps 2-4, declaring the locale config gives Android
 android:localeConfig="@xml/locales_config"
 ```
 
-#### Step 2 — DataStore key + narrow IF additions
+#### Step 2, DataStore key + narrow IF additions
 
 ```kotlin
 // PreferenceKeys
@@ -4895,7 +4896,7 @@ and `SettingsWriter.setLanguageTag(value: String)` through
 `FakeSettingsWriter`) and the `LinkedSettings` helper in
 `BackupOutcomeReporterTest`.
 
-#### Step 3 — Apply the locale at app start
+#### Step 3, Apply the locale at app start
 
 In `EVTrackerApp.onCreate`, BEFORE Hilt's first activity inflates:
 
@@ -4906,12 +4907,12 @@ val locales = if (tag.isEmpty()) LocaleListCompat.getEmptyLocaleList()
 AppCompatDelegate.setApplicationLocales(locales)
 ```
 
-The `runBlocking` is acceptable here — we MUST have the locale
+The `runBlocking` is acceptable here, we MUST have the locale
 resolved before any view inflates, and DataStore reads on a fresh
 process are sub-50ms. Document this trade-off inline in the
 KDoc.
 
-#### Step 4 — Settings → Language row
+#### Step 4, Settings → Language row
 
 New row in `fragment_settings.xml` between **Theme** and
 **Currency**. Tap opens a `MaterialAlertDialog.Builder.setSingleChoiceItems`
@@ -4919,16 +4920,16 @@ with five options:
 
 ```
 Follow system          (settings_language_follow_system)
-English                ("English" — autonym, never localised)
-Ελληνικά               ("Ελληνικά" — autonym, never localised)
-Türkçe                 ("Türkçe" — autonym, never localised)
-Русский                ("Русский" — autonym, never localised)
+English                ("English", autonym, never localised)
+Ελληνικά               ("Ελληνικά", autonym, never localised)
+Türkçe                 ("Türkçe", autonym, never localised)
+Русский                ("Русский", autonym, never localised)
 ```
 
 **Display the autonyms (each language's name in itself), not
 translations.** A Greek-speaking user looking for their language
-needs to see "Ελληνικά" written in Greek script — not "Greek"
-or "Yunanca" — because they may not read English or Turkish.
+needs to see "Ελληνικά" written in Greek script, not "Greek"
+or "Yunanca", because they may not read English or Turkish.
 
 Tag mapping: `""` (follow system) → empty `LocaleListCompat`;
 `"en"` / `"el"` / `"tr"` / `"ru"` → forLanguageTags(tag).
@@ -4940,12 +4941,12 @@ On select:
 The `SettingsViewModel` exposes `onLanguageSelected(tag: String)`
 that does both writes inside a single `viewModelScope.launch`.
 
-#### Step 5 — Wizard page 0 picker
+#### Step 5, Wizard page 0 picker
 
 Add a language dropdown to the **top** of `WizardPage1Fragment`
 (the welcome page). Options identical to the Settings dialog
 (autonym labels). Default selection: empty string ("follow
-system") — but the dropdown's **displayed** value is the resolved
+system"), but the dropdown's **displayed** value is the resolved
 locale name so the user sees what they're currently looking at.
 
 Behaviour: selecting an option calls `vm.onLanguageSelected(tag)`,
@@ -4959,17 +4960,17 @@ sees the effect of their choice.
 
 **Edge case:** if the user picks a language and then taps Back
 to "undo" the choice, `setupComplete` is still false so the
-DataStore tag survives. That's intentional — the choice should
+DataStore tag survives. That's intentional, the choice should
 persist even across mid-wizard kills.
 
-#### Step 6 — Tests
+#### Step 6, Tests
 
 JVM:
 - `SettingsViewModelTest`:
   - `onLanguageSelected_persistsTagAndAppliesLocale` (verify the
     DataStore write; the `setApplicationLocales` side-effect is
     framework-internal but a Mockito spy on a fake `LocaleApplier`
-    interface keeps the test JVM-clean — see "Architectural note"
+    interface keeps the test JVM-clean, see "Architectural note"
     below).
   - `onLanguageSelected_followSystem_writesEmptyString`.
 - `WizardViewModelTest`: `onLanguageSelected_persistsTag_evenBeforeFinish`
@@ -4985,7 +4986,7 @@ Instrumented:
   Greek (or just assert the locale tag was persisted; the actual
   string render is tested by Espresso's `withText` matcher).
 
-#### Architectural note — the `LocaleApplier` boundary
+#### Architectural note, the `LocaleApplier` boundary
 
 `AppCompatDelegate.setApplicationLocales` is a static framework
 call that's hard to verify in JVM tests. Wrap it in a narrow
@@ -5013,7 +5014,7 @@ class AndroidLocaleApplier @Inject constructor() : LocaleApplier {
 ```
 
 Bind in a new `LocaleModule` (single-binding, like
-`DataResetModule` from TASK-50 sub-fix C — keeps tests' Hilt
+`DataResetModule` from TASK-50 sub-fix C, keeps tests' Hilt
 graph minimal).
 
 ### Strings
@@ -5047,7 +5048,7 @@ The translatable strings need el/tr/ru entries per the
 - Android 13+ users can also change the language via System
   Settings → Apps → Joulie → Language (the OS-level entry
   appears thanks to the `locales_config.xml` declaration).
-- `:app:lint` stays green — the new translatable strings are
+- `:app:lint` stays green, the new translatable strings are
   present in all four locale files; the autonym strings are
   marked `translatable="false"` so `MissingTranslation` doesn't
   flag them.
@@ -5071,7 +5072,7 @@ The translatable strings need el/tr/ru entries per the
 
 ---
 
-## 🟡 TASK-56 — CI release wiring for the ADI registration token
+## 🟡 TASK-56, CI release wiring for the ADI registration token
 
 > **Filed 2026-05-04 as a follow-up to local ADI registration.** The
 > Android Developer Verification (ADI) registration token landed
@@ -5112,7 +5113,7 @@ The translatable strings need el/tr/ru entries per the
    ```
    The trailing `\n` matches the byte layout of Google's sample
    (27 bytes = 26-char snippet + LF). Critical: do NOT use
-   `echo $VAR` — bash sometimes interpolates a literal `$` if the
+   `echo $VAR`, bash sometimes interpolates a literal `$` if the
    secret contains shell metacharacters; `printf '%s\n'` is safer.
 3. Add a verification step AFTER `assembleRelease` that confirms
    the asset was packaged into the APK:
@@ -5123,13 +5124,13 @@ The translatable strings need el/tr/ru entries per the
          assets/adi-registration.properties \
          | grep -qx "${{ secrets.ADI_REGISTRATION_SNIPPET }}"
    ```
-   The `-x` flag matches the whole line — guards against future
+   The `-x` flag matches the whole line, guards against future
    trailing-whitespace bugs in the bake step.
 4. Tag a throwaway pre-release (e.g. `v1.7.0-adi-test`) AND upload
    the resulting CI-built APK to Google's verification page to
    confirm it passes the verifier. If it does, delete the test tag
    and the test release. If it doesn't, the verification step
-   above caught a real packaging bug — investigate before any
+   above caught a real packaging bug, investigate before any
    future production release.
 
 ### Acceptance

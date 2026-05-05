@@ -42,8 +42,13 @@
         <item name="scrimBackground">@color/md_theme_light_scrim</item>
     </style>
 
+    <!-- Brand-pack v1.0: solid brand-blue tile in BOTH light and dark
+         (matches the launcher icon background so the splash-to-app
+         transition feels seamless), with the white bolt as the
+         animated icon. Brand Guide §5 + §8 step 4. -->
     <style name="Theme.EVTracker.SplashScreen" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">?android:colorBackground</item>
+        <item name="windowSplashScreenBackground">@color/joulie_brand_blue</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_bolt</item>
         <item name="postSplashScreenTheme">@style/Theme.EVTracker</item>
     </style>
 </resources>
