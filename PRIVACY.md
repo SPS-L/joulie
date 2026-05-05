@@ -98,6 +98,6 @@ If the privacy practices change in a future release, this page will be updated a
 ## Contact
 
 Questions or concerns?
-- 📧 [sps-lab@cut.ac.cy](mailto:sps-lab@cut.ac.cy)
+- 📧 [info@sps-lab.org](mailto:info@sps-lab.org)
 - 🌐 [https://sps-lab.org](https://sps-lab.org)
 - 🐛 Bug reports and feature requests: [github.com/SPS-L/joulie/issues](https://github.com/SPS-L/joulie/issues)
