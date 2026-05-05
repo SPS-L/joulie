@@ -236,29 +236,6 @@ section.hero { border-top: none; padding: 4rem 0 3rem; }
   font-weight: 600;
 }
 
-/* ---------- visuals ---------- */
-
-.visuals figure {
-  margin: 0;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
-  box-shadow: var(--shadow);
-}
-.visuals figure img {
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  object-fit: cover;
-}
-.visuals figcaption {
-  text-align: center;
-  font-size: 0.9rem;
-  color: var(--on-surface-muted);
-  padding: 0.75rem;
-  border-top: 1px solid var(--border);
-}
-
 /* ---------- FAQ ---------- */
 
 .faq dl {
