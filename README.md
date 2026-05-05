@@ -215,6 +215,8 @@ The workflow can also be triggered manually from the **Actions** tab via `workfl
 - Google Drive backup is **opt-in**. When enabled, a JSON snapshot is written to the app's private **App Data folder** on your Drive, hidden from the Drive UI and accessible only to this app's signing certificate. The scope is `https://www.googleapis.com/auth/drive.appdata` — the app cannot read or modify any other files on your Drive.
 - CSV export writes to the app's external-files directory and is shared only via the Android share sheet at your request.
 
+Full policy: [`PRIVACY.md`](PRIVACY.md).
+
 ## License
 
 Released under the **GNU General Public License v3.0 or later** ([`GPL-3.0-or-later`](LICENSE)). © 2024–2026 [Sustainable Power Systems Lab (SPS-Lab)](https://sps-lab.org/), Cyprus University of Technology.

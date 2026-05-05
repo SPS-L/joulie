@@ -1,4 +1,4 @@
-# EV Tracker — CO₂ Tracker Methodology
+# Joulie — CO₂ Tracker Methodology
 
 This document explains how the **Settings → CO₂** card and the **Charts → CO₂ tab** compute their numbers, where the default coefficients come from, and what caveats matter when interpreting them. It is the canonical reference for the constants in [`CO2Calculator`](../app/src/main/java/org/spsl/evtracker/domain/service/CO2Calculator.kt).
 

@@ -4,7 +4,7 @@
 
   Lists every locale the app actually ships translations for. Android 13+
   reads this file to render the OS-level "Language" entry under
-  Settings → Apps → EV Tracker → Language; older Android versions ignore
+  Settings → Apps → Joulie → Language; older Android versions ignore
   it but the entry is still required for our own in-app picker to map
   Settings dialog choices onto AppCompatDelegate.setApplicationLocales.
 
