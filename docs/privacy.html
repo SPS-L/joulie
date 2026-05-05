@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0D47FF" />
+  <title>Privacy Policy. Joulie.</title>
+  <meta name="description" content="Privacy policy for Joulie, the open-source Android app for EV drivers. No analytics, no telemetry, all data stays on the user's device unless Drive backup is opted into." />
+  <meta name="author" content="Sustainable Power Systems Lab, Cyprus University of Technology" />
+
+  <meta property="og:title" content="Privacy Policy. Joulie." />
+  <meta property="og:description" content="Privacy policy for Joulie. No analytics, no telemetry, opt-in Drive backup only." />
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content="https://sps-l.github.io/joulie/privacy" />
+
+  <link rel="icon" type="image/png" href="favicon.png" />
+  <link rel="stylesheet" href="site.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <a class="brand" href="./">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="branding/joulie_mark_mono.png" />
+      <img src="branding/joulie_mark_only.png" alt="" width="32" height="32" />
+    </picture>
+    <span class="brand-name">Joulie</span>
+  </a>
+  <nav class="topnav" aria-label="Primary">
+    <a href="./#about">About</a>
+    <a href="./#features">Features</a>
+    <a href="./#faq">FAQ</a>
+    <a href="https://github.com/SPS-L/joulie/releases/latest">Download</a>
+  </nav>
+</header>
+
+<main class="legal">
+
+  <header class="legal-header">
+    <h1>Privacy Policy</h1>
+    <p class="legal-meta"><strong>Last updated:</strong> May 2026 · <strong>Developed by:</strong> <a href="https://sps-lab.org/">Sustainable Power Systems Lab (SPS-Lab)</a>, Cyprus University of Technology</p>
+  </header>
+
+  <section>
+    <h2>Overview</h2>
+    <p>Joulie is designed with privacy as a default, not an afterthought. The app does <strong>not</strong> collect analytics, telemetry, crash reports, or any personal data beyond what you explicitly enter and choose to store.</p>
+  </section>
+
+  <section>
+    <h2>Data you enter</h2>
+    <p>When you log a charging session, the following data is stored <strong>locally on your device</strong> in the app's private database:</p>
+    <ul>
+      <li>Odometer reading and distance unit</li>
+      <li>kWh added (or state-of-charge values used to estimate it)</li>
+      <li>Charging type (AC or DC)</li>
+      <li>Location label (free text you enter or select from quick-chips; no GPS coordinates are collected)</li>
+      <li>Optional cost and currency</li>
+      <li>Date and time of the session</li>
+      <li>Optional notes</li>
+      <li>Per-car nominal battery capacity (used by the kWh-from-SoC calculator and battery-degradation tracker)</li>
+    </ul>
+    <p>This data never leaves your device unless you explicitly enable one of the opt-in export features described below.</p>
+  </section>
+
+  <section>
+    <h2>Google Drive backup (opt-in)</h2>
+    <p>Drive backup is <strong>disabled by default</strong>. If you choose to enable it:</p>
+    <ul>
+      <li>A JSON snapshot of your charge log is written to your Google Drive <strong>App Data folder</strong>, a private, hidden folder accessible only to this app's signing certificate. The file is not visible in the regular Drive UI.</li>
+      <li>The OAuth scope used is <code>https://www.googleapis.com/auth/drive.appdata</code> only. Joulie cannot read, modify, or access any other files or folders on your Google Drive.</li>
+      <li>You can disable backup, trigger a manual backup, or permanently wipe the remote copy at any time via <strong>Settings → Google Drive backup</strong> (toggle, <strong>Back up now</strong>, and <strong>Wipe remote backup</strong>).</li>
+      <li>Drive backup operations are logged locally for failure diagnostics (<code>android.util.Log</code>) but are not transmitted anywhere.</li>
+      <li>Google's own <a href="https://policies.google.com/privacy">Privacy Policy</a> applies to data stored on Google Drive.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>CSV export (opt-in)</h2>
+    <p>You can export your charge history as a CSV file at any time via <strong>Settings → Export CSV</strong> (full history) or <strong>Settings → Export CSV (date range)</strong>. The file is written to the app's external-files directory and shared only by your explicit action via the standard Android share sheet. No data is transmitted automatically.</p>
+  </section>
+
+  <section>
+    <h2>CO<sub>2</sub> tracker</h2>
+    <p>The CO<sub>2</sub> tracker computes emission estimates using two values you can configure in Settings (a grid CO<sub>2</sub> intensity in gCO<sub>2</sub>/kWh and an ICE-counterfactual baseline in L/100 km). The defaults reflect the Cyprus 2025 grid average and the EU real-world fleet average. All computation happens locally on your device; no data leaves the app.</p>
+  </section>
+
+  <section>
+    <h2>Permissions</h2>
+    <table class="legal-table">
+      <thead>
+        <tr><th>Permission</th><th>Why it is needed</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>INTERNET</code></td><td>Google Drive backup only (when enabled)</td></tr>
+        <tr><td><code>POST_NOTIFICATIONS</code></td><td>Drive-backup failure alerts only, requested after the third consecutive failure, never on launch, never re-prompted after a denial</td></tr>
+        <tr><td>No location permission</td><td>Location labels are free text you type or pick from chips; the app does not access GPS, Wi-Fi-derived location, or any other location signal</td></tr>
+        <tr><td>No contacts / camera / microphone</td><td>The app does not request any of these</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Data retention and deletion</h2>
+    <p>All charge data is stored locally on your device. You can:</p>
+    <ul>
+      <li>Delete individual charge events from <strong>History</strong> (swipe to delete, with a 5-second undo)</li>
+      <li>Reset the active car's history via <strong>Settings → Reset active car</strong></li>
+      <li>Wipe everything via <strong>Settings → Reset all data</strong></li>
+      <li>Uninstall the app, Android removes all local app data automatically</li>
+    </ul>
+    <p>If Drive backup is enabled, use <strong>Settings → Wipe remote backup</strong> before uninstalling to remove the cloud copy. Toggling Drive backup OFF does not delete the remote snapshot; only the explicit wipe does.</p>
+  </section>
+
+  <section>
+    <h2>Children</h2>
+    <p>Joulie is not directed at children under 13 and does not knowingly collect data from children.</p>
+  </section>
+
+  <section>
+    <h2>Open source</h2>
+    <p>Joulie is licensed under the GNU General Public License v3.0 or later. The full source code, including the data-handling paths described above, is available at <a href="https://github.com/SPS-L/joulie">github.com/SPS-L/joulie</a> for independent review.</p>
+  </section>
+
+  <section>
+    <h2>Changes to this policy</h2>
+    <p>If the privacy practices change in a future release, this page will be updated and the "Last updated" date revised. Material changes will be noted in the app's release notes.</p>
+  </section>
+
+  <section>
+    <h2>Contact</h2>
+    <p>Questions or concerns?</p>
+    <ul>
+      <li>📧 <a href="mailto:info@sps-lab.org">info@sps-lab.org</a></li>
+      <li>🌐 <a href="https://sps-lab.org">https://sps-lab.org</a></li>
+      <li>🐛 Bug reports and feature requests: <a href="https://github.com/SPS-L/joulie/issues">github.com/SPS-L/joulie/issues</a></li>
+    </ul>
+  </section>
+
+</main>
+
+<footer>
+  <p>© 2024–2026 <a href="https://sps-lab.org/">Sustainable Power Systems Lab</a>, Cyprus University of Technology.</p>
+  <p>Released under the <a href="https://github.com/SPS-L/joulie/blob/main/LICENSE">GNU General Public License v3.0 or later</a>. Source on <a href="https://github.com/SPS-L/joulie">GitHub</a>.</p>
+</footer>
+
+</body>
+</html>
