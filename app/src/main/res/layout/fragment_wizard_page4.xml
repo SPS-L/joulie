@@ -18,19 +18,11 @@
             android:text="@string/wizard_about_title"
             android:textAppearance="?attr/textAppearanceHeadlineSmall"/>
 
-        <ImageView
-            android:layout_width="240dp"
-            android:layout_height="60dp"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginTop="16dp"
-            android:contentDescription="@string/about_acknowledgment_lab"
-            android:src="@drawable/ic_spslab_badge"/>
-
         <!-- Acknowledgment -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="24dp"
             android:gravity="center_horizontal"
             android:text="@string/about_acknowledgment_lab"
             android:textAppearance="?attr/textAppearanceBodyLarge"/>
