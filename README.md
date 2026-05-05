@@ -169,8 +169,6 @@ The workflow can also be triggered manually from the **Actions** tab via `workfl
 | [`docs/TEST_PLAN.md`](docs/TEST_PLAN.md) | Test specification |
 | [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) | CO₂ tracker methodology — coefficients, sources, and caveats (TASK-20) |
 | [`docs/BACKLOG.md`](docs/BACKLOG.md) | Post-v1 refactors and feature backlog |
-| [`docs/AGENT_INSTRUCTIONS.md`](docs/AGENT_INSTRUCTIONS.md) | Original implementation walkthrough (historical) |
-| [`docs/superpowers/`](docs/superpowers/) | Per-sub-project specs and plans (time-stamped, historical) |
 | [`CLAUDE.md`](CLAUDE.md) | Architecture summary, invariants, and conventions for AI agents |
 
 ## Privacy
