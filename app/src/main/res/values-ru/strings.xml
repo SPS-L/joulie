@@ -5,7 +5,7 @@
 -->
 <resources>
     <!-- Wizard -->
-    <string name="wizard_welcome_title">⚡ Трекер эффективности электромобиля</string>
+    <string name="wizard_welcome_title">⚡ Joulie</string>
     <string name="wizard_welcome_body">Давайте настроим ваши предпочтения — их можно изменить позже в Настройках.</string>
     <string name="wizard_metric_title">Как вы хотите видеть эффективность?</string>
     <string name="wizard_unit_label">Единица расстояния</string>
@@ -104,7 +104,7 @@
     <string name="backup_notif_auth_required_title">Требуется вход в Drive</string>
     <string name="backup_notif_auth_required_body">Нажмите для повторного подключения.</string>
     <string name="backup_notif_permission_rationale_title">Разрешить уведомления о резервном копировании?</string>
-    <string name="backup_notif_permission_rationale_body">EV Tracker использует уведомления только для информирования о сбоях резервного копирования Drive. Больше ни для чего.</string>
+    <string name="backup_notif_permission_rationale_body">Joulie использует уведомления только для информирования о сбоях резервного копирования Drive. Больше ни для чего.</string>
     <string name="backup_notif_permission_rationale_allow">Разрешить</string>
     <string name="backup_notif_permission_rationale_deny">Не сейчас</string>
 

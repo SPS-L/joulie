@@ -5,7 +5,7 @@
 -->
 <resources>
     <!-- Wizard -->
-    <string name="wizard_welcome_title">⚡ Παρακολούθηση Αποδοτικότητας ΗΟΧ</string>
+    <string name="wizard_welcome_title">⚡ Joulie</string>
     <string name="wizard_welcome_body">Ας ρυθμίσουμε τις προτιμήσεις σας — μπορείτε να τις αλλάξετε αργότερα στις Ρυθμίσεις.</string>
     <string name="wizard_metric_title">Πώς θέλετε να βλέπετε την αποδοτικότητα;</string>
     <string name="wizard_unit_label">Μονάδα απόστασης</string>
@@ -104,7 +104,7 @@
     <string name="backup_notif_auth_required_title">Απαιτείται σύνδεση στο Drive</string>
     <string name="backup_notif_auth_required_body">Πατήστε για επανασύνδεση.</string>
     <string name="backup_notif_permission_rationale_title">Επιτρέψτε ειδοποιήσεις αντιγράφων;</string>
-    <string name="backup_notif_permission_rationale_body">Το EV Tracker χρησιμοποιεί ειδοποιήσεις μόνο για να σας ενημερώνει όταν ένα αντίγραφο Drive αποτυγχάνει. Τίποτα άλλο.</string>
+    <string name="backup_notif_permission_rationale_body">Το Joulie χρησιμοποιεί ειδοποιήσεις μόνο για να σας ενημερώνει όταν ένα αντίγραφο Drive αποτυγχάνει. Τίποτα άλλο.</string>
     <string name="backup_notif_permission_rationale_allow">Επιτρέψτε</string>
     <string name="backup_notif_permission_rationale_deny">Όχι τώρα</string>
 

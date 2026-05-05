@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">EV Tracker</string>
+    <string name="app_name" translatable="false">Joulie</string>
 
     <!-- Wizard -->
-    <string name="wizard_welcome_title">⚡ EV Efficiency Tracker</string>
+    <string name="wizard_welcome_title" translatable="false">⚡ Joulie</string>
     <string name="wizard_welcome_body">Let\u2019s set up your preferences \u2014 you can change these later in Settings at any time.</string>
     <string name="wizard_metric_title">How do you like to see efficiency?</string>
     <string name="wizard_metric_km_kwh" translatable="false">km / kWh</string>
@@ -112,7 +112,7 @@
     <string name="backup_notif_auth_required_title">Drive sign-in required</string>
     <string name="backup_notif_auth_required_body">Tap to reconnect.</string>
     <string name="backup_notif_permission_rationale_title">Allow backup notifications?</string>
-    <string name="backup_notif_permission_rationale_body">EV Tracker uses notifications only to tell you when a Drive backup has failed. Nothing else.</string>
+    <string name="backup_notif_permission_rationale_body">Joulie uses notifications only to tell you when a Drive backup has failed. Nothing else.</string>
     <string name="backup_notif_permission_rationale_allow">Allow</string>
     <string name="backup_notif_permission_rationale_deny">Not now</string>
 
@@ -227,7 +227,7 @@
     <string name="period_since_previous">Since previous</string>
 
     <!-- Dashboard -->
-    <string name="dashboard_title" translatable="false">EV Tracker</string>
+    <string name="dashboard_title" translatable="false">Joulie</string>
     <string name="empty_no_car_headline">Add a car to get started</string>
     <string name="empty_no_car_cta">Add car</string>
     <string name="empty_no_events_headline">Log your first charge to see stats here</string>
@@ -363,7 +363,7 @@
 
     <!-- TASK-10 — About / Info screen -->
     <string name="about_title">About</string>
-    <string name="about_app_name" translatable="false">EV Efficiency Tracker</string>
+    <string name="about_app_name" translatable="false">Joulie</string>
     <string name="about_version_label">Version %1$s (build %2$d)</string>
     <string name="about_acknowledgment_title">Developed by</string>
     <string name="about_acknowledgment_lab" translatable="false">Sustainable Power Systems Lab (SPS-Lab)</string>

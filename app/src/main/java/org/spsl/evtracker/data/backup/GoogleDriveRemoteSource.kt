@@ -24,7 +24,7 @@ class GoogleDriveRemoteSource @Inject constructor() : DriveRemoteSource {
             req.headers.authorization = "Bearer $accessToken"
         }
         return Drive.Builder(NetHttpTransport(), GsonFactory(), initializer)
-            .setApplicationName("EV Tracker")
+            .setApplicationName("Joulie")
             .build()
     }
 

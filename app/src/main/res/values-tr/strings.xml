@@ -5,7 +5,7 @@
 -->
 <resources>
     <!-- Wizard -->
-    <string name="wizard_welcome_title">⚡ EV Verimlilik Takipçisi</string>
+    <string name="wizard_welcome_title">⚡ Joulie</string>
     <string name="wizard_welcome_body">Tercihlerinizi ayarlayalım — bunları daha sonra istediğiniz zaman Ayarlar\'dan değiştirebilirsiniz.</string>
     <string name="wizard_metric_title">Verimliliği nasıl görmek istersiniz?</string>
     <string name="wizard_unit_label">Mesafe birimi</string>
@@ -104,7 +104,7 @@
     <string name="backup_notif_auth_required_title">Drive girişi gerekli</string>
     <string name="backup_notif_auth_required_body">Yeniden bağlanmak için dokunun.</string>
     <string name="backup_notif_permission_rationale_title">Yedekleme bildirimlerine izin verilsin mi?</string>
-    <string name="backup_notif_permission_rationale_body">EV Tracker bildirimleri yalnızca Drive yedeklemesi başarısız olduğunda sizi bilgilendirmek için kullanır. Başka bir şey için kullanılmaz.</string>
+    <string name="backup_notif_permission_rationale_body">Joulie bildirimleri yalnızca Drive yedeklemesi başarısız olduğunda sizi bilgilendirmek için kullanır. Başka bir şey için kullanılmaz.</string>
     <string name="backup_notif_permission_rationale_allow">İzin ver</string>
     <string name="backup_notif_permission_rationale_deny">Şimdi değil</string>
 
