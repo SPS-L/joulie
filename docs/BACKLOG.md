@@ -1,4 +1,4 @@
-# EV Tracker — Development Backlog
+# Joulie — Development Backlog
 
 Tasks 1–15 were generated from a senior Android developer code review of the `main` branch (April 2026). Tasks 16–21 are follow-up improvements identified during a 2026-04-30 verification pass against `main` (CI/release pipeline, R8 keep-rules, a11y posture, and SPS-Lab research relevance). Tasks 38–42 are new feature / infra ideas filed 2026-05-02 from a follow-up senior-developer review (research-aligned analytics, schema-migration polish, anonymised research export). TASK-43 (filed 2026-05-02) closes a real UX gap: many EU/UK chargers and several older EVs (Renault/Nissan/older BMW) display only SoC % before/after, never kWh delivered. Tasks 44–49 are filed 2026-05-03 from a senior-developer code audit cross-checked against the current `main` (`658b60a` + the TASK-43 / TASK-18 Step 6 / nightly-WorkManager fixes): three correctness/UX bugs (`StatsCalculator` cost accumulation, `KwhFromSocCalculator` defensive guard, battery-health overshoot warning) and three research-aligned extensions (charging power profile, time-of-use tariff zones, per-event grid carbon intensity). The audit also folded `kwhSource` / `socBefore` / `socAfter` columns into TASK-09 and concrete K2 / Room version pins into TASK-33. TASK-50 (also filed 2026-05-03) bundles the four fix categories surfaced by the first nightly instrumented cron after the WorkManager-init fix landed — `EmptyFragmentActivity` not declared in the app manifest, a stale `DriveBackupWorkerTest.ioError_returnsRetry` assertion, racy `MainActivityResetRecoveryTest` startup hook, and a `ChartsFragmentTest` initialization error. TASK-51 (filed 2026-05-03) captures the GPL relicensing request after a dependency audit found one concrete review item in the shipped runtime set: `com.google.android.gms:play-services-auth` is still distributed under the Android SDK License, so the GPL-3.0-or-later switch should carry that note explicitly in review. Tasks 52–54 (filed 2026-05-03 from `docs/EV-backlog-review.md`) cover three hardening items confirmed against `main`: CSV-injection / CR / tab coverage in `ExportCsvUseCase.csvEscape`, a multi-car `require(...)` guard in `StatsCalculator.computeStats`, and TASK-54 — originally framed as a durable last-seen marker for the Drive restore prompt, since expanded to 🔴 priority after a user-supplied reproduction (2026-05-03 in-conversation): on every Settings entry, the Drive switch visibly flips OFF → ON on its own and the "Restore from Drive?" dialog appears. Root cause is two coupled defects — the switch's `OnCheckedChangeListener` fires when Android's view-state restoration calls `setChecked(true)` after the listener is already attached but before the StateFlow collector's rebind block has run, AND the absence of a durable marker that records the user's "Skip" decision. Both fixes are bundled into TASK-54. The same review proposed two further items (a `NetworkType.CONNECTED` constraint on the backup `WorkRequest` and a forward-compat fallback for unknown `kwhSource` values) which were rejected: both behaviours already hold in `WorkManagerBackupScheduler.kt:27` and `ChargeKwhSource.parseLegacy` respectively. TASK-55 (filed 2026-05-04 as a TASK-15 follow-up) closes the gap that TASK-15 left open: the four locales shipped, but no in-app picker — a Greek-speaking user with an English-defaulted phone has no way to switch the app to Greek without changing the OS-wide language, and the first-launch wizard renders in the system locale before the user has had a chance to choose. Two coupled UX entry points: a Settings → Language row (any time) and a wizard-page-0 dropdown (first run), both wired through a `LocaleApplier` narrow IF over `AppCompatDelegate.setApplicationLocales` so the VM stays JVM-testable. Each task is written as a self-contained instruction suitable for a coding agent.
 
@@ -526,7 +526,7 @@ This screen is important for SPS-Lab attribution and research transparency.
 The screen must display all of the following sections:
 
 #### App Info
-- App name: `EV Efficiency Tracker`
+- App name: `Joulie`
 - Current version name and version code (read dynamically from
   `BuildConfig.VERSION_NAME` and `BuildConfig.VERSION_CODE`).
 - Build date (optional; can be a hardcoded string updated at release time).
@@ -4764,7 +4764,7 @@ exercise the view-state-restoration window.
 >   (`en` / `el` / `tr` / `ru`); `AndroidManifest.xml` declares
 >   `android:localeConfig="@xml/locales_config"`. Android 13+ users now
 >   get the OS-level "Language" entry in
->   `System Settings → Apps → EV Tracker → Language` for free.
+>   `System Settings → Apps → Joulie → Language` for free.
 > - **`PreferenceKeys.LANGUAGE_TAG`** (`stringPreferencesKey`).
 >   Empty string = "follow system" (default); otherwise an IETF BCP-47
 >   tag matching one of the shipped locales. Wired through
@@ -4863,7 +4863,7 @@ exercise the view-state-restoration window.
 Cheap-but-load-bearing baseline. Even with the in-app picker
 landing in steps 2-4, declaring the locale config gives Android
 13+ users the OS-level per-app language entry in
-`System Settings → Apps → EV Tracker → Language` automatically.
+`System Settings → Apps → Joulie → Language` automatically.
 
 ```xml
 <!-- app/src/main/res/xml/locales_config.xml -->
@@ -5045,7 +5045,7 @@ The translatable strings need el/tr/ru entries per the
   Language. The change persists across app restarts and across
   device reboots.
 - Android 13+ users can also change the language via System
-  Settings → Apps → EV Tracker → Language (the OS-level entry
+  Settings → Apps → Joulie → Language (the OS-level entry
   appears thanks to the `locales_config.xml` declaration).
 - `:app:lint` stays green — the new translatable strings are
   present in all four locale files; the autonym strings are

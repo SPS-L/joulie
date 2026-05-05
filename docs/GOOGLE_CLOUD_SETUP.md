@@ -1,4 +1,4 @@
-# Google Cloud Setup — Drive API & OAuth for EV Tracker
+# Google Cloud Setup — Drive API & OAuth for Joulie
 
 Follow these steps **in order**.
 
@@ -40,7 +40,7 @@ Keep it handy — you will paste it in Step 4.
 
 1. Go to [https://console.cloud.google.com/](https://console.cloud.google.com/)
 2. Top-left project picker → **New Project**
-3. Name it `EV Tracker` → **Create**
+3. Name it `Joulie` → **Create**
 4. Wait for it to provision; make sure it is the active project before continuing
 
 ---
@@ -58,7 +58,7 @@ Keep it handy — you will paste it in Step 4.
 1. **APIs & Services → OAuth consent screen**
 2. Choose **External** → **Create**
 3. Fill in:
-   - **App name:** EV Efficiency Tracker
+   - **App name:** Joulie
    - **User support email:** your email address
    - **Developer contact email:** your email address
 4. **Save and Continue**
@@ -76,7 +76,7 @@ You can leave the consent screen in "Testing" status indefinitely — Drive AppD
 1. **APIs & Services → Credentials**
 2. **+ Create Credentials → OAuth client ID**
 3. **Application type:** Android
-4. **Name:** EV Tracker (debug) — create one per keystore SHA-1
+4. **Name:** Joulie (debug) — create one per keystore SHA-1
 5. **Package name:** `org.spsl.evtracker`
 6. **SHA-1 certificate fingerprint:** paste the value from Step 1
 7. **Create**
@@ -103,7 +103,7 @@ name, so debug builds need their own client:
 
 1. **APIs & Services → Credentials → + Create Credentials → OAuth client ID**
 2. **Application type:** Android
-3. **Name:** EV Tracker (debug-suffix)
+3. **Name:** Joulie (debug-suffix)
 4. **Package name:** `org.spsl.evtracker.debug`
 5. **SHA-1:** the same debug keystore SHA-1 from Step 1
 6. **Create**
@@ -121,7 +121,7 @@ builds are unaffected.
    adb install app/build/outputs/apk/debug/app-debug.apk    # installs as org.spsl.evtracker.debug
    ```
 2. Open the app → **Settings → Google Drive backup** → toggle ON
-3. The system Authorization sheet appears asking for permission to manage EV Tracker files in its hidden folder
+3. The system Authorization sheet appears asking for permission to manage Joulie files in its hidden folder
 4. Sign in with the same Google account you added as a test user in Step 4
 5. Save a charge event **or** tap **Settings → Back up now** (TASK-31), then verify the backup file exists by calling Drive `files.list` with `spaces=appDataFolder` (the App Data folder is hidden from the regular Drive UI). Use **Settings → Wipe remote backup** to scrub the file when re-testing the first-time replace-or-skip restore flow.
 
@@ -138,4 +138,4 @@ builds are unaffected.
 | Sign-in fails on **debug** specifically (release works) | Missing the `org.spsl.evtracker.debug` OAuth client. Run Step 5b. |
 | Backup file not visible in Drive web UI | Expected — the App Data folder is hidden. Use the Drive API explorer with `spaces=appDataFolder`. |
 | Auth was revoked from your Google Account but the app keeps trying to back up | TASK-19 surfaces this: after the next backup attempt the user gets a `backup_auth` notification ("Drive sign-in required — Tap to reconnect"). Tapping deep-links to Settings; toggle Drive off and on to re-authorise. Test users on a fresh device get this card the first time their token can't be silently renewed. |
-| Repeated backup failures with no notification | On Android 13+, `POST_NOTIFICATIONS` is gated behind a runtime permission. The app requests it the first time consecutive failures hit the threshold (3) and **never re-prompts after a denial**. To re-grant, go to system **Settings → Apps → EV Tracker → Notifications** and re-enable. |
+| Repeated backup failures with no notification | On Android 13+, `POST_NOTIFICATIONS` is gated behind a runtime permission. The app requests it the first time consecutive failures hit the threshold (3) and **never re-prompts after a denial**. To re-grant, go to system **Settings → Apps → Joulie → Notifications** and re-enable. |

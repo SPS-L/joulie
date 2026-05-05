@@ -1,8 +1,8 @@
-# EV Efficiency Tracker — Full Product & Technical Design (v3)
+# Joulie — Full Product & Technical Design (v3)
 
 ## 1. Overview
 
-**App Name:** EV Efficiency Tracker  
+**App Name:** Joulie  
 **Package:** `org.spsl.evtracker`  
 **Min SDK:** API 26 (Android 8.0)  
 **Target SDK:** API 35 (Android 15)  
@@ -75,7 +75,7 @@ Implemented as a `WizardFragment` backed by `ViewPager2` with **4 pages**. Back/
 ```
 ┌────────────────────────────────┐
 │                                │
-│  ⚡  EV Efficiency Tracker     │
+│  ⚡  Joulie                    │
 │                                │
 │  Let's set up your preferences │
 │  — you can change these later  │
@@ -772,6 +772,6 @@ Two in-app entry points let users switch language without touching system settin
 
 **Architectural boundary.** `AppCompatDelegate.setApplicationLocales` is a static framework call hostile to JVM tests. The new `domain/locale/LocaleApplier` interface (impl `data/locale/AndroidLocaleApplier`, bound via single-binding `LocaleModule`) wraps it; ViewModels depend on the interface. JVM tests substitute `FakeLocaleApplier` to assert the applied tag without booting AppCompat. Mirrors the TASK-12 `WidgetRefresher` pattern.
 
-**Android 13+ system entry.** `res/xml/locales_config.xml` lists the four shipped locales and `AndroidManifest.xml` declares `android:localeConfig="@xml/locales_config"`. Android 13+ users get the OS-level per-app language entry at *System Settings → Apps → EV Tracker → Language* automatically — driven by the same `setApplicationLocales` call so it stays in sync with the in-app picker.
+**Android 13+ system entry.** `res/xml/locales_config.xml` lists the four shipped locales and `AndroidManifest.xml` declares `android:localeConfig="@xml/locales_config"`. Android 13+ users get the OS-level per-app language entry at *System Settings → Apps → Joulie → Language* automatically — driven by the same `setApplicationLocales` call so it stays in sync with the in-app picker.
 
 **Apply at start.** `EVTrackerApp.onCreate` reads the persisted tag asynchronously and calls `LocaleApplier.apply(...)`. AppCompat 1.6+ persists the value internally so subsequent app starts come up in the right locale before the coroutine even runs; the read is mainly a fail-safe for the first launch after a fresh install.
