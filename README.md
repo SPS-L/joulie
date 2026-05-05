@@ -18,6 +18,8 @@
 
 Track EV charging sessions, efficiency, cost, and CO₂, one joule at a time. Built and maintained by the [Sustainable Power Systems Lab (SPS-Lab)](https://sps-lab.org/) at Cyprus University of Technology.
 
+🌐 **Live site:** [sps-l.github.io/joulie](https://sps-l.github.io/joulie/)
+
 ## About
 
 Joulie is a clean, no-nonsense Android app for electric vehicle drivers who want to know exactly how their car uses energy. Log each charge and Joulie tracks the numbers that actually matter.

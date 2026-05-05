@@ -124,6 +124,19 @@ To cut a release:
 
 The workflow can also be triggered manually from the **Actions** tab via `workflow_dispatch`.
 
+## Landing page (GitHub Pages)
+
+The public landing page at [sps-l.github.io/joulie](https://sps-l.github.io/joulie/) is served by GitHub Pages straight from the `/docs` folder of `main`. The whole site is three files (no build step, no Jekyll, no JavaScript):
+
+- [`docs/index.html`](docs/index.html), one-page layout with hero, About, Features, Visuals, FAQ, Privacy, Footer.
+- [`docs/site.css`](docs/site.css), single stylesheet with the brand palette as custom properties and a `prefers-color-scheme: dark` media query.
+- [`docs/.nojekyll`](docs/.nojekyll), empty file that disables Jekyll auto-rendering so the rest of the markdown under `docs/` is served raw rather than processed as Pages content.
+- [`docs/favicon.png`](docs/favicon.png), 32x32 derivative of `branding/joulie_mark_only.png`.
+
+To turn the page on the first time, set Settings → Pages → Source to *Deploy from a branch* with **`main` / `/docs`**. After that every push to `main` redeploys within ~30s.
+
+When editing the page, follow the Brand Guide voice rules: plain English, numbers always have units, never use the em-dash. Reuse the existing assets under `docs/branding/`; don't bake in new colours.
+
 ## Project documentation
 
 | File | Purpose |

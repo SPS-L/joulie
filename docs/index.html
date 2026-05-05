@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0D47FF" />
+  <title>Joulie. Log every charge. Understand every kilometre.</title>
+  <meta name="description" content="Joulie is an open-source Android app for electric vehicle drivers. Track charging sessions, efficiency, cost, and CO2. No analytics, no telemetry, all data stays on your device." />
+  <meta name="author" content="Sustainable Power Systems Lab, Cyprus University of Technology" />
+
+  <meta property="og:title" content="Joulie. Log every charge. Understand every kilometre." />
+  <meta property="og:description" content="Open-source Android app for EV drivers. Track charging sessions, efficiency, cost, and CO2. Privacy by design." />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://sps-l.github.io/joulie/branding/play-store/feature_graphic.png" />
+  <meta property="og:url" content="https://sps-l.github.io/joulie/" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Joulie. Log every charge. Understand every kilometre." />
+  <meta name="twitter:description" content="Open-source Android app for EV drivers. Track charging sessions, efficiency, cost, and CO2. Privacy by design." />
+  <meta name="twitter:image" content="https://sps-l.github.io/joulie/branding/play-store/feature_graphic.png" />
+
+  <link rel="icon" type="image/png" href="favicon.png" />
+  <link rel="stylesheet" href="site.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <a class="brand" href="#top">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="branding/joulie_mark_mono.png" />
+      <img src="branding/joulie_mark_only.png" alt="" width="32" height="32" />
+    </picture>
+    <span class="brand-name">Joulie</span>
+  </a>
+  <nav class="topnav" aria-label="Primary">
+    <a href="#about">About</a>
+    <a href="#features">Features</a>
+    <a href="#faq">FAQ</a>
+    <a href="https://github.com/SPS-L/joulie/releases/latest">Download</a>
+  </nav>
+</header>
+
+<main id="top">
+
+  <section class="hero">
+    <picture class="hero-logo">
+      <source media="(prefers-color-scheme: dark)" srcset="branding/joulie_logo_dark.png" />
+      <img src="branding/joulie_logo_light.png" alt="Joulie. Log every charge. Understand every kilometre." />
+    </picture>
+    <p class="hero-lede">Track EV charging sessions, efficiency, cost, and CO<sub>2</sub>. One joule at a time.</p>
+    <div class="hero-cta">
+      <a class="btn btn-primary" href="https://github.com/SPS-L/joulie/releases/latest">Download APK</a>
+      <a class="btn btn-secondary" href="https://github.com/SPS-L/joulie">Source on GitHub</a>
+    </div>
+  </section>
+
+  <section class="about" id="about">
+    <h2>About</h2>
+    <p class="lede">Joulie is a clean, no-nonsense Android app for electric vehicle drivers who want to know exactly how their car uses energy. Log each charge and Joulie tracks the numbers that actually matter.</p>
+
+    <div class="grid-3">
+      <article class="card">
+        <h3>What you log per charge</h3>
+        <ul>
+          <li>Odometer reading, kWh added, AC or DC session</li>
+          <li>Location (quick-chips or free text), and optional cost</li>
+          <li>State-of-charge percentages. If your charger only shows %, Joulie does the kWh math for you.</li>
+        </ul>
+      </article>
+      <article class="card">
+        <h3>What Joulie shows you</h3>
+        <ul>
+          <li>Efficiency in km/kWh, kWh/100 km, or mi/kWh across any time period</li>
+          <li>Cost per km or per 100 km, with mixed-currency warnings when relevant</li>
+          <li>AC vs DC breakdown charts, monthly kWh and cost trends, battery degradation over time</li>
+          <li>CO<sub>2</sub> emissions versus a petrol-car baseline, using the Cyprus 2025 grid average by default</li>
+        </ul>
+      </article>
+      <article class="card">
+        <h3>Privacy by design</h3>
+        <p>No analytics, no telemetry, no crash reporting. Your charge data stays on your device unless you explicitly enable Drive backup, and even then only this app can read what it wrote.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="features" id="features">
+    <h2>Features</h2>
+    <ul class="feature-list">
+      <li><strong>Multi-car support</strong> with a top-bar switcher and per-car or global resets.</li>
+      <li><strong>Home-screen widget</strong> showing your last charge at a glance.</li>
+      <li><strong>Optional Google Drive backup.</strong> Opt-in, stored in your private App Data folder only.</li>
+      <li><strong>CSV export</strong> via the standard Android share sheet, full-history or date-ranged.</li>
+      <li><strong>Material 3 theming</strong> with light, dark, and system modes.</li>
+      <li><strong>Available in English, Greek, Turkish, and Russian</strong>, with an in-app picker plus the OS-level Android 13+ entry.</li>
+      <li><strong>Charts</strong>: efficiency trend, monthly kWh and cost, AC vs DC split, top locations, battery degradation, CO<sub>2</sub> cumulative.</li>
+      <li><strong>kWh-from-SoC calculator</strong> for chargers that show only state-of-charge percentages.</li>
+      <li><strong>Themed icons on Android 13+</strong>; the bolt-J adopts your wallpaper accent.</li>
+      <li><strong>CO<sub>2</sub> tracker</strong> with a configurable grid intensity and ICE-baseline (Cyprus 2025 grid average by default).</li>
+    </ul>
+  </section>
+
+  <section class="visuals">
+    <h2>Inside the app</h2>
+    <div class="grid-3">
+      <figure>
+        <picture>
+          <source media="(prefers-color-scheme: dark)" srcset="branding/hero/wizard_hero_dark.png" />
+          <img src="branding/hero/wizard_hero_light.png" alt="First-run setup wizard with the gradient brand hero." loading="lazy" />
+        </picture>
+        <figcaption>First-run setup</figcaption>
+      </figure>
+      <figure>
+        <picture>
+          <source media="(prefers-color-scheme: dark)" srcset="branding/hero/about_hero_dark.png" />
+          <img src="branding/hero/about_hero_light.png" alt="About screen with the collapsing gradient banner." loading="lazy" />
+        </picture>
+        <figcaption>About screen</figcaption>
+      </figure>
+      <figure>
+        <picture>
+          <source media="(prefers-color-scheme: dark)" srcset="branding/play-store/feature_graphic_dark.png" />
+          <img src="branding/play-store/feature_graphic.png" alt="Joulie brand banner." loading="lazy" />
+        </picture>
+        <figcaption>Brand</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="faq" id="faq">
+    <h2>FAQ</h2>
+    <dl>
+      <dt>Does Joulie need an account?</dt>
+      <dd>No. The app runs entirely offline by default.</dd>
+
+      <dt>Does Joulie collect my data?</dt>
+      <dd>No analytics, no telemetry, no crash reporting. Charge data stays on your device unless you explicitly enable the optional Google Drive backup, and even then only this app's signing certificate can read what it wrote.</dd>
+
+      <dt>How do I install it?</dt>
+      <dd>Download the latest signed APK from the <a href="https://github.com/SPS-L/joulie/releases/latest">Releases page</a> and side-load it. A Play Store listing is on the roadmap.</dd>
+
+      <dt>Where do I report a bug or request a feature?</dt>
+      <dd>Open an issue on the <a href="https://github.com/SPS-L/joulie/issues">GitHub repo</a>.</dd>
+
+      <dt>Can I see the source?</dt>
+      <dd>Yes. Joulie is licensed under the <a href="https://github.com/SPS-L/joulie/blob/main/LICENSE">GNU General Public License v3.0 or later</a>; the full source is at <a href="https://github.com/SPS-L/joulie">github.com/SPS-L/joulie</a>.</dd>
+    </dl>
+  </section>
+
+  <section class="privacy">
+    <h2>Privacy</h2>
+    <ul>
+      <li>The app does not collect analytics, telemetry, or crash reports.</li>
+      <li>All charge data is stored locally in the app's private database.</li>
+      <li>Google Drive backup is opt-in. When enabled, a JSON snapshot is written to your Drive's hidden App Data folder, accessible only to this app's signing certificate.</li>
+    </ul>
+    <p>Full policy: <a href="https://github.com/SPS-L/joulie/blob/main/PRIVACY.md">PRIVACY.md</a>.</p>
+  </section>
+
+</main>
+
+<footer>
+  <p>© 2024–2026 <a href="https://sps-lab.org/">Sustainable Power Systems Lab</a>, Cyprus University of Technology.</p>
+  <p>Released under the <a href="https://github.com/SPS-L/joulie/blob/main/LICENSE">GNU General Public License v3.0 or later</a>. Source on <a href="https://github.com/SPS-L/joulie">GitHub</a>.</p>
+</footer>
+
+</body>
+</html>

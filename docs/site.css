@@ -1,0 +1,300 @@
+/*
+ * Joulie landing page stylesheet
+ * Brand palette + tone ramp pulled from docs/branding/Joulie_Brand_Guide.pdf
+ * No JavaScript, no web fonts, no analytics. System font stack only.
+ */
+
+:root {
+  /* Joulie brand palette */
+  --joulie-blue:      #0D47FF;
+  --joulie-deep-blue: #0A2FB0;
+  --joulie-teal:      #00C2D1;
+  --joulie-green:     #A6F43C;
+  --joulie-yellow:    #FFD54D;
+  --joulie-ink-deep:  #0A1B5E;
+
+  /* Light-mode neutrals */
+  --bg:               #FDFCFF;
+  --surface:          #FFFFFF;
+  --surface-alt:      #F4F6FB;
+  --on-surface:       #1A1C1E;
+  --on-surface-muted: #43474E;
+  --border:           #DFE2EB;
+  --link:             var(--joulie-blue);
+
+  --max-width:        1100px;
+  --radius:           16px;
+  --shadow:           0 1px 3px rgba(10, 27, 94, 0.06);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:               #1A1C1E;
+    --surface:          #2A2D31;
+    --surface-alt:      #232629;
+    --on-surface:       #E2E2E6;
+    --on-surface-muted: #C3C7CF;
+    --border:           #43474E;
+    --link:             #B7C4FF;
+    --shadow:           0 1px 3px rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* ---------- reset ---------- */
+
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--on-surface);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--link); text-decoration: none; }
+a:hover, a:focus { text-decoration: underline; }
+a:focus-visible { outline: 2px solid var(--joulie-blue); outline-offset: 2px; border-radius: 4px; }
+
+img, picture { max-width: 100%; height: auto; display: block; }
+
+h1, h2, h3 {
+  color: var(--joulie-ink-deep);
+  line-height: 1.2;
+  font-weight: 700;
+}
+@media (prefers-color-scheme: dark) {
+  h1, h2, h3 { color: var(--on-surface); }
+}
+
+h2 { font-size: 1.75rem; margin: 0 0 1rem; }
+h3 { font-size: 1.15rem; margin: 0 0 0.5rem; }
+
+p { margin: 0 0 1rem; }
+
+/* ---------- topbar ---------- */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  z-index: 10;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--on-surface);
+  font-weight: 600;
+}
+.brand:hover { text-decoration: none; }
+.brand img { width: 32px; height: 32px; }
+.brand-name { font-size: 1.1rem; }
+
+.topnav {
+  display: flex;
+  gap: 1.25rem;
+  align-items: center;
+}
+.topnav a { color: var(--on-surface); }
+
+@media (max-width: 540px) {
+  .topnav a:not(:last-child) { display: none; }
+}
+
+/* ---------- main ---------- */
+
+main {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+section {
+  padding: 3.5rem 0;
+  border-top: 1px solid var(--border);
+}
+section.hero { border-top: none; padding: 4rem 0 3rem; }
+
+/* ---------- hero ---------- */
+
+.hero { text-align: center; }
+.hero-logo img {
+  max-width: 520px;
+  width: 100%;
+  margin: 0 auto;
+}
+.hero-lede {
+  font-size: 1.2rem;
+  color: var(--on-surface-muted);
+  max-width: 38rem;
+  margin: 1.5rem auto 2rem;
+}
+.hero-cta {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* ---------- buttons ---------- */
+
+.btn {
+  display: inline-block;
+  padding: 0.85rem 1.6rem;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 1rem;
+  text-decoration: none;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.btn-primary {
+  background: var(--joulie-blue);
+  color: #ffffff;
+}
+.btn-primary:hover, .btn-primary:focus {
+  background: var(--joulie-deep-blue);
+  color: #ffffff;
+  text-decoration: none;
+}
+.btn-secondary {
+  background: transparent;
+  color: var(--joulie-blue);
+  border: 2px solid var(--joulie-blue);
+}
+.btn-secondary:hover, .btn-secondary:focus {
+  background: var(--joulie-blue);
+  color: #ffffff;
+  text-decoration: none;
+}
+@media (prefers-color-scheme: dark) {
+  .btn-secondary { color: var(--link); border-color: var(--link); }
+  .btn-secondary:hover, .btn-secondary:focus {
+    background: var(--link);
+    color: #001F87;
+  }
+}
+
+/* ---------- about / visuals shared grid ---------- */
+
+.lede {
+  font-size: 1.05rem;
+  color: var(--on-surface-muted);
+  max-width: 50rem;
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+  margin-top: 1.5rem;
+}
+@media (min-width: 720px) {
+  .grid-3 { grid-template-columns: repeat(3, 1fr); }
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  box-shadow: var(--shadow);
+}
+.card ul { padding-left: 1.25rem; margin: 0; }
+.card li { margin-bottom: 0.4rem; color: var(--on-surface-muted); }
+
+/* ---------- features list ---------- */
+
+.feature-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+  list-style: none;
+  padding: 0;
+  margin: 1.5rem 0 0;
+}
+@media (min-width: 720px) {
+  .feature-list { grid-template-columns: 1fr 1fr; }
+}
+.feature-list li {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--joulie-blue);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  color: var(--on-surface-muted);
+}
+.feature-list li strong {
+  color: var(--on-surface);
+  font-weight: 600;
+}
+
+/* ---------- visuals ---------- */
+
+.visuals figure {
+  margin: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.visuals figure img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+.visuals figcaption {
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--on-surface-muted);
+  padding: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+/* ---------- FAQ ---------- */
+
+.faq dl {
+  display: grid;
+  gap: 1.25rem;
+  margin: 1.5rem 0 0;
+}
+.faq dt {
+  font-weight: 600;
+  color: var(--joulie-ink-deep);
+  margin-bottom: 0.25rem;
+}
+@media (prefers-color-scheme: dark) {
+  .faq dt { color: var(--on-surface); }
+}
+.faq dd {
+  margin: 0;
+  color: var(--on-surface-muted);
+}
+
+/* ---------- privacy ---------- */
+
+.privacy ul {
+  padding-left: 1.25rem;
+  margin: 1rem 0;
+  color: var(--on-surface-muted);
+}
+.privacy li { margin-bottom: 0.5rem; }
+
+/* ---------- footer ---------- */
+
+footer {
+  border-top: 1px solid var(--border);
+  padding: 2rem 1.5rem;
+  text-align: center;
+  color: var(--on-surface-muted);
+  font-size: 0.9rem;
+}
+footer p { margin: 0.4rem 0; }
