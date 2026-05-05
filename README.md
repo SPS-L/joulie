@@ -46,7 +46,7 @@ Log every charge — odometer, kWh added, AC/DC, location, optional cost — and
 Signed release APKs are attached to every GitHub Release: see the [Releases page](https://github.com/SPS-L/EV-android-app/releases).
 
 ```bash
-adb install evtracker-v1.7.0.apk
+adb install evtracker-v1.7.1.apk
 ```
 
 You can also open the APK on the device after enabling **Install from unknown sources** for your file manager or browser.
