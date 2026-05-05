@@ -80,6 +80,50 @@ class ObserveDashboardStatsUseCaseTest {
     }
 
     @Test
+    fun filterMatchesNothing_butCarHasEvents_doesNotEmitNoEventsEmptyState() = runTest {
+        // Regression: a car with only AC events + the user picking the DC chip
+        // used to flip emptyState=NoEvents because filtered.isEmpty(). The
+        // Fragment then hid `dashboardContent` (the NestedScrollView), which
+        // takes the filter chips down with it because the chips live inside
+        // that container in fragment_dashboard.xml. With chips gone, the user
+        // could not tap All to escape and had to leave the Dashboard via the
+        // bottom nav. The contract is now: NoEvents fires only when the active
+        // car has zero events overall; a zero-match filter falls through to a
+        // normal Stats render with placeholder values, so the chips stay
+        // tappable.
+        val now = System.currentTimeMillis()
+        val (useCase, _, _) = build(
+            cars = listOf(CarEntity(id = 1L, name = "T", createdAt = 0L)),
+            events = listOf(
+                ChargeEventEntity(
+                    carId = 1L,
+                    eventDate = now - 3 * MS_PER_DAY,
+                    odometerKm = 100.0,
+                    kwhAdded = 20.0,
+                    chargeType = org.spsl.evtracker.core.model.ChargeType.AC,
+                    createdAt = 0L,
+                ),
+                ChargeEventEntity(
+                    carId = 1L,
+                    eventDate = now - 1 * MS_PER_DAY,
+                    odometerKm = 200.0,
+                    kwhAdded = 20.0,
+                    chargeType = org.spsl.evtracker.core.model.ChargeType.AC,
+                    createdAt = 0L,
+                ),
+            ),
+            activeCarId = 1L,
+        )
+        val state = useCase.observe(DashboardPeriod.Last30Days, ChargeTypeFilter.DC).first()
+        // The contract: NOT NoEvents (so the Fragment keeps `dashboardContent`
+        // visible and the chips stay tappable). A non-null Stats with zero
+        // counts is the right thing to render in the cards.
+        assertTrue("NoEvents must NOT fire when only the filter is empty", state.emptyState == null)
+        assertTrue("Stats must be non-null so cards render placeholders", state.stats != null)
+        assertEquals(0, state.stats!!.chargeCount)
+    }
+
+    @Test
     fun eventsPresent_emitsStatsAndMultiCurrencyFlag() = runTest {
         val now = System.currentTimeMillis()
         val (useCase, _, _) = build(
