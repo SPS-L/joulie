@@ -133,6 +133,7 @@ The workflow can also be triggered manually from the **Actions** tab via `workfl
 | [`docs/TEST_PLAN.md`](docs/TEST_PLAN.md) | Test specification |
 | [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) | CO₂ tracker methodology, coefficients, sources, and caveats (TASK-20) |
 | [`docs/BACKLOG.md`](docs/BACKLOG.md) | Post-v1 refactors and feature backlog |
+| [`docs/branding/`](docs/branding/) | Joulie brand assets, the canonical `Joulie_Brand_Guide.pdf`, master logos / palette / SVG sources, and the regeneration scripts. Read `docs/branding/README.md` before changing any brand surface |
 | [`PRIVACY.md`](PRIVACY.md) | Privacy policy (also reachable from the Play Store listing) |
 | [`CLAUDE.md`](CLAUDE.md) | Architecture summary, invariants, and conventions for AI agents |
 
