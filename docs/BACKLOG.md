@@ -60,7 +60,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-50 | 🔴 | Stabilise nightly instrumented suite — 21 failures across 4 root causes after WorkManager init landed | TASK-34 | ☑ |
 | TASK-51 | 🔴 | GPL-3.0-or-later license change (pending `play-services-auth` review) | — | ☑ |
 | TASK-52 | 🟡 | CSV escape hardening in `ExportCsvUseCase` — quote `\r` and tabs, neutralise spreadsheet formula-injection prefixes (`=`, `+`, `-`, `@`) in user-supplied fields | — | ☑ |
-| TASK-53 | 🟡 | Multi-car invariant guard in `StatsCalculator.computeStats` — `require` the input shares a single `carId` (latent bug if a future caller passes a mixed-car list) | — | ☐ |
+| TASK-53 | 🟡 | Multi-car invariant guard in `StatsCalculator.computeStats` — `require` the input shares a single `carId` (latent bug if a future caller passes a mixed-car list) | — | ☑ |
 | TASK-54 | 🔴 | Drive switch fires `onUserToggledOn()` on every Settings entry (view-state restoration anti-pattern) — visible OFF→ON flicker + restore-prompt loop; bundled with a durable last-seen marker for the destructive-action path | TASK-31 | ☑ |
 | TASK-55 | 🟡 | Language picker — Settings → Language row (any time) AND first-run picker on the wizard so users never see an unintelligible welcome screen. `AppCompatDelegate.setApplicationLocales` + persisted `language_tag` DataStore key | TASK-15 | ☑ |
 | TASK-56 | 🟡 | CI release wiring for the ADI registration token — write `app/src/main/assets/adi-registration.properties` from a GitHub Secret in `release.yml` before `assembleRelease`, so CI-built tagged APKs pass Google's developer-verification check | — | ☐ |
@@ -4292,7 +4292,26 @@ JVM unit-test count gains ≥ 5 cases.
 
 ---
 
-## 🟡 TASK-53 — Multi-car invariant guard in `StatsCalculator.computeStats`
+## 🟡 TASK-53 — Multi-car invariant guard in `StatsCalculator.computeStats` ☑ Done (2026-05-03)
+
+> **Outcome (merged 2026-05-03 on `feat/task53-multi-car-invariant`).** Single-line guard expanded to a tight private helper so each guarded aggregation reads as one line of intent at the top:
+>
+> ```kotlin
+> private fun requireSingleCar(events: List<ChargeEventEntity>) {
+>     val distinctCars = events.map { it.carId }.distinct()
+>     require(distinctCars.size <= 1) {
+>         "expects a single-car event list; got carIds=$distinctCars"
+>     }
+> }
+> ```
+>
+> Applied to **five** aggregations: `computeStats`, `computeMonthlyBuckets`, `computeEfficiencyTrend`, `computeAcDcSplit`, `computeLocationDistribution`. Each call site (`ObserveDashboardStatsUseCase`, `ObserveChartsModelsUseCase`) was audited and confirmed single-car already — the guard fires only on a future bug, never on existing flows. The error message names the offending `carIds` so a stack-trace bug report points straight at the wrong call.
+>
+> **`detectMixedCurrency` is intentionally exempt** — its semantic question ("are there ≥ 2 distinct currencies among costed events") doesn't depend on car identity, and a future fleet-level cross-car aggregator might legitimately call it on a multi-car list. The exemption is documented in the function KDoc rather than buried in a TODO.
+>
+> Empty input passes (`distinct().size == 0` is `<= 1`) — every aggregation is reachable on an empty period filter, which is a routine state, not an error.
+>
+> **Tests:** new `StatsCalculatorInvariantTest` with 8 cases — five `*_throws_onMixedCarIds` tests (one per guarded method), `computeStats_succeeds_onEmptyList` smoke, `allGuardedAggregations_succeed_onEmptyList` smoke, and `detectMixedCurrency_acceptsMixedCarIds_byDesign` regression guard for the exemption. The first test asserts the offending carIds string `[1, 2]` appears in the message so the diagnostic surface is part of the contract. JVM unit-test count 425 → 433. Gates green: ktlintCheck, :app:lint, :app:testDebugUnitTest, :app:assembleRelease, :app:assembleDebugAndroidTest.
 
 > **Audit finding (`docs/EV-backlog-review.md`, 2026-05-03):**
 > `computeStats` calls `events.sumOf { it.kwhAdded }` on the full input
