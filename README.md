@@ -7,9 +7,9 @@
 > **Log every charge. Understand every kilometre.**
 
 [![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)](LICENSE)
-[![Latest release](https://img.shields.io/github/v/release/SPS-L/EV-android-app)](https://github.com/SPS-L/EV-android-app/releases/latest)
-[![CI](https://github.com/SPS-L/EV-android-app/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/SPS-L/EV-android-app/actions/workflows/ci.yml)
-[![Release build](https://github.com/SPS-L/EV-android-app/actions/workflows/release.yml/badge.svg)](https://github.com/SPS-L/EV-android-app/actions/workflows/release.yml)
+[![Latest release](https://img.shields.io/github/v/release/SPS-L/joulie)](https://github.com/SPS-L/joulie/releases/latest)
+[![CI](https://github.com/SPS-L/joulie/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/SPS-L/joulie/actions/workflows/ci.yml)
+[![Release build](https://github.com/SPS-L/joulie/actions/workflows/release.yml/badge.svg)](https://github.com/SPS-L/joulie/actions/workflows/release.yml)
 [![Min SDK](https://img.shields.io/badge/minSdk-26-brightgreen)](https://developer.android.com/about/versions/oreo)
 [![Kotlin](https://img.shields.io/badge/kotlin-1.9.21-blueviolet)](https://kotlinlang.org)
 
@@ -80,10 +80,10 @@ Technical detail behind the user-facing surfaces above:
 
 ## Download
 
-Signed release APKs are attached to every GitHub Release: see the [Releases page](https://github.com/SPS-L/EV-android-app/releases).
+Signed release APKs are attached to every GitHub Release: see the [Releases page](https://github.com/SPS-L/joulie/releases).
 
 ```bash
-adb install evtracker-v1.7.2.apk
+adb install joulie-v1.8.0.apk
 ```
 
 You can also open the APK on the device after enabling **Install from unknown sources** for your file manager or browser.
@@ -114,8 +114,8 @@ The full technical design lives in [`docs/DESIGN.md`](docs/DESIGN.md).
 You need **JDK 17** and the **Android SDK with Build Tools 35**, with `ANDROID_HOME` set. AGP will auto-download the API 35 platform on first build.
 
 ```bash
-git clone https://github.com/SPS-L/EV-android-app.git
-cd EV-android-app
+git clone https://github.com/SPS-L/joulie.git
+cd joulie
 ./gradlew assembleDebug
 ```
 

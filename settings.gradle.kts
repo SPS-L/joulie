@@ -23,5 +23,5 @@ dependencyResolutionManagement {
         }
     }
 }
-rootProject.name = "EV-android-app"
+rootProject.name = "joulie"
 include(":app")

@@ -4117,7 +4117,7 @@ is instrumented-only work); instrumented-test count may grow by
 > **Manual GitHub step still pending:** the repo's "License" field
 > in GitHub's repo settings → "About" panel needs to be set to
 > `GPL-3.0-or-later` after the merge lands so the right-hand
-> sidebar on `github.com/SPS-L/EV-android-app` reflects the change.
+> sidebar on `github.com/SPS-L/joulie` reflects the change.
 > GitHub will auto-detect from the `LICENSE` file in most cases,
 > so this is usually a no-op verification rather than an active
 > setting change.
