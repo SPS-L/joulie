@@ -90,7 +90,18 @@ class ObserveDashboardStatsUseCase @Inject constructor(
             ChargeTypeFilter.AC -> periodEvents.filter { it.chargeType == ChargeType.AC }
             ChargeTypeFilter.DC -> periodEvents.filter { it.chargeType.isDc }
         }
-        return if (filtered.isEmpty()) {
+        // The "no events" empty state must reflect the car as a whole, not the
+        // current filter+period. Tying it to `filtered.isEmpty()` lets a user
+        // who picks DC on an AC-only car (or a tight period with no matches)
+        // hide the entire dashboard content container, including the filter
+        // chips themselves, because those chips live inside `dashboardContent`
+        // in fragment_dashboard.xml. With the chips gone, there is no way to
+        // step back to All without leaving and re-entering the Dashboard.
+        // Gating on `allEventsForCar.isEmpty()` keeps the empty state honest
+        // (a brand-new car) and lets a zero-match filter fall through to a
+        // normal Stats render with placeholder values, so the chips stay
+        // visible and tappable.
+        return if (allEventsForCar.isEmpty()) {
             DashboardUiState(emptyState = EmptyState.NoEvents)
         } else {
             // Battery-health is computed from the FULL per-car history, not the
