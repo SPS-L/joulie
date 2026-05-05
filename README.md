@@ -1,6 +1,10 @@
-# EV Efficiency Tracker
+<p align="center">
+  <img src="docs/branding/joulie-style-guide.png" alt="Joulie — Log every charge. Understand every kilometre." width="320" />
+</p>
 
-> Native Android app for logging EV charging sessions and analysing real-world efficiency and cost.
+# Joulie
+
+> **Log every charge. Understand every kilometre.**
 
 [![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)](LICENSE)
 [![Latest release](https://img.shields.io/github/v/release/SPS-L/EV-android-app)](https://github.com/SPS-L/EV-android-app/releases/latest)
@@ -9,10 +13,11 @@
 [![Min SDK](https://img.shields.io/badge/minSdk-26-brightgreen)](https://developer.android.com/about/versions/oreo)
 [![Kotlin](https://img.shields.io/badge/kotlin-1.9.21-blueviolet)](https://kotlinlang.org)
 
-Log every charge — odometer, kWh added, AC/DC, location, optional cost — and see your numbers (km/kWh, kWh/100 km, mi/kWh, cost/km, cost/100 km) across any period, with AC vs DC breakdowns, per-car history, and optional Google Drive backup. Built and maintained by the [Sustainable Power Systems Lab (SPS-Lab)](https://sps-lab.org/).
+Track EV charging sessions, efficiency, cost, and CO₂ — one joule at a time. Built and maintained by the [Sustainable Power Systems Lab (SPS-Lab)](https://sps-lab.org/) at Cyprus University of Technology.
 
 ## Table of Contents
 
+- [About](#about)
 - [Features](#features)
 - [Download](#download)
 - [Architecture](#architecture)
@@ -23,21 +28,53 @@ Log every charge — odometer, kWh added, AC/DC, location, optional cost — and
 - [Privacy](#privacy)
 - [License](#license)
 
+## About
+
+Joulie is a clean, no-nonsense Android app for electric vehicle drivers who want to know exactly how their car uses energy. Log each charge and Joulie tracks the numbers that actually matter.
+
+**What you log per charge:**
+
+- Odometer reading, kWh added, AC or DC session
+- Location (quick-chips or free text), and optional cost
+- State-of-charge percentages — if your charger only shows %, Joulie does the kWh math for you
+
+**What Joulie shows you:**
+
+- Efficiency in km/kWh, kWh/100 km, or mi/kWh across any time period
+- Cost per km or per 100 km, with mixed-currency warnings when relevant
+- AC vs DC breakdown charts, monthly kWh and cost trends, and battery degradation over time
+- CO₂ emissions versus a petrol-car baseline, using the Cyprus 2025 grid average by default (configurable)
+
+**Other features:**
+
+- Multi-car support with a top-bar switcher
+- Home-screen widget showing your last charge at a glance
+- Optional Google Drive backup (opt-in, stored in your private App Data folder only)
+- CSV export via the standard Android share sheet
+- Material 3 theming with light, dark, and system modes
+- Available in English, Greek, Turkish, and Russian
+
+**Privacy by design.** No analytics, no telemetry, no crash reporting. Your charge data stays on your device unless you explicitly enable Drive backup.
+
+> *Drive smart. Charge logged. Every joule counted.*
+
 ## Features
 
-- **First-boot setup wizard** — pick efficiency metric, distance unit, and currency once.
-- **Per-charge logging** — odometer, kWh, AC/DC toggle, location quick-chips with free-text fallback, optional cost.
+Technical detail behind the user-facing surfaces above:
+
+- **First-boot setup wizard** — pick efficiency metric, distance unit, currency, and language once; disclaimer acceptance is a hard gate.
+- **Per-charge logging** — odometer, kWh, AC/DC toggle, location quick-chips with free-text fallback, optional cost, optional SoC % pair.
 - **Multi-metric dashboard** — km/kWh, mi/kWh, kWh/100 km, cost/km, cost/100 km. Cost rows hide when no cost data exists in the period.
 - **Multi-car** — track any number of vehicles; switch via the top spinner; per-car or global resets.
 - **AC vs DC** — separate chart series and filter chips.
 - **Custom periods** — last 7 / 30 days, this year, since previous charge, or any custom range.
-- **Charts** — efficiency trend, monthly kWh and cost, AC vs DC split, top locations, and a battery-degradation tab with a nominal-capacity reference line.
+- **Charts** — efficiency trend, monthly kWh and cost, AC vs DC split, top locations, battery degradation with a nominal-capacity reference line, and CO₂ cumulative trend (EV vs petrol counterfactual).
 - **kWh-from-SoC calculator** — for cars and chargers that show only state-of-charge percentages, an opt-in calculator on the charge form derives `kwhAdded` from `Δsoc × nominal battery capacity`. Estimated events get an "Est." badge in History and are excluded from the degradation tracker (so the math doesn't fool itself).
 - **Google Drive backup** — optional, opt-in. Stored in the hidden App Data folder. Replace-or-skip restore on first enable; auto-backup after every committed local change. Surfaces failures via two notification channels (chronic-failure sticky after 3 consecutive misses; auth-required higher-importance card) — `POST_NOTIFICATIONS` is requested only after a real failure, never on launch. Settings exposes manual **Back up now** and **Wipe remote backup** buttons for when you want to force a sync or scrub the cloud copy.
-- **CSV export** — share via the Android share sheet.
+- **CSV export** — full-history or date-ranged, 14-column canonical schema, hardened against CSV injection (RFC 4180 + OWASP formula-prefix guards). Share via the Android share sheet.
 - **Home-screen widget** — 2×2 tile shows the active car's most recent charge: car name, relative date, kWh, efficiency, optional cost. Tap to open the dashboard.
 - **Material 3 theming** — Light / Dark / System; full M3 token system seeded from `#1565C0` with a `#FB8C00` "DC orange" tertiary ramp.
-- **Localisation** — English (default), Greek, Turkish, and Russian translations covering Cyprus's resident populations, switchable in-app via Settings → Language or on the wizard's first page (autonyms always rendered in their own script). On Android 13+, the OS-level per-app language entry under System Settings is also wired automatically. First-pass translations are LLM-produced (TASK-15) and pending native-speaker review.
+- **Localisation** — English (default), Greek, Turkish, and Russian, switchable in-app via Settings → Language or on the wizard's first page (autonyms always rendered in their own script). On Android 13+, the OS-level per-app language entry under System Settings is also wired automatically. First-pass translations are LLM-produced (TASK-15) and pending native-speaker review.
 - **Smart cost handling** — cost left at 0 or blank is stored as `NULL` and excluded from every cost statistic; mixed-currency periods hide cost stats with an explicit banner.
 - **CO₂ tracker** — Dashboard card and Charts tab show EV-side emissions side-by-side with a petrol-counterfactual baseline; defaults to Cyprus 2025 grid average (577 gCO₂/kWh, configurable in Settings). Methodology + coefficients documented in [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md).
 
@@ -87,7 +124,7 @@ The debug APK lands at `app/build/outputs/apk/debug/app-debug.apk`.
 ### Tests
 
 ```bash
-./gradlew test                  # JVM unit tests (~425)
+./gradlew test                  # JVM unit tests (~430)
 ./gradlew connectedAndroidTest  # Espresso / Room — needs API 26+ device or emulator
 ```
 

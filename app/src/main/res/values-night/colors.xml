@@ -1,22 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- M3 — Primary -->
-    <color name="md_theme_light_primary">#9ECAFF</color>
-    <color name="md_theme_light_onPrimary">#003258</color>
-    <color name="md_theme_light_primaryContainer">#00497D</color>
-    <color name="md_theme_light_onPrimaryContainer">#D1E4FF</color>
+    <!-- Joulie brand palette — dark theme. Tones inverted relative to
+         values/colors.xml (M3 convention: tone 80 primary, tone 30
+         container, tone 90 onContainer). See values/colors.xml for the
+         seed-color rationale. -->
 
-    <!-- M3 — Secondary -->
-    <color name="md_theme_light_secondary">#BBC7DB</color>
-    <color name="md_theme_light_onSecondary">#253140</color>
-    <color name="md_theme_light_secondaryContainer">#3B4858</color>
-    <color name="md_theme_light_onSecondaryContainer">#D7E3F8</color>
+    <!-- M3 — Primary (seeded #0D47FF — Joulie vibrant blue) -->
+    <color name="md_theme_light_primary">#B7C4FF</color>
+    <color name="md_theme_light_onPrimary">#001F87</color>
+    <color name="md_theme_light_primaryContainer">#0034BC</color>
+    <color name="md_theme_light_onPrimaryContainer">#DCE1FF</color>
 
-    <!-- M3 — Tertiary (orange ramp inverted from light) -->
-    <color name="md_theme_light_tertiary">#FFB68D</color>
-    <color name="md_theme_light_onTertiary">#552100</color>
-    <color name="md_theme_light_tertiaryContainer">#793300</color>
-    <color name="md_theme_light_onTertiaryContainer">#FFDCC0</color>
+    <!-- M3 — Secondary (seeded #00C2D1 — Joulie teal) -->
+    <color name="md_theme_light_secondary">#82D3DF</color>
+    <color name="md_theme_light_onSecondary">#00363D</color>
+    <color name="md_theme_light_secondaryContainer">#004F58</color>
+    <color name="md_theme_light_onSecondaryContainer">#9EEFFD</color>
+
+    <!-- M3 — Tertiary (seeded #FFD54D — Joulie yellow) -->
+    <color name="md_theme_light_tertiary">#F4C100</color>
+    <color name="md_theme_light_onTertiary">#412D00</color>
+    <color name="md_theme_light_tertiaryContainer">#5D4200</color>
+    <color name="md_theme_light_onTertiaryContainer">#FFE082</color>
 
     <!-- M3 — Error -->
     <color name="md_theme_light_error">#FFB4AB</color>
@@ -37,6 +42,6 @@
     <!-- M3 — Inverse + scrim -->
     <color name="md_theme_light_inverseSurface">#E2E2E6</color>
     <color name="md_theme_light_inverseOnSurface">#2F3033</color>
-    <color name="md_theme_light_inversePrimary">#0061A4</color>
+    <color name="md_theme_light_inversePrimary">#1F3DCC</color>
     <color name="md_theme_light_scrim">#000000</color>
 </resources>
