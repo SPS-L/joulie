@@ -78,8 +78,21 @@
 
     <!-- Brand-pack v1.0 additions (Brand Guide §3 Palette).
          joulie_ink_deep is the wordmark colour on light surfaces (avoid
-         pure black). joulie_spark_green is the accent for the SPS-Lab
-         credit and "fresh" affordances; aligned with chart_4. -->
+         pure black). Wired into res/layout/fragment_about.xml as the
+         brand-headline `about_app_name` text colour, with a `values-night`
+         override that swaps to the M3 inverse-primary `#B7C4FF` so the
+         wordmark stays legible on a dark surface (the brand intent
+         explicitly scopes #0A1B5E to light surfaces).
+
+         joulie_spark_green is the accent for the SPS-Lab credit and
+         "fresh" affordances; aligned with chart_4 (#A6F43C). Lint flags
+         it as unused, identically to chart_4, and the codebase's
+         documented pattern for declared-but-unused brand-palette tokens
+         is `lint-baseline.xml` absorption (see chart_1..chart_5 which
+         are all baselined for the same reason). Wiring as a foreground
+         text colour on a light surface fails WCAG contrast (#A6F43C on
+         #FDFCFF is ~1.6:1, well below AA's 4.5:1), and the brand intent
+         is "fresh affordance" / accent strip rather than body text. -->
     <color name="joulie_ink_deep">#0A1B5E</color>
     <color name="joulie_spark_green">#A6F43C</color>
 </resources>

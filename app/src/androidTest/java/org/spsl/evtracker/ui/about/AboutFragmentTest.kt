@@ -2,6 +2,7 @@ package org.spsl.evtracker.ui.about
 
 import androidx.lifecycle.Lifecycle
 import androidx.test.espresso.Espresso.onView
+import androidx.test.espresso.action.ViewActions.scrollTo
 import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
 import androidx.test.espresso.matcher.ViewMatchers.withId
@@ -12,6 +13,7 @@ import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import org.hamcrest.CoreMatchers.not
 import org.hamcrest.Matchers.allOf
+import org.hamcrest.Matchers.containsString
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -41,8 +43,14 @@ class AboutFragmentTest {
     @Test fun spsLabAcknowledgment_isVisible() {
         launchFragmentInHiltContainer<AboutFragment>(themeResId = R.style.Theme_EVTracker)
             .moveToState(Lifecycle.State.RESUMED).use {
-                onView(withSubstring("SPS-Lab"))
-                    .check(matches(isDisplayed()))
+                // "SPS-Lab" appears in the acknowledgment, the license body,
+                // and the disclaimer body — scope the matcher to the
+                // acknowledgment TextView's id to avoid AmbiguousViewMatcher.
+                // scrollTo() because the acknowledgment card sits below the
+                // 240 dp hero on phones at the smaller end of the matrix.
+                onView(withId(R.id.about_acknowledgment_lab))
+                    .perform(scrollTo())
+                    .check(matches(allOf(isDisplayed(), withText(containsString("SPS-Lab")))))
             }
     }
 
@@ -62,6 +70,7 @@ class AboutFragmentTest {
         launchFragmentInHiltContainer<AboutFragment>(themeResId = R.style.Theme_EVTracker)
             .moveToState(Lifecycle.State.RESUMED).use {
                 onView(withId(R.id.about_license_body))
+                    .perform(scrollTo())
                     .check(matches(allOf(isDisplayed(), withSubstring("GPL-3.0-or-later"))))
             }
     }
@@ -70,6 +79,7 @@ class AboutFragmentTest {
         launchFragmentInHiltContainer<AboutFragment>(themeResId = R.style.Theme_EVTracker)
             .moveToState(Lifecycle.State.RESUMED).use {
                 onView(withId(R.id.about_disclaimer_body))
+                    .perform(scrollTo())
                     .check(matches(allOf(isDisplayed(), withSubstring("liability"))))
             }
     }

@@ -160,6 +160,7 @@
     <string name="common_undo">Отменить</string>
     <string name="common_cancel">Отмена</string>
     <string name="common_confirm">Подтвердить</string>
+    <string name="common_navigate_back">Назад</string>
 
     <!-- F1 startup recovery -->
     <string name="recovery_failure_title">Сбой восстановления после сброса</string>
