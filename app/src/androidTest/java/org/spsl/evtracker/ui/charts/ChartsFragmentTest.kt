@@ -92,10 +92,20 @@ class ChartsFragmentTest {
      * copy and Espresso throws AmbiguousViewMatcherException.
      *
      * Scope to descendants of `charts_tab_root` (the outer FrameLayout that
-     * is the root of `fragment_charts_tab.xml`). This is critical because
-     * `charts_tab_empty_message` is a *sibling* of `charts_tab_chart_root`,
-     * not a descendant — earlier versions of this matcher scoped to
-     * `charts_tab_chart_root` and could never see the empty-message TextView.
+     * is the root of `fragment_charts_tab.xml`). `charts_tab_empty_message`
+     * is a *sibling* of `charts_tab_chart_root`, not a descendant — earlier
+     * versions scoped to `charts_tab_chart_root` and could never see the
+     * empty-message TextView.
+     *
+     * Additionally require the matched view to have window focus
+     * (`view.hasWindowFocus() == true`). On API 35 the off-screen ViewPager2
+     * pages have an empty global visible rect so `isDisplayed()` on the
+     * `charts_tab_root` ancestor disambiguated by itself; on API 26 the
+     * prefetched neighbours pass `isDisplayed()` too, so the matcher hit
+     * multiple views (TREND's empty_message GONE *and* MULTI_COST's
+     * empty_message VISIBLE with the banner text). The active page's views
+     * have window focus, off-screen prefetched pages do not — that's a
+     * stable disambiguator across the API range.
      */
     private fun inActivePage(matcher: org.hamcrest.Matcher<View>): org.hamcrest.Matcher<View> =
         org.hamcrest.Matchers.allOf(
@@ -106,6 +116,12 @@ class ChartsFragmentTest {
                     androidx.test.espresso.matcher.ViewMatchers.isDisplayed(),
                 ),
             ),
+            object : org.hamcrest.TypeSafeMatcher<View>() {
+                override fun describeTo(description: org.hamcrest.Description) {
+                    description.appendText("view has window focus")
+                }
+                override fun matchesSafely(item: View): Boolean = item.hasWindowFocus()
+            },
         )
 
     @Before fun setUp() {
