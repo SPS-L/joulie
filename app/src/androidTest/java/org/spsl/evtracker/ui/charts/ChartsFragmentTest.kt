@@ -33,6 +33,7 @@ import org.spsl.evtracker.data.local.dao.ChargeEventDao
 import org.spsl.evtracker.data.local.entity.CarEntity
 import org.spsl.evtracker.data.local.entity.ChargeEventEntity
 import org.spsl.evtracker.data.preferences.PreferenceKeys
+import org.spsl.evtracker.testing.awaitView
 import org.spsl.evtracker.testing.launchFragmentInHiltContainer
 import javax.inject.Inject
 
@@ -137,8 +138,10 @@ class ChartsFragmentTest {
             )
             launchFragmentInHiltContainer<ChartsFragment>(themeResId = R.style.Theme_EVTracker)
                 .moveToState(Lifecycle.State.RESUMED).use {
+                    // ViewPager2 needs a frame to lay out the active page; without
+                    // a poll the inActivePage matcher races the first frame.
                     // Default tab is TREND. Empty message is GONE → chart populated.
-                    onView(inActivePage(withId(R.id.charts_tab_empty_message))).check(matches(not(isDisplayed())))
+                    awaitView { onView(inActivePage(withId(R.id.charts_tab_empty_message))).check(matches(not(isDisplayed()))) }
 
                     // MONTHLY_KWH: same — chart populated.
                     onView(withText(R.string.charts_tab_monthly_kwh)).perform(click())
@@ -170,15 +173,18 @@ class ChartsFragmentTest {
             seedDb(listOf(ev(twoYearsAgo, 0.0)))
             launchFragmentInHiltContainer<ChartsFragment>(themeResId = R.style.Theme_EVTracker)
                 .moveToState(Lifecycle.State.RESUMED).use {
-                    // Period chips and tab layout still visible
-                    onView(withId(R.id.charts_period_chips)).check(matches(isDisplayed()))
+                    // Wait for the StateFlow → render() chain to flip charts_content
+                    // visible. Without this poll Espresso races the first emission.
+                    awaitView { onView(withId(R.id.charts_period_chips)).check(matches(isDisplayed())) }
                     onView(withId(R.id.charts_tab_layout)).check(matches(isDisplayed()))
                     // Tab body shows the per-period empty message. Scope to the
                     // active page — every offscreen page also shows this string,
                     // so a bare withText would be ambiguous.
-                    onView(inActivePage(withId(R.id.charts_tab_empty_message)))
-                        .check(matches(isDisplayed()))
-                        .check(matches(withText(R.string.charts_no_data_period)))
+                    awaitView {
+                        onView(inActivePage(withId(R.id.charts_tab_empty_message)))
+                            .check(matches(isDisplayed()))
+                            .check(matches(withText(R.string.charts_no_data_period)))
+                    }
                 }
         }
     }
@@ -195,7 +201,9 @@ class ChartsFragmentTest {
             .moveToState(Lifecycle.State.RESUMED)
             .onFragment { Navigation.setViewNavController(it.requireView(), nav) }
 
-        onView(withId(R.id.charts_empty_container)).check(matches(isDisplayed()))
+        // Wait for StateFlow → render() to flip charts_empty_container visible
+        // (NoCar branch). Initial visibility is GONE.
+        awaitView { onView(withId(R.id.charts_empty_container)).check(matches(isDisplayed())) }
         onView(withId(R.id.charts_empty_cta)).perform(click())
 
         assertEquals(R.id.carsFragment, nav.currentDestination?.id)
@@ -213,7 +221,7 @@ class ChartsFragmentTest {
             .moveToState(Lifecycle.State.RESUMED)
             .onFragment { Navigation.setViewNavController(it.requireView(), nav) }
 
-        onView(withId(R.id.charts_empty_container)).check(matches(isDisplayed()))
+        awaitView { onView(withId(R.id.charts_empty_container)).check(matches(isDisplayed())) }
         onView(withId(R.id.charts_empty_cta)).perform(click())
 
         assertEquals(R.id.chargeEditFragment, nav.currentDestination?.id)
@@ -235,8 +243,9 @@ class ChartsFragmentTest {
             )
             launchFragmentInHiltContainer<ChartsFragment>(themeResId = R.style.Theme_EVTracker)
                 .moveToState(Lifecycle.State.RESUMED).use {
+                    // ViewPager2 settle wait — see tabSwitch_showsCorrectChart.
                     // Default TREND tab does NOT show the multi-currency banner string.
-                    onView(inActivePage(withId(R.id.charts_tab_empty_message))).check(matches(not(isDisplayed())))
+                    awaitView { onView(inActivePage(withId(R.id.charts_tab_empty_message))).check(matches(not(isDisplayed()))) }
 
                     // Click MONTHLY_COST tab → tab-body empty TextView shows the banner.
                     onView(withText(R.string.charts_tab_monthly_cost)).perform(click())
