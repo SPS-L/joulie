@@ -33,14 +33,11 @@ jobs:
     # right kernel module access. ubuntu-latest currently provides this for
     # x86_64 system images via reactivecircus/android-emulator-runner.
     runs-on: ubuntu-latest
-    # Tests + emulator boot are <5 min each on a hot AVD cache. The 20-min
-    # cap exists to bound the damage from emulator-runner's post-step
-    # shutdown hang on API 26 — the suite reports BUILD SUCCESSFUL, then
-    # the action waits indefinitely on the emulator's gRPC `stop` endpoint
-    # which logs `ERROR | stop: Not implemented` on Oreo system images.
-    # See the explicit `Force-kill emulator` step below; the cap is the
-    # belt to that fix's braces.
-    timeout-minutes: 20
+    # Tests run in ~3 min on a hot AVD cache (boot ~30 s with KVM, gradle
+    # ~2 min). 15 min is generous head-room covering cold-cache AVD
+    # creation. The Boot/Run/Kill steps each have their own
+    # `timeout-minutes` so a single hang can't burn the whole budget.
+    timeout-minutes: 15
     strategy:
       # Run both ends of the supported SDK range independently. One failure
       # should not mask the other; both reports get uploaded.
@@ -98,34 +95,45 @@ jobs:
           disable-animations: true
           script: echo "Generated AVD snapshot for caching."
 
-      - name: Run instrumented tests
-        uses: reactivecircus/android-emulator-runner@v2
-        timeout-minutes: 15
-        env:
-          # The action waits this many seconds for the emulator to shut
-          # down gracefully via `adb emu kill` before SIGKILLing qemu.
-          # Default is 20 s; on API 26 the emulator's gRPC `stop` endpoint
-          # logs `ERROR | stop: Not implemented` and the wait runs the
-          # full 20 s every time. Squeeze that to 5 s.
-          ANDROID_EMULATOR_WAIT_TIME_BEFORE_KILL: '5'
-        with:
-          api-level: ${{ matrix.api-level }}
-          target: default
-          arch: x86_64
-          force-avd-creation: false
-          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          disable-animations: true
-          script: ./gradlew :app:connectedDebugAndroidTest --no-daemon --stacktrace
+      # The test phase boots and tears down the emulator manually instead
+      # of using `reactivecircus/android-emulator-runner@v2` again. The
+      # action's own shutdown logic deterministically hangs for ~12 min
+      # on API 26 after BUILD SUCCESSFUL: it sends `adb emu kill`, the
+      # emulator's gRPC `stop` endpoint logs `ERROR | stop: Not implemented`,
+      # and the action then never returns even with
+      # ANDROID_EMULATOR_WAIT_TIME_BEFORE_KILL: '5' set (the action
+      # acknowledges the value in its log but still blocks on something
+      # else afterwards — see TASK-70 / TASK-71 round-1/round-2 history).
+      # The action stays in use for the AVD-creation step above, where
+      # the snapshot path works fine and there is no shutdown phase.
+      - name: Boot emulator
+        timeout-minutes: 5
+        run: |
+          $ANDROID_HOME/emulator/emulator -avd test \
+            -no-snapshot-save -no-window -gpu swiftshader_indirect \
+            -noaudio -no-boot-anim -camera-back none \
+            > "$RUNNER_TEMP/emulator.log" 2>&1 &
+          echo "Waiting for boot completion..."
+          adb wait-for-device
+          until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ]; do
+            sleep 2
+          done
+          # Match what `disable-animations: true` does inside the action.
+          # Without these three settings,
+          # swipe_showsSnackbar_undo_restoresRow fails with "Animations
+          # or transitions are enabled on the target device".
+          adb shell settings put global window_animation_scale 0
+          adb shell settings put global transition_animation_scale 0
+          adb shell settings put global animator_duration_scale 0
+          echo "Emulator booted and animations disabled."
 
-      # Safety net for an emulator that survives the action's own cleanup.
-      # Runs even if the test step was terminated by `timeout-minutes: 15`.
-      # An earlier revision (TASK-70 round 1) inlined `pkill -9 -f qemu-system`
-      # at the end of the action's `script:`, but that races the action's
-      # own monitoring: killing qemu before the action's post-step finishes
-      # makes the action report `exit code null` and fail the step even
-      # though the gradle task succeeded. Keeping the kill in a separate
-      # step that runs *after* the action lets the action complete naturally.
-      - name: Force-kill emulator (post-test safety net)
+      - name: Run instrumented tests
+        timeout-minutes: 10
+        run: ./gradlew :app:connectedDebugAndroidTest --no-daemon --stacktrace
+
+      # Always-run cleanup. SIGKILL anything qemu-shaped so post-action
+      # cache + artifact-upload steps have no live emulator hanging on.
+      - name: Kill emulator
         if: always()
         run: |
           adb emu kill || true
