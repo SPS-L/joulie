@@ -106,10 +106,21 @@ jobs:
       # else afterwards — see TASK-70 / TASK-71 round-1/round-2 history).
       # The action stays in use for the AVD-creation step above, where
       # the snapshot path works fine and there is no shutdown phase.
+      # GitHub-hosted ubuntu-latest runners install the Android SDK at
+      # /usr/local/lib/android/sdk but do NOT put platform-tools or
+      # emulator on PATH by default — `reactivecircus/android-emulator-runner`
+      # sets that up internally. Push both onto PATH for the entire job
+      # so the manual Boot / Run / Kill steps below can call `adb` and
+      # `emulator` by name.
+      - name: Add Android SDK tools to PATH
+        run: |
+          echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
+          echo "$ANDROID_HOME/emulator" >> "$GITHUB_PATH"
+
       - name: Boot emulator
         timeout-minutes: 5
         run: |
-          $ANDROID_HOME/emulator/emulator -avd test \
+          emulator -avd test \
             -no-snapshot-save -no-window -gpu swiftshader_indirect \
             -noaudio -no-boot-anim -camera-back none \
             > "$RUNNER_TEMP/emulator.log" 2>&1 &
