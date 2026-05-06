@@ -16,6 +16,7 @@ import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.espresso.matcher.ViewMatchers.withSubstring
 import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.runBlocking
@@ -185,9 +186,10 @@ class ChartsFragmentTest {
     @Test fun noCar_showsAddCarCta_andNavigates() = runBlocking {
         seedDataStore(activeCarId = -1)
         seedDb(emptyList(), withCar = false)
-        val nav = TestNavHostController(ApplicationProvider.getApplicationContext()).apply {
-            setGraph(R.navigation.nav_graph)
-            setCurrentDestination(R.id.chartsFragment)
+        val nav = TestNavHostController(ApplicationProvider.getApplicationContext())
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            nav.setGraph(R.navigation.nav_graph)
+            nav.setCurrentDestination(R.id.chartsFragment)
         }
         launchFragmentInHiltContainer<ChartsFragment>(themeResId = R.style.Theme_EVTracker)
             .moveToState(Lifecycle.State.RESUMED)
@@ -202,9 +204,10 @@ class ChartsFragmentTest {
     @Test fun noEvents_showsLogChargeCta_andNavigates() = runBlocking {
         seedDataStore(activeCarId = 1)
         seedDb(emptyList(), withCar = true)
-        val nav = TestNavHostController(ApplicationProvider.getApplicationContext()).apply {
-            setGraph(R.navigation.nav_graph)
-            setCurrentDestination(R.id.chartsFragment)
+        val nav = TestNavHostController(ApplicationProvider.getApplicationContext())
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            nav.setGraph(R.navigation.nav_graph)
+            nav.setCurrentDestination(R.id.chartsFragment)
         }
         launchFragmentInHiltContainer<ChartsFragment>(themeResId = R.style.Theme_EVTracker)
             .moveToState(Lifecycle.State.RESUMED)

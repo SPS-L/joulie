@@ -22,8 +22,8 @@ android {
         applicationId = "org.spsl.evtracker"
         minSdk = 26
         targetSdk = 35
-        versionCode = 27
-        versionName = "1.9.11"
+        versionCode = 28
+        versionName = "1.9.12"
         testInstrumentationRunner = "org.spsl.evtracker.HiltTestRunner"
     }
 

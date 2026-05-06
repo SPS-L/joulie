@@ -8,6 +8,7 @@ import androidx.test.espresso.Espresso
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.NoActivityResumedException
 import androidx.test.espresso.action.ViewActions.click
+import androidx.test.espresso.action.ViewActions.scrollTo
 import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
 import androidx.test.espresso.matcher.ViewMatchers.withId
@@ -70,7 +71,7 @@ class WizardFlowTest {
             // Page 4 — disclaimer gate: Finish stays disabled until the
             // acceptance switch is toggled. Tapping Next here would be a
             // no-op (button is disabled), so tick the switch first.
-            onView(withId(R.id.wizard_page4_accept)).perform(click())
+            onView(withId(R.id.wizard_page4_accept)).perform(scrollTo(), click())
             onView(withId(R.id.wizard_button_next)).perform(click())
             // Dashboard FAB visible
             onView(withId(R.id.dashboard_fab)).check(matches(isDisplayed()))
