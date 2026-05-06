@@ -80,6 +80,13 @@ class ManageLocationsFragmentTest {
     @Test fun swipe_no_undo_after_5s_rowIsGone() {
         launchFragmentInHiltContainer<ManageLocationsFragment>(themeResId = R.style.Theme_EVTracker)
             .moveToState(Lifecycle.State.RESUMED).use {
+                // Same pre-swipe race as swipe_showsSnackbar_undo_restoresRow:
+                // the seeded "Office" row needs a moment to propagate through
+                // DAO Flow → ViewModel.StateFlow → RecyclerView adapter before
+                // Espresso can target it. The sister test polled the DAO Flow
+                // directly; awaitView on the rendered view is simpler and
+                // covers the adapter-binding step too.
+                awaitView { onView(withText("Office")).check(matches(isDisplayed())) }
                 onView(withText("Office")).perform(
                     GeneralSwipeAction(
                         Swipe.FAST,
