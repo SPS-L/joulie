@@ -24,6 +24,7 @@ import org.junit.runner.RunWith
 import org.spsl.evtracker.R
 import org.spsl.evtracker.data.local.dao.CustomLocationDao
 import org.spsl.evtracker.data.local.entity.CustomLocationEntity
+import org.spsl.evtracker.testing.awaitView
 import org.spsl.evtracker.testing.launchFragmentInHiltContainer
 import javax.inject.Inject
 
@@ -87,17 +88,14 @@ class ManageLocationsFragmentTest {
                         Press.FINGER,
                     ),
                 )
-                // Wait for the 5s job to commit by observing the DAO Flow.
-                // 20 s gives a 15 s margin over the 5 s coroutine `delay` —
-                // the previous 10 s budget left only 5 s headroom and was
-                // racing against load spikes on shared CI runners.
-                runBlocking {
-                    withTimeout(20_000) {
-                        customLocationDao.observeAll()
-                            .first { list -> list.none { it.label == "Office" } }
-                    }
+                // Poll the view hierarchy directly. The previous DAO-Flow poll
+                // raced the StateFlow → adapter diff: the Flow could emit
+                // "Office gone" while RecyclerView still showed the old binding.
+                // Wait up to 20 s — covers the 5 s coroutine `delay` plus
+                // headroom for slow shared CI runners and adapter rebind.
+                awaitView(timeoutMs = 20_000) {
+                    onView(withText("Office")).check(doesNotExist())
                 }
-                onView(withText("Office")).check(doesNotExist())
                 onView(withText("Home")).check(matches(isDisplayed()))
             }
     }
