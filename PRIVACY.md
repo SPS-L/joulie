@@ -27,6 +27,7 @@ When you log a charging session, the following data is stored **locally on your 
 
 This data never leaves your device unless you explicitly enable one of the opt-in export features described below.
 
+
 ---
 
 ## Google Drive Backup (Opt-In)
