@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.Lifecycle
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.action.ViewActions.click
+import androidx.test.espresso.action.ViewActions.scrollTo
 import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.ViewMatchers.hasErrorText
 import androidx.test.espresso.matcher.ViewMatchers.withId
@@ -62,7 +63,7 @@ class ChargeEditFragmentTest {
         launchFragmentInHiltContainer<ChargeEditFragment>(
             themeResId = org.spsl.evtracker.R.style.Theme_EVTracker,
         ).moveToState(Lifecycle.State.RESUMED).use {
-            onView(withId(R.id.charge_edit_save)).perform(click())
+            onView(withId(R.id.charge_edit_save)).perform(scrollTo(), click())
             val expected = InstrumentationRegistry.getInstrumentation()
                 .targetContext.getString(R.string.error_odometer_required)
             onView(withId(R.id.charge_edit_odometer_layout)).check(matches(hasErrorText(expected)))

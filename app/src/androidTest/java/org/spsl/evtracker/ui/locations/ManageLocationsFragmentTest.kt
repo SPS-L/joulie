@@ -88,8 +88,11 @@ class ManageLocationsFragmentTest {
                     ),
                 )
                 // Wait for the 5s job to commit by observing the DAO Flow.
+                // 20 s gives a 15 s margin over the 5 s coroutine `delay` —
+                // the previous 10 s budget left only 5 s headroom and was
+                // racing against load spikes on shared CI runners.
                 runBlocking {
-                    withTimeout(10_000) {
+                    withTimeout(20_000) {
                         customLocationDao.observeAll()
                             .first { list -> list.none { it.label == "Office" } }
                     }
