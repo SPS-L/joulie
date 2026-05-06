@@ -177,6 +177,7 @@
     <string name="common_undo">Undo</string>
     <string name="common_cancel">Cancel</string>
     <string name="common_confirm">Confirm</string>
+    <string name="common_navigate_back">Navigate back</string>
 
     <!-- F1 startup recovery (blocking dialog when auto-recovery fails) -->
     <string name="recovery_failure_title">Reset recovery failed</string>

@@ -160,6 +160,7 @@
     <string name="common_undo">Αναίρεση</string>
     <string name="common_cancel">Ακύρωση</string>
     <string name="common_confirm">Επιβεβαίωση</string>
+    <string name="common_navigate_back">Πλοήγηση πίσω</string>
 
     <!-- F1 startup recovery -->
     <string name="recovery_failure_title">Αποτυχία ανάκτησης επαναφοράς</string>

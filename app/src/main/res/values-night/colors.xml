@@ -44,4 +44,11 @@
     <color name="md_theme_light_inverseOnSurface">#2F3033</color>
     <color name="md_theme_light_inversePrimary">#1F3DCC</color>
     <color name="md_theme_light_scrim">#000000</color>
+
+    <!-- Brand-pack v1.0 dark-mode override. joulie_ink_deep #0A1B5E is
+         scoped by the Brand Guide to light surfaces; on a dark
+         background it would render near-black on dark and disappear.
+         Map to the M3 inverse-primary tone (matches md_theme_light_primary
+         above) so the About wordmark stays legible. -->
+    <color name="joulie_ink_deep">#B7C4FF</color>
 </resources>

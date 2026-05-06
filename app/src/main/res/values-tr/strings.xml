@@ -160,6 +160,7 @@
     <string name="common_undo">Geri al</string>
     <string name="common_cancel">İptal</string>
     <string name="common_confirm">Onayla</string>
+    <string name="common_navigate_back">Geri git</string>
 
     <!-- F1 startup recovery -->
     <string name="recovery_failure_title">Sıfırlama kurtarma başarısız</string>

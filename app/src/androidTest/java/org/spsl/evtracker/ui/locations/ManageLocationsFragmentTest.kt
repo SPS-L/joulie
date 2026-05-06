@@ -52,6 +52,16 @@ class ManageLocationsFragmentTest {
     @Test fun swipe_showsSnackbar_undo_restoresRow() {
         launchFragmentInHiltContainer<ManageLocationsFragment>(themeResId = R.style.Theme_EVTracker)
             .moveToState(Lifecycle.State.RESUMED).use {
+                // Wait for the seeded "Office" row to propagate through
+                // DAO Flow → ViewModel.StateFlow → RecyclerView adapter →
+                // view hierarchy. Without this poll Espresso races the
+                // async-collect path and intermittently sees an empty list.
+                runBlocking {
+                    withTimeout(10_000) {
+                        customLocationDao.observeAll()
+                            .first { rows -> rows.any { it.label == "Office" } }
+                    }
+                }
                 onView(withText("Office")).check(matches(isDisplayed()))
                 onView(withText("Office")).perform(
                     GeneralSwipeAction(

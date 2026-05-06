@@ -409,6 +409,17 @@
 
     <issue
         id="UnusedResources"
+        message="The resource `R.color.joulie_spark_green` appears to be unused"
+        errorLine1="    &lt;color name=&quot;joulie_spark_green&quot;>#A6F43C&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="97"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
         message="The resource `R.color.chart_4` appears to be unused"
         errorLine1="    &lt;color name=&quot;chart_4&quot;>#AD1457&lt;/color>"
         errorLine2="           ~~~~~~~~~~~~~~">

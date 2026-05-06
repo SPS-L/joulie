@@ -92,7 +92,7 @@
                         android:gravity="center_horizontal"
                         android:text="@string/about_app_name"
                         android:textAppearance="?attr/textAppearanceHeadlineSmall"
-                        android:textColor="?attr/colorOnSurface"/>
+                        android:textColor="@color/joulie_ink_deep"/>
 
                     <TextView
                         android:id="@+id/about_version_label"
@@ -129,6 +129,7 @@
                         android:textColor="?attr/colorPrimary"/>
 
                     <TextView
+                        android:id="@+id/about_acknowledgment_lab"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
