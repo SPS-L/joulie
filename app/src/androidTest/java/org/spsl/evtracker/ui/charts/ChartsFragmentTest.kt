@@ -254,6 +254,17 @@ class ChartsFragmentTest {
             )
             launchFragmentInHiltContainer<ChartsFragment>(themeResId = R.style.Theme_EVTracker)
                 .moveToState(Lifecycle.State.RESUMED).use {
+                    // Wait for the TabLayout to lay out before clicking. Without
+                    // this, on API 35 the click races the ViewPager2 / TabLayout
+                    // settle and Espresso's perform() constraints fire before
+                    // the tab is hit-testable. (Earlier versions of this test
+                    // had a leading "TREND tab no banner" awaitView assertion
+                    // that doubled as a settle wait — TASK-67 dropped it as
+                    // redundant, surfacing this race.)
+                    awaitView {
+                        onView(withText(R.string.charts_tab_monthly_cost))
+                            .check(matches(isDisplayed()))
+                    }
                     // Click MONTHLY_COST tab and assert the banner is shown.
                     // Filter by the banner string itself to disambiguate: every
                     // tab fragment binds its own empty_message independently,

@@ -14,9 +14,7 @@ import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeout
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -53,17 +51,13 @@ class ManageLocationsFragmentTest {
     @Test fun swipe_showsSnackbar_undo_restoresRow() {
         launchFragmentInHiltContainer<ManageLocationsFragment>(themeResId = R.style.Theme_EVTracker)
             .moveToState(Lifecycle.State.RESUMED).use {
-                // Wait for the seeded "Office" row to propagate through
-                // DAO Flow → ViewModel.StateFlow → RecyclerView adapter →
-                // view hierarchy. Without this poll Espresso races the
-                // async-collect path and intermittently sees an empty list.
-                runBlocking {
-                    withTimeout(10_000) {
-                        customLocationDao.observeAll()
-                            .first { rows -> rows.any { it.label == "Office" } }
-                    }
-                }
-                onView(withText("Office")).check(matches(isDisplayed()))
+                // Poll the rendered view directly. The previous DAO-Flow poll
+                // exited as soon as the DAO emitted, but the Fragment's
+                // Main-dispatcher collect of ViewModel.StateFlow → adapter
+                // diff hadn't always produced the Office row in the hierarchy
+                // by then — surfaced as NoMatchingViewException on v11.
+                // awaitView covers DAO Flow + StateFlow + adapter diff in one shot.
+                awaitView { onView(withText("Office")).check(matches(isDisplayed())) }
                 onView(withText("Office")).perform(
                     GeneralSwipeAction(
                         Swipe.FAST,
