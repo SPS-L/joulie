@@ -101,6 +101,13 @@ jobs:
       - name: Run instrumented tests
         uses: reactivecircus/android-emulator-runner@v2
         timeout-minutes: 15
+        env:
+          # The action waits this many seconds for the emulator to shut
+          # down gracefully via `adb emu kill` before SIGKILLing qemu.
+          # Default is 20 s; on API 26 the emulator's gRPC `stop` endpoint
+          # logs `ERROR | stop: Not implemented` and the wait runs the
+          # full 20 s every time. Squeeze that to 5 s.
+          ANDROID_EMULATOR_WAIT_TIME_BEFORE_KILL: '5'
         with:
           api-level: ${{ matrix.api-level }}
           target: default
@@ -108,22 +115,16 @@ jobs:
           force-avd-creation: false
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
-          # Force-kill the emulator after the gradle task so the action's
-          # post-step shutdown doesn't hang. On API 26 the emulator's gRPC
-          # `stop` endpoint logs `ERROR | stop: Not implemented` and the
-          # action waits forever for a clean shutdown. `adb emu kill` plus
-          # a SIGKILL on the qemu process completes the same job in <2 s.
-          # `|| true` ensures cleanup runs even if the gradle task failed.
-          script: |
-            ./gradlew :app:connectedDebugAndroidTest --no-daemon --stacktrace
-            EXIT=$?
-            adb emu kill || true
-            pkill -9 -f qemu-system || true
-            exit $EXIT
+          script: ./gradlew :app:connectedDebugAndroidTest --no-daemon --stacktrace
 
-      # Belt to the in-script cleanup's braces. Runs even if the test step
-      # was killed by the step-level timeout-minutes, so an emulator that
-      # somehow survives doesn't hang the post-action cache step.
+      # Safety net for an emulator that survives the action's own cleanup.
+      # Runs even if the test step was terminated by `timeout-minutes: 15`.
+      # An earlier revision (TASK-70 round 1) inlined `pkill -9 -f qemu-system`
+      # at the end of the action's `script:`, but that races the action's
+      # own monitoring: killing qemu before the action's post-step finishes
+      # makes the action report `exit code null` and fail the step even
+      # though the gradle task succeeded. Keeping the kill in a separate
+      # step that runs *after* the action lets the action complete naturally.
       - name: Force-kill emulator (post-test safety net)
         if: always()
         run: |
