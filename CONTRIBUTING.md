@@ -126,14 +126,18 @@ The workflow can also be triggered manually from the **Actions** tab via `workfl
 
 ## Landing page (GitHub Pages)
 
-The public landing page at [sps-l.github.io/joulie](https://sps-l.github.io/joulie/) is served by GitHub Pages straight from the `/docs` folder of `main`. The whole site is three files (no build step, no Jekyll, no JavaScript):
+The public landing page at [sps-l.github.io/joulie](https://sps-l.github.io/joulie/) is built and deployed by [`.github/workflows/pages.yml`](.github/workflows/pages.yml). The privacy page at [/privacy](https://sps-l.github.io/joulie/privacy) is rendered from `PRIVACY.md` at build time via pandoc, so editing the markdown auto-updates the live page within ~30 seconds of the push.
 
-- [`docs/index.html`](docs/index.html), one-page layout with hero, About, Features, Visuals, FAQ, Privacy, Footer.
-- [`docs/site.css`](docs/site.css), single stylesheet with the brand palette as custom properties and a `prefers-color-scheme: dark` media query.
-- [`docs/.nojekyll`](docs/.nojekyll), empty file that disables Jekyll auto-rendering so the rest of the markdown under `docs/` is served raw rather than processed as Pages content.
+Files involved:
+
+- [`docs/index.html`](docs/index.html), single-page layout (hero, About, Features, FAQ, Privacy, Footer).
+- [`docs/site.css`](docs/site.css), single stylesheet. Brand palette as CSS custom properties; `prefers-color-scheme: dark` media query.
+- [`docs/_privacy-template.html`](docs/_privacy-template.html), pandoc HTML template that wraps the rendered privacy markdown with the topbar / footer. The `_` prefix marks it as a build-only file (the workflow excludes anything matching `_*` from the deployed artifact).
 - [`docs/favicon.png`](docs/favicon.png), 32x32 derivative of `branding/joulie_mark_only.png`.
+- [`docs/.nojekyll`](docs/.nojekyll), empty file. Not strictly required under the Actions deploy path (the artifact is served as-is, no Jekyll), but kept so a fall-back to "Deploy from a branch" still works without surprises.
+- [`PRIVACY.md`](PRIVACY.md) at the repo root, source of truth for the privacy policy. Edit this file; the live `/privacy` URL refreshes on the next push.
 
-To turn the page on the first time, set Settings → Pages → Source to *Deploy from a branch* with **`main` / `/docs`**. After that every push to `main` redeploys within ~30s.
+To turn deploys on the first time, set **Settings → Pages → Source to *GitHub Actions*** (not "Deploy from a branch"). The workflow handles everything from there. Triggers: any push to `main` that touches `docs/**`, `PRIVACY.md`, or the workflow itself; plus `workflow_dispatch` for manual reruns.
 
 When editing the page, follow the Brand Guide voice rules: plain English, numbers always have units, never use the em-dash. Reuse the existing assets under `docs/branding/`; don't bake in new colours.
 

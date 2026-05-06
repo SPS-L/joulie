@@ -1,0 +1,70 @@
+name: Deploy GitHub Pages
+
+# Builds the static site under docs/ and renders PRIVACY.md → privacy.html
+# at deploy time so the live page stays in sync with the markdown source.
+# The user only edits PRIVACY.md; the privacy URL refreshes within ~30s.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'PRIVACY.md'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deploy. Don't cancel an in-progress run; let
+# it finish so we don't ship a half-built artifact.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pandoc
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pandoc
+
+      - name: Stage site
+        run: |
+          mkdir -p _site
+          # Static assets straight from docs/, except the pandoc template
+          # (which is build-only) and the previously-hand-rolled
+          # privacy.html (regenerated in the next step).
+          rsync -a --exclude='_*' --exclude='privacy.html' --exclude='scripts/' docs/ _site/
+
+      - name: Render privacy.md → privacy.html
+        run: |
+          pandoc PRIVACY.md \
+            --from=gfm \
+            --to=html5 \
+            --template=docs/_privacy-template.html \
+            --output=_site/privacy.html
+          echo "Rendered $(wc -l < _site/privacy.html) lines"
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
