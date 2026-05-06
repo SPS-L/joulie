@@ -1,6 +1,5 @@
 package org.spsl.evtracker.ui.locations
 
-import androidx.fragment.app.testing.launchFragmentInContainer
 import androidx.lifecycle.Lifecycle
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.action.GeneralLocation
@@ -25,6 +24,7 @@ import org.junit.runner.RunWith
 import org.spsl.evtracker.R
 import org.spsl.evtracker.data.local.dao.CustomLocationDao
 import org.spsl.evtracker.data.local.entity.CustomLocationEntity
+import org.spsl.evtracker.testing.launchFragmentInHiltContainer
 import javax.inject.Inject
 
 @HiltAndroidTest
@@ -50,7 +50,7 @@ class ManageLocationsFragmentTest {
     }
 
     @Test fun swipe_showsSnackbar_undo_restoresRow() {
-        launchFragmentInContainer<ManageLocationsFragment>(themeResId = R.style.Theme_EVTracker)
+        launchFragmentInHiltContainer<ManageLocationsFragment>(themeResId = R.style.Theme_EVTracker)
             .moveToState(Lifecycle.State.RESUMED).use {
                 onView(withText("Office")).check(matches(isDisplayed()))
                 onView(withText("Office")).perform(
@@ -67,7 +67,7 @@ class ManageLocationsFragmentTest {
     }
 
     @Test fun swipe_no_undo_after_5s_rowIsGone() {
-        launchFragmentInContainer<ManageLocationsFragment>(themeResId = R.style.Theme_EVTracker)
+        launchFragmentInHiltContainer<ManageLocationsFragment>(themeResId = R.style.Theme_EVTracker)
             .moveToState(Lifecycle.State.RESUMED).use {
                 onView(withText("Office")).perform(
                     GeneralSwipeAction(

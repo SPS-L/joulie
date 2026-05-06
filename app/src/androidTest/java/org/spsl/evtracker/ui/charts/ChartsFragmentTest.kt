@@ -4,7 +4,6 @@ import android.view.View
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
-import androidx.fragment.app.testing.launchFragmentInContainer
 import androidx.lifecycle.Lifecycle
 import androidx.navigation.Navigation
 import androidx.navigation.testing.TestNavHostController
@@ -33,6 +32,7 @@ import org.spsl.evtracker.data.local.dao.ChargeEventDao
 import org.spsl.evtracker.data.local.entity.CarEntity
 import org.spsl.evtracker.data.local.entity.ChargeEventEntity
 import org.spsl.evtracker.data.preferences.PreferenceKeys
+import org.spsl.evtracker.testing.launchFragmentInHiltContainer
 import javax.inject.Inject
 
 @HiltAndroidTest
@@ -133,7 +133,7 @@ class ChartsFragmentTest {
                 ev(now - 5 * d, 200.0, ChargeType.DC_FAST, cost = 4.0, currency = "EUR"),
             ),
         )
-        launchFragmentInContainer<ChartsFragment>(themeResId = R.style.Theme_EVTracker)
+        launchFragmentInHiltContainer<ChartsFragment>(themeResId = R.style.Theme_EVTracker)
             .moveToState(Lifecycle.State.RESUMED).use {
                 // Default tab is TREND. Empty message is GONE → chart populated.
                 onView(inActivePage(withId(R.id.charts_tab_empty_message))).check(matches(not(isDisplayed())))
@@ -164,7 +164,7 @@ class ChartsFragmentTest {
         seedDataStore()
         val twoYearsAgo = System.currentTimeMillis() - 2L * 365 * 24 * 60 * 60 * 1000
         seedDb(listOf(ev(twoYearsAgo, 0.0)))
-        launchFragmentInContainer<ChartsFragment>(themeResId = R.style.Theme_EVTracker)
+        launchFragmentInHiltContainer<ChartsFragment>(themeResId = R.style.Theme_EVTracker)
             .moveToState(Lifecycle.State.RESUMED).use {
                 // Period chips and tab layout still visible
                 onView(withId(R.id.charts_period_chips)).check(matches(isDisplayed()))
@@ -185,7 +185,7 @@ class ChartsFragmentTest {
             setGraph(R.navigation.nav_graph)
             setCurrentDestination(R.id.chartsFragment)
         }
-        launchFragmentInContainer<ChartsFragment>(themeResId = R.style.Theme_EVTracker)
+        launchFragmentInHiltContainer<ChartsFragment>(themeResId = R.style.Theme_EVTracker)
             .moveToState(Lifecycle.State.RESUMED)
             .onFragment { Navigation.setViewNavController(it.requireView(), nav) }
 
@@ -202,7 +202,7 @@ class ChartsFragmentTest {
             setGraph(R.navigation.nav_graph)
             setCurrentDestination(R.id.chartsFragment)
         }
-        launchFragmentInContainer<ChartsFragment>(themeResId = R.style.Theme_EVTracker)
+        launchFragmentInHiltContainer<ChartsFragment>(themeResId = R.style.Theme_EVTracker)
             .moveToState(Lifecycle.State.RESUMED)
             .onFragment { Navigation.setViewNavController(it.requireView(), nav) }
 
@@ -225,7 +225,7 @@ class ChartsFragmentTest {
                 ev(now - 30 * d, 100.0, ChargeType.AC, cost = 7.5, currency = "USD"),
             ),
         )
-        launchFragmentInContainer<ChartsFragment>(themeResId = R.style.Theme_EVTracker)
+        launchFragmentInHiltContainer<ChartsFragment>(themeResId = R.style.Theme_EVTracker)
             .moveToState(Lifecycle.State.RESUMED).use {
                 // Default TREND tab does NOT show the multi-currency banner string.
                 onView(inActivePage(withId(R.id.charts_tab_empty_message))).check(matches(not(isDisplayed())))

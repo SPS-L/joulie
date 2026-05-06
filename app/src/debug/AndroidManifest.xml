@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    TASK-58: register HiltTestActivity in the debug variant of the *app* manifest
+    (not the test APK manifest). The instrumentation runner launches activities
+    under the target APK's package; if this entry lived under
+    `app/src/androidTest/AndroidManifest.xml` the launch would fail with
+    "Unable to resolve activity for Intent ... HiltTestActivity". Same merge
+    rationale as the EmptyFragmentActivity entry from TASK-50 sub-fix A
+    (provided by `androidx-fragment-testing-manifest` on `debugImplementation`).
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <activity
+            android:name=".HiltTestActivity"
+            android:exported="false"
+            android:theme="@style/Theme.EVTracker" />
+    </application>
+</manifest>

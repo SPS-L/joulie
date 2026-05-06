@@ -3,7 +3,6 @@ package org.spsl.evtracker.ui.settings
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
-import androidx.fragment.app.testing.launchFragmentInContainer
 import androidx.lifecycle.Lifecycle
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dagger.Binds
@@ -26,6 +25,7 @@ import org.spsl.evtracker.domain.backup.DriveAuthManager
 import org.spsl.evtracker.domain.backup.DriveRemoteSource
 import org.spsl.evtracker.testing.FakeDriveAuthManager
 import org.spsl.evtracker.testing.FakeDriveRemoteSource
+import org.spsl.evtracker.testing.launchFragmentInHiltContainer
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -88,7 +88,7 @@ class SettingsDriveSwitchEntryTest {
 
     @Test fun firstEntry_withDriveEnabled_doesNotCallAuthorize() {
         val before = fakeAuth.authorizeCallCount
-        launchFragmentInContainer<SettingsFragment>(themeResId = R.style.Theme_EVTracker)
+        launchFragmentInHiltContainer<SettingsFragment>(themeResId = R.style.Theme_EVTracker)
             .moveToState(Lifecycle.State.RESUMED).use {
                 // Settle one frame so the StateFlow collector has run.
                 Thread.sleep(50)
@@ -107,7 +107,7 @@ class SettingsDriveSwitchEntryTest {
         // navigating away and back through the back stack does. This is the
         // exact reproduction trigger for the user-reported "every Settings
         // entry the switch toggles OFF→ON and the prompt appears" bug.
-        val scenario = launchFragmentInContainer<SettingsFragment>(
+        val scenario = launchFragmentInHiltContainer<SettingsFragment>(
             themeResId = R.style.Theme_EVTracker,
         ).moveToState(Lifecycle.State.RESUMED)
         Thread.sleep(50)

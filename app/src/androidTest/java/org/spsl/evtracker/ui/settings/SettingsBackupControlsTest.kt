@@ -3,7 +3,6 @@ package org.spsl.evtracker.ui.settings
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
-import androidx.fragment.app.testing.launchFragmentInContainer
 import androidx.lifecycle.Lifecycle
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.action.ViewActions.click
@@ -25,6 +24,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.spsl.evtracker.R
 import org.spsl.evtracker.data.preferences.PreferenceKeys
+import org.spsl.evtracker.testing.launchFragmentInHiltContainer
 import javax.inject.Inject
 
 /**
@@ -63,7 +63,7 @@ class SettingsBackupControlsTest {
 
     @Test fun bothButtons_areGone_whenDriveDisabled() {
         seedDataStore(driveEnabled = false)
-        launchFragmentInContainer<SettingsFragment>(themeResId = R.style.Theme_EVTracker)
+        launchFragmentInHiltContainer<SettingsFragment>(themeResId = R.style.Theme_EVTracker)
             .moveToState(Lifecycle.State.RESUMED).use {
                 onView(withId(R.id.button_backup_now)).check(matches(withEffectiveVisibility(Visibility.GONE)))
                 onView(withId(R.id.button_wipe_remote)).check(matches(withEffectiveVisibility(Visibility.GONE)))
@@ -72,7 +72,7 @@ class SettingsBackupControlsTest {
 
     @Test fun bothButtons_areVisible_whenDriveEnabled() {
         seedDataStore(driveEnabled = true)
-        launchFragmentInContainer<SettingsFragment>(themeResId = R.style.Theme_EVTracker)
+        launchFragmentInHiltContainer<SettingsFragment>(themeResId = R.style.Theme_EVTracker)
             .moveToState(Lifecycle.State.RESUMED).use {
                 onView(withId(R.id.button_backup_now)).check(matches(isDisplayed()))
                 onView(withId(R.id.button_wipe_remote)).check(matches(isDisplayed()))
@@ -81,7 +81,7 @@ class SettingsBackupControlsTest {
 
     @Test fun tappingWipe_showsConfirmationDialog_andCancelLeavesNoSideEffect() {
         seedDataStore(driveEnabled = true)
-        launchFragmentInContainer<SettingsFragment>(themeResId = R.style.Theme_EVTracker)
+        launchFragmentInHiltContainer<SettingsFragment>(themeResId = R.style.Theme_EVTracker)
             .moveToState(Lifecycle.State.RESUMED).use {
                 onView(withId(R.id.button_wipe_remote)).perform(click())
 

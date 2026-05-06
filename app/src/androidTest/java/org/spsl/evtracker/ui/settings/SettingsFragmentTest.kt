@@ -3,7 +3,6 @@ package org.spsl.evtracker.ui.settings
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
-import androidx.fragment.app.testing.launchFragmentInContainer
 import androidx.lifecycle.Lifecycle
 import androidx.navigation.Navigation
 import androidx.navigation.testing.TestNavHostController
@@ -30,6 +29,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.spsl.evtracker.R
 import org.spsl.evtracker.data.preferences.PreferenceKeys
+import org.spsl.evtracker.testing.launchFragmentInHiltContainer
 import javax.inject.Inject
 
 @HiltAndroidTest
@@ -60,7 +60,7 @@ class SettingsFragmentTest {
 
     @Test fun themeRow_tap_opensDialog_select_dark_updatesSummary() {
         seedDataStore()
-        launchFragmentInContainer<SettingsFragment>(themeResId = R.style.Theme_EVTracker)
+        launchFragmentInHiltContainer<SettingsFragment>(themeResId = R.style.Theme_EVTracker)
             .moveToState(Lifecycle.State.RESUMED).use {
                 onView(withId(R.id.row_theme)).perform(click())
                 onView(withText(R.string.settings_theme_dark))
@@ -73,7 +73,7 @@ class SettingsFragmentTest {
 
     @Test fun exportCsv_disabled_whenNoActiveCar() {
         seedDataStore(activeCarId = -1)
-        launchFragmentInContainer<SettingsFragment>(themeResId = R.style.Theme_EVTracker)
+        launchFragmentInHiltContainer<SettingsFragment>(themeResId = R.style.Theme_EVTracker)
             .moveToState(Lifecycle.State.RESUMED).use {
                 onView(withId(R.id.row_export_csv)).check(
                     matches(
@@ -89,7 +89,7 @@ class SettingsFragmentTest {
             setGraph(R.navigation.nav_graph)
             setCurrentDestination(R.id.settingsFragment)
         }
-        launchFragmentInContainer<SettingsFragment>(themeResId = R.style.Theme_EVTracker)
+        launchFragmentInHiltContainer<SettingsFragment>(themeResId = R.style.Theme_EVTracker)
             .moveToState(Lifecycle.State.RESUMED)
             .onFragment { fragment ->
                 Navigation.setViewNavController(fragment.requireView(), nav)
@@ -103,7 +103,7 @@ class SettingsFragmentTest {
 
     @Test fun resetAll_dialogText_includesDriveWarning_whenDriveEnabled() {
         seedDataStore(driveEnabled = true)
-        launchFragmentInContainer<SettingsFragment>(themeResId = R.style.Theme_EVTracker)
+        launchFragmentInHiltContainer<SettingsFragment>(themeResId = R.style.Theme_EVTracker)
             .moveToState(Lifecycle.State.RESUMED).use {
                 onView(withId(R.id.row_reset_all)).perform(click())
                 onView(withText(R.string.settings_reset_all_confirm_drive_on))
