@@ -87,21 +87,22 @@ class ChartsFragmentTest {
      *
      * `ViewPager2` keeps neighbouring page Fragments attached for prefetch, so
      * IDs from the shared `fragment_charts_tab.xml` (`charts_tab_empty_message`,
-     * `charts_tab_subtitle`, `charts_tab_chart_root`) are NOT unique in the view
-     * hierarchy when tests run. A bare `withId(...)` matches every page's copy
-     * and Espresso throws AmbiguousViewMatcherException.
+     * `charts_tab_subtitle`, `charts_tab_chart_root`) are NOT unique in the
+     * view hierarchy when tests run. A bare `withId(...)` matches every page's
+     * copy and Espresso throws AmbiguousViewMatcherException.
      *
-     * The active page is the only one whose `charts_tab_chart_root` is
-     * `isDisplayed()` (offscreen pages have isDisplayed = false because their
-     * fragment view is detached or off-screen). We scope every per-tab assertion
-     * to the descendant chain of that displayed root.
+     * Scope to descendants of `charts_tab_root` (the outer FrameLayout that
+     * is the root of `fragment_charts_tab.xml`). This is critical because
+     * `charts_tab_empty_message` is a *sibling* of `charts_tab_chart_root`,
+     * not a descendant — earlier versions of this matcher scoped to
+     * `charts_tab_chart_root` and could never see the empty-message TextView.
      */
     private fun inActivePage(matcher: org.hamcrest.Matcher<View>): org.hamcrest.Matcher<View> =
         org.hamcrest.Matchers.allOf(
             matcher,
             androidx.test.espresso.matcher.ViewMatchers.isDescendantOfA(
                 org.hamcrest.Matchers.allOf(
-                    androidx.test.espresso.matcher.ViewMatchers.withId(R.id.charts_tab_chart_root),
+                    androidx.test.espresso.matcher.ViewMatchers.withId(R.id.charts_tab_root),
                     androidx.test.espresso.matcher.ViewMatchers.isDisplayed(),
                 ),
             ),
