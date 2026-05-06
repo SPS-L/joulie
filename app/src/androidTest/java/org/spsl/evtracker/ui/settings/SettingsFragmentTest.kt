@@ -4,9 +4,8 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.Lifecycle
-import androidx.navigation.Navigation
-import androidx.navigation.testing.TestNavHostController
-import androidx.test.core.app.ApplicationProvider
+import androidx.navigation.fragment.NavHostFragment
+import androidx.test.core.app.ActivityScenario
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.action.ViewActions.scrollTo
@@ -18,7 +17,6 @@ import androidx.test.espresso.matcher.ViewMatchers.withAlpha
 import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.runBlocking
@@ -29,6 +27,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.spsl.evtracker.MainActivity
 import org.spsl.evtracker.R
 import org.spsl.evtracker.data.preferences.PreferenceKeys
 import org.spsl.evtracker.testing.launchFragmentInHiltContainer
@@ -87,39 +86,50 @@ class SettingsFragmentTest {
 
     @Test fun resetAll_confirm_navigatesToWizard() {
         seedDataStore()
-        // androidx.lifecycle 2.7+ enforces main-thread for LifecycleRegistry.
-        // addObserver, which TestNavHostController.setGraph triggers
-        // transitively through the back-stack-entry plumbing. Construct +
-        // configure the nav controller on the instrumentation main thread.
-        val nav = TestNavHostController(ApplicationProvider.getApplicationContext())
-        InstrumentationRegistry.getInstrumentation().runOnMainSync {
-            nav.setGraph(R.navigation.nav_graph)
-            nav.setCurrentDestination(R.id.settingsFragment)
-        }
-        launchFragmentInHiltContainer<SettingsFragment>(themeResId = R.style.Theme_EVTracker)
-            .moveToState(Lifecycle.State.RESUMED)
-            .onFragment { fragment ->
-                Navigation.setViewNavController(fragment.requireView(), nav)
+        // Hosted via real MainActivity rather than HiltTestActivity:
+        // launchFragmentInHiltContainer + MaterialAlertDialog deterministically
+        // hangs Espresso for ~38 s on the dialog interaction (the activity
+        // appears unresumed to Espresso). The MainActivity-launched pattern
+        // (matching DashboardFragmentTest, WizardFlowTest, MainActivityBottomNavTest)
+        // bypasses that bug. The HiltTestActivity issue is captured separately
+        // for follow-up; for now the priority is a green nightly.
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            var navController: androidx.navigation.NavController? = null
+            scenario.onActivity { activity ->
+                val navHost = activity.supportFragmentManager
+                    .findFragmentById(R.id.nav_host_fragment) as NavHostFragment
+                navController = navHost.navController
+                navController!!.navigate(R.id.settingsFragment)
             }
 
-        onView(withId(R.id.row_reset_all)).perform(scrollTo(), click())
-        onView(withText(R.string.common_confirm)).inRoot(isDialog()).perform(click())
+            onView(withId(R.id.row_reset_all)).perform(scrollTo(), click())
+            onView(withText(R.string.common_confirm)).inRoot(isDialog()).perform(click())
 
-        assertEquals(R.id.wizardFragment, nav.currentDestination?.id)
+            scenario.onActivity {
+                assertEquals(R.id.wizardFragment, navController!!.currentDestination?.id)
+            }
+        }
     }
 
     @Test fun resetAll_dialogText_includesDriveWarning_whenDriveEnabled() {
         seedDataStore(driveEnabled = true)
-        launchFragmentInHiltContainer<SettingsFragment>(themeResId = R.style.Theme_EVTracker)
-            .moveToState(Lifecycle.State.RESUMED).use {
-                // row_reset_all sits near the bottom of the Settings scroll
-                // surface, below the fold on smaller emulator screens.
-                // Espresso's click() requires the target to occupy at least
-                // 90% of its global visible rect, so scroll into view first.
-                onView(withId(R.id.row_reset_all)).perform(scrollTo(), click())
-                onView(withText(R.string.settings_reset_all_confirm_drive_on))
-                    .inRoot(isDialog())
-                    .check(matches(isDisplayed()))
+        // See resetAll_confirm_navigatesToWizard for the rationale on why this
+        // test uses ActivityScenario(MainActivity) instead of
+        // launchFragmentInHiltContainer.
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                val navHost = activity.supportFragmentManager
+                    .findFragmentById(R.id.nav_host_fragment) as NavHostFragment
+                navHost.navController.navigate(R.id.settingsFragment)
             }
+            // row_reset_all sits near the bottom of the Settings scroll
+            // surface, below the fold on smaller emulator screens.
+            // Espresso's click() requires the target to occupy at least
+            // 90% of its global visible rect, so scroll into view first.
+            onView(withId(R.id.row_reset_all)).perform(scrollTo(), click())
+            onView(withText(R.string.settings_reset_all_confirm_drive_on))
+                .inRoot(isDialog())
+                .check(matches(isDisplayed()))
+        }
     }
 }
