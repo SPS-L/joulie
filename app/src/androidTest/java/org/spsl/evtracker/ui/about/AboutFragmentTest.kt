@@ -1,6 +1,5 @@
 package org.spsl.evtracker.ui.about
 
-import androidx.fragment.app.testing.launchFragmentInContainer
 import androidx.lifecycle.Lifecycle
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.assertion.ViewAssertions.matches
@@ -18,6 +17,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.spsl.evtracker.R
+import org.spsl.evtracker.testing.launchFragmentInHiltContainer
 
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
@@ -31,7 +31,7 @@ class AboutFragmentTest {
     }
 
     @Test fun versionLabel_isDisplayed_andNonEmpty() {
-        launchFragmentInContainer<AboutFragment>(themeResId = R.style.Theme_EVTracker)
+        launchFragmentInHiltContainer<AboutFragment>(themeResId = R.style.Theme_EVTracker)
             .moveToState(Lifecycle.State.RESUMED).use {
                 onView(withId(R.id.about_version_label))
                     .check(matches(allOf(isDisplayed(), not(withText("")))))
@@ -39,7 +39,7 @@ class AboutFragmentTest {
     }
 
     @Test fun spsLabAcknowledgment_isVisible() {
-        launchFragmentInContainer<AboutFragment>(themeResId = R.style.Theme_EVTracker)
+        launchFragmentInHiltContainer<AboutFragment>(themeResId = R.style.Theme_EVTracker)
             .moveToState(Lifecycle.State.RESUMED).use {
                 onView(withSubstring("SPS-Lab"))
                     .check(matches(isDisplayed()))
@@ -47,7 +47,7 @@ class AboutFragmentTest {
     }
 
     @Test fun spsLabUrlLink_isPresent() {
-        launchFragmentInContainer<AboutFragment>(themeResId = R.style.Theme_EVTracker)
+        launchFragmentInHiltContainer<AboutFragment>(themeResId = R.style.Theme_EVTracker)
             .moveToState(Lifecycle.State.RESUMED).use {
                 onView(withId(R.id.about_link_sps_lab))
                     .check(matches(allOf(isDisplayed(), withText("sps-lab.org"))))
@@ -59,7 +59,7 @@ class AboutFragmentTest {
         // surfaces the SPDX identifier so a TalkBack user (and an
         // automated audit) can confirm the license without parsing
         // marketing prose.
-        launchFragmentInContainer<AboutFragment>(themeResId = R.style.Theme_EVTracker)
+        launchFragmentInHiltContainer<AboutFragment>(themeResId = R.style.Theme_EVTracker)
             .moveToState(Lifecycle.State.RESUMED).use {
                 onView(withId(R.id.about_license_body))
                     .check(matches(allOf(isDisplayed(), withSubstring("GPL-3.0-or-later"))))
@@ -67,7 +67,7 @@ class AboutFragmentTest {
     }
 
     @Test fun disclaimerCard_containsLiability() {
-        launchFragmentInContainer<AboutFragment>(themeResId = R.style.Theme_EVTracker)
+        launchFragmentInHiltContainer<AboutFragment>(themeResId = R.style.Theme_EVTracker)
             .moveToState(Lifecycle.State.RESUMED).use {
                 onView(withId(R.id.about_disclaimer_body))
                     .check(matches(allOf(isDisplayed(), withSubstring("liability"))))

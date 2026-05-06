@@ -3,7 +3,6 @@ package org.spsl.evtracker.ui.chargeedit
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
-import androidx.fragment.app.testing.launchFragmentInContainer
 import androidx.lifecycle.Lifecycle
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.action.ViewActions.click
@@ -22,6 +21,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.spsl.evtracker.R
 import org.spsl.evtracker.data.preferences.PreferenceKeys
+import org.spsl.evtracker.testing.launchFragmentInHiltContainer
 import javax.inject.Inject
 
 @HiltAndroidTest
@@ -49,7 +49,7 @@ class ChargeEditFragmentTest {
 
     @Test
     fun homeChip_clickedFillsLocation() {
-        launchFragmentInContainer<ChargeEditFragment>(
+        launchFragmentInHiltContainer<ChargeEditFragment>(
             themeResId = org.spsl.evtracker.R.style.Theme_EVTracker,
         ).moveToState(Lifecycle.State.RESUMED).use {
             onView(withText(R.string.location_home)).perform(click())
@@ -59,7 +59,7 @@ class ChargeEditFragmentTest {
 
     @Test
     fun saveBlankOdometer_showsError() {
-        launchFragmentInContainer<ChargeEditFragment>(
+        launchFragmentInHiltContainer<ChargeEditFragment>(
             themeResId = org.spsl.evtracker.R.style.Theme_EVTracker,
         ).moveToState(Lifecycle.State.RESUMED).use {
             onView(withId(R.id.charge_edit_save)).perform(click())

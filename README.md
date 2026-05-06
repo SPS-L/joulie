@@ -55,7 +55,7 @@ Joulie is a clean, no-nonsense Android app for electric vehicle drivers who want
 Signed release APKs are attached to every GitHub Release: see the [Releases page](https://github.com/SPS-L/joulie/releases).
 
 ```bash
-adb install joulie-v1.9.9.apk
+adb install joulie-v1.9.10.apk
 ```
 
 You can also open the APK on the device after enabling **Install from unknown sources** for your file manager or browser.
