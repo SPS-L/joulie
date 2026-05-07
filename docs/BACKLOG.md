@@ -52,7 +52,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-42 | 🟢 | Open Charge Map / OCPI station lookup integration | TASK-37 | ⏸ |
 | TASK-43 | 🟡 | kWh-from-SoC calculator + `kwhSource` provenance flag (degradation banner on derived events) | TASK-14 | ☑ |
 | TASK-44 | 🟡 | Fix `StatsCalculator.computeStats` cost accumulation (first event's cost silently dropped; inconsistent with `computeMonthlyBuckets`) |  | ☑ |
-| TASK-45 | 🟢 | Defensive SoC range guard (`require(...)`) in `KwhFromSocCalculator.compute` |  | ☐ |
+| TASK-45 | 🟢 | Defensive SoC range guard (`require(...)`) in `KwhFromSocCalculator.compute` |  | ☑ |
 | TASK-46 | 🟡 | Battery-health card "Estimated" warning when heuristic over-estimates (>105% of nominal AND `isExact = false`) |  | ☑ |
 | TASK-47 | 🟢 | Charging power profile fields (`peakPowerKw`, `chargingDurationMinutes`), schema bump |  | ☐ |
 | TASK-48 | 🟢 | Time-of-use (ToU) tariff classification on charge events |  | ☐ |
@@ -3470,7 +3470,22 @@ increases by ≥ 4. No existing test regresses.
 
 ---
 
-## 🟢 TASK-45, Defensive SoC range guard in `KwhFromSocCalculator`
+## 🟢 TASK-45, Defensive SoC range guard in `KwhFromSocCalculator` ☑ Done (2026-05-07)
+
+> **Outcome.** `KwhFromSocCalculator.compute` now opens with two
+> `require(...)` guards: `socBefore` and `socAfter` must be fractions in
+> `[0.0, 1.0]`, and `nominalBatteryKwh` must be `> 0.0`. Either guard
+> failing throws `IllegalArgumentException` with the offending value in
+> the message. The function-level KDoc was rewritten to make the
+> fraction contract explicit and to cite
+> `ChargeEditViewModel.recomputeKwhFromSoc` as the canonical caller
+> pattern; the existing in-range "negative delta clamps to 0" behaviour
+> is preserved verbatim. Four new JVM cases land in
+> `KwhFromSocCalculatorTest`: `socBefore_rawPercent_throws` (80.0 not
+> 0.80), `socAfter_negativeFraction_throws`, `nominalBatteryKwh_zero_throws`,
+> `nominalBatteryKwh_negative_throws`. `ChargeEditViewModel` is
+> unchanged because it already passes fractions. Full local gate green
+> (`ktlintCheck` + `:app:lint` + `:app:testDebugUnitTest`).
 
 > **Audit finding (BUG-01, 2026-05-03):**
 > `KwhFromSocCalculator.compute(socBefore, socAfter, nominalBatteryKwh)`

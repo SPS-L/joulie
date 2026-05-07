@@ -12,9 +12,17 @@ import kotlin.math.max
  *
  * Returns `(socAfter - socBefore) × nominalBatteryKwh`, clamped to ≥ 0.
  *
- * Negative deltas (user entered SoC fields out of order) clamp to 0 rather
- * than throw — the caller should treat zero as "calculator could not produce
- * a value" and leave the kWh field blank.
+ * **Inputs are fractions in `[0.0, 1.0]`, not percentages.** A caller
+ * holding a UI percent value must divide by 100 first; see
+ * `ChargeEditViewModel.recomputeKwhFromSoc` for the canonical pattern.
+ * `socBefore` or `socAfter` outside `[0, 1]`, or `nominalBatteryKwh ≤ 0`,
+ * fail fast with `IllegalArgumentException` — passing raw percent values
+ * would otherwise silently produce a kWh inflated by 100×.
+ *
+ * Negative deltas (in-range fractions where the user entered the SoC
+ * fields out of order, e.g. `socBefore = 0.80`, `socAfter = 0.70`)
+ * clamp to 0 rather than throw — the caller should treat zero as
+ * "calculator could not produce a value" and leave the kWh field blank.
  *
  * Note: the result is *battery-side* kWh (energy that landed in the cells),
  * not *charger-delivered* kWh. AC charging loses ~10–15% to heat/conversion;
@@ -22,6 +30,13 @@ import kotlin.math.max
  * `ChargeKwhSource.DERIVED_FROM_SOC` so capacity-degradation tracking skips it.
  */
 object KwhFromSocCalculator {
-    fun compute(socBefore: Double, socAfter: Double, nominalBatteryKwh: Double): Double =
-        max(0.0, (socAfter - socBefore) * nominalBatteryKwh)
+    fun compute(socBefore: Double, socAfter: Double, nominalBatteryKwh: Double): Double {
+        require(socBefore in 0.0..1.0 && socAfter in 0.0..1.0) {
+            "SoC values must be fractions in [0,1]; got socBefore=$socBefore socAfter=$socAfter"
+        }
+        require(nominalBatteryKwh > 0.0) {
+            "nominalBatteryKwh must be > 0; got $nominalBatteryKwh"
+        }
+        return max(0.0, (socAfter - socBefore) * nominalBatteryKwh)
+    }
 }

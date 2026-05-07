@@ -1,6 +1,7 @@
 package org.spsl.evtracker.domain.service
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
 import org.junit.Test
 
 class KwhFromSocCalculatorTest {
@@ -46,5 +47,51 @@ class KwhFromSocCalculatorTest {
             nominalBatteryKwh = 60.0,
         )
         assertEquals(0.0, kwh, 1e-9)
+    }
+
+    @Test
+    fun socBefore_rawPercent_throws() {
+        // 80 instead of 0.80 — a future caller passing percent values
+        // would otherwise produce a kWh inflated by 100×.
+        assertThrows(IllegalArgumentException::class.java) {
+            KwhFromSocCalculator.compute(
+                socBefore = 80.0,
+                socAfter = 0.90,
+                nominalBatteryKwh = 60.0,
+            )
+        }
+    }
+
+    @Test
+    fun socAfter_negativeFraction_throws() {
+        assertThrows(IllegalArgumentException::class.java) {
+            KwhFromSocCalculator.compute(
+                socBefore = 0.20,
+                socAfter = -0.1,
+                nominalBatteryKwh = 60.0,
+            )
+        }
+    }
+
+    @Test
+    fun nominalBatteryKwh_zero_throws() {
+        assertThrows(IllegalArgumentException::class.java) {
+            KwhFromSocCalculator.compute(
+                socBefore = 0.20,
+                socAfter = 0.80,
+                nominalBatteryKwh = 0.0,
+            )
+        }
+    }
+
+    @Test
+    fun nominalBatteryKwh_negative_throws() {
+        assertThrows(IllegalArgumentException::class.java) {
+            KwhFromSocCalculator.compute(
+                socBefore = 0.20,
+                socAfter = 0.80,
+                nominalBatteryKwh = -10.0,
+            )
+        }
     }
 }
