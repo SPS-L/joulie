@@ -2,16 +2,19 @@ package org.spsl.evtracker.data.local.db
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.testing.MigrationTestHelper
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteOpenHelper
 import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.spsl.evtracker.core.model.ChargeKwhSource
@@ -22,6 +25,20 @@ class MigrationTest {
 
     private val testDbName = "migration-test.db"
     private lateinit var context: Context
+
+    /**
+     * Discovers `@AutoMigration(from=5, to=6)` and `@AutoMigration(from=6, to=7)`
+     * declared on the `@Database` annotation. Runs them via
+     * [MigrationTestHelper.runMigrationsAndValidate] so the v5→v6 and v6→v7
+     * tests exercise the same Room-synthesised path that ships in production.
+     */
+    @get:Rule
+    val helper: MigrationTestHelper = MigrationTestHelper(
+        InstrumentationRegistry.getInstrumentation(),
+        AppDatabase::class.java,
+        emptyList(),
+        FrameworkSQLiteOpenHelperFactory(),
+    )
 
     @Before
     fun setUp() {
@@ -200,8 +217,8 @@ class MigrationTest {
                 AppDatabase.MIGRATION_2_3,
                 AppDatabase.MIGRATION_3_4,
                 AppDatabase.MIGRATION_4_5,
-                AppDatabase.MIGRATION_5_6,
-                AppDatabase.MIGRATION_6_7,
+                // v5→v6 and v6→v7 are auto-discovered from the @Database
+                // annotation; no addMigrations(...) entry needed.
             )
             .build()
 
@@ -307,51 +324,50 @@ class MigrationTest {
 
     @Test
     fun migrate_5_to_6_addsSocColumns() = runBlocking {
-        // MIGRATION_5_6: adds nullable socBefore + socAfter REAL
-        // columns to charge_events. Existing rows leave both at NULL.
-        val v3 = buildV3Database()
-        v3.execSQL("INSERT INTO cars (name, createdAt) VALUES ('A', 1000)")
-        v3.execSQL(
+        // @AutoMigration(from = 5, to = 6) adds nullable socBefore + socAfter
+        // REAL columns to charge_events. Existing rows leave both at NULL.
+        val v5 = helper.createDatabase(testDbName, 5)
+        v5.execSQL("INSERT INTO cars (id, name, createdAt) VALUES (1, 'A', 1000)")
+        v5.execSQL(
             "INSERT INTO charge_events " +
-                "(carId, eventDate, odometerKm, kwhAdded, chargeType, note, createdAt) " +
-                "VALUES (1, 2000, 100.0, 10.0, 'AC', '', 2000)",
+                "(id, carId, eventDate, odometerKm, kwhAdded, chargeType, note, createdAt) " +
+                "VALUES (1, 1, 2000, 100.0, 10.0, 'AC', '', 2000)",
         )
-        AppDatabase.MIGRATION_3_4.migrate(v3)
-        AppDatabase.MIGRATION_4_5.migrate(v3)
-        AppDatabase.MIGRATION_5_6.migrate(v3)
+        v5.close()
 
-        v3.query("SELECT socBefore, socAfter FROM charge_events WHERE id = 1").use { cursor ->
+        val v6 = helper.runMigrationsAndValidate(testDbName, 6, true)
+        v6.query("SELECT socBefore, socAfter FROM charge_events WHERE id = 1").use { cursor ->
             assertTrue(cursor.moveToFirst())
             assertTrue("socBefore should default to NULL on legacy rows", cursor.isNull(0))
             assertTrue("socAfter should default to NULL on legacy rows", cursor.isNull(1))
         }
-        v3.close()
+        v6.close()
     }
 
     @Test
     fun migrate_6_to_7_addsKwhSourceColumn() = runBlocking {
-        // MIGRATION_6_7: adds a NOT NULL `kwhSource` TEXT column to
-        // charge_events with `DEFAULT 'MEASURED'`. Pre-migration rows backfill
-        // to MEASURED — exactly the right behaviour, since legacy events were
-        // entered before the in-form calculator existed and so cannot be
-        // DERIVED_FROM_SOC.
-        val v3 = buildV3Database()
-        v3.execSQL("INSERT INTO cars (name, createdAt) VALUES ('A', 1000)")
-        v3.execSQL(
+        // @AutoMigration(from = 6, to = 7) adds a NOT NULL `kwhSource` TEXT
+        // column to charge_events with `DEFAULT 'MEASURED'`. Pre-migration
+        // rows backfill to MEASURED — exactly the right behaviour, since
+        // legacy events were entered before the in-form calculator existed
+        // and so cannot be DERIVED_FROM_SOC.
+        val v5 = helper.createDatabase(testDbName, 5)
+        v5.execSQL("INSERT INTO cars (id, name, createdAt) VALUES (1, 'A', 1000)")
+        v5.execSQL(
             "INSERT INTO charge_events " +
-                "(carId, eventDate, odometerKm, kwhAdded, chargeType, note, createdAt) " +
-                "VALUES (1, 2000, 100.0, 10.0, 'AC', '', 2000)",
+                "(id, carId, eventDate, odometerKm, kwhAdded, chargeType, note, createdAt) " +
+                "VALUES (1, 1, 2000, 100.0, 10.0, 'AC', '', 2000)",
         )
-        AppDatabase.MIGRATION_3_4.migrate(v3)
-        AppDatabase.MIGRATION_4_5.migrate(v3)
-        AppDatabase.MIGRATION_5_6.migrate(v3)
-        AppDatabase.MIGRATION_6_7.migrate(v3)
+        v5.close()
 
-        v3.query("SELECT kwhSource FROM charge_events WHERE id = 1").use { cursor ->
+        // Chain v5 → v6 → v7 in one runMigrationsAndValidate call; both
+        // transitions execute as auto-migrations.
+        val v7 = helper.runMigrationsAndValidate(testDbName, 7, true)
+        v7.query("SELECT kwhSource FROM charge_events WHERE id = 1").use { cursor ->
             assertTrue(cursor.moveToFirst())
             assertEquals("MEASURED", cursor.getString(0))
         }
-        v3.close()
+        v7.close()
     }
 
     @Test
