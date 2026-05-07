@@ -610,6 +610,22 @@ typically manifest as `NoSuchMethodError`, `NoSuchFieldError`, or
 
 ---
 
+## 5c. Accessibility smoke walkthrough (run before every tagged release)
+
+Sibling of §5b. Catches a11y regressions that the static-analysis lint floor (the three error-mode a11y rules in `app/build.gradle.kts`'s `lint { error += listOf(...) }` block, see DESIGN.md §11) and the Espresso `AccessibilityChecks` interceptor in `HiltTestRunner` cannot detect, principally TalkBack speech, focus order, and announce-on-state-change.
+
+Run on a physical device or API-26+ emulator with TalkBack enabled (Settings → Accessibility → TalkBack).
+
+| # | Step | Pass criterion |
+|---|------|----------------|
+| 1 | Fresh install. Enable TalkBack. Cold-launch the app. Walk through wizard pages 1 → 4 by swiping right with two fingers. | Every interactive control on every page is announced (page title, primary metric chips on page 1, distance-unit chips, currency dropdown on page 2, language dropdown if present, page-3 disclaimer text + Accept switch + Finish button on page 4). The Finish button announces its disabled state until the disclaimer switch is toggled. |
+| 2 | Dashboard → FAB ("Log charge") → ChargeEdit → save the add-event golden path with TalkBack on. | FAB announces "Log charge". Inside ChargeEdit every text field announces its label (date, odometer km, kWh, cost, currency, charge type AC / DC, location, note). Save button announces success state. |
+| 3 | Settings → walk through Drive toggle, language picker, About row, Reset preferences. | Each row reads its full label + state ("Drive backup, on" / "Drive backup, off"). The Reset confirmation dialog reads its body text and both buttons. |
+
+Optional during development: `scripts/run-instrumented.sh` exercises Espresso's `AccessibilityChecks` on every interaction but does *not* substitute for the manual walkthrough — Espresso's checks are layout-only and cannot verify screen-reader speech. Use the script to catch the *types* of violations that would otherwise surface during the manual walkthrough.
+
+---
+
 ## 6. Coverage Targets
 
 | Layer | Target |

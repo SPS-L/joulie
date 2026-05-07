@@ -83,6 +83,9 @@ android {
                 "MissingTranslation",
                 "TypographyDashes",
                 "UnusedResources",
+                "ContentDescription",
+                "LabelFor",
+                "KeyboardInaccessibleWidget",
             )
     }
 

@@ -25,7 +25,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-15 | 🟢 | Localisation (i18n) foundation | TASK-16 | ☑ |
 | TASK-16 | 🟢 | Static analysis & code style gate in CI (ktlint + Android Lint) |  | ☑ |
 | TASK-17 | 🟡 | R8/ProGuard follow-up audit: MPAndroidChart keep rule + release smoke test |  | ☑ |
-| TASK-18 | 🟡 | Accessibility (a11y) pass, TalkBack, contentDescription, contrast, touch targets |  | ☐ |
+| TASK-18 | 🟡 | Accessibility (a11y) pass, TalkBack, contentDescription, contrast, touch targets — **PR 1 lock-in** done; PR 2 cleanup + 3 follow-ups filed below (TASK-75/76/77/78) |  | ☑ |
 | TASK-19 | 🟡 | Backup failure notification channel + Android 13+ `POST_NOTIFICATIONS` handling |  | ☑ |
 | TASK-20 | 🟢 | CO₂ savings tracker (ICE baseline, Cyprus grid intensity, methodology doc) |  | ☑ |
 | TASK-21 | 🟢 | Android Baseline Profile module for cold-start performance |  | ☐ |
@@ -82,6 +82,10 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-72 | 🔴 | Manual emulator orchestration: drop `reactivecircus/android-emulator-runner@v2` from the test step entirely; keep it only for snapshot creation where the shutdown bug doesn't bite. | TASK-71 | ☑ |
 | TASK-73 | 🔴 | Put Android SDK tools on `PATH` for the manual emulator steps: GitHub-hosted `ubuntu-latest` installs the SDK at `/usr/local/lib/android/sdk` but does NOT put `platform-tools` / `emulator` on `PATH`; export both into `$GITHUB_PATH` so `adb` / `emulator` resolve by name in the manual phase. | TASK-72 | ☑ |
 | TASK-74 | 🔴 | Fresh AVD cache + cold-boot + boot-step diagnostics: bump the AVD cache key suffix to `v2` so a stale snapshot can't load against a drifted emulator binary; add `-no-snapshot` for an explicit cold boot; add per-iteration `getprop sys.boot_completed` + `init.svc.bootanim` polling so a hang is diagnosable from the emulator log. | TASK-72 | ☑ |
+| TASK-75 | 🟡 | Accessibility (a11y) cleanup of priority fragments. Walk the baselined `ContentDescription` / `LabelFor` / `KeyboardInaccessibleWidget` violations on the seven priority fragments (Wizard, ChargeEdit, Dashboard, Charts, History, Cars, Settings), fix them, drop their entries from `app/lint-baseline.xml` per the "append-only-by-omission" rule. About / ManageLocations follow in their own PR if non-trivial. After TASK-18 PR 1 lands the codebase has zero a11y-rule violations, so this is forward-only cleanup of any new debt that accrues. Touch-target violations surfaced by the nightly Espresso `AccessibilityChecks` interceptor are tracked separately, not in PR 1's static-analysis lint floor. | TASK-18 | ☐ |
+| TASK-76 | 🟡 | Contrast audit on M3 tokens. Walk every text / surface pair in the brand palette and every state of every Material component on light + dark themes. Flagged tokens: `#FB8C00` DC orange tertiary + white-on-tertiary text, target ≥ 4.5:1 (WCAG 1.4.3). | TASK-18 | ☐ |
+| TASK-77 | 🟢 | `MaterialButtonToggleGroup` state-change announcements. Custom `AccessibilityDelegate` on each `MaterialButton` so toggle changes announce as "AC selected" / "DC selected" rather than a click sound. Affects ChargeEdit charge-type toggle. | TASK-18 | ☐ |
+| TASK-78 | 🟢 | TalkBack walkthrough notes from real-device session. Run TEST_PLAN.md §5c on a physical Pixel + a physical lower-end device (e.g. Moto G), file findings as concrete fixes. | TASK-18 | ☐ |
 
 **Priority legend:** 🔴 High (architecture/data safety) · 🟡 Medium (robustness/UX) · 🟢 Low (new feature)  
 **Status legend:** ☐ open · ☑ done · ☒ closed (premise no longer holds) · ⏸ under consideration (do not start without explicit go-ahead)  
@@ -1222,7 +1226,13 @@ reflection, and the backup DTOs (`BackupData`, `CarDto`, `ChargeEventDto`,
 
 ---
 
-## 🟡 TASK-18, Accessibility (a11y) pass
+## 🟡 TASK-18 PR 1, Accessibility lint lock-in ☑ Done (2026-05-07)
+
+> **Outcome.** `app/build.gradle.kts`'s `lint { error += listOf(...) }` block now promotes 3 a11y rules from default-warning to PR-blocking error: `ContentDescription`, `LabelFor`, `KeyboardInaccessibleWidget`. Touch-target enforcement is left to the existing Espresso `AccessibilityChecks` runtime interceptor in `HiltTestRunner.onStart()` — Lint has no equivalent rule (`TouchTargetSizeCheck` is the Espresso validator name, AGP 8.7.3's Lint rejects it as `UnknownIssueId`). `app/lint-baseline.xml` was regenerated under AGP 8.7.3's Lint; no current a11y-rule violations exist (rule promotion lands as a forward-only floor), and the diff is AGP-version-bump churn (`AndroidGradlePluginVersion`, `Untranslatable`, `UseCompoundDrawables`, etc.) plus `MonochromeLauncherIcon` removed (the issue was resolved when the Brand Pack v1.0 themed-icon layer landed in TASK-57). `DESIGN.md` gained §11 (target + lint floor + delegation note for touch targets); `TEST_PLAN.md` gained §5c (TalkBack smoke walkthrough run before every tagged release, sibling of §5b). PR 2 cleanup of any future baselined fragments + three behavioural / contrast / walkthrough follow-ups are filed as TASK-75 through TASK-78. Spec: `docs/superpowers/specs/2026-05-07-task18-a11y-lint-lockin-design.md`. Plan: `docs/superpowers/plans/2026-05-07-task18-a11y-lint-lockin.md`.
+
+> **Original task body preserved below for the TASK-75 audit.**
+
+## 🟡 TASK-18 (original), Accessibility (a11y) pass
 
 > **Step 6 landed (2026-05-03).** The standalone-PR early-win from the
 > Notes-for-Agents addendum is in: `HiltTestRunner.onStart()` now calls
