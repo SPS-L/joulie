@@ -342,4 +342,6 @@
     <!-- Settings, About entry point -->
     <string name="settings_about">Σχετικά</string>
     <string name="settings_about_summary">Έκδοση, άδεια, αναγνωρίσεις</string>
+
+    <string name="a11y_toggle_selected">Επιλέχθηκε %1$s</string>
 </resources>

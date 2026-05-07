@@ -342,4 +342,6 @@
     <!-- Settings, About entry point -->
     <string name="settings_about">Hakkında</string>
     <string name="settings_about_summary">Sürüm, lisans, teşekkürler</string>
+
+    <string name="a11y_toggle_selected">%1$s seçildi</string>
 </resources>

@@ -386,4 +386,9 @@
     <!-- Settings, About entry point -->
     <string name="settings_about">About</string>
     <string name="settings_about_summary">Version, license, acknowledgments</string>
+
+    <!-- TalkBack template fired by `MaterialButtonToggleGroup` on each
+         check transition. Wired via `announceCheckedStateOnChange` in
+         `ui/common/ToggleGroupA11y.kt`. See DESIGN.md §11 + TASK-77. -->
+    <string name="a11y_toggle_selected">%1$s selected</string>
 </resources>

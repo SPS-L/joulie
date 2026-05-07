@@ -346,4 +346,6 @@
     <!-- Settings, About entry point -->
     <string name="settings_about">О приложении</string>
     <string name="settings_about_summary">Версия, лицензия, благодарности</string>
+
+    <string name="a11y_toggle_selected">Выбрано: %1$s</string>
 </resources>
