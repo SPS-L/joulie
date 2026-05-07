@@ -17,6 +17,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import org.spsl.evtracker.R
 import org.spsl.evtracker.databinding.FragmentWizardPage2Binding
+import org.spsl.evtracker.ui.common.announceCheckedStateOnChange
 
 @AndroidEntryPoint
 class WizardPage2Fragment : Fragment() {
@@ -51,6 +52,8 @@ class WizardPage2Fragment : Fragment() {
                 viewModel.selectMetric(metric)
             }
         }
+
+        binding.wizardPage2UnitGroup.announceCheckedStateOnChange(R.string.a11y_toggle_selected)
 
         binding.wizardPage2UnitGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (!isChecked) return@addOnButtonCheckedListener

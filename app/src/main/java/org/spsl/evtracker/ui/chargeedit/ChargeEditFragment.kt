@@ -29,6 +29,7 @@ import org.spsl.evtracker.databinding.FragmentChargeEditBinding
 import org.spsl.evtracker.domain.service.CostMode
 import org.spsl.evtracker.domain.service.UnitConverter
 import org.spsl.evtracker.ui.common.DateFormat
+import org.spsl.evtracker.ui.common.announceCheckedStateOnChange
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZonedDateTime
@@ -61,8 +62,10 @@ class ChargeEditFragment : Fragment() {
         binding.chargeEditCost.doAfterTextChanged { viewModel.setCostValue(it?.toString().orEmpty()) }
         binding.chargeEditTypeAc.setOnClickListener { viewModel.setChargeType(ChargeType.AC) }
         binding.chargeEditTypeDc.setOnClickListener { viewModel.setChargeType(ChargeType.DC_FAST) }
+        binding.chargeEditTypeGroup.announceCheckedStateOnChange(R.string.a11y_toggle_selected)
         binding.chargeEditCostModeTotal.setOnClickListener { viewModel.setCostMode(CostMode.TOTAL) }
         binding.chargeEditCostModePerKwh.setOnClickListener { viewModel.setCostMode(CostMode.PER_KWH) }
+        binding.chargeEditCostModeGroup.announceCheckedStateOnChange(R.string.a11y_toggle_selected)
         binding.chargeEditCostToggle.setOnClickListener { viewModel.toggleCostExpanded() }
         binding.chargeEditSocToggle.setOnClickListener { viewModel.toggleSocExpanded() }
         binding.chargeEditSocBefore.doAfterTextChanged { viewModel.setSocBefore(it?.toString().orEmpty()) }
