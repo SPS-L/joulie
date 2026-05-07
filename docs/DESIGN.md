@@ -793,3 +793,21 @@ Touch-target sizing (WCAG 2.5.5) is enforced dynamically by Espresso's `Accessib
 `app/lint-baseline.xml` is the registry of currently-known a11y debt. Existing entries are append-only-by-omission per CLAUDE.md (regenerate only when retiring a rule, never to "clean up"). New violations on the three promoted rules block PR merges.
 
 The release-gating TalkBack smoke walkthrough lives in `docs/TEST_PLAN.md` §5c.
+
+### 11.2 Token contrast audit
+
+The Joulie M3 ramps in `app/src/main/res/values/colors.xml` (light) and `app/src/main/res/values-night/colors.xml` (dark) are locked against WCAG 2.1 contrast regression by `M3ContrastAuditTest` in `app/src/test/java/org/spsl/evtracker/M3ContrastAuditTest.kt`. The test audits 31 token pairs (16 light + 15 dark) across three thresholds:
+
+| Threshold | Constant | WCAG anchor | Pairs |
+|-----------|----------|-------------|-------|
+| 4.5:1 | `TEXT` | 1.4.3 normal text | onX/X text pairs in primary, secondary, tertiary, error (text + container variants), background, surface, surface variant, inverse surface; the brand wordmark `joulie_ink_deep` on background; the launcher-tile glyph on `joulie_brand_blue`. |
+| 3.0:1 | `UI` | 1.4.11 non-text UI | `outline` on surface (used as text-field stroke and component border). |
+| 1.5:1 | `DECO` | n/a, decorative-visibility floor | `outlineVariant` on surface. M3's design intent for `outlineVariant` is intentionally subtle, used here only for Settings dividers (`fragment_settings.xml`) and chart gridlines (`ChartStyling.kt`). WCAG 1.4.11 explicitly excludes purely decorative elements; the 1.5:1 floor is a regression guard against a future re-seed rendering the divider invisible. |
+
+The test pins hex values rather than reading the XML at runtime so a re-seed (e.g. via Material Theme Builder regen) cannot drift below threshold without breaking the build. If a re-seed is intentional, both files (XML + test) must be updated in the same commit.
+
+Headroom over thresholds: lowest text pair `light tertiary text` at 6.43:1 (white on `#7F5700`), lowest UI pair `light outline on surface` at 4.40:1, tightest decorative `light outlineVariant on surface` at 1.66:1.
+
+WCAG ratio computation lives in `ContrastRatio` (test source set, `org.spsl.evtracker.testing`). Runtime code does not consume it; the audit is a pure compile-time / test-time guarantee.
+
+Out of scope: Material component states (filled-button disabled, switch off, error-state text-field outline; the ChargeEdit toggle group is partially covered by TASK-77), dynamic-color (Material You S+) variants, and screen-level screenshot contrast sweeps. The latter would need Roborazzi (TASK-35) before it could be deterministic.
