@@ -1,10 +1,87 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<issues format="6" by="lint 8.2.0" type="baseline" client="gradle" dependencies="false" name="AGP (8.2.0)" variant="all" version="8.2.0">
+<issues format="6" by="lint 8.7.3" type="baseline" client="gradle" dependencies="false" name="AGP (8.7.3)" variant="all" version="8.7.3">
 
     <issue
-        id="GradleDependency"
-        message="A newer version of com.android.application than 8.2.0 is available: 9.2.0"
-        errorLine1="agp = &quot;8.2.0&quot;"
+        id="UnusedAttribute"
+        message="Attribute `localeConfig` is only used in API level 33 and higher (current min is 26)"
+        errorLine1="        android:localeConfig=&quot;@xml/locales_config&quot;"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="15"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `targetCellWidth` is only used in API level 31 and higher (current min is 26)"
+        errorLine1="    android:targetCellWidth=&quot;2&quot;"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/xml/widget_last_charge_info.xml"
+            line="15"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `targetCellHeight` is only used in API level 31 and higher (current min is 26)"
+        errorLine1="    android:targetCellHeight=&quot;2&quot;"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/xml/widget_last_charge_info.xml"
+            line="16"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `previewLayout` is only used in API level 31 and higher (current min is 26)"
+        errorLine1="    android:previewLayout=&quot;@layout/widget_last_charge&quot;/>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/xml/widget_last_charge_info.xml"
+            line="17"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="VectorRaster"
+        message="Limit vector icons sizes to 200×200 to keep icon drawing fast; see https://developer.android.com/studio/write/vector-asset-studio#when for more"
+        errorLine1="    android:width=&quot;432dp&quot;"
+        errorLine2="                   ~~~~~">
+        <location
+            file="src/main/res/drawable/ic_splash_bolt.xml"
+            line="8"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="AndroidGradlePluginVersion"
+        message="A newer version of com.android.application than 8.7.3 is available: 9.2.1"
+        errorLine1="agp = &quot;8.7.3&quot;"
+        errorLine2="      ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="2"
+            column="7"/>
+    </issue>
+
+    <issue
+        id="AndroidGradlePluginVersion"
+        message="A newer version of com.android.application than 8.7.3 is available: 9.2.1"
+        errorLine1="agp = &quot;8.7.3&quot;"
+        errorLine2="      ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="2"
+            column="7"/>
+    </issue>
+
+    <issue
+        id="AndroidGradlePluginVersion"
+        message="A newer version of com.android.application than 8.7.3 is available: 9.2.1"
+        errorLine1="agp = &quot;8.7.3&quot;"
         errorLine2="      ~~~~~~~">
         <location
             file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
@@ -15,6 +92,50 @@
     <issue
         id="GradleDependency"
         message="A newer version of androidx.room:room-compiler than 2.6.1 is available: 2.8.4"
+        errorLine1="room = &quot;2.6.1&quot;"
+        errorLine2="       ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="6"
+            column="8"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.room:room-compiler than 2.6.1 is available: 2.8.4"
+        errorLine1="room = &quot;2.6.1&quot;"
+        errorLine2="       ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="6"
+            column="8"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.room:room-compiler than 2.6.1 is available: 2.8.4"
+        errorLine1="room = &quot;2.6.1&quot;"
+        errorLine2="       ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="6"
+            column="8"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.room:room-ktx than 2.6.1 is available: 2.8.4"
+        errorLine1="room = &quot;2.6.1&quot;"
+        errorLine2="       ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="6"
+            column="8"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.room:room-ktx than 2.6.1 is available: 2.8.4"
         errorLine1="room = &quot;2.6.1&quot;"
         errorLine2="       ~~~~~~~">
         <location
@@ -47,6 +168,50 @@
 
     <issue
         id="GradleDependency"
+        message="A newer version of androidx.room:room-runtime than 2.6.1 is available: 2.8.4"
+        errorLine1="room = &quot;2.6.1&quot;"
+        errorLine2="       ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="6"
+            column="8"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.room:room-runtime than 2.6.1 is available: 2.8.4"
+        errorLine1="room = &quot;2.6.1&quot;"
+        errorLine2="       ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="6"
+            column="8"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.room:room-testing than 2.6.1 is available: 2.8.4"
+        errorLine1="room = &quot;2.6.1&quot;"
+        errorLine2="       ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="6"
+            column="8"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.room:room-testing than 2.6.1 is available: 2.8.4"
+        errorLine1="room = &quot;2.6.1&quot;"
+        errorLine2="       ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="6"
+            column="8"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
         message="A newer version of androidx.room:room-testing than 2.6.1 is available: 2.8.4"
         errorLine1="room = &quot;2.6.1&quot;"
         errorLine2="       ~~~~~~~">
@@ -59,6 +224,50 @@
     <issue
         id="GradleDependency"
         message="A newer version of androidx.lifecycle:lifecycle-livedata-ktx than 2.7.0 is available: 2.10.0"
+        errorLine1="lifecycle = &quot;2.7.0&quot;"
+        errorLine2="            ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="7"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.lifecycle:lifecycle-livedata-ktx than 2.7.0 is available: 2.10.0"
+        errorLine1="lifecycle = &quot;2.7.0&quot;"
+        errorLine2="            ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="7"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.lifecycle:lifecycle-livedata-ktx than 2.7.0 is available: 2.10.0"
+        errorLine1="lifecycle = &quot;2.7.0&quot;"
+        errorLine2="            ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="7"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.lifecycle:lifecycle-viewmodel-ktx than 2.7.0 is available: 2.10.0"
+        errorLine1="lifecycle = &quot;2.7.0&quot;"
+        errorLine2="            ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="7"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.lifecycle:lifecycle-viewmodel-ktx than 2.7.0 is available: 2.10.0"
         errorLine1="lifecycle = &quot;2.7.0&quot;"
         errorLine2="            ~~~~~~~">
         <location
@@ -91,7 +300,73 @@
 
     <issue
         id="GradleDependency"
+        message="A newer version of androidx.navigation:navigation-fragment-ktx than 2.7.6 is available: 2.9.8"
+        errorLine1="navigation = &quot;2.7.6&quot;"
+        errorLine2="             ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="8"
+            column="14"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.navigation:navigation-fragment-ktx than 2.7.6 is available: 2.9.8"
+        errorLine1="navigation = &quot;2.7.6&quot;"
+        errorLine2="             ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="8"
+            column="14"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
         message="A newer version of androidx.navigation:navigation-testing than 2.7.6 is available: 2.9.8"
+        errorLine1="navigation = &quot;2.7.6&quot;"
+        errorLine2="             ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="8"
+            column="14"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.navigation:navigation-testing than 2.7.6 is available: 2.9.8"
+        errorLine1="navigation = &quot;2.7.6&quot;"
+        errorLine2="             ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="8"
+            column="14"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.navigation:navigation-testing than 2.7.6 is available: 2.9.8"
+        errorLine1="navigation = &quot;2.7.6&quot;"
+        errorLine2="             ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="8"
+            column="14"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.navigation:navigation-ui-ktx than 2.7.6 is available: 2.9.8"
+        errorLine1="navigation = &quot;2.7.6&quot;"
+        errorLine2="             ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="8"
+            column="14"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.navigation:navigation-ui-ktx than 2.7.6 is available: 2.9.8"
         errorLine1="navigation = &quot;2.7.6&quot;"
         errorLine2="             ~~~~~~~">
         <location
@@ -124,6 +399,50 @@
 
     <issue
         id="GradleDependency"
+        message="A newer version of androidx.work:work-runtime-ktx than 2.9.0 is available: 2.11.2"
+        errorLine1="work = &quot;2.9.0&quot;"
+        errorLine2="       ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="10"
+            column="8"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.work:work-runtime-ktx than 2.9.0 is available: 2.11.2"
+        errorLine1="work = &quot;2.9.0&quot;"
+        errorLine2="       ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="10"
+            column="8"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.work:work-testing than 2.9.0 is available: 2.11.2"
+        errorLine1="work = &quot;2.9.0&quot;"
+        errorLine2="       ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="10"
+            column="8"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.work:work-testing than 2.9.0 is available: 2.11.2"
+        errorLine1="work = &quot;2.9.0&quot;"
+        errorLine2="       ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="10"
+            column="8"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
         message="A newer version of androidx.work:work-testing than 2.9.0 is available: 2.11.2"
         errorLine1="work = &quot;2.9.0&quot;"
         errorLine2="       ~~~~~~~">
@@ -146,7 +465,73 @@
 
     <issue
         id="GradleDependency"
+        message="A newer version of androidx.hilt:hilt-navigation-fragment than 1.1.0 is available: 1.3.0"
+        errorLine1="hiltNavFragment = &quot;1.1.0&quot;"
+        errorLine2="                  ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="11"
+            column="19"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.hilt:hilt-navigation-fragment than 1.1.0 is available: 1.3.0"
+        errorLine1="hiltNavFragment = &quot;1.1.0&quot;"
+        errorLine2="                  ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="11"
+            column="19"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
         message="A newer version of androidx.hilt:hilt-compiler than 1.1.0 is available: 1.3.0"
+        errorLine1="hiltWork = &quot;1.1.0&quot;"
+        errorLine2="           ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="12"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.hilt:hilt-compiler than 1.1.0 is available: 1.3.0"
+        errorLine1="hiltWork = &quot;1.1.0&quot;"
+        errorLine2="           ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="12"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.hilt:hilt-compiler than 1.1.0 is available: 1.3.0"
+        errorLine1="hiltWork = &quot;1.1.0&quot;"
+        errorLine2="           ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="12"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.hilt:hilt-work than 1.1.0 is available: 1.3.0"
+        errorLine1="hiltWork = &quot;1.1.0&quot;"
+        errorLine2="           ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="12"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.hilt:hilt-work than 1.1.0 is available: 1.3.0"
         errorLine1="hiltWork = &quot;1.1.0&quot;"
         errorLine2="           ~~~~~~~">
         <location
@@ -179,6 +564,28 @@
 
     <issue
         id="GradleDependency"
+        message="A newer version of androidx.core:core-ktx than 1.12.0 is available: 1.18.0"
+        errorLine1="coreKtx = &quot;1.12.0&quot;"
+        errorLine2="          ~~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="13"
+            column="11"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.core:core-ktx than 1.12.0 is available: 1.18.0"
+        errorLine1="coreKtx = &quot;1.12.0&quot;"
+        errorLine2="          ~~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="13"
+            column="11"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
         message="A newer version of androidx.appcompat:appcompat than 1.6.1 is available: 1.7.1"
         errorLine1="appcompat = &quot;1.6.1&quot;"
         errorLine2="            ~~~~~~~">
@@ -186,6 +593,50 @@
             file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
             line="14"
             column="13"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.appcompat:appcompat than 1.6.1 is available: 1.7.1"
+        errorLine1="appcompat = &quot;1.6.1&quot;"
+        errorLine2="            ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="14"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.appcompat:appcompat than 1.6.1 is available: 1.7.1"
+        errorLine1="appcompat = &quot;1.6.1&quot;"
+        errorLine2="            ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="14"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of com.google.android.material:material than 1.11.0 is available: 1.13.0"
+        errorLine1="material = &quot;1.11.0&quot;"
+        errorLine2="           ~~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="15"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of com.google.android.material:material than 1.11.0 is available: 1.13.0"
+        errorLine1="material = &quot;1.11.0&quot;"
+        errorLine2="           ~~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="15"
+            column="12"/>
     </issue>
 
     <issue
@@ -212,6 +663,50 @@
 
     <issue
         id="GradleDependency"
+        message="A newer version of androidx.constraintlayout:constraintlayout than 2.1.4 is available: 2.2.1"
+        errorLine1="constraintlayout = &quot;2.1.4&quot;"
+        errorLine2="                   ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="16"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.constraintlayout:constraintlayout than 2.1.4 is available: 2.2.1"
+        errorLine1="constraintlayout = &quot;2.1.4&quot;"
+        errorLine2="                   ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="16"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.datastore:datastore-preferences than 1.0.0 is available: 1.2.1"
+        errorLine1="datastorePreferences = &quot;1.0.0&quot;"
+        errorLine2="                       ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="17"
+            column="24"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.datastore:datastore-preferences than 1.0.0 is available: 1.2.1"
+        errorLine1="datastorePreferences = &quot;1.0.0&quot;"
+        errorLine2="                       ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="17"
+            column="24"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
         message="A newer version of androidx.datastore:datastore-preferences than 1.0.0 is available: 1.2.1"
         errorLine1="datastorePreferences = &quot;1.0.0&quot;"
         errorLine2="                       ~~~~~~~">
@@ -229,6 +724,50 @@
         <location
             file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
             line="19"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of com.google.android.gms:play-services-auth than 21.2.0 is available: 21.5.1"
+        errorLine1="playServicesAuth = &quot;21.2.0&quot;"
+        errorLine2="                   ~~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="19"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of com.google.android.gms:play-services-auth than 21.2.0 is available: 21.5.1"
+        errorLine1="playServicesAuth = &quot;21.2.0&quot;"
+        errorLine2="                   ~~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="19"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.core:core-splashscreen than 1.0.1 is available: 1.2.0"
+        errorLine1="coreSplashscreen = &quot;1.0.1&quot;"
+        errorLine2="                   ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="23"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.core:core-splashscreen than 1.0.1 is available: 1.2.0"
+        errorLine1="coreSplashscreen = &quot;1.0.1&quot;"
+        errorLine2="                   ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="23"
             column="20"/>
     </issue>
 
@@ -256,6 +795,83 @@
 
     <issue
         id="GradleDependency"
+        message="A newer version of androidx.test.ext:junit than 1.1.5 is available: 1.3.0"
+        errorLine1="androidxTestExtJunit = &quot;1.1.5&quot;"
+        errorLine2="                       ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="27"
+            column="24"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.test.ext:junit than 1.1.5 is available: 1.3.0"
+        errorLine1="androidxTestExtJunit = &quot;1.1.5&quot;"
+        errorLine2="                       ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="27"
+            column="24"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.test.espresso:espresso-accessibility than 3.5.1 is available: 3.7.0"
+        errorLine1="espressoCore = &quot;3.5.1&quot;"
+        errorLine2="               ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="28"
+            column="16"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.test.espresso:espresso-accessibility than 3.5.1 is available: 3.7.0"
+        errorLine1="espressoCore = &quot;3.5.1&quot;"
+        errorLine2="               ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="28"
+            column="16"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.test.espresso:espresso-accessibility than 3.5.1 is available: 3.7.0"
+        errorLine1="espressoCore = &quot;3.5.1&quot;"
+        errorLine2="               ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="28"
+            column="16"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.test.espresso:espresso-core than 3.5.1 is available: 3.7.0"
+        errorLine1="espressoCore = &quot;3.5.1&quot;"
+        errorLine2="               ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="28"
+            column="16"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.test.espresso:espresso-core than 3.5.1 is available: 3.7.0"
+        errorLine1="espressoCore = &quot;3.5.1&quot;"
+        errorLine2="               ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="28"
+            column="16"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
         message="A newer version of androidx.test.espresso:espresso-core than 3.5.1 is available: 3.7.0"
         errorLine1="espressoCore = &quot;3.5.1&quot;"
         errorLine2="               ~~~~~~~">
@@ -277,13 +893,101 @@
     </issue>
 
     <issue
+        id="GradleDependency"
+        message="A newer version of androidx.fragment:fragment-testing than 1.6.2 is available: 1.8.9"
+        errorLine1="fragmentTesting = &quot;1.6.2&quot;"
+        errorLine2="                  ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="29"
+            column="19"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.fragment:fragment-testing than 1.6.2 is available: 1.8.9"
+        errorLine1="fragmentTesting = &quot;1.6.2&quot;"
+        errorLine2="                  ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="29"
+            column="19"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.fragment:fragment-testing-manifest than 1.6.2 is available: 1.8.9"
+        errorLine1="fragmentTesting = &quot;1.6.2&quot;"
+        errorLine2="                  ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="29"
+            column="19"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.fragment:fragment-testing-manifest than 1.6.2 is available: 1.8.9"
+        errorLine1="fragmentTesting = &quot;1.6.2&quot;"
+        errorLine2="                  ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="29"
+            column="19"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.fragment:fragment-testing-manifest than 1.6.2 is available: 1.8.9"
+        errorLine1="fragmentTesting = &quot;1.6.2&quot;"
+        errorLine2="                  ~~~~~~~">
+        <location
+            file="$HOME/OneDriveCUT/Code/EV-android-app/gradle/libs.versions.toml"
+            line="29"
+            column="19"/>
+    </issue>
+
+    <issue
+        id="Untranslatable"
+        message="The resource string &quot;wizard_welcome_title&quot; has been marked as translatable=&quot;false&quot; elsewhere (usually in the `values` folder), but is translated to &quot;el&quot; (Greek) here"
+        errorLine1="    &lt;string name=&quot;wizard_welcome_title&quot;>⚡ Joulie&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-el/strings.xml"
+            line="8"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="Untranslatable"
+        message="The resource string &quot;wizard_welcome_title&quot; has been marked as translatable=&quot;false&quot; elsewhere (usually in the `values` folder), but is translated to &quot;ru&quot; (Russian) here"
+        errorLine1="    &lt;string name=&quot;wizard_welcome_title&quot;>⚡ Joulie&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-ru/strings.xml"
+            line="8"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="Untranslatable"
+        message="The resource string &quot;wizard_welcome_title&quot; has been marked as translatable=&quot;false&quot; elsewhere (usually in the `values` folder), but is translated to &quot;tr&quot; (Turkish) here"
+        errorLine1="    &lt;string name=&quot;wizard_welcome_title&quot;>⚡ Joulie&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-tr/strings.xml"
+            line="8"
+            column="13"/>
+    </issue>
+
+    <issue
         id="PluralsCandidate"
         message="Formatting %d followed by words (&quot;saved&quot;): This should probably be a plural rather than a string"
         errorLine1="    &lt;string name=&quot;settings_manage_locations_summary&quot;>%d saved&lt;/string>"
         errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="99"
+            line="143"
             column="5"/>
     </issue>
 
@@ -294,7 +998,7 @@
         errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="120"
+            line="172"
             column="5"/>
     </issue>
 
@@ -319,7 +1023,7 @@
         errorLine2="                             ~~~~~">
         <location
             file="src/main/AndroidManifest.xml"
-            line="10"
+            line="12"
             column="30"/>
     </issue>
 
@@ -330,8 +1034,19 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/org/spsl/evtracker/ui/history/HistoryAdapter.kt"
-            line="23"
+            line="28"
             column="13"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is never &lt; 26"
+        errorLine1="            if (Build.VERSION.SDK_INT &lt; Build.VERSION_CODES.O) return"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/spsl/evtracker/data/notification/AndroidBackupNotifier.kt"
+            line="95"
+            column="17"/>
     </issue>
 
     <issue
@@ -339,6 +1054,17 @@
         message="This folder configuration (`v26`) is unnecessary; `minSdkVersion` is 26. Merge all the resources in this folder into `mipmap-anydpi`.">
         <location
             file="src/main/res/mipmap-anydpi-v26"/>
+    </issue>
+
+    <issue
+        id="UseCompoundDrawables"
+        message="This tag and its children can be replaced by one `&lt;TextView/>` and a compound drawable"
+        errorLine1="        &lt;LinearLayout"
+        errorLine2="         ~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/widget_last_charge.xml"
+            line="32"
+            column="10"/>
     </issue>
 
     <issue
@@ -350,6 +1076,28 @@
             file="src/main/res/drawable/ic_settings_24.xml"
             line="6"
             column="27"/>
+    </issue>
+
+    <issue
+        id="DisableBaselineAlignment"
+        message="Set `android:baselineAligned=&quot;false&quot;` on this element for better performance"
+        errorLine1="                &lt;LinearLayout"
+        errorLine2="                 ~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/fragment_charge_edit.xml"
+            line="195"
+            column="18"/>
+    </issue>
+
+    <issue
+        id="DisableBaselineAlignment"
+        message="Set `android:baselineAligned=&quot;false&quot;` on this element for better performance"
+        errorLine1="                    &lt;LinearLayout"
+        errorLine2="                     ~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/fragment_dashboard.xml"
+            line="295"
+            column="22"/>
     </issue>
 
     <issue
@@ -377,33 +1125,55 @@
     <issue
         id="UnusedResources"
         message="The resource `R.color.chart_1` appears to be unused"
-        errorLine1="    &lt;color name=&quot;chart_1&quot;>#1565C0&lt;/color>"
+        errorLine1="    &lt;color name=&quot;chart_1&quot;>#0D47FF&lt;/color>"
         errorLine2="           ~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/colors.xml"
-            line="44"
+            line="61"
             column="12"/>
     </issue>
 
     <issue
         id="UnusedResources"
         message="The resource `R.color.chart_2` appears to be unused"
-        errorLine1="    &lt;color name=&quot;chart_2&quot;>#00796B&lt;/color>"
+        errorLine1="    &lt;color name=&quot;chart_2&quot;>#00C2D1&lt;/color>"
         errorLine2="           ~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/colors.xml"
-            line="45"
+            line="62"
             column="12"/>
     </issue>
 
     <issue
         id="UnusedResources"
         message="The resource `R.color.chart_3` appears to be unused"
-        errorLine1="    &lt;color name=&quot;chart_3&quot;>#F57F17&lt;/color>"
+        errorLine1="    &lt;color name=&quot;chart_3&quot;>#FFD54D&lt;/color>"
         errorLine2="           ~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/colors.xml"
-            line="46"
+            line="63"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.chart_4` appears to be unused"
+        errorLine1="    &lt;color name=&quot;chart_4&quot;>#A6F43C&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="64"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.chart_5` appears to be unused"
+        errorLine1="    &lt;color name=&quot;chart_5&quot;>#6A1B9A&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/colors.xml"
+            line="65"
             column="12"/>
     </issue>
 
@@ -420,42 +1190,9 @@
 
     <issue
         id="UnusedResources"
-        message="The resource `R.color.chart_4` appears to be unused"
-        errorLine1="    &lt;color name=&quot;chart_4&quot;>#AD1457&lt;/color>"
-        errorLine2="           ~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/colors.xml"
-            line="47"
-            column="12"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
-        message="The resource `R.color.chart_5` appears to be unused"
-        errorLine1="    &lt;color name=&quot;chart_5&quot;>#6A1B9A&lt;/color>"
-        errorLine2="           ~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/colors.xml"
-            line="48"
-            column="12"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
         message="The resource `R.string.wizard_metric_km_kwh` appears to be unused"
-        errorLine1="    &lt;string name=&quot;wizard_metric_km_kwh&quot;>km / kWh&lt;/string>"
+        errorLine1="    &lt;string name=&quot;wizard_metric_km_kwh&quot; translatable=&quot;false&quot;>km / kWh&lt;/string>"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="9"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
-        message="The resource `R.string.wizard_metric_kwh_100km` appears to be unused"
-        errorLine1="    &lt;string name=&quot;wizard_metric_kwh_100km&quot;>kWh / 100 km&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
             line="10"
@@ -464,12 +1201,23 @@
 
     <issue
         id="UnusedResources"
-        message="The resource `R.string.wizard_metric_mi_kwh` appears to be unused"
-        errorLine1="    &lt;string name=&quot;wizard_metric_mi_kwh&quot;>mi / kWh&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        message="The resource `R.string.wizard_metric_kwh_100km` appears to be unused"
+        errorLine1="    &lt;string name=&quot;wizard_metric_kwh_100km&quot; translatable=&quot;false&quot;>kWh / 100 km&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
             line="11"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.wizard_metric_mi_kwh` appears to be unused"
+        errorLine1="    &lt;string name=&quot;wizard_metric_mi_kwh&quot; translatable=&quot;false&quot;>mi / kWh&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="12"
             column="13"/>
     </issue>
 
@@ -480,7 +1228,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="15"
+            line="16"
             column="13"/>
     </issue>
 
@@ -491,7 +1239,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="17"
+            line="18"
             column="13"/>
     </issue>
 
@@ -502,7 +1250,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="18"
+            line="19"
             column="13"/>
     </issue>
 
@@ -513,7 +1261,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="19"
+            line="20"
             column="13"/>
     </issue>
 
@@ -524,7 +1272,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="20"
+            line="21"
             column="13"/>
     </issue>
 
@@ -535,7 +1283,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="23"
+            line="24"
             column="13"/>
     </issue>
 
@@ -546,7 +1294,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="24"
+            line="25"
             column="13"/>
     </issue>
 
@@ -557,7 +1305,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="25"
+            line="26"
             column="13"/>
     </issue>
 
@@ -568,18 +1316,18 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="26"
+            line="27"
             column="13"/>
     </issue>
 
     <issue
         id="UnusedResources"
         message="The resource `R.string.cost_hint_zero` appears to be unused"
-        errorLine1="    &lt;string name=&quot;cost_hint_zero&quot;>Leave 0 or blank to skip \u2014 won\u2019t be counted in statistics&lt;/string>"
+        errorLine1="    &lt;string name=&quot;cost_hint_zero&quot;>Leave 0 or blank to skip, won\u2019t be counted in statistics&lt;/string>"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="29"
+            line="30"
             column="13"/>
     </issue>
 
@@ -590,7 +1338,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="30"
+            line="31"
             column="13"/>
     </issue>
 
@@ -601,7 +1349,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="31"
+            line="32"
             column="13"/>
     </issue>
 
@@ -612,7 +1360,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="34"
+            line="35"
             column="13"/>
     </issue>
 
@@ -623,7 +1371,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="35"
+            line="36"
             column="13"/>
     </issue>
 
@@ -634,7 +1382,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="36"
+            line="37"
             column="13"/>
     </issue>
 
@@ -645,7 +1393,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="37"
+            line="38"
             column="13"/>
     </issue>
 
@@ -656,7 +1404,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="38"
+            line="39"
             column="13"/>
     </issue>
 
@@ -667,7 +1415,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="39"
+            line="40"
             column="13"/>
     </issue>
 
@@ -678,7 +1426,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="40"
+            line="41"
             column="13"/>
     </issue>
 
@@ -689,7 +1437,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="41"
+            line="42"
             column="13"/>
     </issue>
 
@@ -700,7 +1448,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="42"
+            line="43"
             column="13"/>
     </issue>
 
@@ -711,7 +1459,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="45"
+            line="46"
             column="13"/>
     </issue>
 
@@ -722,7 +1470,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="53"
+            line="54"
             column="13"/>
     </issue>
 
@@ -733,7 +1481,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="54"
+            line="55"
             column="13"/>
     </issue>
 
@@ -744,7 +1492,7 @@
         errorLine2="            ~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="57"
+            line="58"
             column="13"/>
     </issue>
 
@@ -755,7 +1503,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="58"
+            line="59"
             column="13"/>
     </issue>
 
@@ -766,7 +1514,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="61"
+            line="62"
             column="13"/>
     </issue>
 
@@ -777,7 +1525,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="62"
+            line="63"
             column="13"/>
     </issue>
 
@@ -788,7 +1536,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="63"
+            line="64"
             column="13"/>
     </issue>
 
@@ -799,7 +1547,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="64"
+            line="65"
             column="13"/>
     </issue>
 
@@ -810,7 +1558,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="65"
+            line="66"
             column="13"/>
     </issue>
 
@@ -821,18 +1569,18 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="70"
+            line="71"
             column="13"/>
     </issue>
 
     <issue
         id="UnusedResources"
         message="The resource `R.string.settings_drive_subtitle_on` appears to be unused"
-        errorLine1="    &lt;string name=&quot;settings_drive_subtitle_on&quot;>On — auto-backup on every change&lt;/string>"
+        errorLine1="    &lt;string name=&quot;settings_drive_subtitle_on&quot;>On, auto-backup on every change&lt;/string>"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="71"
+            line="72"
             column="13"/>
     </issue>
 
@@ -843,7 +1591,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="118"
+            line="170"
             column="13"/>
     </issue>
 
@@ -854,7 +1602,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="135"
+            line="188"
             column="13"/>
     </issue>
 
@@ -865,7 +1613,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="136"
+            line="189"
             column="13"/>
     </issue>
 
@@ -876,95 +1624,95 @@
         errorLine2="            ~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="137"
+            line="190"
             column="13"/>
     </issue>
 
     <issue
         id="UnusedResources"
         message="The resource `R.string.efficiency_not_available` appears to be unused"
-        errorLine1="    &lt;string name=&quot;efficiency_not_available&quot;>\u2014&lt;/string>"
+        errorLine1="    &lt;string name=&quot;efficiency_not_available&quot; translatable=&quot;false&quot;>\u2014&lt;/string>"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="138"
+            line="191"
             column="13"/>
     </issue>
 
     <issue
         id="UnusedResources"
         message="The resource `R.string.placeholder_dashboard` appears to be unused"
-        errorLine1="    &lt;string name=&quot;placeholder_dashboard&quot;>Dashboard \u2014 coming soon&lt;/string>"
+        errorLine1="    &lt;string name=&quot;placeholder_dashboard&quot; translatable=&quot;false&quot;>Dashboard, coming soon&lt;/string>"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="150"
+            line="208"
             column="13"/>
     </issue>
 
     <issue
         id="UnusedResources"
         message="The resource `R.string.placeholder_charge_edit` appears to be unused"
-        errorLine1="    &lt;string name=&quot;placeholder_charge_edit&quot;>Charge Edit \u2014 coming soon&lt;/string>"
+        errorLine1="    &lt;string name=&quot;placeholder_charge_edit&quot; translatable=&quot;false&quot;>Charge Edit, coming soon&lt;/string>"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="151"
+            line="209"
             column="13"/>
     </issue>
 
     <issue
         id="UnusedResources"
         message="The resource `R.string.placeholder_cars` appears to be unused"
-        errorLine1="    &lt;string name=&quot;placeholder_cars&quot;>Cars \u2014 coming soon&lt;/string>"
+        errorLine1="    &lt;string name=&quot;placeholder_cars&quot; translatable=&quot;false&quot;>Cars, coming soon&lt;/string>"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="152"
+            line="210"
             column="13"/>
     </issue>
 
     <issue
         id="UnusedResources"
         message="The resource `R.string.placeholder_settings` appears to be unused"
-        errorLine1="    &lt;string name=&quot;placeholder_settings&quot;>Settings \u2014 coming soon&lt;/string>"
+        errorLine1="    &lt;string name=&quot;placeholder_settings&quot; translatable=&quot;false&quot;>Settings, coming soon&lt;/string>"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="153"
+            line="211"
             column="13"/>
     </issue>
 
     <issue
         id="UnusedResources"
         message="The resource `R.string.placeholder_charts` appears to be unused"
-        errorLine1="    &lt;string name=&quot;placeholder_charts&quot;>Charts \u2014 coming soon&lt;/string>"
+        errorLine1="    &lt;string name=&quot;placeholder_charts&quot; translatable=&quot;false&quot;>Charts, coming soon&lt;/string>"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="154"
+            line="212"
             column="13"/>
     </issue>
 
     <issue
         id="UnusedResources"
         message="The resource `R.string.placeholder_history` appears to be unused"
-        errorLine1="    &lt;string name=&quot;placeholder_history&quot;>History \u2014 coming soon&lt;/string>"
+        errorLine1="    &lt;string name=&quot;placeholder_history&quot; translatable=&quot;false&quot;>History, coming soon&lt;/string>"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="155"
+            line="213"
             column="13"/>
     </issue>
 
     <issue
         id="UnusedResources"
         message="The resource `R.string.placeholder_manage_locations` appears to be unused"
-        errorLine1="    &lt;string name=&quot;placeholder_manage_locations&quot;>Manage Locations \u2014 coming soon&lt;/string>"
+        errorLine1="    &lt;string name=&quot;placeholder_manage_locations&quot; translatable=&quot;false&quot;>Manage Locations, coming soon&lt;/string>"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="156"
+            line="214"
             column="13"/>
     </issue>
 
@@ -975,7 +1723,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="187"
+            line="258"
             column="13"/>
     </issue>
 
@@ -986,7 +1734,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="188"
+            line="259"
             column="13"/>
     </issue>
 
@@ -997,7 +1745,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="200"
+            line="276"
             column="13"/>
     </issue>
 
@@ -1008,30 +1756,22 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="242"
+            line="331"
             column="13"/>
     </issue>
 
     <issue
-        id="MonochromeLauncherIcon"
-        message="The application adaptive icon is missing a monochrome tag"
-        errorLine1="&lt;adaptive-icon xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;>"
-        errorLine2="^">
+        id="IconLocation"
+        message="Found bitmap drawable `res/drawable/about_hero.png` in densityless folder">
         <location
-            file="src/main/res/mipmap-anydpi-v26/ic_launcher.xml"
-            line="2"
-            column="1"/>
+            file="src/main/res/drawable/about_hero.png"/>
     </issue>
 
     <issue
-        id="MonochromeLauncherIcon"
-        message="The application adaptive roundIcon is missing a monochrome tag"
-        errorLine1="&lt;adaptive-icon xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;>"
-        errorLine2="^">
+        id="IconLocation"
+        message="Found bitmap drawable `res/drawable/wizard_hero.png` in densityless folder">
         <location
-            file="src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml"
-            line="2"
-            column="1"/>
+            file="src/main/res/drawable/wizard_hero.png"/>
     </issue>
 
     <issue
@@ -1041,8 +1781,30 @@
         errorLine2="      ~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/org/spsl/evtracker/ui/charts/ChartsMarkerView.kt"
-            line="19"
+            line="23"
             column="7"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="Number formatting does not take into account locale settings. Consider using `String.format` instead."
+        errorLine1="            binding.carDialogYear.setText(it.year?.toString().orEmpty())"
+        errorLine2="                                          ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/spsl/evtracker/ui/cars/CarEditDialog.kt"
+            line="36"
+            column="43"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="Number formatting does not take into account locale settings. Consider using `String.format` instead."
+        errorLine1="            binding.carDialogBattery.setText(it.batteryKwh?.toString().orEmpty())"
+        errorLine2="                                             ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/spsl/evtracker/ui/cars/CarEditDialog.kt"
+            line="37"
+            column="46"/>
     </issue>
 
     <issue
@@ -1052,7 +1814,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/org/spsl/evtracker/ui/chargeedit/ChargeEditFragment.kt"
-            line="86"
+            line="96"
             column="13"/>
     </issue>
 
@@ -1063,7 +1825,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/org/spsl/evtracker/ui/chargeedit/ChargeEditFragment.kt"
-            line="86"
+            line="96"
             column="13"/>
     </issue>
 
@@ -1074,7 +1836,7 @@
         errorLine2="                                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/org/spsl/evtracker/ui/dashboard/DashboardFragment.kt"
-            line="228"
+            line="234"
             column="47"/>
     </issue>
 
@@ -1085,7 +1847,7 @@
         errorLine2="                                                                                            ~~~~~">
         <location
             file="src/main/java/org/spsl/evtracker/ui/dashboard/DashboardFragment.kt"
-            line="228"
+            line="234"
             column="93"/>
     </issue>
 
@@ -1096,7 +1858,7 @@
         errorLine2="                                              ~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/org/spsl/evtracker/ui/history/HistoryAdapter.kt"
-            line="54"
+            line="64"
             column="47"/>
     </issue>
 

@@ -22,8 +22,8 @@ android {
         applicationId = "org.spsl.evtracker"
         minSdk = 26
         targetSdk = 35
-        versionCode = 45
-        versionName = "1.9.29"
+        versionCode = 46
+        versionName = "1.9.30"
         testInstrumentationRunner = "org.spsl.evtracker.HiltTestRunner"
     }
 
@@ -83,6 +83,9 @@ android {
                 "MissingTranslation",
                 "TypographyDashes",
                 "UnusedResources",
+                "ContentDescription",
+                "LabelFor",
+                "KeyboardInaccessibleWidget",
             )
     }
 

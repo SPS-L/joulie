@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Promote 4 core Android Lint a11y rules (`ContentDescription`, `TouchTargetSizeCheck`, `LabelFor`, `KeyboardInaccessibleWidget`) from default-warning to error so future drift cannot land silently; absorb current violations into the baseline; document the WCAG 2.1 AA target in DESIGN.md and the release-gating TalkBack smoke walkthrough in TEST_PLAN.md.
+**Goal:** Promote 3 core Android Lint a11y rules (`ContentDescription`, `LabelFor`, `KeyboardInaccessibleWidget`) from default-warning to error so future drift cannot land silently; absorb current violations into the baseline; document the WCAG 2.1 AA target in DESIGN.md and the release-gating TalkBack smoke walkthrough in TEST_PLAN.md. Touch-target enforcement (originally scoped as a fourth rule) is left to the existing Espresso `AccessibilityChecks` runtime interceptor in `HiltTestRunner.onStart()` — Android Lint has no equivalent static-analysis rule (`TouchTargetSizeCheck` is the validator name in the Espresso accessibility-test framework, not a Lint issue ID; AGP 8.7.3 rejects it as `UnknownIssueId`).
 
 **Architecture:** Build-config and docs change. No new code, no new modules, no schema bump, no runtime behaviour change. The lock-in mechanism is the `lint { error += listOf(...) }` block in `app/build.gradle.kts`; the rest of the work is content (`lint-baseline.xml` regenerated mechanically, two markdown sections appended, BACKLOG status flip).
 
@@ -16,7 +16,7 @@
 
 | File | Change |
 |------|--------|
-| `app/build.gradle.kts` | Add 4 IDs to the existing `lint { error += listOf(...) }` block; bump `versionCode` 45 → 46 and `versionName` 1.9.29 → 1.9.30. |
+| `app/build.gradle.kts` | Add 3 IDs (`ContentDescription`, `LabelFor`, `KeyboardInaccessibleWidget`) to the existing `lint { error += listOf(...) }` block; bump `versionCode` 45 → 46 and `versionName` 1.9.29 → 1.9.30. |
 | `app/lint-baseline.xml` | Regenerated in-place by `:app:updateLintBaseline`; absorbs whatever violates today. |
 | `docs/DESIGN.md` | Append `## 11. Accessibility (a11y)` (Target + Lint floor subsections). |
 | `docs/TEST_PLAN.md` | Insert `## 5c. Accessibility smoke walkthrough` between existing §5b and §6. |
@@ -87,7 +87,6 @@ Replace with:
                 "TypographyDashes",
                 "UnusedResources",
                 "ContentDescription",
-                "TouchTargetSizeCheck",
                 "LabelFor",
                 "KeyboardInaccessibleWidget",
             )
@@ -102,7 +101,7 @@ Expected: `BUILD SUCCESSFUL`. The file `app/lint-baseline.xml` is rewritten in p
 - [ ] **Step 3: Capture the diff shape for the PR description**
 
 Run: `git diff app/lint-baseline.xml | grep -E '^\+ +<issue id="' | sort -u | head`
-Expected: lines for newly-baselined issues. The 4 promoted rule IDs (`ContentDescription`, `TouchTargetSizeCheck`, `LabelFor`, `KeyboardInaccessibleWidget`) should appear if there are any current violations.
+Expected: lines for newly-baselined issues. The 3 promoted rule IDs (`ContentDescription`, `LabelFor`, `KeyboardInaccessibleWidget`) should appear if there are any current violations. Empirically (per the spec's verification dry-run on `4ffa1e6`), the codebase has *no* current violations of these three rules — the rule promotion lands as a forward-only floor with the baseline gaining only AGP-version-bump entries (`AndroidGradlePluginVersion`, `Untranslatable`, etc.) that the older Lint did not check.
 
 Run: `git diff app/lint-baseline.xml | grep -E '^- +<issue id="' | sort -u`
 Expected: lines for any *removed* legacy entries. Each removed ID must be enumerated in the eventual commit-or-PR description with a one-sentence note on why it stopped firing.
@@ -134,11 +133,12 @@ Append this exact content to the end of `docs/DESIGN.md` (preceded by one blank 
 | Rule | What it catches |
 |------|-----------------|
 | `ContentDescription` | `ImageView` / `ImageButton` / icon-only widgets without `android:contentDescription`. Decorative views must explicitly opt out via `android:contentDescription="@null"` or `android:importantForAccessibility="no"`. |
-| `TouchTargetSizeCheck` | Clickable / focusable views smaller than 48 × 48dp. WCAG 2.5.5. |
 | `LabelFor` | `EditText` / `TextInputEditText` whose label lives in a separate `TextView` that lacks `android:labelFor`. TalkBack drops the label otherwise. |
 | `KeyboardInaccessibleWidget` | View with an `OnClickListener` but `android:focusable="false"`, hidden from D-pad / keyboard / switch-access users. |
 
-`app/lint-baseline.xml` is the registry of currently-known a11y debt; existing entries are append-only-by-omission per CLAUDE.md (regenerate only when retiring a rule, never to "clean up"). New violations on the four promoted rules block PR merges.
+Touch-target sizing (WCAG 2.5.5) is enforced dynamically by Espresso's `AccessibilityChecks.enable().setRunChecksFromRootView(true)` interceptor wired in `HiltTestRunner.onStart()`: every Espresso `ViewAction` in every nightly instrumented test runs the `TouchTargetSizeCheck` validator against every view in the scanned root. Static-analysis lock-in is not available — `TouchTargetSizeCheck` is an Espresso `AccessibilityValidator` ID, not an Android Lint issue ID, and AGP's Lint rejects it as `UnknownIssueId`.
+
+`app/lint-baseline.xml` is the registry of currently-known a11y debt; existing entries are append-only-by-omission per CLAUDE.md (regenerate only when retiring a rule, never to "clean up"). New violations on the three promoted rules block PR merges.
 
 The release-gating TalkBack smoke walkthrough lives in `docs/TEST_PLAN.md` §5c.
 ```
@@ -211,7 +211,7 @@ Replace with:
 ```
 ## 🟡 TASK-18 PR 1, Accessibility lint lock-in ☑ Done (2026-05-07)
 
-> **Outcome.** `app/build.gradle.kts`'s `lint { error += listOf(...) }` block now promotes 4 a11y rules from default-warning to error: `ContentDescription`, `TouchTargetSizeCheck`, `LabelFor`, `KeyboardInaccessibleWidget`. `app/lint-baseline.xml` was regenerated to absorb current violations; future drift on these rules blocks PR merges. `DESIGN.md` gained §11 (target + lint floor); `TEST_PLAN.md` gained §5c (TalkBack smoke walkthrough). PR 2 cleanup of baselined fragments + the three behavioural / contrast / walkthrough follow-ups are filed as separate rows below. Spec: `docs/superpowers/specs/2026-05-07-task18-a11y-lint-lockin-design.md`. Plan: `docs/superpowers/plans/2026-05-07-task18-a11y-lint-lockin.md`.
+> **Outcome.** `app/build.gradle.kts`'s `lint { error += listOf(...) }` block now promotes 3 a11y rules from default-warning to error: `ContentDescription`, `LabelFor`, `KeyboardInaccessibleWidget`. `app/lint-baseline.xml` was regenerated under AGP 8.7.3's Lint to absorb new entries; future drift on these rules blocks PR merges. Touch-target enforcement is left to the existing Espresso `AccessibilityChecks` runtime interceptor in `HiltTestRunner.onStart()` — Lint has no equivalent rule. `DESIGN.md` gained §11 (target + lint floor); `TEST_PLAN.md` gained §5c (TalkBack smoke walkthrough). PR 2 cleanup of baselined fragments + the three behavioural / contrast / walkthrough follow-ups are filed as separate rows below. Spec: `docs/superpowers/specs/2026-05-07-task18-a11y-lint-lockin-design.md`. Plan: `docs/superpowers/plans/2026-05-07-task18-a11y-lint-lockin.md`.
 
 > **Original task body preserved below for the PR 2 audit.**
 
@@ -230,7 +230,7 @@ Find the row for TASK-74 (last row in the cohort, line ~69):
 Insert these 4 new rows immediately after it:
 
 ```
-| TASK-75 | 🟡 | Accessibility (a11y) cleanup of priority fragments. Walk the baselined `ContentDescription` / `TouchTargetSizeCheck` / `LabelFor` / `KeyboardInaccessibleWidget` violations on the seven priority fragments (Wizard, ChargeEdit, Dashboard, Charts, History, Cars, Settings), fix them, drop their entries from `app/lint-baseline.xml` per the "append-only-by-omission" rule. About / ManageLocations follow in their own PR if non-trivial. Concrete violation count is known after TASK-18 PR 1 lands. | TASK-18 | ☐ |
+| TASK-75 | 🟡 | Accessibility (a11y) cleanup of priority fragments. Walk the baselined `ContentDescription` / `LabelFor` / `KeyboardInaccessibleWidget` violations on the seven priority fragments (Wizard, ChargeEdit, Dashboard, Charts, History, Cars, Settings), fix them, drop their entries from `app/lint-baseline.xml` per the "append-only-by-omission" rule. About / ManageLocations follow in their own PR if non-trivial. Concrete violation count is known after TASK-18 PR 1 lands. Touch-target violations surfaced by the nightly Espresso `AccessibilityChecks` interceptor are tracked separately, not in PR 1's static-analysis lint floor. | TASK-18 | ☐ |
 | TASK-76 | 🟡 | Contrast audit on M3 tokens. Walk every text / surface pair in the brand palette and every state of every Material component on light + dark themes. Flagged tokens: `#FB8C00` DC orange tertiary + white-on-tertiary text, target ≥ 4.5:1 (WCAG 1.4.3). | TASK-18 | ☐ |
 | TASK-77 | 🟢 | `MaterialButtonToggleGroup` state-change announcements. Custom `AccessibilityDelegate` on each `MaterialButton` so toggle changes announce as "AC selected" / "DC selected" rather than a click sound. Affects ChargeEdit charge-type toggle. | TASK-18 | ☐ |
 | TASK-78 | 🟢 | TalkBack walkthrough notes from real-device session. Run TEST_PLAN.md §5c on a physical Pixel + a physical lower-end device (e.g. Moto G), file findings as concrete fixes. | TASK-18 | ☐ |
@@ -260,12 +260,15 @@ Promotes 4 Android Lint a11y rules from default-warning to PR-blocking
 error so future drift cannot land silently:
 
   - ContentDescription (icon-only widgets without contentDescription)
-  - TouchTargetSizeCheck (clickable / focusable views < 48dp)
   - LabelFor (EditText whose label TextView lacks labelFor)
   - KeyboardInaccessibleWidget (clickable view with focusable=false)
 
+Touch-target enforcement is delegated to Espresso's runtime check
+already wired in HiltTestRunner; Android Lint has no equivalent
+static-analysis rule.
+
 `app/lint-baseline.xml` regenerated via `:app:updateLintBaseline` to
-absorb current violations of the 4 new rules. Existing legacy entries
+absorb current violations of the 3 new rules. Existing legacy entries
 (`HardcodedText`, `UnusedResources`, etc.) are preserved verbatim
 where they still violate; any drops correspond to issues fixed since
 the baseline was last regenerated and are listed above.
@@ -291,7 +294,7 @@ The commit message should be amended *before* committing if Task 2 Step 3 surfac
 
 ## Task 7: Fault-injection acceptance verification
 
-This task proves each of the 4 new rules is wired up to error severity. Each fault-injection is a temporary edit that should produce a non-zero `:app:lint` exit. After verification, every change is reverted before the release commit.
+This task proves each of the 3 new rules is wired up to error severity. Each fault-injection is a temporary edit that should produce a non-zero `:app:lint` exit. After verification, every change is reverted before the release commit.
 
 **Files (all reverted at end of task):**
 - Touch: `app/src/main/res/layout/fragment_dashboard.xml:399` (FAB contentDescription)
@@ -327,24 +330,7 @@ Restore: `git checkout app/src/main/res/layout/fragment_dashboard.xml`.
 
 Run: `./gradlew :app:lint --no-daemon`. Expected: `BUILD SUCCESSFUL`.
 
-- [ ] **Step 3: TouchTargetSizeCheck fault**
-
-Edit `app/src/main/res/layout/item_car.xml`. The ImageButton at lines 36-43 currently has `wrap_content` for both width and height. Replace those with:
-```xml
-        android:layout_width="20dp"
-        android:layout_height="20dp"
-        android:minWidth="20dp"
-        android:minHeight="20dp"
-```
-
-Run: `./gradlew :app:lint --no-daemon` with sandbox disabled.
-Expected: `BUILD FAILED` with `TouchTargetSizeCheck` error firing on `item_car.xml`.
-
-Restore: `git checkout app/src/main/res/layout/item_car.xml`.
-
-Run: `./gradlew :app:lint --no-daemon`. Expected: `BUILD SUCCESSFUL`.
-
-- [ ] **Step 4: LabelFor fault**
+- [ ] **Step 3: LabelFor fault**
 
 Edit `app/src/main/res/layout/dialog_edit_car.xml`. Inside the existing root layout, append this snippet (e.g. at the bottom of the LinearLayout):
 ```xml
@@ -367,7 +353,7 @@ Restore: `git checkout app/src/main/res/layout/dialog_edit_car.xml`.
 
 Run: `./gradlew :app:lint --no-daemon`. Expected: `BUILD SUCCESSFUL`.
 
-- [ ] **Step 5: Confirm working tree is clean before continuing**
+- [ ] **Step 4: Confirm working tree is clean before continuing**
 
 Run: `git status --short`
 Expected: no `M ` lines on layouts. Only the lock-in changes from Task 6 (already committed) plus possibly `?? ` sandbox-bound entries.
@@ -406,8 +392,9 @@ chore(release): v1.9.30
 Patch bump (z): TASK-18 PR 1 lock-in. Promotes 4 a11y lint rules to
 error + regenerates baseline + DESIGN.md §11 + TEST_PLAN.md §5c.
 No app code touched; no schema or backup-version delta. Future a11y
-drift on `ContentDescription`, `TouchTargetSizeCheck`, `LabelFor`, or
-`KeyboardInaccessibleWidget` now blocks PR merges.
+drift on `ContentDescription`, `LabelFor`, or
+`KeyboardInaccessibleWidget` now blocks PR merges. Touch-target
+enforcement is left to the existing Espresso runtime check.
 EOF
 )"
 ```
@@ -486,7 +473,7 @@ Expected: `v1.9.30 | joulie-v1.9.30.apk <size>B` where `<size>` is in the ~4.3M 
 - TEST_PLAN.md §5c ✓ (Task 4)
 - BACKLOG TASK-18 flip ✓ (Task 5)
 - 4 forward-work follow-ups filed ✓ (Task 5 Step 3 → TASK-75/76/77/78)
-- 4 fault-injection acceptance proofs ✓ (Task 7)
+- 3 fault-injection acceptance proofs ✓ (Task 7); touch-target coverage delegated to Espresso `AccessibilityChecks`.
 - Release per repo workflow ✓ (Tasks 8-10)
 
 **Type / signature consistency:** No new types or methods introduced.

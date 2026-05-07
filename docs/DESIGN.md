@@ -775,3 +775,21 @@ Two in-app entry points let users switch language without touching system settin
 **Android 13+ system entry.** `res/xml/locales_config.xml` lists the four shipped locales and `AndroidManifest.xml` declares `android:localeConfig="@xml/locales_config"`. Android 13+ users get the OS-level per-app language entry at *System Settings → Apps → Joulie → Language* automatically, driven by the same `setApplicationLocales` call so it stays in sync with the in-app picker.
 
 **Apply at start.** `EVTrackerApp.onCreate` reads the persisted tag asynchronously and calls `LocaleApplier.apply(...)`. AppCompat 1.6+ persists the value internally so subsequent app starts come up in the right locale before the coroutine even runs; the read is mainly a fail-safe for the first launch after a fresh install.
+
+## 11. Accessibility (a11y)
+
+**Target.** WCAG 2.1 AA. The app is intended for public use and must clear the AA bar on the surfaces a typical user touches: rendering, interaction, contrast on text and icons. AAA is aspirational and not gated. Cognitive accessibility, internationalised TalkBack vocabularies, and assistive-tech-specific testing harnesses are out of scope.
+
+**Lint floor.** `app/build.gradle.kts` promotes three Android Lint rules from default-warning to PR-blocking error so future a11y drift cannot land silently:
+
+| Rule | What it catches |
+|------|-----------------|
+| `ContentDescription` | `ImageView` / `ImageButton` / icon-only widgets without `android:contentDescription`. Decorative views must explicitly opt out via `android:contentDescription="@null"` or `android:importantForAccessibility="no"`. |
+| `LabelFor` | `EditText` / `TextInputEditText` whose label lives in a separate `TextView` that lacks `android:labelFor`. TalkBack drops the label otherwise. |
+| `KeyboardInaccessibleWidget` | View with an `OnClickListener` but `android:focusable="false"`, hidden from D-pad / keyboard / switch-access users. |
+
+Touch-target sizing (WCAG 2.5.5) is enforced dynamically by Espresso's `AccessibilityChecks.enable().setRunChecksFromRootView(true)` interceptor wired in `HiltTestRunner.onStart()`: every Espresso `ViewAction` in every nightly instrumented test runs the `TouchTargetSizeCheck` validator against every view in the scanned root. Static-analysis lock-in is not available — `TouchTargetSizeCheck` is an Espresso `AccessibilityValidator` ID, not an Android Lint issue ID, and AGP's Lint rejects it as `UnknownIssueId`.
+
+`app/lint-baseline.xml` is the registry of currently-known a11y debt. Existing entries are append-only-by-omission per CLAUDE.md (regenerate only when retiring a rule, never to "clean up"). New violations on the three promoted rules block PR merges.
+
+The release-gating TalkBack smoke walkthrough lives in `docs/TEST_PLAN.md` §5c.
