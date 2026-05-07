@@ -9,10 +9,6 @@ Open follow-up work and under-consideration ideas. Items merged to `main` are dr
 
 ## Open
 
-### 🟡 ADI registration token wired into the CI release pipeline
-
-Add a `printf "$ADI_REGISTRATION_TOKEN" > app/src/main/assets/adi-registration.properties` step to `.github/workflows/release.yml` before `assembleRelease`, so CI-built tagged APKs include the asset and pass Google's developer-verification check. Add a post-build `unzip -p` verification that fails the workflow if the asset is missing or zero-length. The token comes from a new GitHub Secret. Until this lands, only locally-built APKs are registered; CI tag pushes produce unregistered APKs.
-
 ### 🟡 Accessibility (a11y) pass
 
 Audit TalkBack semantics, `contentDescription` coverage, colour contrast (WCAG 2.1 AA), and touch-target sizing across all fragments. Espresso `AccessibilityChecks.enable()` already runs in nightly instrumented runs (informational, does not block PRs); the open work is to actually clear the surfaced violations rather than baseline them.

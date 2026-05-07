@@ -75,7 +75,7 @@ Then:
 
 Without `keystore.properties`, the build still runs but produces an unsigned APK (useful for inspection, not for installing).
 
-If you want a release APK that passes Google's developer-verification check, also place your **Android Developer Verification (ADI) registration token** at `app/src/main/assets/adi-registration.properties`, one line containing the snippet from your registration page. The file is gitignored (sensitivity-class same as `keystore.properties`); each maintainer keeps their own copy. The CI release workflow doesn't bake this asset yet — see the open backlog item in `docs/BACKLOG.md`.
+If you want a release APK that passes Google's developer-verification check, also place your **Android Developer Verification (ADI) registration token** at `app/src/main/assets/adi-registration.properties`, one line containing the snippet from your registration page. The file is gitignored (sensitivity-class same as `keystore.properties`); each maintainer keeps their own copy. The CI release workflow writes the same asset from the `ADI_REGISTRATION_TOKEN` GitHub Secret before `assembleRelease` and verifies the signed APK contains it (`unzip -p`); if the secret is unset or the asset is empty, the workflow fails.
 
 Drive backup on debug and release builds requires Google Cloud OAuth Android clients registered against your keystore SHA-1s. See [`docs/GOOGLE_CLOUD_SETUP.md`](docs/GOOGLE_CLOUD_SETUP.md) for the full walkthrough.
 

@@ -49,6 +49,17 @@ jobs:
             printf 'keyPassword=%s\n' "$KEY_PASSWORD"
           } > keystore.properties
 
+      - name: Write ADI registration token
+        env:
+          ADI_REGISTRATION_TOKEN: ${{ secrets.ADI_REGISTRATION_TOKEN }}
+        run: |
+          if [ -z "$ADI_REGISTRATION_TOKEN" ]; then
+            echo "::error::ADI_REGISTRATION_TOKEN secret is unset. Set it in repo Settings -> Secrets -> Actions so the CI APK is registered against the developer keystore." >&2
+            exit 1
+          fi
+          mkdir -p app/src/main/assets
+          printf '%s' "$ADI_REGISTRATION_TOKEN" > app/src/main/assets/adi-registration.properties
+
       - name: Build release APK
         run: ./gradlew :app:assembleRelease --no-daemon --stacktrace
 
@@ -56,6 +67,16 @@ jobs:
         run: |
           BUILD_TOOLS_DIR=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
           "$BUILD_TOOLS_DIR/apksigner" verify --verbose app/build/outputs/apk/release/app-release.apk
+
+      - name: Verify ADI registration asset is bundled
+        run: |
+          APK=app/build/outputs/apk/release/app-release.apk
+          SIZE=$(unzip -p "$APK" assets/adi-registration.properties 2>/dev/null | wc -c)
+          if [ "$SIZE" -le 0 ]; then
+            echo "::error::ADI registration asset missing or empty in $APK (size=$SIZE)." >&2
+            exit 1
+          fi
+          echo "ADI registration asset present in APK (size=${SIZE} bytes)."
 
       - name: Rename APK with tag
         id: rename
@@ -84,4 +105,5 @@ jobs:
         if: always()
         run: |
           rm -f keystore.properties
+          rm -f app/src/main/assets/adi-registration.properties
           rm -rf "${{ runner.temp }}/signing"
