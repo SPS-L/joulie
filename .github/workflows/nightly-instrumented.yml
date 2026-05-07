@@ -33,11 +33,13 @@ jobs:
     # right kernel module access. ubuntu-latest currently provides this for
     # x86_64 system images via reactivecircus/android-emulator-runner.
     runs-on: ubuntu-latest
-    # Tests run in ~3 min on a hot AVD cache (boot ~30 s with KVM, gradle
-    # ~2 min). 15 min is generous head-room covering cold-cache AVD
-    # creation. The Boot/Run/Kill steps each have their own
-    # `timeout-minutes` so a single hang can't burn the whole budget.
-    timeout-minutes: 15
+    # Tests run in ~5 min on a hot AVD cache (cold boot ~60 s with KVM,
+    # gradle ~3 min). 25 min covers the cold-cache first run that has to
+    # rebuild the AVD + snapshot from scratch via the
+    # `reactivecircus/android-emulator-runner` setup step. Boot/Run/Kill
+    # each have their own `timeout-minutes` so a single hang can't burn
+    # the whole budget.
+    timeout-minutes: 25
     strategy:
       # Run both ends of the supported SDK range independently. One failure
       # should not mask the other; both reports get uploaded.
@@ -74,6 +76,12 @@ jobs:
       # Pre-warm the AVD snapshot so the test step starts from a hot boot
       # rather than paying the cold-boot cost twice. Hot boot also yields
       # a more deterministic test run than re-booting between attempts.
+      # Cache-key suffix is bumped whenever a stale snapshot is suspected.
+      # v2 (TASK-74): the v1 snapshot stopped loading on the runner image
+      # rolled out around 2026-05-06 — every nightly hung silently for the
+      # full Boot-emulator timeout with no log output, on both API 26 and
+      # API 35. Bumping the suffix forces a fresh AVD + snapshot built
+      # against the current emulator binary and system images.
       - name: AVD cache
         uses: actions/cache@v4
         id: avd-cache
@@ -81,7 +89,7 @@ jobs:
           path: |
             ~/.android/avd/*
             ~/.android/adb*
-          key: avd-${{ matrix.api-level }}-default-x86_64-v1
+          key: avd-${{ matrix.api-level }}-default-x86_64-v2
 
       - name: Create AVD and generate snapshot for caching
         if: steps.avd-cache.outputs.cache-hit != 'true'
@@ -117,18 +125,53 @@ jobs:
           echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
           echo "$ANDROID_HOME/emulator" >> "$GITHUB_PATH"
 
+      # `-no-snapshot` (= `-no-snapshot-load -no-snapshot-save`) forces a
+      # cold boot. We deliberately don't rely on the cached snapshot — when
+      # the runner image's emulator binary drifts ahead of the snapshot
+      # format, snapshot load hangs silently with no log output. The AVD
+      # config is still cached, which is what saves real time; cold-boot
+      # under KVM is ~60s, well inside the 8-min budget.
       - name: Boot emulator
-        timeout-minutes: 5
+        timeout-minutes: 8
         run: |
           emulator -avd test \
-            -no-snapshot-save -no-window -gpu swiftshader_indirect \
+            -no-snapshot -no-window -gpu swiftshader_indirect \
             -noaudio -no-boot-anim -camera-back none \
             > "$RUNNER_TEMP/emulator.log" 2>&1 &
-          echo "Waiting for boot completion..."
-          adb wait-for-device
-          until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ]; do
-            sleep 2
+          EMU_PID=$!
+          echo "Emulator pid: $EMU_PID"
+          # Single bounded poll: device must come online AND finish booting
+          # within 6 minutes. Each iteration prints state so a hang is no
+          # longer silent. The previous workflow polled in `adb wait-for-device`
+          # which produces no output and obscured every recent failure.
+          BOOTED=0
+          for i in $(seq 1 120); do
+            EMU_STATE=$(kill -0 "$EMU_PID" 2>/dev/null && echo running || echo dead)
+            DEV_STATE=$(adb get-state 2>/dev/null || echo offline)
+            if [ "$DEV_STATE" = "device" ]; then
+              BOOT=$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
+              BOOTANIM=$(adb shell getprop init.svc.bootanim 2>/dev/null | tr -d '\r')
+            else
+              BOOT=""
+              BOOTANIM=""
+            fi
+            echo "[$i] emu=$EMU_STATE dev=$DEV_STATE boot_completed='$BOOT' bootanim='$BOOTANIM'"
+            if [ "$BOOT" = "1" ]; then
+              BOOTED=1
+              break
+            fi
+            if [ "$EMU_STATE" = "dead" ]; then
+              echo "Emulator process exited before boot completed." >&2
+              break
+            fi
+            sleep 3
           done
+          adb devices -l || true
+          if [ "$BOOTED" != "1" ]; then
+            echo "Boot did not complete. Last 200 lines of emulator log:" >&2
+            tail -n 200 "$RUNNER_TEMP/emulator.log" >&2 || true
+            exit 1
+          fi
           # Match what `disable-animations: true` does inside the action.
           # Without these three settings,
           # swipe_showsSnackbar_undo_restoresRow fails with "Animations
@@ -149,6 +192,14 @@ jobs:
         run: |
           adb emu kill || true
           pkill -9 -f qemu-system || true
+
+      - name: Upload emulator log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: emulator-log-api${{ matrix.api-level }}
+          path: ${{ runner.temp }}/emulator.log
+          if-no-files-found: ignore
 
       - name: Upload HTML test report
         if: always()
