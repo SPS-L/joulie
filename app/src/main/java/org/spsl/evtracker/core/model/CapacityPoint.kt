@@ -5,7 +5,7 @@
 package org.spsl.evtracker.core.model
 
 /**
- * One data point for the battery-degradation chart (TASK-14).
+ * One data point for the battery-degradation chart.
  *
  * @property eventDate epoch millis of the originating charge event
  * @property effectiveCapacityKwh estimated effective battery capacity in kWh.

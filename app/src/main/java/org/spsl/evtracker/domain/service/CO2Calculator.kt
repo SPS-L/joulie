@@ -8,26 +8,27 @@ import org.spsl.evtracker.data.local.entity.ChargeEventEntity
 import javax.inject.Inject
 
 /**
- * TASK-20: pure-domain CO₂ tracker.
+ * Pure-domain CO₂ tracker.
  *
- * Surfaces two numbers side-by-side per the BACKLOG Q1=c decision:
+ * Surfaces two numbers side-by-side:
  * - **EV emissions** — actual grid-attributable CO₂ from the energy
  *   the user charged into the car.
  * - **ICE counterfactual** — CO₂ a comparable petrol car would have
  *   emitted over the same distance, using the user's editable
  *   `iceBaselineLPer100km` preference.
  * - **Saved** is derived as `iceCo2Kg − evCo2Kg` (may be negative on
- *   high-grid-intensity periods or short distances).
+ *   high-grid-intensity periods or short distances; the Dashboard
+ *   labels both numbers rather than relying on this aggregate).
  *
  * Coefficients live in the companion. Methodology + sources documented
  * in `docs/METHODOLOGY.md`; do NOT change the coefficients without
  * updating that file.
  *
- * **Static-grid caveat.** TASK-20 reads `gridIntensityGCo2PerKwh` from
- * the user preference (default 577 = Cyprus 2025 average). TASK-49
- * will layer per-event live values from a free real-time grid-mix
- * source on top once one is identified; until then, every event in
- * the period is attributed the same intensity.
+ * Static-grid caveat: this calculator reads `gridIntensityGCo2PerKwh`
+ * from the user preference (default 577 = Cyprus 2025 average) and
+ * applies it uniformly to every event in the period. Per-event live
+ * grid-mix values are deferred until a free real-time data source is
+ * available — see `docs/METHODOLOGY.md`.
  */
 class CO2Calculator @Inject constructor() {
 
@@ -75,7 +76,7 @@ class CO2Calculator @Inject constructor() {
     }
 
     /**
-     * TASK-20 charts: cumulative EV CO₂ + cumulative ICE counterfactual,
+     * Charts: cumulative EV CO₂ + cumulative ICE counterfactual,
      * indexed by event date. Used by the Charts CO₂ tab. Distance for
      * each event is the delta-odometer to the previous event in the
      * sorted-by-date sequence (matching `StatsCalculator.computeEfficiencyTrend`

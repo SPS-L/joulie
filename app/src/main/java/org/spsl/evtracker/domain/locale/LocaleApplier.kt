@@ -5,7 +5,7 @@
 package org.spsl.evtracker.domain.locale
 
 /**
- * TASK-55: narrow boundary around `AppCompatDelegate.setApplicationLocales`.
+ * Narrow boundary around `AppCompatDelegate.setApplicationLocales`.
  *
  * The static framework call is hostile to JVM tests (it touches
  * `LocaleManager` on Android 13+ and `AppLocalesStorageHelper` on older
@@ -14,7 +14,7 @@ package org.spsl.evtracker.domain.locale
  * `LocaleModule`; tests substitute `FakeLocaleApplier` and assert the
  * applied tag without booting any framework.
  *
- * Mirrors the TASK-12 `WidgetRefresher` pattern.
+ * Mirrors the `WidgetRefresher` pattern.
  */
 interface LocaleApplier {
     /**

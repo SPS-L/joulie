@@ -10,19 +10,17 @@ import org.spsl.evtracker.core.model.ChargeType
 import org.spsl.evtracker.data.local.entity.ChargeEventEntity
 
 /**
- * TASK-53: locks in the single-car invariant on every aggregation in
+ * Locks in the single-car invariant on every aggregation in
  * [StatsCalculator] except [StatsCalculator.detectMixedCurrency], which
  * is intentionally exempt because it semantically does not depend on
  * car identity (see KDoc).
  *
- * Defense-in-depth — current call sites
- * ([ObserveDashboardStatsUseCase], [ObserveChartsModelsUseCase]) all
- * pass single-car lists, but the invariant was unenforced before this
- * task. A future cross-car comparison view that forgets to thread
- * `carId` correctly would now trip a clear `IllegalArgumentException`
- * with the offending carIds in the message rather than silently
- * producing nonsense `totalDistanceKm` / efficiency values across a
- * car-switch boundary.
+ * Current call sites ([ObserveDashboardStatsUseCase],
+ * [ObserveChartsModelsUseCase]) all pass single-car lists. A future
+ * cross-car comparison view that forgets to thread `carId` correctly
+ * trips a clear `IllegalArgumentException` (with the offending carIds
+ * in the message) rather than silently producing nonsense
+ * `totalDistanceKm` / efficiency values across a car-switch boundary.
  */
 class StatsCalculatorInvariantTest {
 
@@ -87,17 +85,14 @@ class StatsCalculatorInvariantTest {
     }
 
     // -------------------------------------------------------------------------
-    // Empty list: passes the guard. `distinct().size == 0` is `<= 1`. This
-    // matters because every aggregation in this class is reachable on an
-    // empty list (period filter producing 0 events is a routine state, not
-    // an error).
+    // Empty list: passes the guard. `distinct().size == 0` is `<= 1`.
+    // Every aggregation in this class is reachable on an empty list (period
+    // filter producing 0 events is a routine state, not an error).
     // -------------------------------------------------------------------------
 
     @Test
     fun computeStats_succeeds_onEmptyList() {
         val result = calc.computeStats(emptyList(), label = "empty")
-        // Existing semantics for empty input hold — the guard didn't
-        // change them. Spot-check the chargeCount and totalKwh fields.
         require(result.chargeCount == 0)
         require(result.totalKwh == 0.0)
     }
@@ -105,8 +100,8 @@ class StatsCalculatorInvariantTest {
     @Test
     fun allGuardedAggregations_succeed_onEmptyList() {
         // Single-call smoke per method to confirm the empty-list path
-        // doesn't accidentally throw on the new guard. Specific
-        // aggregation outputs are covered by the per-method tests
+        // doesn't accidentally throw on the guard. Specific aggregation
+        // outputs are covered by the per-method tests
         // elsewhere.
         calc.computeMonthlyBuckets(emptyList())
         calc.computeEfficiencyTrend(emptyList())

@@ -88,7 +88,7 @@ abstract class AppDatabase : RoomDatabase() {
         }
 
         /**
-         * TASK-25: rewrite legacy `'DC'` chargeType cells to `'DC_FAST'` so the
+         * Rewrite legacy `'DC'` chargeType cells to `'DC_FAST'` so the
          * Room TypeConverter (and the [org.spsl.evtracker.core.model.ChargeType]
          * enum it produces) sees only canonical values for fresh reads. The
          * column type stays TEXT NOT NULL — only the cell values mutate, so
@@ -103,7 +103,7 @@ abstract class AppDatabase : RoomDatabase() {
         }
 
         /**
-         * TASK-26: widen entity primary keys (and foreign keys) from Kotlin
+         * Widen entity primary keys (and foreign keys) from Kotlin
          * `Int` to `Long`. SQLite already stores `INTEGER` columns as up to
          * 8 bytes, so the on-disk schema is unchanged — Room's affinity for
          * these columns stays `INTEGER` and the column DDL is identical.
@@ -120,7 +120,7 @@ abstract class AppDatabase : RoomDatabase() {
         }
 
         /**
-         * TASK-14: add optional `socBefore` and `socAfter` REAL columns to
+         * Add optional `socBefore` and `socAfter` REAL columns to
          * `charge_events` so the user can record state-of-charge data per
          * event. Both columns are nullable and default to NULL — events
          * persisted before this migration leave both fields blank.
@@ -135,9 +135,9 @@ abstract class AppDatabase : RoomDatabase() {
         }
 
         /**
-         * TASK-43: add a `kwhSource` provenance column to `charge_events`.
+         * Add a `kwhSource` provenance column to `charge_events`.
          * `MEASURED` events come from the charger or the user; they remain
-         * eligible for the TASK-14 capacity-degradation tracker.
+         * eligible for the capacity-degradation tracker.
          * `DERIVED_FROM_SOC` events are produced by the in-form calculator
          * and are skipped by `CapacityEstimator` because the math is
          * tautological. The column is `NOT NULL DEFAULT 'MEASURED'` so legacy

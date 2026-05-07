@@ -151,9 +151,9 @@ class SaveChargeEventUseCaseTest {
                 chargeType = ChargeType.AC,
             ),
         )
-        // Existing call sites that pre-date TASK-43 stay correct: the
-        // SaveChargeEventInput default is MEASURED, so the persisted entity
-        // is never silently flipped to DERIVED on a normal user flow.
+        // The SaveChargeEventInput default for kwhSource is MEASURED, so a
+        // persisted entity is never silently flipped to DERIVED on a normal
+        // user flow when the caller omits the field.
         assertEquals(ChargeKwhSource.MEASURED, s.queries.current().single().kwhSource)
     }
 

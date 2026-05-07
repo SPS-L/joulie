@@ -20,7 +20,7 @@
             android:textAppearance="?attr/textAppearanceTitleSmall"
             tools:text="27 Apr 2026, 12:34"/>
 
-        <!-- TASK-43: "Est." badge for events flagged DERIVED_FROM_SOC. Tertiary-
+        <!-- "Est." badge for events flagged DERIVED_FROM_SOC. Tertiary-
              container colour distinguishes the provenance from the AC/DC
              charge-type badge that sits beside it. -->
         <TextView

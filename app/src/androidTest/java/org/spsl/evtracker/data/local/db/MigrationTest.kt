@@ -282,7 +282,7 @@ class MigrationTest {
 
     @Test
     fun migrate_4_to_5_isNoOp_widenIntPksToLong() = runBlocking {
-        // MIGRATION_4_5 (TASK-26): widening Kotlin Int → Long PKs is a no-op
+        // MIGRATION_4_5: widening Kotlin Int → Long PKs is a no-op
         // at the SQLite level — INTEGER columns already hold 64-bit signed
         // integers. Verify the migration runs cleanly and existing rows
         // survive untouched.
@@ -307,7 +307,7 @@ class MigrationTest {
 
     @Test
     fun migrate_5_to_6_addsSocColumns() = runBlocking {
-        // MIGRATION_5_6 (TASK-14): adds nullable socBefore + socAfter REAL
+        // MIGRATION_5_6: adds nullable socBefore + socAfter REAL
         // columns to charge_events. Existing rows leave both at NULL.
         val v3 = buildV3Database()
         v3.execSQL("INSERT INTO cars (name, createdAt) VALUES ('A', 1000)")
@@ -330,7 +330,7 @@ class MigrationTest {
 
     @Test
     fun migrate_6_to_7_addsKwhSourceColumn() = runBlocking {
-        // MIGRATION_6_7 (TASK-43): adds a NOT NULL `kwhSource` TEXT column to
+        // MIGRATION_6_7: adds a NOT NULL `kwhSource` TEXT column to
         // charge_events with `DEFAULT 'MEASURED'`. Pre-migration rows backfill
         // to MEASURED — exactly the right behaviour, since legacy events were
         // entered before the in-form calculator existed and so cannot be
@@ -367,9 +367,9 @@ class MigrationTest {
         // Open through Room with all six migrations registered. Room runs them
         // in order and then validates the resulting schema against v7 entity
         // declarations. Schema validation exercises the ChargeTypeConverter
-        // wiring on the chargeType column (TASK-25), the Long-PK widening
-        // (TASK-26), the optional SoC columns (TASK-14), and the new
-        // ChargeKwhSourceConverter on kwhSource (TASK-43).
+        // wiring on the chargeType column, the Long-PK widening, the
+        // optional SoC columns, and the new ChargeKwhSourceConverter on
+        // the kwhSource column.
         val room = openWithRoom()
         try {
             val event = room.chargeEventDao().getAllForCarSorted(1L).single()

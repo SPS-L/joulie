@@ -48,7 +48,7 @@ class WizardFragment : Fragment() {
         // The dots are decorative-only — the wizard navigates via the
         // Back / Next buttons and `wizardPager.isUserInputEnabled = false`
         // disables swipe. Mark each tab view non-clickable / non-focusable so
-        // Espresso's TouchTargetSizeCheck (TASK-18 step 6) doesn't flag the
+        // Espresso's TouchTargetSizeCheck doesn't flag the
         // 24 dp dots as undersized clickable targets — they are not click
         // targets at all.
         repeat(binding.wizardDots.tabCount) { i ->

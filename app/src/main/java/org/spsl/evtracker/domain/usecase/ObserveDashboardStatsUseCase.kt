@@ -90,17 +90,12 @@ class ObserveDashboardStatsUseCase @Inject constructor(
             ChargeTypeFilter.AC -> periodEvents.filter { it.chargeType == ChargeType.AC }
             ChargeTypeFilter.DC -> periodEvents.filter { it.chargeType.isDc }
         }
-        // The "no events" empty state must reflect the car as a whole, not the
-        // current filter+period. Tying it to `filtered.isEmpty()` lets a user
-        // who picks DC on an AC-only car (or a tight period with no matches)
-        // hide the entire dashboard content container, including the filter
-        // chips themselves, because those chips live inside `dashboardContent`
-        // in fragment_dashboard.xml. With the chips gone, there is no way to
-        // step back to All without leaving and re-entering the Dashboard.
-        // Gating on `allEventsForCar.isEmpty()` keeps the empty state honest
-        // (a brand-new car) and lets a zero-match filter fall through to a
-        // normal Stats render with placeholder values, so the chips stay
-        // visible and tappable.
+        // The "no events" empty state reflects the car as a whole, not the
+        // current filter+period. Gating on `allEventsForCar.isEmpty()` keeps
+        // the empty state honest (a brand-new car) and lets a zero-match
+        // filter fall through to a normal Stats render with placeholder
+        // values, so the filter chips (which live inside `dashboardContent`)
+        // stay visible and tappable.
         return if (allEventsForCar.isEmpty()) {
             DashboardUiState(emptyState = EmptyState.NoEvents)
         } else {
@@ -109,7 +104,7 @@ class ObserveDashboardStatsUseCase @Inject constructor(
             // hiding it when the user picks a tight period would be misleading.
             val capacityPoints = capacityEstimator.estimate(allEventsForCar, activeCar?.batteryKwh)
             val healthPct = capacityEstimator.batteryHealthPercent(capacityPoints, activeCar?.batteryKwh)
-            // TASK-46: surface heuristic provenance to the Stats consumer so
+            // surface heuristic provenance to the Stats consumer so
             // the Dashboard can render the "Estimated — heuristic may
             // overestimate" warning chip when the latest point came from the
             // unclamped 80%-of-nominal heuristic AND the percentage crosses
@@ -125,10 +120,9 @@ class ObserveDashboardStatsUseCase @Inject constructor(
                 batteryHealthIsHeuristic = isHeuristic,
                 batteryHealthIsOverestimated = isOverestimated,
             )
-            // TASK-20: CO₂ stats. Both numbers null when the user hasn't
-            // configured the corresponding preference (default-zero
-            // contract — see Q6 in the BACKLOG TASK-20 brief). Dashboard
-            // hides the entire CO₂ card if either is null.
+            // CO₂ stats. Both numbers are null when the user hasn't
+            // configured the corresponding preference (zero or unset).
+            // Dashboard hides the entire CO₂ card if either is null.
             val evCo2 = if (settings.gridIntensityGCo2PerKwh > 0.0) {
                 co2Calculator.evCo2Kg(filtered, settings.gridIntensityGCo2PerKwh)
             } else {

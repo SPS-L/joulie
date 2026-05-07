@@ -7,7 +7,7 @@ package org.spsl.evtracker.domain.service
 import kotlin.math.max
 
 /**
- * TASK-43: derive `kwhAdded` from a state-of-charge delta when the user has
+ * Derive `kwhAdded` from a state-of-charge delta when the user has
  * SoC % readings but no charger-reported kWh.
  *
  * Returns `(socAfter - socBefore) × nominalBatteryKwh`, clamped to ≥ 0.

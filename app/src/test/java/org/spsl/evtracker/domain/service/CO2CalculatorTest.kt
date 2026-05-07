@@ -124,8 +124,8 @@ class CO2CalculatorTest {
     fun savedCo2_canGoNegative_onDirtyGridShortDistance() {
         // 100 km on 50 kWh on an extreme-dirty grid: EV emits 50 kg,
         // ICE counterfactual is only 16.17 kg → saved is negative.
-        // The card should still surface this honestly (Q1=c contract:
-        // both numbers shown side-by-side, not just the savings).
+        // The card surfaces this honestly (both numbers shown
+        // side-by-side rather than only the savings).
         val events = listOf(event(kwhAdded = 50.0))
         val saved = calc.savedCo2Kg(
             events = events,

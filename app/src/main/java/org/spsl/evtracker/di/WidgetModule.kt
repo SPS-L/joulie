@@ -13,7 +13,7 @@ import org.spsl.evtracker.domain.widget.WidgetRefresher
 import javax.inject.Singleton
 
 /**
- * TASK-12: home-screen widget refresh trigger. Kept as its own module so
+ * Home-screen widget refresh trigger. Kept as its own module so
  * future tests can `@UninstallModules(WidgetModule::class)` and replace
  * the binding with a fake without disturbing other backup wiring.
  */

@@ -8,7 +8,7 @@ package org.spsl.evtracker.core.model
  * Provenance flag on a `ChargeEventEntity.kwhAdded` value.
  *
  * `MEASURED` is the user-entered or charger-reported kWh — the only flavour
- * eligible for the TASK-14 capacity-degradation tracker.
+ * eligible for the capacity-degradation tracker.
  *
  * `DERIVED_FROM_SOC` is computed from `(socAfter - socBefore) × Car.nominalBatteryKwh`
  * via the in-form calculator. Capacity tracking must skip these events because

@@ -145,7 +145,7 @@ class DriveBackupRepositoryTest {
         assertEquals(BackupResult.AuthRequired, s.repo.backupCurrentData())
     }
 
-    // -- Storage full (TASK-07: must NOT be conflated with auth) --------------
+    // -- Storage full (— must NOT be conflated with auth) --------------
 
     @Test
     fun backup_drive403StorageFull_returnsFailureNotAuthRequired() = runTest {
@@ -174,7 +174,7 @@ class DriveBackupRepositoryTest {
         assertEquals(1, s.remote.failuresRaised)
     }
 
-    // -- Transient retry (TASK-07: 3 attempts with exp backoff) ---------------
+    // -- Transient retry (— 3 attempts with exp backoff) ---------------
 
     @Test
     fun backup_drive429_retriesThenSucceeds() = runTest {

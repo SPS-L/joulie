@@ -39,7 +39,7 @@ class ObserveChartsModelsUseCase @Inject constructor(
 ) {
 
     /**
-     * TASK-20: bundle of pref values folded into the charts stream. Pulled
+     * Bundle of pref values folded into the charts stream. Pulled
      * out as a data class so the outer combine is legible and adding a new
      * pref doesn't reshuffle the lambda arity.
      */
@@ -97,12 +97,12 @@ class ObserveChartsModelsUseCase @Inject constructor(
             .estimate(periodEvents, nominalBatteryKwh)
             .takeIf { it.size >= CapacityEstimator.MIN_POINTS_FOR_CHART && nominalBatteryKwh != null }
             .orEmpty()
-        // TASK-43: count derived events in the visible period so the chart
+        // count derived events in the visible period so the chart
         // can surface a banner explaining the exclusion. Counted regardless
         // of whether the chart is rendered (banner can also fire when the
         // remaining measured-event count is below the 3-point threshold).
         val derivedExcluded = capacityEstimator.countDerivedEvents(periodEvents)
-        // TASK-20: cumulative CO₂ trend across the period's events.
+        // cumulative CO₂ trend across the period's events.
         // Empty when both prefs are 0 — the CO₂ tab then renders the
         // "set baseline + grid intensity" empty state.
         val co2Cumulative = if (settings.iceBaselineLPer100km > 0.0 || settings.gridIntensityGCo2PerKwh > 0.0) {

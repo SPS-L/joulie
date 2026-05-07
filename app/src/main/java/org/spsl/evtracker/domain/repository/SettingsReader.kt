@@ -22,38 +22,38 @@ interface SettingsReader {
     /** Null when no successful backup has been recorded yet. */
     val lastBackupAt: Flow<Long?>
 
-    /** F1: theme is "system" | "light" | "dark". */
+    /** Theme is "system" | "light" | "dark". */
     val theme: Flow<String>
 
     /**
-     * F1: durable flag set true at start of `ResetAllDataUseCase`, cleared at the end.
+     * Durable flag set true at start of `ResetAllDataUseCase`, cleared at the end.
      * `MainActivity` reads this at startup; if true, the use case re-runs to completion
      * before any UI mounts so the user never reaches an inconsistent state.
      */
     val resetInProgress: Flow<Boolean>
 
     /**
-     * F1 wizard gate. False until the wizard's finish step writes primaryMetric,
+     * Wizard gate. False until the wizard's finish step writes primaryMetric,
      * distanceUnit, currency together with this flag. Settings → Reset preferences
      * sets it back to false.
      */
     val setupComplete: Flow<Boolean>
 
     /**
-     * TASK-19: streak counter incremented on each Drive backup failure
+     * Streak counter incremented on each Drive backup failure
      * (Auth-required or generic) and reset to 0 on success. `MainActivity`
      * reads this to decide when to prompt for `POST_NOTIFICATIONS`.
      */
     val consecutiveBackupFailures: Flow<Int>
 
     /**
-     * TASK-19: sticky once true. Set by `MainActivity` when the user denies
+     * Sticky once true. Set by `MainActivity` when the user denies
      * `POST_NOTIFICATIONS`. Once true, the rationale dialog never re-fires.
      */
     val notificationPermissionDenied: Flow<Boolean>
 
     /**
-     * TASK-54: ISO-8601 `exported_at` string of the Drive snapshot most recently
+     * ISO-8601 `exported_at` string of the Drive snapshot most recently
      * offered to (and Skipped or Restored by) the user. Empty string = none.
      * Compared verbatim against the `exported_at` field of incoming remote
      * backups in `SettingsViewModel.onDriveAuthGranted` to suppress the
@@ -62,7 +62,7 @@ interface SettingsReader {
     val lastSeenRemoteBackupExportedAt: Flow<String>
 
     /**
-     * TASK-55: persisted IETF BCP-47 language tag. Empty string = "follow
+     * Persisted IETF BCP-47 language tag. Empty string = "follow
      * system" (the default; `LocaleApplier.apply("")` passes an empty
      * `LocaleListCompat` to AppCompat and the device locale wins). Other
      * values: `"en"` / `"el"` / `"tr"` / `"ru"`.
@@ -70,13 +70,13 @@ interface SettingsReader {
     val languageTag: Flow<String>
 
     /**
-     * TASK-20: ICE petrol baseline in L/100km (default 7.0). Used as the
+     * ICE petrol baseline in L/100km (default 7.0). Used as the
      * counterfactual for CO₂ savings in [CO2Calculator].
      */
     val iceBaselineLPer100km: Flow<Double>
 
     /**
-     * TASK-20: grid carbon intensity in gCO₂/kWh (default 577 — Cyprus
+     * Grid carbon intensity in gCO₂/kWh (default 577 — Cyprus
      * 2025 grid average per cyprusgrid.com). Used by [CO2Calculator] to
      * compute EV-side emissions per charge event.
      */

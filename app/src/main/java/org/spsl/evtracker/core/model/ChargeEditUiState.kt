@@ -39,30 +39,30 @@ data class ChargeEditUiState(
     val odometerBelowPrevious: Boolean = false,
     /** True when the typed odometer (converted to km) is ≥ [nextOdometerKm]. Drives inline error + Save gate. */
     val odometerAboveNext: Boolean = false,
-    /** TASK-14: SoC card collapsed by default; expand toggles via "+ Add SoC data". */
+    /** SoC card collapsed by default; expand toggles via "+ Add SoC data". */
     val socExpanded: Boolean = false,
-    /** TASK-14: raw user input for SoC-before, expressed as a percentage string (`"0".."100"`). */
+    /** Raw user input for SoC-before, expressed as a percentage string (`"0".."100"`). */
     val socBeforeText: String = "",
-    /** TASK-14: raw user input for SoC-after, expressed as a percentage string (`"0".."100"`). */
+    /** Raw user input for SoC-after, expressed as a percentage string (`"0".."100"`). */
     val socAfterText: String = "",
-    /** TASK-14: localized error string-res for the SoC pair, or `null` when valid / both blank. */
+    /** Localized error string-res for the SoC pair, or `null` when valid / both blank. */
     val socError: Int? = null,
     /**
-     * TASK-43: provenance flag persisted with the saved event. Set to
+     * Provenance flag persisted with the saved event. Set to
      * MEASURED on user-typed kWh, DERIVED_FROM_SOC by the in-form calculator.
      * In edit mode this is loaded from the existing entity so re-saves
      * preserve the original provenance unless the user edits.
      */
     val kwhSource: ChargeKwhSource = ChargeKwhSource.MEASURED,
     /**
-     * TASK-43: true while the SoC-based kWh calculator is "active" — i.e.,
+     * True while the SoC-based kWh calculator is "active" — i.e.,
      * after the user tapped "Calculate kWh from SoC %" and before they
      * manually edited the kWh field. While active, the SoC banner is shown
      * and SoC-field changes auto-recompute the kWh field.
      */
     val kwhCalculatorActive: Boolean = false,
     /**
-     * TASK-43: nominal battery capacity (kWh) of the active car, used to
+     * Nominal battery capacity (kWh) of the active car, used to
      * gate calculator-link visibility and as the multiplier for the kWh
      * derivation. `null` when the active car has no nominal capacity set
      * — the calculator is hidden in that case.

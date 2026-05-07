@@ -11,7 +11,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * TASK-55: production [LocaleApplier] backed by androidx.appcompat.
+ * Production [LocaleApplier] backed by androidx.appcompat.
  *
  * `setApplicationLocales` persists internally (per-app on Android 13+,
  * a SharedPreferences fallback on older versions) AND triggers an

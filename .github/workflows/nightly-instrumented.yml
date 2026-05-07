@@ -1,8 +1,8 @@
 name: Nightly instrumented tests
 
-# TASK-34: deliberately decoupled from `ci.yml`. Emulator boot dwarfs
-# the rest of the gate's runtime, so PR feedback stays fast and the
-# instrumented suite runs on a separate cadence.
+# Deliberately decoupled from `ci.yml`. Emulator boot dwarfs the rest
+# of the gate's runtime, so PR feedback stays fast and the instrumented
+# suite runs on a separate cadence.
 #
 # Triggers:
 #   - cron at 02:00 UTC daily (low runner-contention window)
@@ -76,12 +76,9 @@ jobs:
       # Pre-warm the AVD snapshot so the test step starts from a hot boot
       # rather than paying the cold-boot cost twice. Hot boot also yields
       # a more deterministic test run than re-booting between attempts.
-      # Cache-key suffix is bumped whenever a stale snapshot is suspected.
-      # v2 (TASK-74): the v1 snapshot stopped loading on the runner image
-      # rolled out around 2026-05-06 — every nightly hung silently for the
-      # full Boot-emulator timeout with no log output, on both API 26 and
-      # API 35. Bumping the suffix forces a fresh AVD + snapshot built
-      # against the current emulator binary and system images.
+      # Cache-key suffix is bumped whenever a stale snapshot is suspected
+      # — bumping forces a fresh AVD + snapshot built against the current
+      # emulator binary and system images.
       - name: AVD cache
         uses: actions/cache@v4
         id: avd-cache
@@ -108,10 +105,9 @@ jobs:
       # action's own shutdown logic deterministically hangs for ~12 min
       # on API 26 after BUILD SUCCESSFUL: it sends `adb emu kill`, the
       # emulator's gRPC `stop` endpoint logs `ERROR | stop: Not implemented`,
-      # and the action then never returns even with
-      # ANDROID_EMULATOR_WAIT_TIME_BEFORE_KILL: '5' set (the action
-      # acknowledges the value in its log but still blocks on something
-      # else afterwards — see TASK-70 / TASK-71 round-1/round-2 history).
+      # and the action then never returns — even with
+      # ANDROID_EMULATOR_WAIT_TIME_BEFORE_KILL: '5' the action acknowledges
+      # the value in its log but still blocks on something else afterwards.
       # The action stays in use for the AVD-creation step above, where
       # the snapshot path works fine and there is no shutdown phase.
       # GitHub-hosted ubuntu-latest runners install the Android SDK at
@@ -141,9 +137,9 @@ jobs:
           EMU_PID=$!
           echo "Emulator pid: $EMU_PID"
           # Single bounded poll: device must come online AND finish booting
-          # within 6 minutes. Each iteration prints state so a hang is no
-          # longer silent. The previous workflow polled in `adb wait-for-device`
-          # which produces no output and obscured every recent failure.
+          # within 6 minutes. Each iteration prints state so a hang is
+          # diagnosable from the log. `adb wait-for-device` produces no
+          # output and obscures the failure mode, so we don't use it.
           BOOTED=0
           for i in $(seq 1 120); do
             EMU_STATE=$(kill -0 "$EMU_PID" 2>/dev/null && echo running || echo dead)

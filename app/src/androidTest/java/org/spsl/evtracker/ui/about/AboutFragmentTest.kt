@@ -63,7 +63,7 @@ class AboutFragmentTest {
     }
 
     @Test fun licenseCard_containsGplIdentifier() {
-        // TASK-51: relicensed from MIT to GPL-3.0-or-later. The card body
+        // relicensed from MIT to GPL-3.0-or-later. The card body
         // surfaces the SPDX identifier so a TalkBack user (and an
         // automated audit) can confirm the license without parsing
         // marketing prose.

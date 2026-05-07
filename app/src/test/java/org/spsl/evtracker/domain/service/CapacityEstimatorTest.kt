@@ -161,7 +161,7 @@ class CapacityEstimatorTest {
         assertNull(estimator.batteryHealthPercent(points, nominalBatteryKwh = null))
     }
 
-    // -- TASK-43: derived events excluded from both paths --------------------
+    // -- — derived events excluded from both paths --------------------
 
     @Test fun derivedEvent_excludedFromExactPath() {
         // SoC fields present and valid AND kWh is non-zero — would normally

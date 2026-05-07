@@ -71,11 +71,11 @@ data class ChargeEventDto(
     @SerializedName("currency") val currency: String?,
     @SerializedName("location") val location: String?,
     @SerializedName("note") val note: String,
-    /** TASK-14: optional state-of-charge fields. Absent on v3/v4/v5 backups. */
+    /** Optional state-of-charge fields. Absent on v3/v4/v5 backups. */
     @SerializedName("soc_before") val socBefore: Double? = null,
     @SerializedName("soc_after") val socAfter: Double? = null,
     /**
-     * TASK-43: provenance flag on `kwhAdded`. Absent on v3..v6 backups; the
+     * Provenance flag on `kwhAdded`. Absent on v3..v6 backups; the
      * field is declared **nullable** because Gson constructs Kotlin data
      * classes via `sun.misc.Unsafe.allocateInstance`, which bypasses
      * primary-constructor defaults — a non-null field with a Kotlin default

@@ -35,7 +35,7 @@ class WizardViewModelTest {
 
     @Before
     fun setUp() {
-        // TASK-55: WizardViewModel.init now launches a viewModelScope
+        // WizardViewModel.init now launches a viewModelScope
         // coroutine to collect SettingsReader.languageTag, so the Main
         // dispatcher must be set before the VM is constructed.
         Dispatchers.setMain(dispatcher)
@@ -54,7 +54,7 @@ class WizardViewModelTest {
     }
 
     // -------------------------------------------------------------------------
-    // TASK-55 — language picker (DataStore + LocaleApplier)
+    // — language picker (DataStore + LocaleApplier)
     // -------------------------------------------------------------------------
 
     @Test

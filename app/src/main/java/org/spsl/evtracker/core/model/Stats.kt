@@ -20,7 +20,7 @@ data class Stats(
     val costPer100Km: Double?,
     val mixedCurrency: Boolean,
     /**
-     * TASK-14: latest effective battery capacity as a percentage of the
+     * Latest effective battery capacity as a percentage of the
      * car's nominal `battery_kwh`. `null` when nominal capacity is unset
      * or no qualifying capacity points exist in the period. Values may
      * exceed 100% — over-estimation by the heuristic is information,
@@ -28,7 +28,7 @@ data class Stats(
      */
     val batteryHealthPercent: Double? = null,
     /**
-     * TASK-46: true when the chronologically latest capacity point that
+     * True when the chronologically latest capacity point that
      * fed [batteryHealthPercent] came from the heuristic full-charge
      * path (`CapacityPoint.isExact = false`) rather than the exact
      * SoC-delta path. Lets the Dashboard distinguish "92% confirmed by
@@ -37,7 +37,7 @@ data class Stats(
      */
     val batteryHealthIsHeuristic: Boolean = false,
     /**
-     * TASK-46: true when both [batteryHealthIsHeuristic] holds AND
+     * True when both [batteryHealthIsHeuristic] holds AND
      * [batteryHealthPercent] is at or above
      * `CapacityEstimator.HEURISTIC_OVERESTIMATE_THRESHOLD_PERCENT`
      * (105%). Drives the "Estimated — heuristic may overestimate"
@@ -48,7 +48,7 @@ data class Stats(
      */
     val batteryHealthIsOverestimated: Boolean = false,
     /**
-     * TASK-20: kg CO₂ from EV-side energy use across the period
+     * Kg CO₂ from EV-side energy use across the period
      * (`Σ kwhAdded × gridIntensityGCo2PerKwh / 1000`). `null` when
      * the user has not configured the grid-intensity preference (or
      * set it to 0) — the Dashboard CO₂ card hides entirely in that
@@ -56,7 +56,7 @@ data class Stats(
      */
     val evCo2Kg: Double? = null,
     /**
-     * TASK-20: kg CO₂ a comparable petrol car would have emitted over
+     * Kg CO₂ a comparable petrol car would have emitted over
      * the same period distance, computed as
      * `(distanceKm / 100) × iceBaselineLPer100km × 2.31`. `null` when
      * the user has not configured the ICE-baseline preference (or set

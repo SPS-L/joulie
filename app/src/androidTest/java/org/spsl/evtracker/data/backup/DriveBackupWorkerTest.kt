@@ -78,14 +78,12 @@ class DriveBackupWorkerTest {
     }
 
     /**
-     * TASK-07 retry contract — transient IO failures recover inside the
-     * repository's withRetry loop (3 attempts, exponential backoff). The
+     * Retry contract — transient IO failures recover inside the
+     * repository's `withRetry` loop (3 attempts, exponential backoff). The
      * worker never sees a `BackupResult.Failure` for a one-shot transient
-     * error, so it returns `Result.success()`. Note: pre-TASK-07 this test
-     * asserted `Result.retry()` and got "retry-amplification" (worker retry
-     * stacked on top of repo retry); TASK-07 explicitly removed
-     * `Result.retry()` from the worker, and TASK-36's inline comment in
-     * `DriveBackupWorker.doWork()` codifies the invariant.
+     * error, so it returns `Result.success()`. The worker never returns
+     * `Result.retry()` — that would amplify the inner retry; the
+     * invariant is codified in `DriveBackupWorker.doWork()`.
      */
     @Test
     fun ioError_recoversAfterTransientRetry_returnsSuccess() = runBlocking {
@@ -102,7 +100,7 @@ class DriveBackupWorkerTest {
     }
 
     /**
-     * TASK-07 retry contract — when transient failures exceed the repo's
+     * Retry contract — when transient failures exceed the repo's
      * `MAX_ATTEMPTS = 3` budget, the repo emits `BackupResult.Failure` and
      * the worker translates that to `Result.failure()` (never `retry()`).
      */

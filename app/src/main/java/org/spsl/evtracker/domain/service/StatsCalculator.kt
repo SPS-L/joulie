@@ -18,7 +18,7 @@ import javax.inject.Inject
 class StatsCalculator @Inject constructor() {
 
     /**
-     * TASK-53: defense-in-depth guard for the single-car invariant. Every
+     * Defense-in-depth guard for the single-car invariant. Every
      * aggregation in this class except [detectMixedCurrency] assumes its
      * input shares a single `carId` — the odometer-delta loops in
      * [computeStats] / [computeEfficiencyTrend] produce nonsense numbers
@@ -55,11 +55,10 @@ class StatsCalculator @Inject constructor() {
         val totalKwhAll = events.sumOf { it.kwhAdded }
         val chargeCount = events.size
 
-        // Cost over the period is the sum of every costed event in the period
-        // (TASK-44). The earlier implementation accumulated cost only inside the
-        // delta-pair odometer loop, which silently dropped the first event's cost
-        // and made `totalCost` disagree with `computeMonthlyBuckets`. The DESIGN.md
-        // §7 contract is `Σ cost / Σ d_km`; this implementation now matches it.
+        // Cost over the period is the sum of every costed event (DESIGN.md
+        // §7: `Σ cost / Σ d_km`). Accumulating cost outside the delta-pair
+        // odometer loop ensures the first event's cost contributes — matches
+        // `computeMonthlyBuckets` which already sums every event.
         val costedCurrencies = events.mapNotNull { e -> e.costTotal?.let { e.currency } }.distinct()
         val mixedCurrency = costedCurrencies.size > 1
         val totalCost = if (mixedCurrency) 0.0 else events.mapNotNull { it.costTotal }.sum()
@@ -152,7 +151,7 @@ class StatsCalculator @Inject constructor() {
     }
 
     /**
-     * TASK-53 exemption: this function semantically does NOT depend on
+     * Exemption: this function semantically does NOT depend on
      * car identity — it is asking "are there ≥ 2 distinct currencies
      * among costed events". A future cross-car aggregator (e.g. a
      * fleet-level summary view) might legitimately call this on a
@@ -216,8 +215,8 @@ class StatsCalculator @Inject constructor() {
     }
 
     companion object {
-        // Cap chosen so the pie chart stays legible on phone widths
-        // (see spec §6.5 / §10). Tweaking is a code change, not a localization change.
+        // Cap chosen so the pie chart stays legible on phone widths.
+        // Tweaking is a code change, not a localization change.
         const val MAX_LOCATION_SLICES = 8
     }
 }

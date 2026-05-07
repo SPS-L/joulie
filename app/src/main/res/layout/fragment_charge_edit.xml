@@ -62,7 +62,7 @@
                     android:inputType="numberDecimal"/>
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- TASK-43: opt-in calculator link, hidden when the active car has no
+            <!-- opt-in calculator link, hidden when the active car has no
                  nominal battery capacity. Tapping expands the SoC card and (when
                  SoC fields are populated) auto-derives kWh. -->
             <com.google.android.material.button.MaterialButton
@@ -180,7 +180,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:visibility="gone">
-                <!-- TASK-43: visible only while the kWh calculator is active. -->
+                <!-- visible only while the kWh calculator is active. -->
                 <TextView
                     android:id="@+id/charge_edit_kwh_calculator_banner"
                     android:layout_width="match_parent"

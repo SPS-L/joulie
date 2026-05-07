@@ -160,7 +160,7 @@ class ChargeEditViewModel @Inject constructor(
     }
 
     /**
-     * TASK-43 override semantics: when the typed text differs from current
+     * Override semantics: when the typed text differs from current
      * state.kwh, the user is genuinely editing — flip provenance to
      * MEASURED and deactivate the SoC calculator. When the text matches
      * (echo from a programmatic setText() — initial render, or our own
@@ -202,13 +202,13 @@ class ChargeEditViewModel @Inject constructor(
     }
 
     /**
-     * TASK-43: opt-in entry point for the SoC-based kWh calculator.
+     * Opt-in entry point for the SoC-based kWh calculator.
      * Expands the SoC card if collapsed, marks the calculator active, and
      * pre-derives the kWh field if both SoC values are already present.
      * The calculator stays active until the user manually edits the kWh
      * field (handled in [setKwh]).
      *
-     * Note: post-auto-derive (2026-05-03), filling both SoC fields with kWh
+     * Note: post-auto-derive, filling both SoC fields with kWh
      * blank already activates the calculator implicitly via
      * [tryAutoActivateCalculator]. This explicit entry point survives so
      * users can still trigger the calculator by tapping the form's
@@ -229,11 +229,10 @@ class ChargeEditViewModel @Inject constructor(
     /**
      * Auto-activate the SoC calculator when the user has supplied both SoC
      * fields with a valid range and the kWh field is blank. The auto-fill
-     * is visible (kWh appears live as the user types SoC), so unlike the
-     * silent save-time auto-derive considered (and rejected) in TASK-43,
-     * this never surprises the user — manual edits to kWh after the fact
-     * still flip provenance back to `MEASURED` via [setKwh]'s existing
-     * override semantic.
+     * is visible (kWh appears live as the user types SoC) so it never
+     * surprises the user — manual edits to kWh after the fact still flip
+     * provenance back to `MEASURED` via [setKwh]'s existing override
+     * semantic.
      *
      * Returns the input state unchanged when any precondition fails so a
      * non-blank kWh is never overwritten silently and partial / invalid

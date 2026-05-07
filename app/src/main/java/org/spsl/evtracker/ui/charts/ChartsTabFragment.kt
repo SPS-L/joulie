@@ -101,7 +101,7 @@ class ChartsTabFragment : Fragment() {
             TabKind.AC_DC -> renderAcDc(charts, container, empty, subtitle)
             TabKind.LOCATIONS -> renderLocations(charts, container, empty)
             TabKind.DEGRADATION -> {
-                // TASK-43: surface the count of derived events excluded from
+                // surface the count of derived events excluded from
                 // capacity tracking so the user understands why the chart is
                 // sparser than the visible event count would suggest.
                 val excluded = charts.derivedExcludedCount
@@ -120,7 +120,7 @@ class ChartsTabFragment : Fragment() {
     }
 
     /**
-     * TASK-20: cumulative EV-emissions vs ICE-counterfactual line chart.
+     * Cumulative EV-emissions vs ICE-counterfactual line chart.
      * Two series, both running totals, anchored to the period's start —
      * the user sees the gap between the lines grow over time as the EV
      * accumulates "saved" CO₂.
@@ -221,8 +221,8 @@ class ChartsTabFragment : Fragment() {
             setDrawFilled(false)
         }
 
-        // Reference line at the car's nominal battery_kwh — drawn as a horizontal
-        // limit-line on the Y-axis (dashed) per spec.
+        // Reference line at the car's nominal battery_kwh — drawn as a
+        // horizontal dashed limit-line on the Y-axis.
         val limitLine = com.github.mikephil.charting.components.LimitLine(
             nominal.toFloat(),
             getString(R.string.charts_degradation_legend_nominal),
@@ -242,10 +242,10 @@ class ChartsTabFragment : Fragment() {
             chart.animateY(400)
             firstRenderConsumed = true
         }
-        // Pre-fix: this called `addView(chart)` with no LayoutParams, which
-        // left the chart at WRAP_CONTENT inside a FrameLayout container and
-        // crashed during measure when the data list had > 0 entries. Match
-        // the MATCH_PARENT pattern used by every other render method.
+        // Pass MATCH_PARENT LayoutParams explicitly: a bare `addView(chart)`
+        // would leave the chart at WRAP_CONTENT inside this FrameLayout
+        // container and crash during measure once the data list grows beyond
+        // zero entries. Matches the pattern used by every other render method.
         container.addView(
             chart,
             FrameLayout.LayoutParams(

@@ -289,7 +289,7 @@ class ChargeEditViewModelTest {
     }
 
     // -------------------------------------------------------------------------
-    // TASK-11: odometer regression UX (prefill + inline error + Save gate)
+    // odometer regression UX (prefill + inline error + Save gate)
     // -------------------------------------------------------------------------
 
     @Test
@@ -463,7 +463,7 @@ class ChargeEditViewModelTest {
         assertTrue(state.odometerAboveNext)
     }
 
-    // -- TASK-43: kWh-from-SoC calculator --------------------------------------
+    // -- — kWh-from-SoC calculator --------------------------------------
 
     @Test
     fun createMode_loadsNominalBatteryKwhFromActiveCar() = runTest {
@@ -594,12 +594,10 @@ class ChargeEditViewModelTest {
         assertEquals(36.0, saved.kwhAdded, 1e-6)
     }
 
-    // TASK-43 follow-up (2026-05-03) — auto-activate the SoC calculator when
-    // the user has filled both SoC fields with a valid range and kWh is blank.
-    // The original TASK-43 design required an explicit "Calculate from SoC %"
-    // tap; user feedback noted that's friction, and the visible-as-you-type
-    // behaviour doesn't suffer from the silent provenance flip the original
-    // save-time auto-derive would have had.
+    // Auto-activate the SoC calculator when the user has filled both SoC
+    // fields with a valid range and kWh is blank. The visible-as-you-type
+    // behaviour avoids the silent provenance flip a save-time auto-derive
+    // would have had.
 
     @Test
     fun socFieldsFilledWithBlankKwh_autoActivatesCalculator() = runTest {

@@ -21,16 +21,16 @@ class BackupSerializer @Inject constructor() {
     fun toJson(data: BackupData): String = gson.toJson(data)
 
     /**
-     * Accept `backup_version` 3 (pre-TASK-25), 4 (TASK-25 — `ChargeType` enum),
-     * 5 (TASK-26 — widened DTO ids `Int` → `Long`), 6 (TASK-14 — optional
-     * `socBefore`/`socAfter` fields on charge events), and 7 (current —
-     * TASK-43, `kwhSource` provenance flag).
+     * Accept `backup_version` 3 (legacy `"DC"` chargeType),
+     * 4 (`ChargeType` enum), 5 (widened DTO ids `Int` → `Long`),
+     * 6 (optional `socBefore`/`socAfter` fields on charge events), and 7
+     * (current; `kwhSource` provenance flag).
      *
      * Older backups simply leave new fields at their defaults — Gson
      * tolerates absent JSON keys for fields with Kotlin defaults. The
      * chargeType `JsonDeserializer` routes through [ChargeType.parseLegacy]
-     * so v3's `"DC"` decodes to [ChargeType.DC_FAST]; the kwhSource adapter
-     * (TASK-43) similarly defaults to `MEASURED` for v3..v6 backups, which
+     * so v3's `"DC"` decodes to [ChargeType.DC_FAST]; the kwhSource
+     * adapter similarly defaults to `MEASURED` for v3..v6 backups, which
      * is the correct backfill (those events predate the in-form calculator).
      */
     fun fromJson(json: String): BackupData {

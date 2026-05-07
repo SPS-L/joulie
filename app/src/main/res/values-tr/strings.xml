@@ -59,7 +59,7 @@
     <string name="drive_last_backup">Son yedek: %s</string>
     <string name="drive_backup_now">Şimdi yedekle</string>
 
-    <!-- Drive (Sub-project E) -->
+    <!-- Drive backup -->
     <string name="settings_section_drive">Yedekleme &amp; geri yükleme</string>
     <string name="settings_drive_label">Google Drive yedeklemesi</string>
     <string name="settings_drive_subtitle_off">Kapalı</string>
@@ -109,7 +109,7 @@
     <string name="backup_notif_permission_rationale_allow">İzin ver</string>
     <string name="backup_notif_permission_rationale_deny">Şimdi değil</string>
 
-    <!-- Settings (F1) -->
+    <!-- Settings -->
     <string name="settings_unit_flipped_to_km">Mesafe birimi km olarak da değiştirildi.</string>
     <string name="settings_unit_flipped_to_miles">Mesafe birimi mil olarak da değiştirildi.</string>
     <string name="settings_metric_flipped_km_per_kwh">Birincil ölçüt km / kWh olarak da değiştirildi.</string>
@@ -117,12 +117,12 @@
     <string name="settings_metric_flipped_mi_per_kwh">Birincil ölçüt mi / kWh olarak da değiştirildi.</string>
     <string name="settings_export_csv_failed">CSV dışa aktarma başarısız.</string>
 
-    <!-- Settings (F1), row labels and summaries -->
+    <!-- Settings, row labels and summaries -->
     <string name="settings_primary_metric">Birincil ölçüt</string>
     <string name="settings_distance_unit">Mesafe birimi</string>
     <string name="settings_currency">Para birimi</string>
     <string name="settings_theme">Tema</string>
-    <!-- TASK-55: language picker -->
+    <!-- language picker -->
     <string name="settings_language">Dil</string>
     <string name="settings_language_dialog_title">Dil seçin</string>
     <string name="settings_language_follow_system">Sistem ayarını kullan</string>
@@ -149,20 +149,20 @@
     <string name="settings_theme_light">Açık</string>
     <string name="settings_theme_dark">Koyu</string>
 
-    <!-- ManageLocations (F1) -->
+    <!-- ManageLocations -->
     <string name="manage_locations_title">Özel konumları yönet</string>
     <string name="manage_locations_empty">Şarj etkinliklerinde kaydettiğiniz konumlar burada görünecek.</string>
     <string name="manage_locations_row_count">%1$d kez kullanıldı · son %2$s</string>
     <string name="manage_locations_row_count_zero">Son %1$s</string>
     <string name="manage_locations_undo_snackbar">\"%1$s\" silindi</string>
 
-    <!-- F1 common -->
+    <!-- Common -->
     <string name="common_undo">Geri al</string>
     <string name="common_cancel">İptal</string>
     <string name="common_confirm">Onayla</string>
     <string name="common_navigate_back">Geri git</string>
 
-    <!-- F1 startup recovery -->
+    <!-- startup recovery -->
     <string name="recovery_failure_title">Sıfırlama kurtarma başarısız</string>
     <string name="recovery_failure_body">Son sıfırlama işleminiz tamamlanamadı.\n\n%1$s\n\nTekrar deneyin veya sorun devam ederse sistem Ayarlar\'dan uygulamanın verilerini temizleyin.</string>
     <string name="recovery_failure_retry">Tekrar dene</string>
@@ -172,7 +172,7 @@
     <string name="reset_per_car">Bu aracı sıfırla</string>
     <string name="reset_all">Tüm araçları sıfırla</string>
 
-    <!-- Wizard (Task 7 additions) -->
+    <!-- Wizard, page 1 (welcome) -->
     <string name="wizard_metric_question">Verimliliği nasıl görmek istersiniz?</string>
     <string name="wizard_metric_km_per_kwh">km / kWh (mesafe / enerji)</string>
     <string name="wizard_metric_kwh_per_100km">kWh / 100 km (enerji / mesafe)</string>
@@ -215,7 +215,7 @@
     <string name="battery_health_card_subtitle">En son efektif kapasite ile nominal karşılaştırması</string>
     <string name="battery_health_estimated_warning">Tahmini, sezgisel yöntem aşırı tahmin edebilir</string>
     <string name="battery_health_estimated_warning_a11y">Tahmini kapasite, aşırı tahmin edebilir</string>
-    <!-- TASK-20: CO₂ tracker -->
+    <!-- CO₂ tracker -->
     <string name="co2_card_label">CO₂</string>
     <string name="co2_card_ev_label">EV emisyonları</string>
     <string name="co2_card_ice_label">Benzin eşdeğeri</string>
@@ -255,7 +255,7 @@
     <string name="hint_soc_before">SoC öncesi (%)</string>
     <string name="hint_soc_after">SoC sonrası (%)</string>
 
-    <!-- TASK-43: kWh-from-SoC calculator -->
+    <!-- kWh-from-SoC calculator -->
     <string name="kwh_calculator_link">kWh bilmiyorsanız SoC %\'den hesaplayın</string>
     <string name="kwh_calculator_banner">kWh, SoC değişimi × nominal kapasite kullanılarak hesaplanıyor. Pil bozunma takibinden hariç tutulur.</string>
     <string name="history_kwh_estimated_badge">Tah.</string>
@@ -296,7 +296,7 @@
     <string name="car_form_year">Yıl</string>
     <string name="car_form_battery_kwh">Pil (kWh)</string>
 
-    <!-- F2, Charts -->
+    <!-- Charts -->
     <string name="charts_title">Grafikler</string>
     <string name="charts_period_last_6_months">Son 6 ay</string>
     <string name="charts_period_last_12_months">Son 12 ay</string>
@@ -328,7 +328,7 @@
         <item quantity="other">%d şarj</item>
     </plurals>
 
-    <!-- TASK-10, About / Info screen -->
+    <!--  About / Info screen -->
     <string name="about_title">Hakkında</string>
     <string name="about_version_label">Sürüm %1$s (derleme %2$d)</string>
     <string name="about_acknowledgment_title">Geliştiren</string>

@@ -41,19 +41,19 @@ data class ChargeEventEntity(
     val note: String = "",
     /**
      * State of charge before charging, stored as a fraction in `0.0..1.0`.
-     * `null` when the user did not enter SoC data on this event (TASK-14).
+     * `null` when the user did not enter SoC data on this event.
      */
     val socBefore: Double? = null,
     /**
      * State of charge after charging, stored as a fraction in `0.0..1.0`.
-     * `null` when the user did not enter SoC data on this event (TASK-14).
+     * `null` when the user did not enter SoC data on this event.
      */
     val socAfter: Double? = null,
     /**
-     * Provenance of [kwhAdded] (TASK-43). `MEASURED` is the user-entered or
+     * Provenance of [kwhAdded]. `MEASURED` is the user-entered or
      * charger-reported value; `DERIVED_FROM_SOC` is computed from
      * `(socAfter - socBefore) × Car.nominalBatteryKwh` via the in-form
-     * calculator. Capacity-degradation tracking (TASK-14) skips `DERIVED`
+     * calculator. Capacity-degradation tracking skips `DERIVED`
      * events because the math is tautological.
      */
     val kwhSource: ChargeKwhSource = ChargeKwhSource.MEASURED,

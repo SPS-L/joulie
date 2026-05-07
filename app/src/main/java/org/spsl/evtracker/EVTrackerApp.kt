@@ -48,7 +48,7 @@ class EVTrackerApp : Application(), Configuration.Provider {
                 },
             )
         }
-        // TASK-55: apply the persisted language tag at app start. Async per
+        // apply the persisted language tag at app start. Async per
         // the same trade-off as the theme branch above — DataStore reads are
         // sub-50ms on a cold start. AppCompat 1.6+ persists the value
         // internally, so subsequent app starts come up in the right locale

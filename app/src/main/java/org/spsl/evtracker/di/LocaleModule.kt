@@ -13,10 +13,10 @@ import org.spsl.evtracker.domain.locale.LocaleApplier
 import javax.inject.Singleton
 
 /**
- * TASK-55: single-binding module for [LocaleApplier]. Kept separate from
- * `DomainModule` so instrumented tests can `@UninstallModules(LocaleModule::class)`
- * without dragging in unrelated dependencies (mirrors the TASK-50 sub-fix C
- * `DataResetModule` extraction pattern).
+ * Single-binding module for [LocaleApplier]. Kept separate from
+ * `DomainModule` so instrumented tests can
+ * `@UninstallModules(LocaleModule::class)` without dragging in unrelated
+ * dependencies (mirrors the `DataResetModule` extraction pattern).
  */
 @Module
 @InstallIn(SingletonComponent::class)

@@ -28,7 +28,7 @@ import org.spsl.evtracker.testing.launchFragmentInHiltContainer
 import javax.inject.Inject
 
 /**
- * TASK-31: instrumented coverage for the manual Drive controls in
+ * Instrumented coverage for the manual Drive controls in
  * Settings ("Back up now" / "Wipe remote backup"). Drive enable state is
  * driven through DataStore directly because the Drive sign-in path
  * itself isn't part of this test's surface — we only care about whether

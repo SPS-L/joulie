@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  TASK-55: declared locales for the per-app language selector.
+  — declared locales for the per-app language selector.
 
   Lists every locale the app actually ships translations for. Android 13+
   reads this file to render the OS-level "Language" entry under

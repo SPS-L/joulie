@@ -75,11 +75,10 @@ class BackupSerializerTest {
     }
 
     /**
-     * TASK-25: backups written by pre-TASK-25 builds carry `backup_version = 3`
-     * and `charge_type = "DC"`. After this task, both must still restore on a
-     * v4-aware app: the version check accepts both 3 and 4, and the
-     * `ChargeType` Gson adapter routes legacy `"DC"` through
-     * `ChargeType.parseLegacy` to land at `DC_FAST`.
+     * Legacy backups carry `backup_version = 3` and `charge_type = "DC"`
+     * and must still restore on a v7-aware app: the version check accepts
+     * 3 through 7, and the `ChargeType` Gson adapter routes legacy `"DC"`
+     * through `ChargeType.parseLegacy` to land at `DC_FAST`.
      */
     @Test
     fun fromJson_acceptsV3Backup_andMapsLegacyDcToDcFast() {
@@ -109,7 +108,7 @@ class BackupSerializerTest {
     }
 
     /**
-     * TASK-43: a v7 backup carrying `"kwh_source": "DERIVED_FROM_SOC"`
+     * a v7 backup carrying `"kwh_source": "DERIVED_FROM_SOC"`
      * round-trips through Gson preserving the enum value. The default for
      * the field is `MEASURED`, so this test only passes if the
      * serializer + deserializer are wired (otherwise Gson would either
@@ -141,7 +140,7 @@ class BackupSerializerTest {
     }
 
     /**
-     * TASK-43: a v6 backup file (which predates the field entirely) must
+     * a v6 backup file (which predates the field entirely) must
      * still restore on a v7-aware app. The kwh_source key is absent from
      * the JSON; Gson should leave the Kotlin default in place, and that
      * default is `MEASURED` — the safe backfill since legacy events came

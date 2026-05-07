@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    TASK-12: home-screen widget for the most recent charge of the active car.
+    — home-screen widget for the most recent charge of the active car.
     RemoteViews-only — no custom views, no fragment, no data binding.
     The provider hides the "loaded" group + shows the empty TextView when
     there is no active car or no events.

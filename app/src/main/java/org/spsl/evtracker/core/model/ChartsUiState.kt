@@ -29,19 +29,19 @@ sealed class ChartsUiState {
         val monthlyCost: List<MonthBucket>,
         val acDc: AcDcSplit,
         val locations: List<LocationSlice>,
-        /** TASK-14: capacity points for the active car, sorted by eventDate. Empty when the
+        /** Capacity points for the active car, sorted by eventDate. Empty when the
          *  car has no nominal `battery_kwh` set OR fewer than 3 qualifying points exist. */
         val capacity: List<CapacityPoint>,
-        /** TASK-14: nominal battery capacity (kWh) for the active car; used to draw the
+        /** Nominal battery capacity (kWh) for the active car; used to draw the
          *  reference line on the degradation chart. `null` when unset on the car. */
         val nominalBatteryKwh: Double?,
-        /** TASK-43: count of `DERIVED_FROM_SOC` events in the current period.
+        /** Count of `DERIVED_FROM_SOC` events in the current period.
          *  Drives the degradation-tab banner ("N estimated events excluded …").
          *  These events are silently skipped by [CapacityEstimator]; the banner
          *  surfaces the exclusion so the user can reconcile event count with
          *  rendered points. */
         val derivedExcludedCount: Int,
-        /** TASK-20: cumulative CO₂ trend (EV-side + ICE counterfactual) across
+        /** Cumulative CO₂ trend (EV-side + ICE counterfactual) across
          *  the period's events. Empty list when both prefs are 0 / unset —
          *  the CO₂ tab then shows the empty-state pointing the user to
          *  Settings → CO₂. */

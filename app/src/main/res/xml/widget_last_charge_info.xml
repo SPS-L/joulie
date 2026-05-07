@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    TASK-12: AppWidget metadata.
+    — AppWidget metadata.
     updatePeriodMillis="0" — no polling. The provider re-renders on demand
     via WidgetRefresher.refresh() called from the snapshot-affecting use
     cases (Save/Delete charge event, Add/Delete/Rename car, Restore, Reset).

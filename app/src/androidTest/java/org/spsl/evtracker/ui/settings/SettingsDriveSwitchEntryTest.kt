@@ -30,16 +30,17 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * TASK-54 — Step 0 regression guard.
+ * Drive-switch view-state-restoration regression guard.
  *
- * Bare entry into [SettingsFragment] with `DRIVE_ENABLED = true` in DataStore
- * must NOT invoke [DriveAuthManager.authorize]. Pre-fix, the switch's
- * `OnCheckedChangeListener` was attached in `onViewCreated` before Android's
- * view-state restoration ran `setChecked(true)` to restore the saved switch
- * state, which synchronously fired the listener → `onUserToggledOn` →
- * `auth.authorize()`. Post-fix (Option A: lazy listener attach in the
- * StateFlow collector), the first `isChecked` write happens with no listener
- * attached, so the restoration call is silent.
+ * Bare entry into [SettingsFragment] with `DRIVE_ENABLED = true` in
+ * DataStore must NOT invoke [DriveAuthManager.authorize]. The switch's
+ * `OnCheckedChangeListener` is attached lazily inside the StateFlow
+ * collector, not in `onViewCreated`. If it were attached eagerly,
+ * Android's view-state restoration calling `setChecked(true)` between
+ * `onCreateView` and `onStart` would synchronously fire the listener →
+ * `onUserToggledOn` → `auth.authorize()`. The lazy-attach ordering means
+ * the first `isChecked` write happens with no listener attached, so the
+ * restoration call is silent.
  *
  * Two assertions cover the two reproduction triggers:
  *  - first launch with persisted `driveEnabled=true`
@@ -104,9 +105,9 @@ class SettingsDriveSwitchEntryTest {
     @Test fun reEntry_viaActivityRecreation_doesNotCallAuthorize() {
         // FragmentScenario.recreate() destroys and recreates the host
         // activity, exercising the same view-state save/restore path that
-        // navigating away and back through the back stack does. This is the
-        // exact reproduction trigger for the user-reported "every Settings
-        // entry the switch toggles OFF→ON and the prompt appears" bug.
+        // navigating away and back through the back stack does. Without
+        // the lazy listener attach, this would fire `authorize()` on every
+        // re-entry and cascade into a destructive restore prompt.
         val scenario = launchFragmentInHiltContainer<SettingsFragment>(
             themeResId = R.style.Theme_EVTracker,
         ).moveToState(Lifecycle.State.RESUMED)

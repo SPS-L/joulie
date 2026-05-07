@@ -11,7 +11,7 @@
         android:layout_height="match_parent"
         android:orientation="vertical">
 
-        <!-- TASK-43: degradation tab banner. Visible only on the DEGRADATION
+        <!-- degradation tab banner. Visible only on the DEGRADATION
              tab when at least one DERIVED_FROM_SOC event is in the visible
              period. -->
         <TextView

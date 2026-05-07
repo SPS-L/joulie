@@ -144,7 +144,7 @@ class ObserveChartsModelsUseCaseTest {
     }
 
     @Test fun derivedExcludedCount_reflectsKwhSourceFlag_inPeriod() = runTest {
-        // TASK-43: derived events in the visible period must not produce
+        // derived events in the visible period must not produce
         // capacity points (CapacityEstimator filters them) but must be
         // counted on derivedExcludedCount so the chart can render the banner.
         val ms30d = 30L * 24 * 60 * 60 * 1000

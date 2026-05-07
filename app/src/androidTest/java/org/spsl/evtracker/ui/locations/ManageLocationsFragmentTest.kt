@@ -51,12 +51,11 @@ class ManageLocationsFragmentTest {
     @Test fun swipe_showsSnackbar_undo_restoresRow() {
         launchFragmentInHiltContainer<ManageLocationsFragment>(themeResId = R.style.Theme_EVTracker)
             .moveToState(Lifecycle.State.RESUMED).use {
-                // Poll the rendered view directly. The previous DAO-Flow poll
-                // exited as soon as the DAO emitted, but the Fragment's
-                // Main-dispatcher collect of ViewModel.StateFlow → adapter
-                // diff hadn't always produced the Office row in the hierarchy
-                // by then — surfaced as NoMatchingViewException on v11.
-                // awaitView covers DAO Flow + StateFlow + adapter diff in one shot.
+                // Poll the rendered view directly: a DAO-Flow poll exits as
+                // soon as the DAO emits, but the Fragment's Main-dispatcher
+                // collect of ViewModel.StateFlow → adapter diff may not have
+                // produced the Office row in the hierarchy yet. awaitView
+                // covers DAO Flow + StateFlow + adapter diff in one shot.
                 awaitView { onView(withText("Office")).check(matches(isDisplayed())) }
                 onView(withText("Office")).perform(
                     GeneralSwipeAction(
@@ -74,12 +73,10 @@ class ManageLocationsFragmentTest {
     @Test fun swipe_no_undo_after_5s_rowIsGone() {
         launchFragmentInHiltContainer<ManageLocationsFragment>(themeResId = R.style.Theme_EVTracker)
             .moveToState(Lifecycle.State.RESUMED).use {
-                // Same pre-swipe race as swipe_showsSnackbar_undo_restoresRow:
-                // the seeded "Office" row needs a moment to propagate through
+                // The seeded "Office" row needs a moment to propagate through
                 // DAO Flow → ViewModel.StateFlow → RecyclerView adapter before
-                // Espresso can target it. The sister test polled the DAO Flow
-                // directly; awaitView on the rendered view is simpler and
-                // covers the adapter-binding step too.
+                // Espresso can target it. awaitView on the rendered view
+                // covers the adapter-binding step in addition to the Flow.
                 awaitView { onView(withText("Office")).check(matches(isDisplayed())) }
                 onView(withText("Office")).perform(
                     GeneralSwipeAction(
@@ -89,11 +86,10 @@ class ManageLocationsFragmentTest {
                         Press.FINGER,
                     ),
                 )
-                // Poll the view hierarchy directly. The previous DAO-Flow poll
-                // raced the StateFlow → adapter diff: the Flow could emit
-                // "Office gone" while RecyclerView still showed the old binding.
-                // Wait up to 20 s — covers the 5 s coroutine `delay` plus
-                // headroom for slow shared CI runners and adapter rebind.
+                // Poll the view hierarchy directly — the DAO Flow could emit
+                // "Office gone" while RecyclerView still showed the old
+                // binding. Wait up to 20 s — covers the 5 s coroutine `delay`
+                // plus headroom for slow shared CI runners and adapter rebind.
                 awaitView(timeoutMs = 20_000) {
                     onView(withText("Office")).check(doesNotExist())
                 }

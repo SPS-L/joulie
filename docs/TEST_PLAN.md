@@ -40,7 +40,7 @@
 
 ### 1.4 StatsCalculatorCostTest.kt
 
-Note (TASK-44, 2026-05-03): the existing fixtures in cases 1–5 below all start with an "anchor event" (`event(1, 0.0, 0.0)`) that has *no* cost, so the pre-TASK-44 bug (first event's cost silently dropped) didn't trip them. The four new cases at the bottom (`firstAndSecondEventBothCosted_…`, `firstAndThirdEventCosted_…`, `singleCostedEvent_…`, `mixedCurrencyWithFirstEventCosted_…`) lock in the corrected `Σ cost` semantic for first-event-costed shapes.
+Note: the fixtures in cases 1–5 below all start with an "anchor event" (`event(1, 0.0, 0.0)`) that has *no* cost, so a regression where the first event's cost is silently dropped would not trip them. The four cases at the bottom (`firstAndSecondEventBothCosted_…`, `firstAndThirdEventCosted_…`, `singleCostedEvent_…`, `mixedCurrencyWithFirstEventCosted_…`) lock in the `Σ cost` semantic for first-event-costed shapes.
 
 | Test | Input | Expected |
 |------|-------|----------|
@@ -49,14 +49,14 @@ Note (TASK-44, 2026-05-03): the existing fixtures in cases 1–5 below all start
 | `singleCostEvent_correct` | 1 event, cost=5.0, 50km | costPerKm=0.10 |
 | `multipleCurrencies_costStatsNull` | 4 events, 2 EUR + 2 USD | costPerKm=null, costPer100km=null (multi-currency guard) |
 | `singleCurrencyAcrossPeriod_costStatsComputed` | 4 events all EUR | costPerKm=Σcost/Σdist |
-| `firstAndSecondEventBothCosted_totalCostSumsBoth` | 2 events both costed, EUR | totalCost=15 (sum); costPerKm=15/Δkm (TASK-44, pre-fix dropped event 0's €5) |
-| `firstAndThirdEventCosted_middleNotCosted_totalIncludesBoth` | 3 events, only 1st & 3rd costed | totalCost=sum of both costed events; currency=EUR (TASK-44) |
-| `singleCostedEvent_reportsTotalCost_costPerKmStillNull` | 1 event, costed | totalCost=that cost; currency=EUR; costPerKm=null (delta distance undefined for single event) (TASK-44) |
-| `mixedCurrencyWithFirstEventCosted_totalCostStillNull` | 2 events: EUR + USD, both costed, first event costed | totalCost=null; currency=null; mixedCurrency=true (mixed-currency rule still wins after TASK-44) |
+| `firstAndSecondEventBothCosted_totalCostSumsBoth` | 2 events both costed, EUR | totalCost=15 (sum of both events' cost); costPerKm=15/Δkm |
+| `firstAndThirdEventCosted_middleNotCosted_totalIncludesBoth` | 3 events, only 1st & 3rd costed | totalCost=sum of both costed events; currency=EUR |
+| `singleCostedEvent_reportsTotalCost_costPerKmStillNull` | 1 event, costed | totalCost=that cost; currency=EUR; costPerKm=null (delta distance undefined for single event) |
+| `mixedCurrencyWithFirstEventCosted_totalCostStillNull` | 2 events: EUR + USD, both costed, first event costed | totalCost=null; currency=null; mixedCurrency=true (mixed-currency rule still wins) |
 
 ### 1.5 CapacityEstimatorTest.kt
 
-Locks in the TASK-14 battery-capacity estimator. SoC fields are stored as fractions in `0.0..1.0`. The heuristic boundary is `kwhAdded ≥ 0.8 × nominalBatteryKwh`. `batteryHealthPercent` is **not clamped**, over-estimation by the heuristic surfaces as values above 100%.
+Locks in the battery-capacity estimator. SoC fields are stored as fractions in `0.0..1.0`. The heuristic boundary is `kwhAdded ≥ 0.8 × nominalBatteryKwh`. `batteryHealthPercent` is **not clamped**, over-estimation by the heuristic surfaces as values above 100%.
 
 | Test | Description |
 |------|-------------|
@@ -87,7 +87,7 @@ Locks in the TASK-14 battery-capacity estimator. SoC fields are stored as fracti
 
 ### 1.7 BackupOutcomeReporterTest.kt
 
-Locks in the TASK-19 orchestration: `BackupOutcomeReporter` translates each `BackupResult` into a counter update and a notifier call. Threshold is `CHRONIC_FAILURE_THRESHOLD = 3`. Uses an in-test `LinkedSettings` paired SettingsReader+Writer so the reporter's read-then-write sequence sees the value it just wrote (the shared `Fakes.kt` reader/writer are independent stores).
+Locks in the backup-failure notification orchestration: `BackupOutcomeReporter` translates each `BackupResult` into a counter update and a notifier call. Threshold is `CHRONIC_FAILURE_THRESHOLD = 3`. Uses an in-test `LinkedSettings` paired SettingsReader+Writer so the reporter's read-then-write sequence sees the value it just wrote (the shared `Fakes.kt` reader/writer are independent stores).
 
 | Test | Description |
 |------|-------------|
@@ -102,7 +102,7 @@ Locks in the TASK-19 orchestration: `BackupOutcomeReporter` translates each `Bac
 
 ### 1.8 PushBackupNowUseCaseTest.kt
 
-Locks in the TASK-31 manual-push contract: `PushBackupNowUseCase` calls `BackupRepository.backupCurrentData()` and only updates `lastBackupAt` to the `NowProvider` value on `BackupResult.Success`. Failure paths leave the timestamp untouched so the UI's "Last backup at …" hint stays truthful.
+Locks in the manual-push contract: `PushBackupNowUseCase` calls `BackupRepository.backupCurrentData()` and only updates `lastBackupAt` to the `NowProvider` value on `BackupResult.Success`. Failure paths leave the timestamp untouched so the UI's "Last backup at …" hint stays truthful.
 
 | Test | Description |
 |------|-------------|
@@ -113,7 +113,7 @@ Locks in the TASK-31 manual-push contract: `PushBackupNowUseCase` calls `BackupR
 
 ### 1.9 WipeRemoteBackupUseCaseTest.kt
 
-Locks in the TASK-31 manual-wipe contract: `WipeRemoteBackupUseCase` calls `BackupRepository.deleteRemoteBackup()` and only clears `lastBackupAt` to `0L` on `BackupResult.Success`. Failure paths leave the timestamp at its previous value. TASK-54 (2026-05-03) extends the `Success` side-effect to **also** clear the durable last-seen-snapshot marker, `setLastSeenRemoteBackupExportedAt("")` runs in the same branch, ordered AFTER `setLastBackupAt(0L)` (the test pins call ordering so a future reorder is visible in code review).
+Locks in the manual-wipe contract: `WipeRemoteBackupUseCase` calls `BackupRepository.deleteRemoteBackup()` and only clears `lastBackupAt` to `0L` on `BackupResult.Success`. Failure paths leave the timestamp at its previous value. The `Success` side-effect to **also** clear the durable last-seen-snapshot marker, `setLastSeenRemoteBackupExportedAt("")` runs in the same branch, ordered AFTER `setLastBackupAt(0L)` (the test pins call ordering so a future reorder is visible in code review).
 
 | Test | Description |
 |------|-------------|
@@ -121,12 +121,12 @@ Locks in the TASK-31 manual-wipe contract: `WipeRemoteBackupUseCase` calls `Back
 | `authRequired_propagates_andDoesNotClearLastBackupAt` | `AuthRequired` returned + previous `lastBackupAt` preserved |
 | `failure_propagates_andDoesNotClearLastBackupAt` | `Failure("HTTP 500")` returned + previous `lastBackupAt` preserved |
 | `success_whenNoPriorTimestamp_writesZero` | Even with a null pre-state, `Success` normalises to `0L` so the empty-state hint reverts |
-| `success_clearsLastSeenRemoteBackupExportedAtMarker` | Pre-seeded marker `"2025-01-01T00:00:00Z"` → after `Success`, marker resets to `""` AND call recorder shows `setLastBackupAt(0)` then `setLastSeenRemoteBackupExportedAt()` in that order (TASK-54) |
-| `authRequired_doesNotClearLastSeenMarker` | Pre-seeded marker → after `AuthRequired`, marker is preserved (the wipe didn't happen, so the remote may still exist and the marker is still meaningful) (TASK-54) |
+| `success_clearsLastSeenRemoteBackupExportedAtMarker` | Pre-seeded marker `"2025-01-01T00:00:00Z"` → after `Success`, marker resets to `""` AND call recorder shows `setLastBackupAt(0)` then `setLastSeenRemoteBackupExportedAt()` in that order |
+| `authRequired_doesNotClearLastSeenMarker` | Pre-seeded marker → after `AuthRequired`, marker is preserved (the wipe didn't happen, so the remote may still exist and the marker is still meaningful) |
 
 ### 1.10 LastChargeWidgetSnapshotTest.kt
 
-Locks in the TASK-12 widget snapshot helper. The helper picks the latest event by `eventDate` (sorts the input, caller may pass unsorted), computes efficiency from the latest event's odometer-delta vs the previous one (consistent with `StatsCalculator`'s convention from `docs/DESIGN.md §7`), converts to the user's primary metric, and buckets the relative date.
+Locks in the widget snapshot helper. The helper picks the latest event by `eventDate` (sorts the input, caller may pass unsorted), computes efficiency from the latest event's odometer-delta vs the previous one (consistent with `StatsCalculator`'s convention from `docs/DESIGN.md §7`), converts to the user's primary metric, and buckets the relative date.
 
 | Test | Description |
 |------|-------------|
@@ -151,7 +151,7 @@ Locks in the TASK-12 widget snapshot helper. The helper picks the latest event b
 
 ### 1.11 KwhFromSocCalculatorTest.kt
 
-Locks in the TASK-43 pure helper `KwhFromSocCalculator.compute(socBefore, socAfter, nominalBatteryKwh)`. Returns `max(0, (socAfter − socBefore) × nominalBatteryKwh)`. Negative deltas clamp to zero (rather than throw) so the caller can treat zero as "calculator could not produce a value". Battery-side kWh only, charging-loss caveat documented inline on the helper's KDoc.
+Locks in the pure helper `KwhFromSocCalculator.compute(socBefore, socAfter, nominalBatteryKwh)`. Returns `max(0, (socAfter − socBefore) × nominalBatteryKwh)`. Negative deltas clamp to zero (rather than throw) so the caller can treat zero as "calculator could not produce a value". Battery-side kWh only, charging-loss caveat documented inline on the helper's KDoc.
 
 | Test | Description |
 |------|-------------|
@@ -162,7 +162,7 @@ Locks in the TASK-43 pure helper `KwhFromSocCalculator.compute(socBefore, socAft
 
 ### 1.12 ChargeKwhSourceTest.kt + ChargeKwhSourceConverterTest.kt
 
-Locks in the TASK-43 enum + Room TypeConverter pair, mirroring the TASK-25 `ChargeType` pattern. Defensive-fallback contract: unknown / corrupted strings decode to `MEASURED` so a stale row never crashes Room reads (worst-case is a single derived event over-counts in the degradation chart).
+Locks in the enum + Room TypeConverter pair, mirroring the `ChargeType` pattern. Defensive-fallback contract: unknown / corrupted strings decode to `MEASURED` so a stale row never crashes Room reads (worst-case is a single derived event over-counts in the degradation chart).
 
 | Test | Description |
 |------|-------------|
@@ -171,7 +171,7 @@ Locks in the TASK-43 enum + Room TypeConverter pair, mirroring the TASK-25 `Char
 | `roundTrip_allValues_preserved` | Converter `fromChargeKwhSource` → `toChargeKwhSource` is identity for every enum value |
 | `unknownString_fallsBackToMeasured` | Converter side: same defensive fallback as the enum |
 
-### 1.13 BackupSerializerTest.kt, TASK-43 additions
+### 1.13 BackupSerializerTest.kt
 
 | Test | Description |
 |------|-------------|
@@ -180,7 +180,7 @@ Locks in the TASK-43 enum + Room TypeConverter pair, mirroring the TASK-25 `Char
 | `toJson_serializesKwhSourceAsName` | `DERIVED_FROM_SOC` writes as the canonical enum name on the wire |
 | `currentVersion_isSeven` | Sanity tripwire: catches a future bump that forgets to update the constant |
 
-### 1.14 CapacityEstimatorTest.kt, TASK-43 additions
+### 1.14 CapacityEstimatorTest.kt
 
 | Test | Description |
 |------|-------------|
@@ -190,14 +190,14 @@ Locks in the TASK-43 enum + Room TypeConverter pair, mirroring the TASK-25 `Char
 | `countDerivedEvents_returnsDerivedRowCount` | Counts events flagged `DERIVED_FROM_SOC`; unflagged events do not contribute |
 | `countDerivedEvents_emptyListReturnsZero` | Empty input → 0 |
 
-### 1.15 SaveChargeEventUseCaseTest.kt, TASK-43 additions
+### 1.15 SaveChargeEventUseCaseTest.kt
 
 | Test | Description |
 |------|-------------|
-| `kwhSource_defaultsToMeasured_whenInputOmitsField` | Existing call sites that pre-date TASK-43 stay correct: `SaveChargeEventInput.kwhSource` default is `MEASURED`, persisted entity is never silently flipped to `DERIVED` |
+| `kwhSource_defaultsToMeasured_whenInputOmitsField` | Existing call sites that omit the field stay correct: `SaveChargeEventInput.kwhSource` default is `MEASURED`, persisted entity is never silently flipped to `DERIVED` |
 | `kwhSource_persistsDerivedFromSoc_whenInputOptsIn` | Explicit `DERIVED_FROM_SOC` round-trips through to the persisted entity unchanged |
 
-### 1.16 ObserveChartsModelsUseCaseTest.kt, TASK-43 addition
+### 1.16 ObserveChartsModelsUseCaseTest.kt
 
 | Test | Description |
 |------|-------------|
@@ -205,13 +205,13 @@ Locks in the TASK-43 enum + Room TypeConverter pair, mirroring the TASK-25 `Char
 
 ### 1.17 ExportCsvUseCaseTest.kt
 
-Locks in two related contracts: the TASK-52 (2026-05-03) CSV-injection / RFC 4180 escape rules, and the TASK-09 (2026-05-03) canonical 14-column schema with date-ranged-export support. The file has two baseline cases (`header_isCanonicalFourteenColumnSchema`, `rowCountMatchesEventCount`) plus 10 TASK-52 hardening cases plus 11 TASK-09 schema/range cases. Two shared helpers: `rowFor(location, note, currency)` slices on the first `\n` (header terminator) and `trimEnd('\n')` to capture a single full data row (used by the TASK-52 single-event hardening cases); `writeAndGetLines(events, carName)` walks the output character-by-character honouring CSV quoting state so embedded `\r` / `\n` inside a quoted field don't split a logical record across multiple "lines" (used by the TASK-09 column-index assertions). The previous `headerLineUsesKmOrMilesPerFlag` test was retired when TASK-09 dropped the `useKm` parameter.
+Locks in two related contracts: the CSV-injection / RFC 4180 escape rules and the canonical 14-column schema with date-ranged-export support. The file has two baseline cases (`header_isCanonicalFourteenColumnSchema`, `rowCountMatchesEventCount`) plus 10 hardening cases plus 11 schema/range cases. Two shared helpers: `rowFor(location, note, currency)` slices on the first `\n` (header terminator) and `trimEnd('\n')` to capture a single full data row (used by the single-event hardening cases); `writeAndGetLines(events, carName)` walks the output character-by-character honouring CSV quoting state so embedded `\r` / `\n` inside a quoted field don't split a logical record across multiple "lines" (used by the column-index assertions). The previous `headerLineUsesKmOrMilesPerFlag` test was retired when the `useKm` parameter was dropped.
 
-**TASK-52 hardening cases:**
+**CSV-injection hardening cases:**
 
 | Test | Description |
 |------|-------------|
-| `note_containingCarriageReturn_isQuoted` | RFC 4180 mandates CR-bearing fields to be quoted; pre-TASK-52 only `\n` triggered quoting. Note `"line1\rline2"` → `"line1\rline2"` |
+| `note_containingCarriageReturn_isQuoted` | RFC 4180 mandates CR-bearing fields to be quoted (a regression that quoted only on `\n` would let `\r` through). Note `"line1\rline2"` → `"line1\rline2"` |
 | `note_containingTab_isQuoted` | Excel auto-detects TSV when a tab appears in the first data row; quoting forces CSV interpretation. Note `"col1\tcol2"` → `"col1\tcol2"` |
 | `note_startingWithEquals_getsFormulaPrefix` | Canonical OWASP CSV-injection. Note `"=SUM(A1:A10)"` → `"'=SUM(A1:A10)"` (apostrophe inside outer quotes neutralises Excel's formula mode) |
 | `location_startingWithPlus_getsFormulaPrefix` | International phone numbers (`"+44 7000"`) are legitimate user data that triggers Excel's formula mode. Apostrophe-prefix protects without losing the data |
@@ -220,9 +220,9 @@ Locks in two related contracts: the TASK-52 (2026-05-03) CSV-injection / RFC 418
 | `note_withFormulaPrefixAndEmbeddedQuote_doublesQuotesInsideField` | Compound case: leading `=` triggers the apostrophe prefix AND an embedded `"` requires standard CSV doubling. `=HYPERLINK("http://evil")` → `"'=HYPERLINK(""http://evil"")"`. Regression guard for the prefix + escape interaction |
 | `note_plainText_isNotQuoted` | Over-quoting regression guard: `"Charged at home"` is benign and stays unquoted. The full row ends with `,Charged at home` (no trailing record terminator after `trimEnd('\n')`) |
 | `note_existingCommaAndQuoteCases_stayGreen` | RFC 4180 baseline, `,` → quoted; embedded `"` → doubled and quoted; `\n` → quoted |
-| `currency_isAlsoEscaped` | TASK-52 expanded escape coverage to the `currency` column (free-form letter code stored verbatim from the wizard). A malicious `currency = "=USD"` emits `"'=USD"` instead of `=USD` |
+| `currency_isAlsoEscaped` | Escape coverage extends to the `currency` column (free-form letter code stored verbatim from the wizard). A malicious `currency = "=USD"` emits `"'=USD"` instead of `=USD` |
 
-**TASK-09 schema + range cases:**
+**Schema + range cases:**
 
 | Test | Description |
 |------|-------------|
@@ -232,8 +232,8 @@ Locks in two related contracts: the TASK-52 (2026-05-03) CSV-injection / RFC 418
 | `multiEvent_efficiencyDerivedFromDeltaOdometer` | 100 km gained, 12 kWh charged → `8.333333333333334` km/kWh on row 2; row 1 stays blank |
 | `negativeOdometerDelta_efficiencyBlank` | Odometer rolls back: that row's efficiency is blank, but the chain continues, the next row computes its delta against the rolled-back row (mirrors `StatsCalculator`'s pairwise convention) |
 | `zeroKwh_efficiencyBlank` | 0-kwh rows would divide-by-zero; defensive blank, not NaN |
-| `kwhSource_emitsEnumName` | TASK-43 column 4, `MEASURED` / `DERIVED_FROM_SOC` enum names emit verbatim |
-| `socFields_emitFractionsOrBlank` | TASK-14 columns 11 / 12, `0.2` and `0.8` emit as `"0.2"` / `"0.8"`; null fields emit blank |
+| `kwhSource_emitsEnumName` | Column 4, `MEASURED` / `DERIVED_FROM_SOC` enum names emit verbatim |
+| `socFields_emitFractionsOrBlank` | Columns 11 / 12, `0.2` and `0.8` emit as `"0.2"` / `"0.8"`; null fields emit blank |
 | `costPerKwh_emitsDoubleOrBlank_independentOfCostTotal` | Both `costTotal` (col 7) and `costPerKwh` (col 8) are independently nullable per the CostParser contract; each renders Double or blank without coupling |
 | `carName_appearsInEveryRow_andIsEscapedWhenContainsComma` | Car name is column 1 on every row (not just header). A name containing `,` (e.g., `"Tesla, Model 3"`) forces RFC 4180 quoting via the hardened escape |
 | `mixedCurrencyRows_eachRowEmitsItsOwnCurrency` | The exporter does NOT apply mixed-currency aggregation rules (those live in `StatsCalculator` for the dashboard). EUR row + USD row each emit their own currency verbatim, researchers handle aggregation downstream |
@@ -241,7 +241,7 @@ Locks in two related contracts: the TASK-52 (2026-05-03) CSV-injection / RFC 418
 
 ### 1.18 CO2CalculatorTest.kt
 
-Locks in the pure-domain CO₂ calculator from TASK-20 (2026-05-04). All cases use deterministic numeric fixtures, `event(kwhAdded = 50.0)` × 577 gCO₂/kWh = 28.85 kg, etc., so the assertions are checkable by hand against the formulas in [`docs/METHODOLOGY.md`](METHODOLOGY.md).
+Locks in the pure-domain CO₂ calculator. All cases use deterministic numeric fixtures, `event(kwhAdded = 50.0)` × 577 gCO₂/kWh = 28.85 kg, etc., so the assertions are checkable by hand against the formulas in [`docs/METHODOLOGY.md`](METHODOLOGY.md).
 
 | Test | Description |
 |------|-------------|
@@ -255,7 +255,7 @@ Locks in the pure-domain CO₂ calculator from TASK-20 (2026-05-04). All cases u
 | `iceCounterfactual_typicalCase` | 1000 km × 7.0 / 100 × 2.31 = 161.7 kg |
 | `iceCounterfactual_smallDistance` | 50 km × 5.5 / 100 × 2.31 = 6.3525 kg |
 | `savedCo2_positiveSavings_typicalCypriotEv` | 1000 km / 50 kWh / 577 gCO₂ → saved = 132.85 kg |
-| `savedCo2_canGoNegative_onDirtyGridShortDistance` | 100 km / 50 kWh on a 1000 gCO₂/kWh grid → saved = -33.83 kg. Q1=c contract: card surfaces this honestly |
+| `savedCo2_canGoNegative_onDirtyGridShortDistance` | 100 km / 50 kWh on a 1000 gCO₂/kWh grid → saved = -33.83 kg. Card surfaces both numbers side-by-side rather than hiding negative savings |
 | `cumulativeTrend_emptyEvents_returnsEmpty` | No events → no points (Charts tab shows period-empty copy) |
 | `cumulativeTrend_firstEventHasZeroIceRunning` | First event has no prior odometer → ICE running stays 0; EV side accrues immediately |
 | `cumulativeTrend_threeEvents_runningTotalsAdvance` | EV and ICE running totals advance correctly; `prev` advances on every event |
@@ -302,10 +302,10 @@ Locks in the pure-domain CO₂ calculator from TASK-20 (2026-05-04). All cases u
 | `migrate_1_to_2` | Adds `chargeType` column |
 | `migrate_2_to_3` | Creates `custom_locations`; adds cost/location/note columns (camelCase) |
 | `migrate_3_to_4_rewritesLegacyDcRows` | Seeds a v3 DB with a `chargeType = 'DC'` row, runs `MIGRATION_3_4`, asserts the row is rewritten to `'DC_FAST'`. Column type stays TEXT, `@TypeConverters(ChargeTypeConverter)` does the enum round-trip. |
-| `migrate_4_to_5_isNoOp_widenIntPksToLong` | Runs `MIGRATION_3_4` then `MIGRATION_4_5` against a v3 fixture and asserts existing rows survive untouched with PKs round-tripping as 64-bit `Long`. SQLite `INTEGER` columns already hold 64 bits, so the migration is a deliberate no-op (TASK-26). |
-| `migrate_5_to_6_addsSocColumns` | Runs the full v3 → v4 → v5 → v6 chain against a fixture and asserts the new `socBefore` and `socAfter` REAL columns exist and default to `NULL` on legacy rows (TASK-14). |
-| `migrate_6_to_7_addsKwhSourceColumn` | Runs v3 → v4 → v5 → v6 → v7 against a fixture and asserts the new `kwhSource TEXT NOT NULL DEFAULT 'MEASURED'` column exists and pre-existing rows backfill to `'MEASURED'` (TASK-43). |
-| `migrate_1_to_7_validatesSchema` | Full chain v1 → v7 (renamed from `migrate_1_to_6_validatesSchema`); opens via `Room.databaseBuilder(...).build().openHelper.writableDatabase` to force schema validation against the entity declarations (catches column-name casing drift), asserts the migrated `ChargeType` decodes to `ChargeType.AC`, asserts entity PKs round-trip as `Long`, asserts both SoC columns are `null` on rows persisted before TASK-14, and asserts the new `kwhSource` column resolves to `ChargeKwhSource.MEASURED` via `@TypeConverters(ChargeKwhSourceConverter)`. |
+| `migrate_4_to_5_isNoOp_widenIntPksToLong` | Runs `MIGRATION_3_4` then `MIGRATION_4_5` against a v3 fixture and asserts existing rows survive untouched with PKs round-tripping as 64-bit `Long`. SQLite `INTEGER` columns already hold 64 bits, so the migration is a deliberate no-op. |
+| `migrate_5_to_6_addsSocColumns` | Runs the full v3 → v4 → v5 → v6 chain against a fixture and asserts the new `socBefore` and `socAfter` REAL columns exist and default to `NULL` on legacy rows. |
+| `migrate_6_to_7_addsKwhSourceColumn` | Runs v3 → v4 → v5 → v6 → v7 against a fixture and asserts the new `kwhSource TEXT NOT NULL DEFAULT 'MEASURED'` column exists and pre-existing rows backfill to `'MEASURED'`. |
+| `migrate_1_to_7_validatesSchema` | Full chain v1 → v7; opens via `Room.databaseBuilder(...).build().openHelper.writableDatabase` to force schema validation against the entity declarations (catches column-name casing drift), asserts the migrated `ChargeType` decodes to `ChargeType.AC`, asserts entity PKs round-trip as `Long`, asserts both SoC columns are `null` on rows persisted before the SoC migration, and asserts `kwhSource` resolves to `ChargeKwhSource.MEASURED` via `@TypeConverters(ChargeKwhSourceConverter)`. |
 
 ---
 
@@ -324,7 +324,7 @@ Uses `TestCoroutineDispatcher` + in-memory Room.
 
 ### 3.2 WizardViewModelTest.kt
 
-`Dispatchers.setMain` / `resetMain` setup is required because the VM's `init` block now launches a `viewModelScope` collector for `SettingsReader.languageTag` (TASK-55).
+`Dispatchers.setMain` / `resetMain` setup is required because the VM's `init` block now launches a `viewModelScope` collector for `SettingsReader.languageTag`.
 
 | Test | Description |
 |------|-------------|
@@ -332,7 +332,7 @@ Uses `TestCoroutineDispatcher` + in-memory Room.
 | `finish_writesAllPrefs` | Call `finish()` with custom values; verify metric, unit, currency all written |
 | `defaultValues_correct` | Fresh VM: metric=`km_per_kwh`, unit=`km`, currency=`EUR` |
 
-**TASK-55 additions:**
+**Language picker:**
 
 | Test | Description |
 |------|-------------|
@@ -347,23 +347,23 @@ Uses `TestCoroutineDispatcher` + in-memory Room.
 | `saveWithCostZero_storesNull` | Submit form with cost=0; DB entry has `costTotal=null` |
 | `saveWithCost_storesBoth` | Submit form with cost=5.0, kwh=10; `costTotal=5.0`, `costPerKwh=0.5` |
 | `saveLocation_recordsUsage` | Submit with location="Home"; `custom_locations` has "Home" with count ≥ 1 |
-| `createMode_loadsNominalBatteryKwhFromActiveCar` | Active car with `batteryKwh = 60.0` → `state.nominalBatteryKwh == 60.0`; defaults to `kwhSource = MEASURED` and `kwhCalculatorActive = false` (TASK-43) |
-| `calculator_withSocFieldsPrefilled_derivesKwhAndFlagsDerived` | User enters SoC 20% → 80%, taps the calculator link → kWh fills to "36" (60 × 0.6), `kwhSource = DERIVED_FROM_SOC`, SoC card expanded (TASK-43) |
-| `calculator_thenSocChange_recomputesKwh` | Calculator active, then SoC changes → kWh re-derives in real time (TASK-43) |
-| `calculator_userManuallyEditsKwh_revertsToMeasured` | After the calculator filled kWh, manually editing the field flips `kwhSource` back to `MEASURED` and deactivates the calculator (TASK-43) |
-| `setKwh_echoesCurrentText_preservesProvenance` | The fragment's `doAfterTextChanged` listener echoes the calculator's own `setText()` with the unchanged value, the echo guard preserves provenance (TASK-43) |
-| `calculator_recalculate_afterUserEdit_reactivates` | User edits → MEASURED, then re-tap link → DERIVED_FROM_SOC again, kWh re-derived (TASK-43) |
-| `editMode_loadsExistingKwhSourceFromEntity` | Loading a persisted event with `kwhSource = DERIVED_FROM_SOC` preserves the flag in UiState (TASK-43) |
-| `save_threadsKwhSourceToInput` | After calculator-driven save, the persisted entity carries `kwhSource = DERIVED_FROM_SOC` and the battery-side derived kWh value (TASK-43) |
-| `socFieldsFilledWithBlankKwh_autoActivatesCalculator` | User types SoC 20 → 80 with kWh blank; auto-activation fires *without* tapping the calculator link → kWh = "36", `kwhSource = DERIVED_FROM_SOC` (TASK-43 follow-up, 2026-05-03) |
-| `socFieldsFilledWithKwhAlreadyPresent_doesNotOverwriteKwh` | User types kWh = "42" first, then SoC 20 → 80; kWh stays "42", calculator stays inactive, `kwhSource = MEASURED`, manual values are never overwritten silently (TASK-43 follow-up) |
-| `socAfterLessThanBefore_doesNotAutoActivate` | SoC 80 → 20 (invalid range) with blank kWh; auto-activation declines, kWh stays "" (TASK-43 follow-up) |
-| `nominalBatteryKwhMissing_doesNotAutoActivate` | Active car has `batteryKwh = null`; SoC fields filled with blank kWh; auto-activation declines (TASK-43 follow-up) |
-| `userClearsKwhAfterAutoFill_thenChangesSoc_reActivates` | After auto-fill, user clears kWh, then changes SoC; auto-activation fires again, derives new kWh from updated SoC (TASK-43 follow-up) |
+| `createMode_loadsNominalBatteryKwhFromActiveCar` | Active car with `batteryKwh = 60.0` → `state.nominalBatteryKwh == 60.0`; defaults to `kwhSource = MEASURED` and `kwhCalculatorActive = false` |
+| `calculator_withSocFieldsPrefilled_derivesKwhAndFlagsDerived` | User enters SoC 20% → 80%, taps the calculator link → kWh fills to "36" (60 × 0.6), `kwhSource = DERIVED_FROM_SOC`, SoC card expanded |
+| `calculator_thenSocChange_recomputesKwh` | Calculator active, then SoC changes → kWh re-derives in real time |
+| `calculator_userManuallyEditsKwh_revertsToMeasured` | After the calculator filled kWh, manually editing the field flips `kwhSource` back to `MEASURED` and deactivates the calculator |
+| `setKwh_echoesCurrentText_preservesProvenance` | The fragment's `doAfterTextChanged` listener echoes the calculator's own `setText()` with the unchanged value, the echo guard preserves provenance |
+| `calculator_recalculate_afterUserEdit_reactivates` | User edits → MEASURED, then re-tap link → DERIVED_FROM_SOC again, kWh re-derived |
+| `editMode_loadsExistingKwhSourceFromEntity` | Loading a persisted event with `kwhSource = DERIVED_FROM_SOC` preserves the flag in UiState |
+| `save_threadsKwhSourceToInput` | After calculator-driven save, the persisted entity carries `kwhSource = DERIVED_FROM_SOC` and the battery-side derived kWh value |
+| `socFieldsFilledWithBlankKwh_autoActivatesCalculator` | User types SoC 20 → 80 with kWh blank; auto-activation fires *without* tapping the calculator link → kWh = "36", `kwhSource = DERIVED_FROM_SOC` |
+| `socFieldsFilledWithKwhAlreadyPresent_doesNotOverwriteKwh` | User types kWh = "42" first, then SoC 20 → 80; kWh stays "42", calculator stays inactive, `kwhSource = MEASURED`, manual values are never overwritten silently |
+| `socAfterLessThanBefore_doesNotAutoActivate` | SoC 80 → 20 (invalid range) with blank kWh; auto-activation declines, kWh stays "" |
+| `nominalBatteryKwhMissing_doesNotAutoActivate` | Active car has `batteryKwh = null`; SoC fields filled with blank kWh; auto-activation declines |
+| `userClearsKwhAfterAutoFill_thenChangesSoc_reActivates` | After auto-fill, user clears kWh, then changes SoC; auto-activation fires again, derives new kWh from updated SoC |
 
 ### 3.4 DriveBackupRepositoryTest.kt
 
-Locks in the `BackupResult` contract introduced in TASK-07: `Success` / `AuthRequired` / `Failure(reason, cause?)`. `FakeDriveRemoteSource` exposes `failNext: Throwable?` + `failTimes: Int` + `failuresRaised: Int` so tests drive multi-failure scenarios deterministically. Retry budget under test: `DriveBackupRepository.MAX_ATTEMPTS = 3`, exponential backoff `250 ms × 2^attempt` (virtualised by `runTest`'s test scheduler).
+Locks in the `BackupResult` contract — `Success` / `AuthRequired` / `Failure(reason, cause?)`. `FakeDriveRemoteSource` exposes `failNext: Throwable?` + `failTimes: Int` + `failuresRaised: Int` so tests drive multi-failure scenarios deterministically. Retry budget under test: `DriveBackupRepository.MAX_ATTEMPTS = 3`, exponential backoff `250 ms × 2^attempt` (virtualised by `runTest`'s test scheduler).
 
 | Test | Description |
 |------|-------------|
@@ -388,9 +388,9 @@ Locks in the `BackupResult` contract introduced in TASK-07: `Success` / `AuthReq
 | `read_drive401_throwsDriveAuthRequired` | Read path keeps its exception contract, 401 → `DriveAuthRequiredException` (not `BackupResult`) |
 | `read_drive429_retriesThenSucceeds` | Read path also retries transient, 429 then success → returns body |
 
-### 3.5 SettingsViewModelTest.kt, TASK-54 additions (durable last-seen marker)
+### 3.5 SettingsViewModelTest.kt (durable last-seen marker)
 
-`SettingsViewModelTest.kt` covers the full Drive (E) + F1 + TASK-31 surface (~39 cases total). The TASK-54 (2026-05-03) additions lock in the durable last-seen-snapshot marker contract: the destructive restore prompt is shown at most once per remote snapshot identity, where identity = the JSON `exported_at` ISO-8601 string. Backed by the new `lastSeenRemoteBackupExportedAt` DataStore key on `SettingsReader` / `SettingsWriter`. All cases use `BackupData.fromEntities(..., now = X)` to seed a remote JSON with a deterministic `exported_at` derived from `Instant.ofEpochMilli(X).toString()`. The TASK-55 (2026-05-04) additions exercise the language-picker contract via a new `FakeLocaleApplier` recorded in the test `Setup` data class.
+`SettingsViewModelTest.kt` covers the full Drive + Reset + manual-control surface. The durable last-seen-snapshot marker cases lock in: the destructive restore prompt is shown at most once per remote snapshot identity, where identity = the JSON `exported_at` ISO-8601 string. Backed by the `lastSeenRemoteBackupExportedAt` DataStore key on `SettingsReader` / `SettingsWriter`. All cases use `BackupData.fromEntities(..., now = X)` to seed a remote JSON with a deterministic `exported_at` derived from `Instant.ofEpochMilli(X).toString()`. The language-picker cases exercise the locale contract via a `FakeLocaleApplier` recorded in the test `Setup` data class.
 
 | Test | Description |
 |------|-------------|
@@ -401,7 +401,7 @@ Locks in the `BackupResult` contract introduced in TASK-07: `Success` / `AuthReq
 | `onConfirmRestore_success_persistsLastSeenExportedAt` | After successful Restore, marker is written so the same snapshot is never re-prompted post-restore (the local DB already equals it) |
 | `onDriveAuthGranted_noRemote_keepsExistingMarker` | The no-remote path enables Drive without touching the marker (a previous Skip / Restore decision is still meaningful, regression guard) |
 
-**TASK-55 additions (language picker):**
+**Language picker:**
 
 | Test | Description |
 |------|-------------|
@@ -409,7 +409,7 @@ Locks in the `BackupResult` contract introduced in TASK-07: `Success` / `AuthReq
 | `onLanguageSelected_followSystem_writesEmptyString` | After picking `"ru"` then `""`, both writer and applier reflect the empty-string "follow system" semantic |
 | `languageTag_collectedFromSettingsReader_intoUiState` | Pre-seed `reader.setLanguageTag("tr")` → `vm.uiState.value.languageTag == "tr"`. Confirms the init-time collector surfaces the persisted tag for the dialog's selected-option highlight |
 
-**Deferred instrumented coverage:** the BACKLOG TASK-55 spec called for `SettingsLanguagePickerTest` + `WizardLanguagePickerTest` instrumented cases. Both deferred at merge time, the JVM tests cover the VM contract end-to-end (DataStore + LocaleApplier + UiState round-trip) and the dialog wiring is mechanical (`MaterialAlertDialog.Builder.setSingleChoiceItems`). File a follow-up if instrumented coverage of the `setApplicationLocales`-triggered Activity recreation becomes load-bearing.
+**Deferred instrumented coverage:** instrumented `SettingsLanguagePickerTest` + `WizardLanguagePickerTest` cases are not currently shipped. The JVM tests cover the VM contract end-to-end (DataStore + LocaleApplier + UiState round-trip) and the dialog wiring is mechanical (`MaterialAlertDialog.Builder.setSingleChoiceItems`). File a follow-up if instrumented coverage of the `setApplicationLocales`-triggered Activity recreation becomes load-bearing.
 
 ---
 
@@ -417,10 +417,10 @@ Locks in the `BackupResult` contract introduced in TASK-07: `Success` / `AuthReq
 
 > **Test runner, `org.spsl.evtracker.HiltTestRunner`** (subclass of `AndroidJUnitRunner`):
 >
-> - **`callApplicationOnCreate(app)`**, calls `WorkManagerTestInitHelper.initializeTestWorkManager(app)` once per test process so the first WorkManager-touching test doesn't crash. The production manifest removes `androidx.work.WorkManagerInitializer` from `androidx.startup` because `EVTrackerApp` implements `Configuration.Provider`; under instrumentation the application is `HiltTestApplication`, which doesn't, so without this hook `WorkManager.getInstance(context)` would throw `IllegalStateException` and take the whole suite down (regression that surfaced in the 2026-05-03 nightly when `MainActivityBottomNavTest` first pulled WorkManager into a Hilt graph).
-> - **`onStart()`**, calls `AccessibilityChecks.enable().setRunChecksFromRootView(true)` (TASK-18 Step 6, 2026-05-03) so every Espresso `ViewAction` (click, type, scrollTo, …) runs the WCAG 2.1 AA rule set against the targeted view AND the surrounding root. No suppression matchers configured, pre-existing violations surface as nightly test failures (informational only; does not block PRs) and feed the TASK-18 follow-up scope.
+> - **`callApplicationOnCreate(app)`**, calls `WorkManagerTestInitHelper.initializeTestWorkManager(app)` once per test process so the first WorkManager-touching test doesn't crash. The production manifest removes `androidx.work.WorkManagerInitializer` from `androidx.startup` because `EVTrackerApp` implements `Configuration.Provider`; under instrumentation the application is `HiltTestApplication`, which doesn't, so without this hook `WorkManager.getInstance(context)` would throw `IllegalStateException` and take the whole suite down.
+> - **`onStart()`**, calls `AccessibilityChecks.enable().setRunChecksFromRootView(true)` so every Espresso `ViewAction` (click, type, scrollTo, …) runs the WCAG 2.1 AA rule set against the targeted view AND the surrounding root. No suppression matchers configured, pre-existing violations surface as nightly test failures (informational only; does not block PRs) and feed the follow-up scope.
 >
-> **Fragment host activity**, `androidx.fragment:fragment-testing-manifest:1.6.2` is on `debugImplementation` (TASK-50 sub-fix A, 2026-05-03), so the merged debug app manifest declares `androidx.fragment.app.testing.EmptyFragmentActivity`. Without that, every test that calls `launchFragmentInContainer` fails with "Unable to resolve activity" because the test APK's manifest entry isn't visible to the runtime app package (`org.spsl.evtracker.debug`).
+> **Fragment host activity**, `androidx.fragment:fragment-testing-manifest:1.6.2` is on `debugImplementation`, so the merged debug app manifest declares `androidx.fragment.app.testing.EmptyFragmentActivity`. Without that, every test that calls `launchFragmentInContainer` fails with "Unable to resolve activity" because the test APK's manifest entry isn't visible to the runtime app package (`org.spsl.evtracker.debug`).
 
 ### 4.1 WizardFlowTest.kt
 
@@ -506,18 +506,18 @@ For real-device Drive auth and backup verification, complete the external OAuth 
 
 ### 4.8 DriveBackupWorkerTest.kt (instrumented)
 
-Locks in the worker-level translation of `BackupResult` → `ListenableWorker.Result` per TASK-07's contract. The instrumented `FakeDriveRemoteSource` mirrors the JVM-side budget design (`failNext: Throwable?` + `failTimes: Int` + `failuresRaised: Int`) so both halves of the retry contract are testable on the same fixtures (TASK-50 sub-fix B, 2026-05-03).
+Locks in the worker-level translation of `BackupResult` → `ListenableWorker.Result`. The instrumented `FakeDriveRemoteSource` mirrors the JVM-side budget design (`failNext: Throwable?` + `failTimes: Int` + `failuresRaised: Int`) so both halves of the retry contract are testable on the same fixtures.
 
 | Test | Description |
 |------|-------------|
 | `happyPath_returnsSuccess` | No failures seeded → `BackupResult.Success` → `Result.success()` |
-| `authRevoked_returnsFailure` | `FakeDriveAuthManager.nextResult = Failed("revoked")` → `BackupResult.AuthRequired` → `Result.failure()` (worker never emits `Result.retry()` per TASK-36's invariant) |
-| `ioError_recoversAfterTransientRetry_returnsSuccess` | `failTimes = 1` → repo absorbs the transient via its 3-attempt budget → `Result.success()`, with `failuresRaised == 1` proving the retry actually happened (TASK-50 sub-fix B; replaced the stale `ioError_returnsRetry` case that asserted the pre-TASK-07 contract) |
-| `ioError_exceedsRetryBudget_returnsFailure` | `failTimes = 4` exceeds `MAX_ATTEMPTS = 3` → `BackupResult.Failure` → `Result.failure()` (TASK-50 sub-fix B) |
+| `authRevoked_returnsFailure` | `FakeDriveAuthManager.nextResult = Failed("revoked")` → `BackupResult.AuthRequired` → `Result.failure()` (worker never emits `Result.retry()` — repo already exhausted the retry budget) |
+| `ioError_recoversAfterTransientRetry_returnsSuccess` | `failTimes = 1` → repo absorbs the transient via its 3-attempt budget → `Result.success()`, with `failuresRaised == 1` proving the retry actually happened |
+| `ioError_exceedsRetryBudget_returnsFailure` | `failTimes = 4` exceeds `MAX_ATTEMPTS = 3` → `BackupResult.Failure` → `Result.failure()` |
 
 ### 4.9 MainActivityResetRecoveryTest.kt (instrumented)
 
-Locks in the F1 startup auto-recovery flow. Uses `@UninstallModules(DataResetModule::class)` + a local `TestResetModule` to swap the production `RoomDataResetTransactionRunner` for a `TestableResetRunner` spy. The `DataResetModule` was extracted from `DomainModule` in TASK-50 sub-fix C specifically so this single binding can be uninstalled without dragging in unrelated dependencies (mirrors the `BackupModule` pattern used by `DriveBackupWorkerTest`).
+Locks in the startup auto-recovery flow for an interrupted "Reset all data" operation. Uses `@UninstallModules(DataResetModule::class)` + a local `TestResetModule` to swap the production `RoomDataResetTransactionRunner` for a `TestableResetRunner` spy. The `DataResetModule` is a separate binding from `DomainModule` specifically so it can be uninstalled without dragging in unrelated dependencies (mirrors the `BackupModule` pattern used by `DriveBackupWorkerTest`).
 
 | Test | Description |
 |------|-------------|
@@ -525,16 +525,16 @@ Locks in the F1 startup auto-recovery flow. Uses `@UninstallModules(DataResetMod
 | `startup_resetInProgressFalse_doesNotRunUseCase` | `resetInProgress=false` at launch; assert `clearCalls == 0` and the seeded Test car still exists |
 | `startup_resetRecoveryThrows_showsRetryDialog_doesNotMountNavGraph` | Set `testRunner.failNext = IllegalStateException(…)`; launch; assert the recovery-failure dialog is displayed, the nav graph is not mounted, and `resetInProgress` remains `true` so the next launch retries |
 
-### 4.10 SettingsDriveSwitchEntryTest.kt (instrumented), TASK-54 Step 0 regression
+### 4.10 SettingsDriveSwitchEntryTest.kt (instrumented), Drive switch regression
 
-Covers the user-reported reproduction: every Settings entry the Drive switch visibly flipped OFF→ON on its own and the "Restore from Drive?" dialog appeared. Root cause was that `SettingsFragment.onViewCreated` attached the switch's `OnCheckedChangeListener` synchronously, and Android's view-state restoration called `setChecked(true)` between `onCreateView` and `onStart` to restore the saved checked state, which fired the listener → `onUserToggledOn()` → `auth.authorize()`. Fix is the lazy listener attach inside the StateFlow collector (TASK-54 Step 0, Option A).
+Locks in the contract that the Drive switch's `OnCheckedChangeListener` must NOT fire on view-state restoration. Android's view-state restoration calls `setChecked(true)` between `onCreateView` and `onStart` to restore the saved checked state; an eager listener attach would treat that synthetic flip as user intent and call `auth.authorize()`. The lazy attach inside the StateFlow collector is what keeps the contract.
 
-Uses the same `@UninstallModules(BackupModule::class)` + local `TestBackupModule` pattern as `DriveBackupWorkerTest` to wire `FakeDriveAuthManager` (which exposes a new `authorizeCallCount: Int` field, incremented on every `authorize()` invocation) and `FakeDriveRemoteSource`. Pre-seeds DataStore with `DRIVE_ENABLED = true` so the StateFlow collector has a real reason to flip `binding.switchDrive.isChecked` from the XML default `false` → `true`.
+Uses the same `@UninstallModules(BackupModule::class)` + local `TestBackupModule` pattern as `DriveBackupWorkerTest` to wire `FakeDriveAuthManager` (exposes `authorizeCallCount: Int`, incremented on every `authorize()` invocation) and `FakeDriveRemoteSource`. Pre-seeds DataStore with `DRIVE_ENABLED = true` so the StateFlow collector has a real reason to flip `binding.switchDrive.isChecked` from the XML default `false` → `true`.
 
 | Test | Description |
 |------|-------------|
-| `firstEntry_withDriveEnabled_doesNotCallAuthorize` | Launch fragment, move to RESUMED, settle one frame; assert `fakeAuth.authorizeCallCount` did not increment. Pre-fix this fails because the listener attached at line 69 fires when the StateFlow collector's first emission flips `isChecked` |
-| `reEntry_viaActivityRecreation_doesNotCallAuthorize` | Launch + RESUMED, capture `authorizeCallCount`, then `FragmentScenario.recreate()` (full activity recreation, the canonical "navigate away and back" simulation that exercises view-state save/restore), settle one frame, assert the counter did not move. This is the exact reproduction trigger for the user-reported bug |
+| `firstEntry_withDriveEnabled_doesNotCallAuthorize` | Launch fragment, move to RESUMED, settle one frame; assert `fakeAuth.authorizeCallCount` did not increment. An eager listener attach would fail this because the listener fires when the StateFlow collector's first emission flips `isChecked` |
+| `reEntry_viaActivityRecreation_doesNotCallAuthorize` | Launch + RESUMED, capture `authorizeCallCount`, then `FragmentScenario.recreate()` (full activity recreation, the canonical "navigate away and back" simulation that exercises view-state save/restore), settle one frame, assert the counter did not move |
 
 ---
 
@@ -590,17 +590,17 @@ adb install -r app/build/outputs/apk/release/app-release.apk
 | 4 | Dashboard FAB → log a charge with cost (e.g. 30 kWh / €12.50) | Save returns to Dashboard; total kWh + cost rows render correct values |
 | 5 | Add a second event so efficiency can compute | Efficiency stat is no longer "—"; the configured primary metric (default `kwh_per_100km`) renders a number |
 | 6 | Bottom nav → Charts; cycle every tab (Trend / Monthly kWh / Monthly cost / AC vs DC / Locations / Degradation) | Each tab renders without crash; MPAndroidChart canvases are non-empty (this exercises the new keep rule). The Degradation tab shows an empty-state for cars with no nominal `battery_kwh` set or fewer than 3 qualifying charges, that's expected, not a failure. |
-| 6b | **Switch system to Dark mode** (Settings → Display → Dark theme) **and re-cycle all six Charts tabs** | Axis labels, legend text, AC vs DC center text, and gridlines are all readable against the dark surface. AC vs DC + Locations + Degradation tabs render without crash. Two regressions were caught here in the past: (a) `c677a2b` introduced theme-aware text but accidentally crashed the PieChart paths by touching `chart.xAxis` on a renderer chain with no XAxisRenderer, fixed by `5a99335`; (b) Degradation was missing `LayoutParams.MATCH_PARENT` and crashed during measure, same fix. This step is the first line of defence for similar future drift. |
+| 6b | **Switch system to Dark mode** (Settings → Display → Dark theme) **and re-cycle all six Charts tabs** | Axis labels, legend text, AC vs DC center text, and gridlines are all readable against the dark surface. AC vs DC + Locations + Degradation tabs render without crash. This step guards against theme-aware-text drift (e.g. PieChart paths that touch `chart.xAxis` on a renderer chain without an XAxisRenderer) and against missing `LayoutParams.MATCH_PARENT` on chart inflation. |
 | 7 | Settings → enable Drive backup → sign in (allow-listed Google account) → wait for first backup | Snackbar reports success; verify `evtracker_backup.json` lands in the App Data folder via `files.list?spaces=appDataFolder` |
 | 8 | Add another charge event after Drive is enabled | WorkManager fires a follow-up backup; remote `modifiedTime` advances |
-| 9 | Settings → Reset preferences → confirm | App relaunches into the wizard; existing charge data intact (TASK-23 startup auto-recovery path) |
+| 9 | Settings → Reset preferences → confirm | App relaunches into the wizard; existing charge data intact |
 | 10 | Re-complete the wizard (page 4 disclaimer must be re-accepted) | Dashboard returns; previously logged events still visible |
 | 11 | Settings → Export CSV | Share-sheet opens; chosen target receives a non-empty `.csv` with the correct header for the active distance unit |
 | 12 | Settings → About | About screen renders with version (e.g. `1.0.1`), SPS-Lab card with tappable links, MIT license, and the open-source-libraries card |
-| 13 | **TASK-19 backup notifications.** Settings → enable Drive backup, then put the device into airplane mode and trigger 3 charge-event saves to drive 3 backup failures in a row | On the 3rd failure, when the app is opened, the rationale dialog appears (Android 13+). Tap **Allow**, then **Allow** on the system prompt → channel `backup_status` shows the sticky "Drive backup failed, Tap to open Settings" notification. Tap it → app opens to Settings. Disable airplane mode and trigger another save → next backup succeeds → the chronic notification is cancelled. To verify the **Not now** path, repeat with a fresh install / re-grant cycle and decline; the rationale must never re-fire and notifications stay silent. Pre-13 devices skip the rationale (channel exists, permission implicit). |
-| 14 | **TASK-31 manual Drive controls.** Settings → with Drive enabled, observe two buttons under "Last backup": "Back up now" (primary) and "Wipe remote backup" (destructive outlined). Tap **Back up now** | Snackbar "Backup uploaded" appears within a few seconds; the "Last backup" timestamp advances. Verifying via Drive `files.list?spaces=appDataFolder` shows the file's `modifiedTime` updated. While the upload is in flight, the wipe button is disabled (mutual exclusion). |
-| 15 | **TASK-31 wipe.** Tap **Wipe remote backup** → confirmation dialog appears with title "Delete remote backup?" and the body explaining local data is unaffected. Tap **Delete** | Snackbar "Remote backup deleted" appears. Verifying via Drive `files.list?spaces=appDataFolder` returns no `evtracker_backup.json`. The "Last backup" timestamp reverts to its empty state ("Never"). Trigger any new charge save → the auto-backup worker re-creates the remote file (regression check). With Drive disabled (toggle off), both buttons disappear (View.GONE, not just disabled). |
-| 16 | **TASK-12 widget.** Long-press the home screen → Widgets → search "Joulie" → drag the **Last charge** 2×2 widget to the home screen. With no charge events: empty state renders ("No charges logged yet."). Save a charge event in the app → switch back to the home screen | The widget refreshes within a second showing the active car name, "Today", kWh, efficiency in the configured primary metric, and (if cost was entered) the formatted currency line. Tap the widget → the app opens to the dashboard. Add a second charge event with the odometer advanced → efficiency value updates to a real number. Wipe all data via **Settings → Reset all** → the widget reverts to the empty state. Switch the primary metric in Settings → the widget's efficiency unit follows on the next refresh. |
+| 13 | **backup notifications.** Settings → enable Drive backup, then put the device into airplane mode and trigger 3 charge-event saves to drive 3 backup failures in a row | On the 3rd failure, when the app is opened, the rationale dialog appears (Android 13+). Tap **Allow**, then **Allow** on the system prompt → channel `backup_status` shows the sticky "Drive backup failed, Tap to open Settings" notification. Tap it → app opens to Settings. Disable airplane mode and trigger another save → next backup succeeds → the chronic notification is cancelled. To verify the **Not now** path, repeat with a fresh install / re-grant cycle and decline; the rationale must never re-fire and notifications stay silent. Pre-13 devices skip the rationale (channel exists, permission implicit). |
+| 14 | **manual Drive controls.** Settings → with Drive enabled, observe two buttons under "Last backup": "Back up now" (primary) and "Wipe remote backup" (destructive outlined). Tap **Back up now** | Snackbar "Backup uploaded" appears within a few seconds; the "Last backup" timestamp advances. Verifying via Drive `files.list?spaces=appDataFolder` shows the file's `modifiedTime` updated. While the upload is in flight, the wipe button is disabled (mutual exclusion). |
+| 15 | **wipe.** Tap **Wipe remote backup** → confirmation dialog appears with title "Delete remote backup?" and the body explaining local data is unaffected. Tap **Delete** | Snackbar "Remote backup deleted" appears. Verifying via Drive `files.list?spaces=appDataFolder` returns no `evtracker_backup.json`. The "Last backup" timestamp reverts to its empty state ("Never"). Trigger any new charge save → the auto-backup worker re-creates the remote file (regression check). With Drive disabled (toggle off), both buttons disappear (View.GONE, not just disabled). |
+| 16 | **widget.** Long-press the home screen → Widgets → search "Joulie" → drag the **Last charge** 2×2 widget to the home screen. With no charge events: empty state renders ("No charges logged yet."). Save a charge event in the app → switch back to the home screen | The widget refreshes within a second showing the active car name, "Today", kWh, efficiency in the configured primary metric, and (if cost was entered) the formatted currency line. Tap the widget → the app opens to the dashboard. Add a second charge event with the odometer advanced → efficiency value updates to a real number. Wipe all data via **Settings → Reset all** → the widget reverts to the empty state. Switch the primary metric in Settings → the widget's efficiency unit follows on the next refresh. |
 
 **On any failure:** capture `adb logcat *:E` from the moment of the crash,
 file an issue, and **do not publish the GitHub Release**, keep it in draft

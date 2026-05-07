@@ -81,16 +81,13 @@ class ObserveDashboardStatsUseCaseTest {
 
     @Test
     fun filterMatchesNothing_butCarHasEvents_doesNotEmitNoEventsEmptyState() = runTest {
-        // Regression: a car with only AC events + the user picking the DC chip
-        // used to flip emptyState=NoEvents because filtered.isEmpty(). The
-        // Fragment then hid `dashboardContent` (the NestedScrollView), which
-        // takes the filter chips down with it because the chips live inside
-        // that container in fragment_dashboard.xml. With chips gone, the user
-        // could not tap All to escape and had to leave the Dashboard via the
-        // bottom nav. The contract is now: NoEvents fires only when the active
-        // car has zero events overall; a zero-match filter falls through to a
-        // normal Stats render with placeholder values, so the chips stay
-        // tappable.
+        // NoEvents must fire only when the active car has zero events
+        // overall. A zero-match filter (e.g. car with only AC events + user
+        // picks the DC chip) falls through to a normal Stats render with
+        // placeholder values so the filter chips stay tappable; if NoEvents
+        // fired here, the Fragment would hide `dashboardContent` (the
+        // NestedScrollView) and take the chips down with it, trapping the
+        // user out of the filter selection.
         val now = System.currentTimeMillis()
         val (useCase, _, _) = build(
             cars = listOf(CarEntity(id = 1L, name = "T", createdAt = 0L)),
@@ -141,7 +138,7 @@ class ObserveDashboardStatsUseCaseTest {
     }
 
     // -------------------------------------------------------------------------
-    // TASK-46 — battery-health heuristic / overestimate flags on Stats
+    // — battery-health heuristic / overestimate flags on Stats
     // -------------------------------------------------------------------------
 
     private fun nominal60Car() = CarEntity(id = 1L, name = "T", batteryKwh = 60.0, createdAt = 0L)
@@ -187,8 +184,8 @@ class ObserveDashboardStatsUseCaseTest {
     @Test
     fun heuristicAtExactly105Percent_setsOverestimated_boundaryGuard() = runTest {
         // kwhAdded = 63 against nominal = 60: capacity = 63, pct = 105.0%
-        // exactly. The threshold uses `>=`, so the boundary value triggers.
-        // Regression guard for the BACKLOG-mandated transition point.
+        // exactly. The threshold uses `>=`, so the boundary value triggers
+        // — pin behaviour at the threshold transition point.
         val now = System.currentTimeMillis()
         val (useCase, _, _) = build(
             cars = listOf(nominal60Car()),

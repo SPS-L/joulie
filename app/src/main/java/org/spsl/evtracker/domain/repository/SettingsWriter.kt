@@ -9,7 +9,7 @@ interface SettingsWriter {
     suspend fun setDriveEnabled(enabled: Boolean)
     suspend fun setLastBackupAt(epochMs: Long)
 
-    // F1:
+    // Settings rows backing the Reset / Preferences flows.
     suspend fun setTheme(value: String)
     suspend fun setPrimaryMetric(metric: String)
     suspend fun setDistanceUnit(unit: String)
@@ -34,30 +34,30 @@ interface SettingsWriter {
      */
     suspend fun markGlobalResetInProgress()
 
-    /** TASK-19: 0 to reset on success, or `previous + 1` after a backup failure. */
+    /** Set to 0 on backup success, or `previous + 1` after a backup failure. */
     suspend fun setConsecutiveBackupFailures(value: Int)
 
-    /** TASK-19: set to true once when the user denies POST_NOTIFICATIONS — never reverted. */
+    /** Set to true once when the user denies POST_NOTIFICATIONS — never reverted. */
     suspend fun setNotificationPermissionDenied(value: Boolean)
 
     /**
-     * TASK-54: persist the ISO-8601 `exported_at` of the most recently
+     * Persist the ISO-8601 `exported_at` of the most recently
      * Skipped or Restored remote snapshot. Pass empty string to clear
      * (used by `WipeRemoteBackupUseCase` on successful delete).
      */
     suspend fun setLastSeenRemoteBackupExportedAt(value: String)
 
     /**
-     * TASK-55: persist the IETF BCP-47 language tag chosen by the user.
+     * Persist the IETF BCP-47 language tag chosen by the user.
      * Pass empty string for "follow system". Caller is responsible for
      * also invoking `LocaleApplier.apply(tag)` to surface the change to
      * the running process.
      */
     suspend fun setLanguageTag(value: String)
 
-    /** TASK-20: persist the user-edited ICE petrol baseline in L/100km. */
+    /** Persist the user-edited ICE petrol baseline in L/100km. */
     suspend fun setIceBaselineLPer100km(value: Double)
 
-    /** TASK-20: persist the user-edited grid carbon intensity in gCO₂/kWh. */
+    /** Persist the user-edited grid carbon intensity in gCO₂/kWh. */
     suspend fun setGridIntensityGCo2PerKwh(value: Double)
 }

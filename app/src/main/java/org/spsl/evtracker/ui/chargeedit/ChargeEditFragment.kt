@@ -118,7 +118,7 @@ class ChargeEditFragment : Fragment() {
             binding.chargeEditKwh.setText(state.kwh)
         }
         binding.chargeEditKwhLayout.error = state.kwhError?.let { getString(it) }
-        // TASK-43: calculator link visible whenever the active car has a
+        // calculator link visible whenever the active car has a
         // nominal capacity. Hidden when the car has none — there's nothing
         // to multiply Δsoc against.
         binding.chargeEditKwhCalculatorLink.isVisible = state.nominalBatteryKwh != null
@@ -150,7 +150,7 @@ class ChargeEditFragment : Fragment() {
             binding.chargeEditNote.setText(state.note)
         }
         binding.chargeEditSocSection.isVisible = state.socExpanded
-        // TASK-43: banner appears inside the SoC card while the calculator
+        // banner appears inside the SoC card while the calculator
         // is active so the user understands their event will be flagged
         // and excluded from the degradation chart.
         binding.chargeEditKwhCalculatorBanner.isVisible = state.kwhCalculatorActive

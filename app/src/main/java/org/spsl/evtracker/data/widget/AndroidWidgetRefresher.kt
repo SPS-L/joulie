@@ -12,7 +12,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * TASK-12: thin Android wrapper around [LastChargeWidget.refreshAll]. The
+ * Thin Android wrapper around [LastChargeWidget.refreshAll]. The
  * production binding for [WidgetRefresher] — JVM tests use the
  * `FakeWidgetRefresher` from `Fakes.kt` instead.
  */

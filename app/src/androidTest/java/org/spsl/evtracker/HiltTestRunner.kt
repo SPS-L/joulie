@@ -27,11 +27,7 @@ class HiltTestRunner : AndroidJUnitRunner() {
      * which does **not** implement `Configuration.Provider`, so the first
      * call into [org.spsl.evtracker.di.WorkerModule.provideWorkManager] →
      * `WorkManager.getInstance(context)` would throw `IllegalStateException`
-     * and crash the test process before any assertions ran. The latent
-     * bug surfaced in the 2026-05-03 nightly run when
-     * `MainActivityBottomNavTest` (TASK-27) became the first test to
-     * resolve a Hilt graph that transitively pulls WorkManager — its crash
-     * took the rest of the 57-test suite down with it.
+     * and crash the test process before any assertions ran.
      *
      * `WorkManagerTestInitHelper.initializeTestWorkManager(app)` swaps in
      * a synchronous executor + an in-memory database backing, so
@@ -50,25 +46,20 @@ class HiltTestRunner : AndroidJUnitRunner() {
     }
 
     /**
-     * TASK-18 Step 6: enable Espresso's accessibility checks once per test
-     * process. `AccessibilityChecks.enable()` installs a per-thread
-     * interceptor that runs the WCAG 2.1 AA rule set against the targeted
-     * view on every `ViewAction` (click, type, scrollTo, …) in every
-     * Espresso test, failing the test on any violation.
+     * Enable Espresso's accessibility checks once per test process.
+     * `AccessibilityChecks.enable()` installs a per-thread interceptor that
+     * runs the WCAG 2.1 AA rule set against the targeted view on every
+     * `ViewAction` (click, type, scrollTo, …) in every Espresso test,
+     * failing the test on any violation.
      *
      * Configured to scan from the root view (not just the targeted element)
      * so issues like undersized touch targets nested deep in a layout still
      * surface — pre-existing violations on adjacent views show up the first
      * time any test in their fragment runs.
      *
-     * **No suppression matchers are wired today.** The intent of Step 6 is
-     * to make the existing audit gap measurable: any violation already in
-     * the codebase will fail
-     * [`nightly-instrumented.yml`](../../../../../../.github/workflows/nightly-instrumented.yml)'s
-     * API 26 + API 35 matrix on the next cron run, and those failures
-     * become the input list for the remaining TASK-18 scope (steps 1–5,
-     * 7, 8). The nightly job is informational only — never blocks PRs —
-     * so the red signal is a discovery tool, not a regression.
+     * No suppression matchers are wired today. The nightly instrumented
+     * job is informational only (never blocks PRs), so a violation here
+     * is a discovery signal rather than a hard regression.
      */
     override fun onStart() {
         AccessibilityChecks.enable().setRunChecksFromRootView(true)

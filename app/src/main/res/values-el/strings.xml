@@ -59,7 +59,7 @@
     <string name="drive_last_backup">Τελευταίο αντίγραφο: %s</string>
     <string name="drive_backup_now">Δημιουργία αντιγράφου τώρα</string>
 
-    <!-- Drive (Sub-project E) -->
+    <!-- Drive backup -->
     <string name="settings_section_drive">Αντίγραφα ασφαλείας &amp; επαναφορά</string>
     <string name="settings_drive_label">Αντίγραφο ασφαλείας Google Drive</string>
     <string name="settings_drive_subtitle_off">Απενεργοποιημένο</string>
@@ -109,7 +109,7 @@
     <string name="backup_notif_permission_rationale_allow">Επιτρέψτε</string>
     <string name="backup_notif_permission_rationale_deny">Όχι τώρα</string>
 
-    <!-- Settings (F1) -->
+    <!-- Settings -->
     <string name="settings_unit_flipped_to_km">Η μονάδα απόστασης άλλαξε επίσης σε km.</string>
     <string name="settings_unit_flipped_to_miles">Η μονάδα απόστασης άλλαξε επίσης σε μίλια.</string>
     <string name="settings_metric_flipped_km_per_kwh">Η κύρια μονάδα άλλαξε επίσης σε km / kWh.</string>
@@ -117,12 +117,12 @@
     <string name="settings_metric_flipped_mi_per_kwh">Η κύρια μονάδα άλλαξε επίσης σε mi / kWh.</string>
     <string name="settings_export_csv_failed">Η εξαγωγή CSV απέτυχε.</string>
 
-    <!-- Settings (F1), row labels and summaries -->
+    <!-- Settings, row labels and summaries -->
     <string name="settings_primary_metric">Κύρια μονάδα</string>
     <string name="settings_distance_unit">Μονάδα απόστασης</string>
     <string name="settings_currency">Νόμισμα</string>
     <string name="settings_theme">Θέμα</string>
-    <!-- TASK-55: language picker -->
+    <!-- language picker -->
     <string name="settings_language">Γλώσσα</string>
     <string name="settings_language_dialog_title">Επιλογή γλώσσας</string>
     <string name="settings_language_follow_system">Όπως το σύστημα</string>
@@ -149,20 +149,20 @@
     <string name="settings_theme_light">Φωτεινό</string>
     <string name="settings_theme_dark">Σκοτεινό</string>
 
-    <!-- ManageLocations (F1) -->
+    <!-- ManageLocations -->
     <string name="manage_locations_title">Διαχείριση προσαρμοσμένων τοποθεσιών</string>
     <string name="manage_locations_empty">Οι τοποθεσίες που αποθηκεύετε σε φορτίσεις θα εμφανιστούν εδώ.</string>
     <string name="manage_locations_row_count">Χρησιμοποιήθηκε %1$d φορά(ές) · τελευταία %2$s</string>
     <string name="manage_locations_row_count_zero">Τελευταία %1$s</string>
     <string name="manage_locations_undo_snackbar">Διαγράφηκε «%1$s»</string>
 
-    <!-- F1 common -->
+    <!-- Common -->
     <string name="common_undo">Αναίρεση</string>
     <string name="common_cancel">Ακύρωση</string>
     <string name="common_confirm">Επιβεβαίωση</string>
     <string name="common_navigate_back">Πλοήγηση πίσω</string>
 
-    <!-- F1 startup recovery -->
+    <!-- startup recovery -->
     <string name="recovery_failure_title">Αποτυχία ανάκτησης επαναφοράς</string>
     <string name="recovery_failure_body">Δεν ήταν δυνατή η ολοκλήρωση της τελευταίας επαναφοράς.\n\n%1$s\n\nΔοκιμάστε ξανά, ή διαγράψτε τα δεδομένα εφαρμογής από τις Ρυθμίσεις συστήματος εάν το πρόβλημα επιμένει.</string>
     <string name="recovery_failure_retry">Δοκιμάστε ξανά</string>
@@ -172,7 +172,7 @@
     <string name="reset_per_car">Επαναφορά αυτού του αυτοκινήτου</string>
     <string name="reset_all">Επαναφορά όλων των αυτοκινήτων</string>
 
-    <!-- Wizard (Task 7 additions) -->
+    <!-- Wizard, page 1 (welcome) -->
     <string name="wizard_metric_question">Πώς θέλετε να βλέπετε την αποδοτικότητα;</string>
     <string name="wizard_metric_km_per_kwh">km / kWh (απόσταση / ενέργεια)</string>
     <string name="wizard_metric_kwh_per_100km">kWh / 100 km (ενέργεια / απόσταση)</string>
@@ -215,7 +215,7 @@
     <string name="battery_health_card_subtitle">Τελευταία ενεργός χωρητικότητα έναντι ονομαστικής</string>
     <string name="battery_health_estimated_warning">Εκτιμώμενο, η ευρετική μέθοδος μπορεί να υπερεκτιμά</string>
     <string name="battery_health_estimated_warning_a11y">Εκτιμώμενη χωρητικότητα, μπορεί να υπερεκτιμά</string>
-    <!-- TASK-20: CO₂ tracker -->
+    <!-- CO₂ tracker -->
     <string name="co2_card_label">CO₂</string>
     <string name="co2_card_ev_label">Εκπομπές EV</string>
     <string name="co2_card_ice_label">Αντίστοιχη βενζίνης</string>
@@ -255,7 +255,7 @@
     <string name="hint_soc_before">SoC πριν (%)</string>
     <string name="hint_soc_after">SoC μετά (%)</string>
 
-    <!-- TASK-43: kWh-from-SoC calculator -->
+    <!-- kWh-from-SoC calculator -->
     <string name="kwh_calculator_link">Δεν γνωρίζετε kWh; Υπολογισμός από SoC %</string>
     <string name="kwh_calculator_banner">Το kWh εκτιμάται από τη μεταβολή SoC × ονομαστική χωρητικότητα. Αποκλείεται από την παρακολούθηση υποβάθμισης μπαταρίας.</string>
     <string name="history_kwh_estimated_badge">Εκτ.</string>
@@ -296,7 +296,7 @@
     <string name="car_form_year">Έτος</string>
     <string name="car_form_battery_kwh">Μπαταρία (kWh)</string>
 
-    <!-- F2, Charts -->
+    <!-- Charts -->
     <string name="charts_title">Γραφήματα</string>
     <string name="charts_period_last_6_months">Τελευταίοι 6 μήνες</string>
     <string name="charts_period_last_12_months">Τελευταίοι 12 μήνες</string>
@@ -328,7 +328,7 @@
         <item quantity="other">%d φορτίσεις</item>
     </plurals>
 
-    <!-- TASK-10, About / Info screen -->
+    <!--  About / Info screen -->
     <string name="about_title">Σχετικά</string>
     <string name="about_version_label">Έκδοση %1$s (build %2$d)</string>
     <string name="about_acknowledgment_title">Αναπτύχθηκε από</string>

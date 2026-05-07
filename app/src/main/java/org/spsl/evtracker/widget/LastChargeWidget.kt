@@ -26,7 +26,7 @@ import java.util.Currency
 import java.util.Locale
 
 /**
- * TASK-12: home-screen widget showing the most recent charge for the active
+ * Home-screen widget showing the most recent charge for the active
  * car. The provider is invoked by:
  *  - the platform on add / configuration change (`onUpdate`);
  *  - [AndroidWidgetRefresher] sending a self-broadcast after every committed

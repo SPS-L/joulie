@@ -75,7 +75,7 @@ Then:
 
 Without `keystore.properties`, the build still runs but produces an unsigned APK (useful for inspection, not for installing).
 
-If you want a release APK that passes Google's developer-verification check, also place your **Android Developer Verification (ADI) registration token** at `app/src/main/assets/adi-registration.properties`, one line containing the snippet from your registration page. The file is gitignored (sensitivity-class same as `keystore.properties`); each maintainer keeps their own copy. The CI release workflow doesn't bake this asset yet, see backlog TASK-56.
+If you want a release APK that passes Google's developer-verification check, also place your **Android Developer Verification (ADI) registration token** at `app/src/main/assets/adi-registration.properties`, one line containing the snippet from your registration page. The file is gitignored (sensitivity-class same as `keystore.properties`); each maintainer keeps their own copy. The CI release workflow doesn't bake this asset yet — see the open backlog item in `docs/BACKLOG.md`.
 
 Drive backup on debug and release builds requires Google Cloud OAuth Android clients registered against your keystore SHA-1s. See [`docs/GOOGLE_CLOUD_SETUP.md`](docs/GOOGLE_CLOUD_SETUP.md) for the full walkthrough.
 
@@ -96,7 +96,7 @@ Run the full gate locally before opening a PR:
 
 Style is anchored by [`.editorconfig`](.editorconfig) (Kotlin official / IntelliJ style, 4-space indent), so the IDE's reformat output and `ktlintCheck` agree. Pre-existing lint offenses are absorbed by [`app/lint-baseline.xml`](app/lint-baseline.xml); **only new violations break the build**. Regenerate the baseline only when retiring a rule, never to "clean up", it's append-by-omission by design.
 
-New Kotlin files under `app/src/main/java/org/spsl/evtracker/` must carry the SPDX header (TASK-51 relicense convention):
+New Kotlin files under `app/src/main/java/org/spsl/evtracker/` must carry the SPDX header:
 
 ```kotlin
 // SPDX-FileCopyrightText: 2026 Cyprus University of Technology,
@@ -148,7 +148,7 @@ When editing the page, follow the Brand Guide voice rules: plain English, number
 | [`docs/DESIGN.md`](docs/DESIGN.md) | Canonical product + technical design spec |
 | [`docs/GOOGLE_CLOUD_SETUP.md`](docs/GOOGLE_CLOUD_SETUP.md) | Drive API + OAuth 2.0 Android client setup |
 | [`docs/TEST_PLAN.md`](docs/TEST_PLAN.md) | Test specification |
-| [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) | CO₂ tracker methodology, coefficients, sources, and caveats (TASK-20) |
+| [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) | CO₂ tracker methodology, coefficients, sources, and caveats |
 | [`docs/BACKLOG.md`](docs/BACKLOG.md) | Post-v1 refactors and feature backlog |
 | [`docs/branding/`](docs/branding/) | Joulie brand assets, the canonical `Joulie_Brand_Guide.pdf`, master logos / palette / SVG sources, and the regeneration scripts. Read `docs/branding/README.md` before changing any brand surface |
 | [`PRIVACY.md`](PRIVACY.md) | Privacy policy (also reachable from the Play Store listing) |

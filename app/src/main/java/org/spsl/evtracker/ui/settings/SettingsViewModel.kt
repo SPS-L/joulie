@@ -93,12 +93,12 @@ class SettingsViewModel @Inject constructor(
             settingsReader.theme.collect { v -> _uiState.update { it.copy(theme = v) } }
         }
         viewModelScope.launch {
-            // TASK-55: collect the persisted language tag so the Settings UI
+            // collect the persisted language tag so the Settings UI
             // can show the currently-selected option in the dialog.
             settingsReader.languageTag.collect { v -> _uiState.update { it.copy(languageTag = v) } }
         }
         viewModelScope.launch {
-            // TASK-20: CO₂ tracker preferences. Drive the row summaries +
+            // CO₂ tracker preferences. Drive the row summaries +
             // the dialog's prefilled value.
             settingsReader.iceBaselineLPer100km.collect { v ->
                 _uiState.update { it.copy(iceBaselineLPer100km = v) }
@@ -122,7 +122,7 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    // -- E (Drive) --------------------------------------------------------------
+    // -- Drive ----------------------------------------------------------------
 
     fun onDriveAuthGranted() {
         viewModelScope.launch {
@@ -136,7 +136,7 @@ class SettingsViewModel @Inject constructor(
                     return@launch
                 }
                 val snapshot = parseRemoteSnapshot(json)
-                // TASK-54: if the user has already been offered (and Skipped or
+                // if the user has already been offered (and Skipped or
                 // Restored) this exact remote snapshot, enable Drive silently
                 // instead of re-firing the destructive restore prompt.
                 val lastSeen = settingsReader.lastSeenRemoteBackupExportedAt.first()
@@ -171,7 +171,7 @@ class SettingsViewModel @Inject constructor(
 
     fun onConfirmRestore() {
         viewModelScope.launch {
-            // TASK-54: capture the snapshot identity BEFORE the restore use case
+            // capture the snapshot identity BEFORE the restore use case
             // overwrites local data — after restore the marker means "the local
             // DB is now this snapshot; don't re-prompt to restore it again."
             val pendingExportedAt = _uiState.value.pendingRestoreExportedAt
@@ -203,7 +203,7 @@ class SettingsViewModel @Inject constructor(
 
     fun onSkipRestore() {
         viewModelScope.launch {
-            // TASK-54: persist the marker BEFORE flipping driveEnabled so a fast
+            // persist the marker BEFORE flipping driveEnabled so a fast
             // re-entry of Settings sees the marker already populated.
             val pendingExportedAt = _uiState.value.pendingRestoreExportedAt
             if (!pendingExportedAt.isNullOrEmpty()) {
@@ -232,7 +232,7 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    // -- TASK-31: manual Drive controls ----------------------------------------
+    // -- — manual Drive controls ----------------------------------------
 
     /**
      * "Back up now" tap. No-op if any manual operation is already running —
@@ -286,8 +286,6 @@ class SettingsViewModel @Inject constructor(
         else -> R.string.drive_wipe_failure
     }
 
-    // -- F1 ---------------------------------------------------------------------
-
     fun onPrimaryMetricSelected(metric: String) {
         viewModelScope.launch {
             val requiredUnit = unitFor(metric)
@@ -322,7 +320,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     /**
-     * TASK-55: persist the selected language tag and apply it to the
+     * Persist the selected language tag and apply it to the
      * running process. Empty string ("") = follow system. The
      * [LocaleApplier.apply] call triggers an Activity recreation on most
      * Android versions; the DataStore write is durable so the new
@@ -336,7 +334,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     /**
-     * TASK-20: persist the user-edited petrol baseline in L/100km.
+     * Persist the user-edited petrol baseline in L/100km.
      * Caller (Settings dialog) is responsible for validating > 0 — the
      * VM-level check here is a defensive last line; sub-zero values get
      * silently dropped to avoid corrupting Stats math.
@@ -346,7 +344,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { settingsWriter.setIceBaselineLPer100km(value) }
     }
 
-    /** TASK-20: persist the user-edited grid intensity in gCO₂/kWh. */
+    /** Persist the user-edited grid intensity in gCO₂/kWh. */
     fun onGridIntensitySelected(value: Double) {
         if (value <= 0.0) return
         viewModelScope.launch { settingsWriter.setGridIntensityGCo2PerKwh(value) }
@@ -377,9 +375,9 @@ class SettingsViewModel @Inject constructor(
         if (carId == -1L) return
         viewModelScope.launch {
             try {
-                // TASK-09: distance is now always emitted as canonical km in
+                // distance is now always emitted as canonical km in
                 // the export — the previous useKm flip was dropped so research
-                // consumers (TASK-40) get a locale-independent schema.
+                // consumers get a locale-independent schema.
                 val uri = exportCsvUseCase.export(carId)
                 _events.tryEmit(SettingsEvent.LaunchCsvShareIntent(uri))
             } catch (_: IOException) {
@@ -391,7 +389,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     /**
-     * TASK-09: date-ranged CSV export. The fragment owns the
+     * Date-ranged CSV export. The fragment owns the
      * `MaterialDatePicker` UI and forwards the selected range here.
      * `startMillis` and `endMillis` are inclusive on both ends; the
      * use case treats them via `LongRange` semantics
@@ -414,7 +412,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     /**
-     * TASK-54: parse the remote backup JSON once and return both the raw
+     * Parse the remote backup JSON once and return both the raw
      * `exported_at` string (used for the durable last-seen marker) and the
      * human-readable label (shown in the restore prompt). `exportedAt` is
      * the empty string when the JSON has no parseable `exported_at` field —

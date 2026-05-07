@@ -10,12 +10,12 @@ import org.spsl.evtracker.domain.repository.SettingsWriter
 import javax.inject.Inject
 
 /**
- * TASK-31: deletes the remote `evtracker_backup.json` from the App Data
+ * Deletes the remote `evtracker_backup.json` from the App Data
  * folder. Local data is untouched. On success, clears `lastBackupAt` so
  * the UI's "Last backup at …" hint doesn't point at a snapshot that no
  * longer exists.
  *
- * TASK-54: also clears the durable last-seen-snapshot marker on success.
+also clears the durable last-seen-snapshot marker on success.
  * After a wipe, the next committed local change re-creates a fresh
  * remote snapshot with a NEW `exported_at`; clearing the marker ensures
  * the next Drive re-toggle prompts the user once for the new snapshot

@@ -10,6 +10,6 @@ interface LocationWriter {
     suspend fun recordUsage(label: String, now: Long)
     suspend fun delete(location: CustomLocationEntity)
 
-    /** F1: global reset. */
+    /** Global reset. */
     suspend fun deleteAll()
 }

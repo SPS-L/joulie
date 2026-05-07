@@ -78,7 +78,7 @@ class WipeRemoteBackupUseCaseTest {
 
     @Test
     fun success_clearsLastSeenRemoteBackupExportedAtMarker() = runTest {
-        // TASK-54: a successful wipe must also clear the durable last-seen
+        // a successful wipe must also clear the durable last-seen
         // marker. Otherwise the next remote upload + Drive re-toggle would be
         // silently swallowed because the marker still pointed at the deleted
         // snapshot's exportedAt — the user would never be offered the new one.
@@ -108,7 +108,7 @@ class WipeRemoteBackupUseCaseTest {
 
     @Test
     fun authRequired_doesNotClearLastSeenMarker() = runTest {
-        // TASK-54 regression guard: only Success clears the marker. AuthRequired
+        // regression guard: only Success clears the marker. AuthRequired
         // means the wipe didn't happen, so the remote snapshot may still exist
         // and the marker is still meaningful.
         val repo = FakeBackupRepository(nextDeleteResult = BackupResult.AuthRequired)

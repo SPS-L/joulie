@@ -66,9 +66,9 @@ android {
 
     testOptions {
         // Let JVM unit tests call android.util.Log without throwing
-        // "Method e in android.util.Log not mocked" — TASK-07's
-        // DriveBackupRepository logs ERROR-level for non-recoverable
-        // failures, and the JVM tests exercise those branches.
+        // "Method e in android.util.Log not mocked". DriveBackupRepository
+        // logs ERROR-level for non-recoverable failures and the JVM tests
+        // exercise those branches.
         unitTests.isReturnDefaultValues = true
     }
 
@@ -162,9 +162,9 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.accessibility)
     androidTestImplementation(libs.androidx.navigation.testing)
     androidTestImplementation(libs.androidx.fragment.testing)
-    // TASK-50 sub-fix A: fragment-testing 1.6+ split the EmptyFragmentActivity
-    // manifest entry into a companion artifact. It must merge into the *app*
-    // manifest (debug variant), not the test APK manifest, because the
+    // fragment-testing 1.6+ ships the EmptyFragmentActivity manifest entry
+    // in a companion artifact that must merge into the *app* manifest
+    // (debug variant), not the test APK manifest, because the
     // instrumentation runner launches activities under the app's package.
     // Without this, FragmentScenario.launchInContainer fails with
     // "Unable to resolve activity for Intent ... EmptyFragmentActivity".

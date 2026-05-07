@@ -65,7 +65,7 @@
     <string name="drive_last_backup">Last backup: %s</string>
     <string name="drive_backup_now">Back up now</string>
 
-    <!-- Drive (Sub-project E) -->
+    <!-- Drive backup -->
     <string name="settings_section_drive">Backup &amp; restore</string>
     <string name="settings_drive_label">Google Drive backup</string>
     <string name="settings_drive_subtitle_off">Off</string>
@@ -83,7 +83,7 @@
     <string name="drive_remote_backup_too_new">This backup was created by a newer version. Update the app to restore.</string>
     <string name="drive_restore_failed">Couldn’t restore backup. Local data is unchanged.</string>
 
-    <!-- Drive, manual controls (TASK-31) -->
+    <!-- Drive, manual controls -->
     <string name="drive_backup_now_button">Back up now</string>
     <string name="drive_wipe_button">Wipe remote backup</string>
     <string name="drive_wipe_confirm_title">Delete remote backup?</string>
@@ -95,7 +95,7 @@
     <string name="drive_wipe_failure">Couldn’t delete remote backup. Try again.</string>
     <string name="drive_storage_full">Drive storage full. Free up space and retry.</string>
 
-    <!-- Home-screen widget (TASK-12) -->
+    <!-- Home-screen widget -->
     <string name="widget_last_charge_label">Last charge</string>
     <string name="widget_empty_state">No charges logged yet.</string>
     <string name="widget_kwh_added_format">%1$s kWh added</string>
@@ -103,7 +103,7 @@
     <string name="widget_efficiency_dash" translatable="false">—</string>
     <string name="widget_charge_type_content_description">Last charge type</string>
 
-    <!-- Backup notifications (TASK-19) -->
+    <!-- Backup notifications -->
     <string name="backup_notif_channel_status_name">Backup status</string>
     <string name="backup_notif_channel_status_description">Low-priority alerts when Drive backup has failed multiple times in a row.</string>
     <string name="backup_notif_channel_auth_name">Backup sign-in required</string>
@@ -117,7 +117,7 @@
     <string name="backup_notif_permission_rationale_allow">Allow</string>
     <string name="backup_notif_permission_rationale_deny">Not now</string>
 
-    <!-- Settings (F1) -->
+    <!-- Settings -->
     <string name="settings_unit_flipped_to_km">Distance unit also changed to km.</string>
     <string name="settings_unit_flipped_to_miles">Distance unit also changed to miles.</string>
     <string name="settings_metric_flipped_km_per_kwh">Primary metric also changed to km / kWh.</string>
@@ -125,12 +125,12 @@
     <string name="settings_metric_flipped_mi_per_kwh">Primary metric also changed to mi / kWh.</string>
     <string name="settings_export_csv_failed">CSV export failed.</string>
 
-    <!-- Settings (F1), row labels and summaries -->
+    <!-- Settings, row labels and summaries -->
     <string name="settings_primary_metric">Primary metric</string>
     <string name="settings_distance_unit">Distance unit</string>
     <string name="settings_currency">Currency</string>
     <string name="settings_theme">Theme</string>
-    <!-- TASK-55: language picker. Autonyms (language_name_*) are intentionally translatable=false so a Greek user always sees "Ελληνικά" in Greek script regardless of the current app locale. -->
+    <!-- Language picker. Autonyms (language_name_*) are intentionally translatable=false so a Greek user always sees "Ελληνικά" in Greek script regardless of the current app locale. -->
     <string name="settings_language">Language</string>
     <string name="settings_language_dialog_title">Select language</string>
     <string name="settings_language_follow_system">Follow system</string>
@@ -157,7 +157,7 @@
     <string name="settings_export_csv_range">Export CSV (date range)</string>
     <string name="settings_export_csv_range_summary">Pick a start and end date, then share the matching charge events.</string>
     <string name="settings_export_csv_range_picker_title">Select export range</string>
-    <!-- TASK-20: CO₂ tracker preferences -->
+    <!-- CO₂ tracker preferences -->
     <string name="settings_section_co2">CO₂ tracker</string>
     <string name="settings_co2_ice_baseline">Petrol baseline (L/100km)</string>
     <string name="settings_co2_grid_intensity">Grid intensity (gCO₂/kWh)</string>
@@ -166,20 +166,20 @@
     <string name="settings_theme_light">Light</string>
     <string name="settings_theme_dark">Dark</string>
 
-    <!-- ManageLocations (F1) -->
+    <!-- ManageLocations -->
     <string name="manage_locations_title">Manage custom locations</string>
     <string name="manage_locations_empty">Locations you save on charge events will appear here.</string>
     <string name="manage_locations_row_count">Used %1$d time(s) · last %2$s</string>
     <string name="manage_locations_row_count_zero">Last %1$s</string>
     <string name="manage_locations_undo_snackbar">Deleted \"%1$s\"</string>
 
-    <!-- F1 common -->
+    <!-- Common -->
     <string name="common_undo">Undo</string>
     <string name="common_cancel">Cancel</string>
     <string name="common_confirm">Confirm</string>
     <string name="common_navigate_back">Navigate back</string>
 
-    <!-- F1 startup recovery (blocking dialog when auto-recovery fails) -->
+    <!-- Startup recovery (blocking dialog when auto-recovery fails) -->
     <string name="recovery_failure_title">Reset recovery failed</string>
     <string name="recovery_failure_body">We couldn\'t finish your last reset.\n\n%1$s\n\nTry again, or clear the app\'s data from system Settings if it keeps failing.</string>
     <string name="recovery_failure_retry">Try again</string>
@@ -190,7 +190,7 @@
     <string name="reset_all">Reset all cars</string>
     <string name="efficiency_not_available" translatable="false">\u2014</string>
 
-    <!-- Wizard (Task 7 additions) -->
+    <!-- Wizard, page 1 (welcome) -->
     <string name="wizard_metric_question">How do you like to see efficiency?</string>
     <string name="wizard_metric_km_per_kwh">km / kWh (distance / energy)</string>
     <string name="wizard_metric_kwh_per_100km">kWh / 100 km (energy / distance)</string>
@@ -247,7 +247,7 @@
     <string name="battery_health_value_format" translatable="false">%1$.0f%%</string>
     <string name="battery_health_estimated_warning">Estimated, heuristic may overestimate</string>
     <string name="battery_health_estimated_warning_a11y">Estimated capacity, may overestimate</string>
-    <!-- TASK-20: CO₂ tracker -->
+    <!-- CO₂ tracker -->
     <string name="co2_card_label">CO₂</string>
     <string name="co2_card_ev_label">EV emissions</string>
     <string name="co2_card_ice_label">Petrol counterfactual</string>
@@ -259,7 +259,7 @@
     <string name="cost_card_per_100km">Cost per 100km</string>
     <string name="fab_log_charge">Log charge</string>
 
-    <!-- Charge edit error messages (full ChargeEdit string set lands in Task 12) -->
+    <!-- Charge edit error messages -->
     <string name="error_odometer_required">Enter a valid odometer reading</string>
     <string name="error_odometer_must_be_higher">Odometer must be greater than the previous entry</string>
     <string name="error_odometer_must_be_greater_than">Must be greater than last entry (%1$s %2$s)</string>
@@ -284,7 +284,7 @@
     <string name="hint_soc_before">SoC before (%)</string>
     <string name="hint_soc_after">SoC after (%)</string>
 
-    <!-- TASK-43: kWh-from-SoC calculator -->
+    <!-- kWh-from-SoC calculator -->
     <string name="kwh_calculator_link">Don\'t know kWh? Calculate from SoC %</string>
     <string name="kwh_calculator_banner">kWh estimated from SoC change × nominal capacity. Excluded from battery-degradation tracking.</string>
     <string name="history_kwh_estimated_badge">Est.</string>
@@ -327,7 +327,7 @@
     <string name="car_form_year">Year</string>
     <string name="car_form_battery_kwh">Battery (kWh)</string>
 
-    <!-- F2, Charts -->
+    <!-- Charts -->
     <string name="charts_title">Charts</string>
     <string name="charts_period_last_6_months">Last 6 months</string>
     <string name="charts_period_last_12_months">Last 12 months</string>
@@ -363,7 +363,7 @@
         <item quantity="other">%d charges</item>
     </plurals>
 
-    <!-- TASK-10, About / Info screen -->
+    <!--  About / Info screen -->
     <string name="about_title">About</string>
     <string name="about_app_name" translatable="false">Joulie</string>
     <string name="about_version_label">Version %1$s (build %2$d)</string>

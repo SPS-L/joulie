@@ -132,10 +132,9 @@ class StatsCalculatorCostTest {
         assertNull(s.currency)
     }
 
-    // TASK-44 regressions — first event's cost must contribute to the period total.
-    // Prior bug: cost accumulated only inside the delta-pair loop (i ≥ 1), so the
-    // first event's cost was silently dropped. This made `computeStats.totalCost`
-    // disagree with `computeMonthlyBuckets`, which already sums every event.
+    // Cost-accumulation invariant: the first event's cost must contribute to
+    // the period total. `computeStats.totalCost` sums every costed event so it
+    // agrees with `computeMonthlyBuckets`.
 
     @Test
     fun firstAndSecondEventBothCosted_totalCostSumsBoth() {

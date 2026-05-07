@@ -10,7 +10,7 @@ import org.spsl.evtracker.domain.repository.SettingsWriter
 import javax.inject.Inject
 
 /**
- * TASK-31: forces an immediate Drive snapshot upload on the user's
+ * Forces an immediate Drive snapshot upload on the user's
  * direct request, bypassing [org.spsl.evtracker.domain.backup.BackupScheduler]
  * so the UI gets synchronous-feeling feedback.
  *

@@ -76,7 +76,7 @@ class DriveBackupRepository @Inject constructor(
     }
 
     /**
-     * TASK-31: deletes the remote `evtracker_backup.json` from the App Data
+     * Deletes the remote `evtracker_backup.json` from the App Data
      * folder, sharing the same retry + error-translation harness as
      * [backupCurrentData]. Returns [BackupResult.Success] when the desired
      * post-state holds — including the no-file case, since "no remote

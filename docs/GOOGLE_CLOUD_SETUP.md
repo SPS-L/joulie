@@ -95,11 +95,10 @@ That's the entire OAuth setup. There is no JSON file to download. The Authorizat
 
 ## Step 5b, Register a third client for the debug `applicationId` suffix
 
-After **TASK-29** (merged 2026-05-01) the **debug** build type uses
-`applicationId = org.spsl.evtracker.debug` (release stays at
-`org.spsl.evtracker`, Step 5 above still applies for release builds).
-The OAuth Android client created in Step 5 is bound to a fixed package
-name, so debug builds need their own client:
+The **debug** build type uses `applicationId = org.spsl.evtracker.debug`
+(release stays at `org.spsl.evtracker`; Step 5 above still applies for
+release builds). The OAuth Android client created in Step 5 is bound to
+a fixed package name, so debug builds need their own client:
 
 1. **APIs & Services → Credentials → + Create Credentials → OAuth client ID**
 2. **Application type:** Android
@@ -123,7 +122,7 @@ builds are unaffected.
 2. Open the app → **Settings → Google Drive backup** → toggle ON
 3. The system Authorization sheet appears asking for permission to manage Joulie files in its hidden folder
 4. Sign in with the same Google account you added as a test user in Step 4
-5. Save a charge event **or** tap **Settings → Back up now** (TASK-31), then verify the backup file exists by calling Drive `files.list` with `spaces=appDataFolder` (the App Data folder is hidden from the regular Drive UI). Use **Settings → Wipe remote backup** to scrub the file when re-testing the first-time replace-or-skip restore flow.
+5. Save a charge event **or** tap **Settings → Back up now**, then verify the backup file exists by calling Drive `files.list` with `spaces=appDataFolder` (the App Data folder is hidden from the regular Drive UI). Use **Settings → Wipe remote backup** to scrub the file when re-testing the first-time replace-or-skip restore flow.
 
 ---
 
@@ -137,5 +136,5 @@ builds are unaffected.
 | Switching keystore (debug ↔ release) breaks sign-in | Each keystore SHA-1 needs its own OAuth client. Repeat Step 5 for the release SHA-1. |
 | Sign-in fails on **debug** specifically (release works) | Missing the `org.spsl.evtracker.debug` OAuth client. Run Step 5b. |
 | Backup file not visible in Drive web UI | Expected, the App Data folder is hidden. Use the Drive API explorer with `spaces=appDataFolder`. |
-| Auth was revoked from your Google Account but the app keeps trying to back up | TASK-19 surfaces this: after the next backup attempt the user gets a `backup_auth` notification ("Drive sign-in required, Tap to reconnect"). Tapping deep-links to Settings; toggle Drive off and on to re-authorise. Test users on a fresh device get this card the first time their token can't be silently renewed. |
+| Auth was revoked from your Google Account but the app keeps trying to back up | surfaces this: after the next backup attempt the user gets a `backup_auth` notification ("Drive sign-in required, Tap to reconnect"). Tapping deep-links to Settings; toggle Drive off and on to re-authorise. Test users on a fresh device get this card the first time their token can't be silently renewed. |
 | Repeated backup failures with no notification | On Android 13+, `POST_NOTIFICATIONS` is gated behind a runtime permission. The app requests it the first time consecutive failures hit the threshold (3) and **never re-prompts after a denial**. To re-grant, go to system **Settings → Apps → Joulie → Notifications** and re-enable. |

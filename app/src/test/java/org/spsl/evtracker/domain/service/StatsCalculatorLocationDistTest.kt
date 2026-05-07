@@ -56,9 +56,9 @@ class StatsCalculatorLocationDistTest {
     }
 
     @Test fun tieBreaking_byInsertionOrder() {
-        // groupingBy preserves first-seen order on ties; the spec leaves tie
-        // ordering implementation-defined. This test pins current behaviour
-        // so a future refactor that changes it surfaces here.
+        // groupingBy preserves first-seen order on ties; tie ordering is
+        // intentionally implementation-defined. This test pins current
+        // behaviour so a future refactor that changes it surfaces here.
         val r = calc.computeLocationDistribution(
             listOf(
                 ev("First"),

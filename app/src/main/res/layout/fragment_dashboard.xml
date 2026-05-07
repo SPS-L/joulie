@@ -274,7 +274,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- TASK-20: CO₂ tracker. Hidden when neither pref is configured. -->
+            <!-- CO₂ tracker. Hidden when neither pref is configured. -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/dashboard_card_co2"
                 android:layout_width="match_parent"

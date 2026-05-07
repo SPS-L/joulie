@@ -61,7 +61,7 @@ class SettingsRepository @Inject constructor(
     override val gridIntensityGCo2PerKwh: Flow<Double> =
         dataStore.data.map { it[PreferenceKeys.GRID_INTENSITY_G_CO2_PER_KWH] ?: 577.0 }
 
-    // ACTIVE_CAR_ID stays an `intPreferencesKey` (TASK-26 didn't touch DataStore
+    // ACTIVE_CAR_ID stays an `intPreferencesKey` (didn't touch DataStore
     // backing types — switching `intPreferencesKey` to `longPreferencesKey` with
     // the same key name would silently lose the existing Int value). We widen
     // to Long at the boundary so callers see the same type as the entity PK.
@@ -152,7 +152,7 @@ class SettingsRepository @Inject constructor(
         dataStore.edit { it[PreferenceKeys.GRID_INTENSITY_G_CO2_PER_KWH] = value }
     }
 
-    /** Used by the future Settings → Reset preferences action (Sub-project F). */
+    /** Flips `setupComplete` back to `false` so the wizard re-fires on next launch. */
     suspend fun resetSetupComplete() {
         dataStore.edit { it[PreferenceKeys.SETUP_COMPLETE] = false }
     }

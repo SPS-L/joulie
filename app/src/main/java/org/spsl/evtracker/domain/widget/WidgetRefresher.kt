@@ -5,7 +5,7 @@
 package org.spsl.evtracker.domain.widget
 
 /**
- * TASK-12: narrow domain interface use cases call after committing a
+ * Narrow domain interface use cases call after committing a
  * change that affects the home-screen widget's content.
  *
  * The Android implementation triggers an `AppWidgetManager` update via

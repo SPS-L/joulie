@@ -89,10 +89,9 @@ class SettingsFragmentTest {
         // Hosted via real MainActivity rather than HiltTestActivity:
         // launchFragmentInHiltContainer + MaterialAlertDialog deterministically
         // hangs Espresso for ~38 s on the dialog interaction (the activity
-        // appears unresumed to Espresso). The MainActivity-launched pattern
-        // (matching DashboardFragmentTest, WizardFlowTest, MainActivityBottomNavTest)
-        // bypasses that bug. The HiltTestActivity issue is captured separately
-        // for follow-up; for now the priority is a green nightly.
+        // appears unresumed to Espresso). Launching MainActivity directly
+        // mirrors the pattern used by DashboardFragmentTest, WizardFlowTest,
+        // and MainActivityBottomNavTest.
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             var navController: androidx.navigation.NavController? = null
             scenario.onActivity { activity ->

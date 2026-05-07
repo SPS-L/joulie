@@ -14,38 +14,37 @@ import java.time.Instant
 import javax.inject.Inject
 
 /**
- * TASK-09 (2026-05-03): unified CSV exporter for the active car.
+ * Unified CSV exporter for the active car.
  *
  * Header schema (14 columns, identical for full-history and date-ranged
- * exports — research consumers in TASK-40 anchor on a stable schema):
+ * exports — research consumers anchor on a stable schema):
  *
  *   event_date_iso, car_name, odometer_km, kwh, kwh_source, charge_type,
  *   location, cost_total, cost_per_kwh, currency, km_per_kwh,
  *   soc_before, soc_after, note
  *
- * Distance is **always** emitted as canonical kilometres regardless of
- * the user's display preference (DESIGN.md §invariants — "Odometer is
- * always stored in km"); this drops the previous `useKm` parameter and
- * makes exports locale-independent for cross-fleet research analysis.
+ * Distance is always emitted as canonical kilometres regardless of the
+ * user's display preference (the "odometer is always stored in km"
+ * invariant). Exports are locale-independent for cross-fleet research
+ * analysis.
  *
  * `kwh_source` emits the `ChargeKwhSource` enum name (`MEASURED` /
  * `DERIVED_FROM_SOC`). `soc_before` / `soc_after` emit fractions in
  * `0.0..1.0`, blank when null. `km_per_kwh` is computed per-row using
- * the same delta-odometer convention as `StatsCalculator` (TASK-44 /
- * DESIGN.md §7) — `(odo[i] - odo[i-1]) / kwh[i]`, blank when there is
- * no previous event in the *exported* slice or when `dist <= 0` /
- * `kwh <= 0`. The first row in any export therefore emits a blank
- * efficiency cell even when an earlier event for the same car exists
- * outside the range — keeping the "first row blank" invariant
- * predictable for spreadsheet consumers.
+ * the same delta-odometer convention as `StatsCalculator` (DESIGN.md §7)
+ * — `(odo[i] - odo[i-1]) / kwh[i]`, blank when there is no previous
+ * event in the *exported* slice or when `dist <= 0` / `kwh <= 0`. The
+ * first row in any export therefore emits a blank efficiency cell even
+ * when an earlier event for the same car exists outside the range —
+ * keeping the "first row blank" invariant predictable for spreadsheet
+ * consumers.
  *
  * Text-bearing columns (`car_name`, `kwh_source`, `charge_type`,
- * `location`, `currency`, `note`) all route through `csvEscape`
- * (TASK-52 hardening: RFC 4180 + OWASP formula-injection prefixes).
- * Numeric / timestamp columns deliberately bypass — `Double.toString()`
- * cannot produce a destructive formula prefix from a non-malicious
- * value, and quoting them as text would defeat researchers' pivot
- * tables.
+ * `location`, `currency`, `note`) all route through `csvEscape` (RFC
+ * 4180 + OWASP formula-injection prefixes). Numeric / timestamp columns
+ * deliberately bypass — `Double.toString()` cannot produce a destructive
+ * formula prefix from a non-malicious value, and quoting them as text
+ * would defeat researchers' pivot tables.
  */
 class ExportCsvUseCase @Inject constructor(
     private val carReader: CarReader,
@@ -108,7 +107,7 @@ class ExportCsvUseCase @Inject constructor(
     }
 
     /**
-     * RFC 4180 + spreadsheet-formula-injection hardening (TASK-52).
+     * RFC 4180 + spreadsheet-formula-injection hardening.
      *
      * Quoting is applied when the field contains any of `,`, `"`, `\n`, `\r`,
      * or `\t`. RFC 4180 only mandates quoting on `,`, `"`, and the line-end

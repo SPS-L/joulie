@@ -10,7 +10,7 @@ import org.spsl.evtracker.data.local.entity.ChargeEventEntity
 import javax.inject.Inject
 
 /**
- * TASK-14 — battery-capacity degradation estimator.
+ * Battery-capacity degradation estimator.
  *
  * Two estimation paths per event, in priority order:
  *
@@ -26,7 +26,7 @@ import javax.inject.Inject
  *
  * Events that satisfy neither rule are skipped. Events with `kwhAdded
  * ≤ 0` are always skipped. Events with `kwhSource = DERIVED_FROM_SOC`
- * (TASK-43) are also always skipped, on both paths — the derived
+ * are also always skipped, on both paths — the derived
  * `kwhAdded` was itself computed from `Δsoc × nominalBatteryKwh`, so
  * any capacity calculation that round-trips through it is tautological
  * (exact path returns nominal verbatim; heuristic trivially qualifies).
@@ -78,7 +78,7 @@ class CapacityEstimator @Inject constructor() {
         nominalBatteryKwh: Double?,
     ): CapacityPoint? {
         if (event.kwhAdded <= 0.0) return null
-        // TASK-43: derived events are tautological for both code paths.
+        // derived events are tautological for both code paths.
         if (event.kwhSource == ChargeKwhSource.DERIVED_FROM_SOC) return null
         val before = event.socBefore
         val after = event.socAfter
@@ -94,7 +94,7 @@ class CapacityEstimator @Inject constructor() {
     }
 
     /**
-     * TASK-46: latest point's exactness flag. `null` when [points] is empty,
+     * Latest point's exactness flag. `null` when [points] is empty,
      * `true` when the chronologically latest point came from the exact SoC-
      * delta path, `false` when it came from the heuristic full-charge path.
      * The Dashboard battery-health card uses this together with
@@ -112,7 +112,7 @@ class CapacityEstimator @Inject constructor() {
         const val MIN_POINTS_FOR_CHART = 3
 
         /**
-         * TASK-46: above this, the heuristic capacity estimate is far enough
+         * Above this, the heuristic capacity estimate is far enough
          * over the car's nominal capacity that the unclamped value is more
          * likely a measurement artifact than real battery state. Used by
          * `ObserveDashboardStatsUseCase` to gate the "Estimated" warning

@@ -44,14 +44,13 @@ import javax.inject.Singleton
  * singleton so assertions on `clearCalls` / `failNext` see the same
  * instance the use case mutated.
  *
- * Earlier versions of this test used `@BindValue val testRunner:
- * TestableResetRunner` — that bound the *concrete* class, not the
- * interface, so the use case kept resolving the production
- * `RoomDataResetTransactionRunner` via [DataResetModule] and the spy
- * was never invoked. Switching the field type to the interface caused
- * a duplicate-binding error (`@BindValue` adds a parallel binding, it
- * does not replace), which is why the binding had to be extracted to
- * its own focused module before this fix could land.
+ * Note: `@BindValue val testRunner: TestableResetRunner` does NOT work
+ * here — that binds the concrete class, not the interface, so the use
+ * case keeps resolving the production `RoomDataResetTransactionRunner`
+ * via [DataResetModule]. Binding to the interface via `@BindValue`
+ * conflicts with `DataResetModule`'s own binding (parallel, not
+ * replacement), which is why [DataResetModule] is extracted to its own
+ * focused module so this test can `@UninstallModules` it cleanly.
  */
 @HiltAndroidTest
 @UninstallModules(DataResetModule::class)

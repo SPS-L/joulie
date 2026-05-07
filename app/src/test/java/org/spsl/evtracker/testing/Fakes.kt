@@ -28,7 +28,7 @@ import java.io.IOException
 /**
  * Deterministic clock for JVM tests. Replaces every direct
  * `System.currentTimeMillis()` call in tests that exercise NowProvider-driven
- * code paths (TASK-28).
+ * code paths.
  */
 class FakeNowProvider(@Volatile var time: Long = 0L) : NowProvider {
     override fun nowMillis() = time
@@ -333,7 +333,7 @@ class FakeSettingsWriter(
 }
 
 /**
- * TASK-55: JVM-side stub for [LocaleApplier]. Records the last applied
+ * JVM-side stub for [LocaleApplier]. Records the last applied
  * tag so VM tests can assert behaviour without booting AppCompat or the
  * Android framework.
  */

@@ -25,7 +25,7 @@ class WizardPage1Fragment : Fragment() {
     private var _binding: FragmentWizardPage1Binding? = null
     private val binding get() = _binding!!
 
-    // TASK-55: page 0 needs to talk to the wizard's shared VM so the language
+    // page 0 needs to talk to the wizard's shared VM so the language
     // pick persists immediately (DataStore + AppCompatDelegate). Activity-
     // scoped because WizardFragment hosts this Fragment via a ViewPager2.
     private val viewModel: WizardViewModel by activityViewModels()

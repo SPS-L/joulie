@@ -38,7 +38,7 @@ class MainViewModel @Inject constructor(
     val startupState: StateFlow<StartupState> = _startupState.asStateFlow()
 
     /**
-     * TASK-19: true once the user has hit the chronic-failure threshold
+     * True once the user has hit the chronic-failure threshold
      * AND has not previously dismissed the notification permission rationale.
      * The Activity is responsible for the platform-level checks (API >= 33,
      * `ContextCompat.checkSelfPermission`) — the VM only owns the DataStore

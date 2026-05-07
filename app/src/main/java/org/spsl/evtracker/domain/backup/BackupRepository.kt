@@ -27,7 +27,7 @@ interface BackupRepository {
      * usual auth / failure variants per the [backupCurrentData] contract.
      *
      * Drive must be authorised; the caller normally gates on
-     * [SettingsReader.driveEnabled] before invoking. (TASK-31)
+     * [SettingsReader.driveEnabled] before invoking.
      */
     suspend fun deleteRemoteBackup(): BackupResult
 }

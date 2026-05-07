@@ -32,7 +32,7 @@ class WizardViewModel @Inject constructor(
         /** Page 3 (About + Disclaimer) Finish gate — true when the user ticks the acceptance checkbox. */
         val disclaimerAccepted: Boolean = false,
         /**
-         * TASK-55: persisted language tag. `""` = follow system. The wizard
+         * Persisted language tag. `""` = follow system. The wizard
          * page 0 dropdown surfaces this; selecting an entry persists +
          * applies in one go.
          */
@@ -43,7 +43,7 @@ class WizardViewModel @Inject constructor(
     val state: StateFlow<UiState> = _state.asStateFlow()
 
     init {
-        // TASK-55: hydrate the language tag from DataStore so the wizard
+        // hydrate the language tag from DataStore so the wizard
         // page 0 dropdown can show the currently-active selection (which
         // may already be non-empty if the user re-runs the wizard via
         // Settings → Reset preferences).
@@ -91,7 +91,7 @@ class WizardViewModel @Inject constructor(
     }
 
     /**
-     * TASK-55: persist the chosen language tag immediately AND apply it
+     * Persist the chosen language tag immediately AND apply it
      * to the running process. The DataStore write survives a mid-wizard
      * kill so the user's choice is honoured on relaunch even before
      * `setupComplete = true`.

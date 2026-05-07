@@ -5,7 +5,7 @@
 package org.spsl.evtracker.testing
 
 /**
- * TASK-61: poll an Espresso interaction until it succeeds or the budget runs
+ * Poll an Espresso interaction until it succeeds or the budget runs
  * out. Used to bridge the gap between asynchronous state propagation chains
  * (DAO Flow → ViewModel.StateFlow → Fragment.collect → RecyclerView /
  * View visibility) and Espresso's synchronous assertion model.

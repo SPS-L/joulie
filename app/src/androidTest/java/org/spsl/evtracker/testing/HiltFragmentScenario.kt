@@ -16,7 +16,7 @@ import org.spsl.evtracker.HiltTestActivity
 import org.spsl.evtracker.R
 
 /**
- * TASK-58: drop-in replacement for `androidx.fragment.app.testing.launchFragmentInContainer`
+ * Drop-in replacement for `androidx.fragment.app.testing.launchFragmentInContainer`
  * for fragments that depend on Hilt injection.
  *
  * `launchFragmentInContainer` hosts the fragment in the library's

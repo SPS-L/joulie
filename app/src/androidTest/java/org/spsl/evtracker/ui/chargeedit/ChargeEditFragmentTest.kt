@@ -86,12 +86,11 @@ class ChargeEditFragmentTest {
     fun saveBlankOdometer_showsError() {
         // Hosted via real MainActivity rather than HiltTestActivity:
         // launchFragmentInHiltContainer + the post-click form-validation update
-        // deterministically hangs Espresso for ~38 s on the next assertion (the
-        // activity appears unresumed to Espresso). The MainActivity-launched
-        // pattern bypasses that bug. The HiltTestActivity issue is captured
-        // separately for follow-up. homeChip_clickedFillsLocation above stays
-        // on launchFragmentInHiltContainer because it does not exercise the
-        // post-click hang path.
+        // deterministically hangs Espresso for ~38 s on the next assertion
+        // (the activity appears unresumed to Espresso). Launching MainActivity
+        // directly avoids that path. homeChip_clickedFillsLocation above
+        // stays on launchFragmentInHiltContainer because it does not exercise
+        // the post-click validation update.
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 val navHost = activity.supportFragmentManager

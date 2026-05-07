@@ -2,8 +2,6 @@
 
 This document explains how the **Settings → CO₂** card and the **Charts → CO₂ tab** compute their numbers, where the default coefficients come from, and what caveats matter when interpreting them. It is the canonical reference for the constants in [`CO2Calculator`](../app/src/main/java/org/spsl/evtracker/domain/service/CO2Calculator.kt).
 
-The CO₂ tracker shipped in **TASK-20** (2026-05-04, app version 1.7.0).
-
 ---
 
 ## Formulas
@@ -54,7 +52,7 @@ Real Cyprus grid intensity varies meaningfully by hour of day:
 - **Morning solar peak (10am–4pm)** can drop below 350 gCO₂/kWh on clear summer days.
 - **Evening peak (7pm–11pm)** can exceed 700 gCO₂/kWh when oil-fired plants ramp to cover residential demand without solar.
 
-TASK-20 uses a static yearly average; the per-event variation will land in **TASK-49** (deferred, see *Open issues* below).
+The current implementation uses a static yearly average; per-event variation is on the backlog (see *Open issues* below).
 
 The user can edit this value in **Settings → CO₂ tracker → Grid intensity** to reflect their charging habits or a different region.
 
@@ -82,9 +80,9 @@ On a high-grid-intensity period with low driven distance, EV emissions can excee
 
 ## Open issues
 
-### Per-event grid intensity (TASK-49)
+### Per-event grid intensity
 
-The deferred TASK-49 will replace the static `gridIntensityGCo2PerKwh` preference with a per-event live value fetched at save time. The intent is to surface "charge during the solar peak for cleaner CO₂" as a behavioural nudge. Required: a free real-time Cyprus grid-mix data source. Candidates evaluated and not yet adopted:
+A future iteration will replace the static `gridIntensityGCo2PerKwh` preference with a per-event live value fetched at save time. The intent is to surface "charge during the solar peak for cleaner CO₂" as a behavioural nudge. Required: a free real-time Cyprus grid-mix data source. Candidates evaluated and not yet adopted:
 
 - **Electricity Maps API**, closest fit functionally, but priced at €6,000/year per zone for Carbon Intensity. Out of budget.
 - **CO2Signal**, was free; absorbed into Electricity Maps' paid product.
@@ -92,7 +90,7 @@ The deferred TASK-49 will replace the static `gridIntensityGCo2PerKwh` preferenc
 - **ENTSO-E Transparency Platform**, free, registered API, Cyprus covered, but returns hourly generation mix per production type (not pre-computed carbon intensity). Would require deriving intensity from per-source CO₂ emission factors. Real work; deferred.
 - **TSOC direct API access**, best long-term answer; needs email correspondence.
 
-When TASK-49 lands, this document will be extended with the per-event source's methodology and emission factors.
+When per-event grid intensity lands, this document will be extended with the per-event source's methodology and emission factors.
 
 ### ICE-baseline personalisation
 

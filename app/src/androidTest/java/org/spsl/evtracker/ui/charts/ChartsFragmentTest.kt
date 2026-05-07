@@ -93,19 +93,18 @@ class ChartsFragmentTest {
      *
      * Scope to descendants of `charts_tab_root` (the outer FrameLayout that
      * is the root of `fragment_charts_tab.xml`). `charts_tab_empty_message`
-     * is a *sibling* of `charts_tab_chart_root`, not a descendant — earlier
-     * versions scoped to `charts_tab_chart_root` and could never see the
-     * empty-message TextView.
+     * is a *sibling* of `charts_tab_chart_root`, not a descendant — scoping
+     * to `charts_tab_chart_root` would never see the empty-message TextView.
      *
      * Note: this matcher is sufficient for tests where exactly one
-     * `charts_tab_empty_message` instance is in a "displayed" state at
-     * any time. The `multiCurrencyPeriod_costTabShowsBanner_locally` test
-     * has two simultaneously-displayed empty_message TextViews on API 26
+     * `charts_tab_empty_message` instance is in a "displayed" state at any
+     * time. The `multiCurrencyPeriod_costTabShowsBanner_locally` test has
+     * two simultaneously-displayed empty_message TextViews on API 26
      * (TREND's GONE-but-laid-out and MONTHLY_COST's VISIBLE-with-banner)
      * because every tab fragment binds independently and the multi-currency
      * banner flips MONTHLY_COST's empty_message to VISIBLE regardless of
      * which page is active. That test sidesteps `inActivePage` and uses
-     * the banner text itself as the unique discriminator (see TASK-66).
+     * the banner text itself as the unique discriminator.
      */
     private fun inActivePage(matcher: org.hamcrest.Matcher<View>): org.hamcrest.Matcher<View> =
         org.hamcrest.Matchers.allOf(
@@ -257,10 +256,7 @@ class ChartsFragmentTest {
                     // Wait for the TabLayout to lay out before clicking. Without
                     // this, on API 35 the click races the ViewPager2 / TabLayout
                     // settle and Espresso's perform() constraints fire before
-                    // the tab is hit-testable. (Earlier versions of this test
-                    // had a leading "TREND tab no banner" awaitView assertion
-                    // that doubled as a settle wait — TASK-67 dropped it as
-                    // redundant, surfacing this race.)
+                    // the tab is hit-testable.
                     awaitView {
                         onView(withText(R.string.charts_tab_monthly_cost))
                             .check(matches(isDisplayed()))

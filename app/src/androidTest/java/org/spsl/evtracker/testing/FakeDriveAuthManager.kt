@@ -9,10 +9,10 @@ class FakeDriveAuthManager @Inject constructor() : DriveAuthManager {
     var nextResult: DriveAuthManager.AuthResult = DriveAuthManager.AuthResult.Success("fake-token")
 
     /**
-     * TASK-54: number of times [authorize] has been called. Used as the
-     * regression-test signal for "the Drive switch listener fired on view-state
-     * restoration" — pre-fix this counter increments on every
-     * `SettingsFragment` re-entry; post-fix it stays at zero on bare entry.
+     * Number of times [authorize] has been called. Used as the
+     * regression-test signal for "the Drive switch listener fired on
+     * view-state restoration" — bare `SettingsFragment` entry must leave
+     * this counter at zero.
      */
     @Volatile var authorizeCallCount: Int = 0
         private set

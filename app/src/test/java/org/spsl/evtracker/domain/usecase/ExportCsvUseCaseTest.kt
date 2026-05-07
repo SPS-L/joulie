@@ -50,7 +50,7 @@ class ExportCsvUseCaseTest {
     }
 
     // -------------------------------------------------------------------------
-    // TASK-09 — header schema (14 columns, canonical km, no useKm flip)
+    // — header schema (14 columns, canonical km, no useKm flip)
     // -------------------------------------------------------------------------
 
     @Test
@@ -74,7 +74,7 @@ class ExportCsvUseCaseTest {
     }
 
     // -------------------------------------------------------------------------
-    // TASK-52 — CSV escape hardening: \r, \t, formula-injection prefixes
+    // — CSV escape hardening: \r, \t, formula-injection prefixes
     // -------------------------------------------------------------------------
 
     /**
@@ -113,7 +113,7 @@ class ExportCsvUseCaseTest {
     @Test
     fun note_containingCarriageReturn_isQuoted() {
         // RFC 4180 requires CR-bearing fields to be quoted just like LF-bearing
-        // ones. Pre-TASK-52 csvEscape only quoted on \n; a bare \r in note
+        // ones. Pre-csvEscape only quoted on \n; a bare \r in note
         // would corrupt downstream parsers that split on \r.
         val row = rowFor(note = "line1\rline2")
         assertTrue("expected quoted note in: $row", row.contains("\"line1\rline2\""))
@@ -189,7 +189,7 @@ class ExportCsvUseCaseTest {
     @Test
     fun note_plainText_isNotQuoted() {
         // Regression guard: hardening must not over-quote benign text.
-        // Pre-TASK-52 behaviour preserved for any field that is neither
+        // Pre-behaviour preserved for any field that is neither
         // quotable nor formula-prefixed.
         val row = rowFor(note = "Charged at home")
         // Plain ASCII text without commas / quotes / linebreaks / tabs and
@@ -200,8 +200,8 @@ class ExportCsvUseCaseTest {
 
     @Test
     fun note_existingCommaAndQuoteCases_stayGreen() {
-        // Regression guard for the pre-TASK-52 behaviour: comma → quoted;
-        // embedded `"` → doubled and quoted; \n → quoted.
+        // RFC 4180 baseline: comma → quoted; embedded `"` → doubled and
+        // quoted; `\n` → quoted.
         assertTrue(rowFor(note = "a,b").contains("\"a,b\""))
         assertTrue(rowFor(note = "she said \"hi\"").contains("\"she said \"\"hi\"\"\""))
         assertTrue(rowFor(note = "line1\nline2").contains("\"line1\nline2\""))
@@ -209,7 +209,7 @@ class ExportCsvUseCaseTest {
 
     @Test
     fun currency_isAlsoEscaped() {
-        // TASK-52 expanded the escape contract to cover the currency column —
+        // expanded the escape contract to cover the currency column —
         // free-form letter code stored verbatim from the wizard. A malicious
         // (or pasted-via-keyboard-app) value starting with `=` must be
         // neutralised here too.
@@ -221,7 +221,7 @@ class ExportCsvUseCaseTest {
     }
 
     // -------------------------------------------------------------------------
-    // TASK-09 — schema additions (kwh_source, soc_*, km_per_kwh, car_name,
+    // — schema additions (kwh_source, soc_*, km_per_kwh, car_name,
     //           cost_per_kwh) + per-row efficiency derivation + range filter
     // -------------------------------------------------------------------------
 

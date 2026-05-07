@@ -71,20 +71,18 @@ class SettingsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // TASK-54 — Step 0: do NOT attach the Drive switch listener here.
-        // Android's view-state restoration calls setChecked() between
-        // onCreateView and onStart to restore the saved checked state,
-        // and any listener attached at this point would synchronously
-        // fire onUserToggledOn() before the StateFlow collector below
-        // has had a chance to sync isChecked to the persisted DataStore
-        // value. The listener is instead attached lazily by the collector,
-        // AFTER the first state-driven sync.
+        // Do NOT attach the Drive switch listener here. Android's view-state
+        // restoration calls setChecked() between onCreateView and onStart;
+        // a listener attached at this point would synchronously fire
+        // onUserToggledOn() before the StateFlow collector below has synced
+        // isChecked to the persisted DataStore value. The listener is
+        // attached lazily by the collector, AFTER the first state-driven sync.
 
-        // TASK-31: manual Drive controls
+        // manual Drive controls
         binding.buttonBackupNow.setOnClickListener { viewModel.onPushBackupClicked() }
         binding.buttonWipeRemote.setOnClickListener { showWipeConfirmDialog() }
 
-        // F1 row clicks
+        // Reset/preferences row clicks
         binding.rowPrimaryMetric.setOnClickListener { showPrimaryMetricDialog() }
         binding.rowDistanceUnit.setOnClickListener { showDistanceUnitDialog() }
         binding.rowCurrency.setOnClickListener { showCurrencyDialog() }
@@ -107,7 +105,7 @@ class SettingsFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
-                    // TASK-54 — Step 0: lazy first-attach of the Drive switch
+                    // lazy first-attach of the Drive switch
                     // listener. The first emission unconditionally syncs
                     // isChecked to the persisted state with NO listener
                     // attached, then attaches the listener for the first time.
@@ -132,8 +130,8 @@ class SettingsFragment : Fragment() {
                         binding.textLastBackup.text = formatLastBackup(state.lastBackupAt)
                         renderManualDriveControls(state)
 
-                        // F1 — render row summaries + enabled/disabled state
-                        renderF1Rows(state)
+                        // Render row summaries + enabled/disabled state
+                        renderPreferenceRows(state)
                     }
                 }
                 launch {
@@ -188,7 +186,7 @@ class SettingsFragment : Fragment() {
             .show()
     }
 
-    private fun renderF1Rows(state: SettingsUiState) {
+    private fun renderPreferenceRows(state: SettingsUiState) {
         binding.summaryPrimaryMetric.setText(
             when (state.primaryMetric) {
                 "kwh_per_100km" -> R.string.wizard_metric_kwh_per_100km
@@ -207,11 +205,11 @@ class SettingsFragment : Fragment() {
                 else -> R.string.settings_theme_system
             },
         )
-        // TASK-55: language summary. Empty tag = follow system; otherwise the
+        // language summary. Empty tag = follow system; otherwise the
         // autonym lookup. Autonym strings are translatable=false so they
         // always render in their own script regardless of the current locale.
         binding.summaryLanguage.text = languageLabelFor(state.languageTag)
-        // TASK-20: CO₂ row summaries. Numbers are formatted in the
+        // CO₂ row summaries. Numbers are formatted in the
         // user's default locale via Locale-aware DecimalFormat — Greek
         // / Russian readers see comma decimals, English readers see
         // dot decimals. Units stay non-localised (L/100km, gCO₂/kWh).
@@ -247,7 +245,7 @@ class SettingsFragment : Fragment() {
     }
 
     /**
-     * TASK-09: opens a `MaterialDatePicker` date-range picker and forwards
+     * Opens a `MaterialDatePicker` date-range picker and forwards
      * the user's choice to [SettingsViewModel.onExportCsvRange]. The picker
      * uses the default UTC selection mode; the use case treats the
      * selected millis as inclusive on both ends.
@@ -322,14 +320,14 @@ class SettingsFragment : Fragment() {
     }
 
     /**
-     * TASK-55: language picker dialog. The five options are "Follow
+     * Language picker dialog. The five options are "Follow
      * system" + four autonyms — each language's name written in its own
      * script. Autonyms must NOT be localised: a Greek user looking for
      * their language needs to see "Ελληνικά" written in Greek script
      * regardless of the current app locale.
      */
     /**
-     * TASK-20: numeric-input dialog shared by the two CO₂ rows.
+     * Numeric-input dialog shared by the two CO₂ rows.
      * Material doesn't ship a built-in numeric picker for arbitrary
      * doubles, so we use an EditText inside a MaterialAlertDialog with
      * inputType=numberDecimal. The locale-aware parser accepts both

@@ -55,7 +55,7 @@ class HistoryAdapter(
             }
             binding.itemChargeDate.text = DateFormat.formatEpochMs(row.event.eventDate)
             binding.itemChargeTypeBadge.text = row.event.chargeType.displayLabel()
-            // TASK-43: surface DERIVED_FROM_SOC events with a small "Est."
+            // surface DERIVED_FROM_SOC events with a small "Est."
             // badge so the user can spot which rows came from the in-form
             // SoC calculator and were excluded from degradation tracking.
             binding.itemChargeEstimatedBadge.isVisible =

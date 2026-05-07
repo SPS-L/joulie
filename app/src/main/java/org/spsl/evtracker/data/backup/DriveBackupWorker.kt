@@ -32,7 +32,7 @@ class DriveBackupWorker @AssistedInject constructor(
      * to the WorkManager [Result] surface — no `Result.retry()` needed,
      * which keeps WorkManager's outer retry from amplifying the inner one.
      *
-     * TASK-19: side-channels the result through [BackupOutcomeReporter]
+     * side-channels the result through [BackupOutcomeReporter]
      * before translating, so the failure-streak counter and notifications
      * fire whether the user opens the app or not.
      */
@@ -44,10 +44,10 @@ class DriveBackupWorker @AssistedInject constructor(
                 settingsWriter.setLastBackupAt(now.nowMillis())
                 Result.success()
             }
-            // Repository already exhausted its retry budget (TASK-07);
+            // Repository already exhausted its retry budget;
             // returning Result.retry() would let WorkManager re-amplify it.
             BackupResult.AuthRequired -> Result.failure()
-            // Same invariant — see KDoc above and TASK-07 / TASK-36.
+            // Same invariant — see KDoc above and /.
             is BackupResult.Failure -> Result.failure()
         }
     }

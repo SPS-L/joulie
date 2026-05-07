@@ -11,6 +11,6 @@ interface CarWriter {
     suspend fun rename(carId: Long, newName: String)
     suspend fun deleteById(carId: Long)
 
-    /** F1: global reset. */
+    /** Global reset. */
     suspend fun deleteAll()
 }

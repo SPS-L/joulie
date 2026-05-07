@@ -59,7 +59,7 @@
     <string name="drive_last_backup">Последнее копирование: %s</string>
     <string name="drive_backup_now">Создать копию сейчас</string>
 
-    <!-- Drive (Sub-project E) -->
+    <!-- Drive backup -->
     <string name="settings_section_drive">Резервное копирование &amp; восстановление</string>
     <string name="settings_drive_label">Резервное копирование Google Drive</string>
     <string name="settings_drive_subtitle_off">Отключено</string>
@@ -109,7 +109,7 @@
     <string name="backup_notif_permission_rationale_allow">Разрешить</string>
     <string name="backup_notif_permission_rationale_deny">Не сейчас</string>
 
-    <!-- Settings (F1) -->
+    <!-- Settings -->
     <string name="settings_unit_flipped_to_km">Единица расстояния также изменена на км.</string>
     <string name="settings_unit_flipped_to_miles">Единица расстояния также изменена на мили.</string>
     <string name="settings_metric_flipped_km_per_kwh">Основной показатель также изменён на km / kWh.</string>
@@ -117,12 +117,12 @@
     <string name="settings_metric_flipped_mi_per_kwh">Основной показатель также изменён на mi / kWh.</string>
     <string name="settings_export_csv_failed">Экспорт CSV не удался.</string>
 
-    <!-- Settings (F1), row labels and summaries -->
+    <!-- Settings, row labels and summaries -->
     <string name="settings_primary_metric">Основной показатель</string>
     <string name="settings_distance_unit">Единица расстояния</string>
     <string name="settings_currency">Валюта</string>
     <string name="settings_theme">Тема</string>
-    <!-- TASK-55: language picker -->
+    <!-- language picker -->
     <string name="settings_language">Язык</string>
     <string name="settings_language_dialog_title">Выберите язык</string>
     <string name="settings_language_follow_system">Как в системе</string>
@@ -149,20 +149,20 @@
     <string name="settings_theme_light">Светлая</string>
     <string name="settings_theme_dark">Тёмная</string>
 
-    <!-- ManageLocations (F1) -->
+    <!-- ManageLocations -->
     <string name="manage_locations_title">Управление местами</string>
     <string name="manage_locations_empty">Здесь появятся места, сохранённые в событиях зарядки.</string>
     <string name="manage_locations_row_count">Использовано %1$d раз(а) · последний раз %2$s</string>
     <string name="manage_locations_row_count_zero">Последний раз %1$s</string>
     <string name="manage_locations_undo_snackbar">«%1$s» удалено</string>
 
-    <!-- F1 common -->
+    <!-- Common -->
     <string name="common_undo">Отменить</string>
     <string name="common_cancel">Отмена</string>
     <string name="common_confirm">Подтвердить</string>
     <string name="common_navigate_back">Назад</string>
 
-    <!-- F1 startup recovery -->
+    <!-- startup recovery -->
     <string name="recovery_failure_title">Сбой восстановления после сброса</string>
     <string name="recovery_failure_body">Не удалось завершить последний сброс.\n\n%1$s\n\nПовторите попытку или очистите данные приложения в системных Настройках, если проблема продолжается.</string>
     <string name="recovery_failure_retry">Повторить</string>
@@ -172,7 +172,7 @@
     <string name="reset_per_car">Сбросить этот автомобиль</string>
     <string name="reset_all">Сбросить все автомобили</string>
 
-    <!-- Wizard (Task 7 additions) -->
+    <!-- Wizard, page 1 (welcome) -->
     <string name="wizard_metric_question">Как вы хотите видеть эффективность?</string>
     <string name="wizard_metric_km_per_kwh">km / kWh (расстояние / энергия)</string>
     <string name="wizard_metric_kwh_per_100km">kWh / 100 km (энергия / расстояние)</string>
@@ -215,7 +215,7 @@
     <string name="battery_health_card_subtitle">Последняя эффективная ёмкость vs номинальная</string>
     <string name="battery_health_estimated_warning">Оценочно, эвристика может завышать значение</string>
     <string name="battery_health_estimated_warning_a11y">Оценочная ёмкость, может завышать значение</string>
-    <!-- TASK-20: CO₂ tracker -->
+    <!-- CO₂ tracker -->
     <string name="co2_card_label">CO₂</string>
     <string name="co2_card_ev_label">Выбросы EV</string>
     <string name="co2_card_ice_label">Бензиновый эквивалент</string>
@@ -255,7 +255,7 @@
     <string name="hint_soc_before">SoC до (%)</string>
     <string name="hint_soc_after">SoC после (%)</string>
 
-    <!-- TASK-43: kWh-from-SoC calculator -->
+    <!-- kWh-from-SoC calculator -->
     <string name="kwh_calculator_link">Не знаете kWh? Вычислить из SoC %</string>
     <string name="kwh_calculator_banner">kWh оценивается по изменению SoC × номинальная ёмкость. Исключается из отслеживания деградации батареи.</string>
     <string name="history_kwh_estimated_badge">Оцен.</string>
@@ -298,7 +298,7 @@
     <string name="car_form_year">Год</string>
     <string name="car_form_battery_kwh">Батарея (kWh)</string>
 
-    <!-- F2, Charts -->
+    <!-- Charts -->
     <string name="charts_title">Графики</string>
     <string name="charts_period_last_6_months">Последние 6 месяцев</string>
     <string name="charts_period_last_12_months">Последние 12 месяцев</string>
@@ -332,7 +332,7 @@
         <item quantity="other">%d зарядки</item>
     </plurals>
 
-    <!-- TASK-10, About / Info screen -->
+    <!--  About / Info screen -->
     <string name="about_title">О приложении</string>
     <string name="about_version_label">Версия %1$s (сборка %2$d)</string>
     <string name="about_acknowledgment_title">Разработано</string>

@@ -249,7 +249,7 @@ class DashboardFragment : Fragment() {
             binding.dashboardBatteryHealthValue.text =
                 getString(R.string.battery_health_value_format, pct)
         }
-        // TASK-46: warning chip fires only when both flags hold — heuristic
+        // warning chip fires only when both flags hold — heuristic
         // path AND the percentage is past the 105% guard. Hidden otherwise
         // so an exact-path 102% (legitimate noise from whole-percent SoC
         // entries) doesn't trigger a false alarm.
@@ -258,7 +258,7 @@ class DashboardFragment : Fragment() {
     }
 
     private fun renderCo2Card(state: DashboardScreenState) {
-        // TASK-20: hide the entire card when EITHER pref is unset (Q6 contract).
+        // hide the entire card when EITHER pref is unset (Q6 contract).
         // The two numbers are coupled in meaning — showing only one would be
         // confusing ("ev = 28 kg" without an ICE comparison says nothing about
         // savings; "ICE = 161 kg" with no EV figure is even worse).
