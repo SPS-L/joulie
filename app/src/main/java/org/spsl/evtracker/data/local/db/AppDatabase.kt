@@ -4,6 +4,7 @@
 
 package org.spsl.evtracker.data.local.db
 
+import androidx.room.AutoMigration
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
@@ -24,6 +25,10 @@ import org.spsl.evtracker.data.local.entity.CustomLocationEntity
     ],
     version = 7,
     exportSchema = true,
+    autoMigrations = [
+        AutoMigration(from = 5, to = 6),
+        AutoMigration(from = 6, to = 7),
+    ],
 )
 @TypeConverters(ChargeTypeConverter::class, ChargeKwhSourceConverter::class)
 abstract class AppDatabase : RoomDatabase() {
@@ -119,37 +124,11 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        /**
-         * Add optional `socBefore` and `socAfter` REAL columns to
-         * `charge_events` so the user can record state-of-charge data per
-         * event. Both columns are nullable and default to NULL — events
-         * persisted before this migration leave both fields blank.
-         * `CapacityEstimator` consumes the fields when both are present
-         * (else falls back to the heuristic `kwh_added` proxy on full charges).
-         */
-        val MIGRATION_5_6: Migration = object : Migration(5, 6) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE charge_events ADD COLUMN socBefore REAL")
-                db.execSQL("ALTER TABLE charge_events ADD COLUMN socAfter REAL")
-            }
-        }
-
-        /**
-         * Add a `kwhSource` provenance column to `charge_events`.
-         * `MEASURED` events come from the charger or the user; they remain
-         * eligible for the capacity-degradation tracker.
-         * `DERIVED_FROM_SOC` events are produced by the in-form calculator
-         * and are skipped by `CapacityEstimator` because the math is
-         * tautological. The column is `NOT NULL DEFAULT 'MEASURED'` so legacy
-         * rows backfill cleanly without a separate UPDATE pass.
-         */
-        val MIGRATION_6_7: Migration = object : Migration(6, 7) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL(
-                    "ALTER TABLE charge_events " +
-                        "ADD COLUMN kwhSource TEXT NOT NULL DEFAULT 'MEASURED'",
-                )
-            }
-        }
+        // v5 → v6 (add socBefore + socAfter REAL columns) and
+        // v6 → v7 (add kwhSource TEXT NOT NULL DEFAULT 'MEASURED') run via
+        // @AutoMigration entries on the @Database annotation. Room's KSP
+        // synthesises the migration SQL from the exported schemas in
+        // app/schemas/ at compile time. Equivalent to the hand-written
+        // ALTER TABLE ADD COLUMN they replaced. See TASK-39.
     }
 }

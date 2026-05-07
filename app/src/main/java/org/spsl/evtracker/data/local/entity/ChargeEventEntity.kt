@@ -4,6 +4,7 @@
 
 package org.spsl.evtracker.data.local.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -55,7 +56,13 @@ data class ChargeEventEntity(
      * `(socAfter - socBefore) × Car.nominalBatteryKwh` via the in-form
      * calculator. Capacity-degradation tracking skips `DERIVED`
      * events because the math is tautological.
+     *
+     * `@ColumnInfo(defaultValue = "MEASURED")` is the SQL-level default
+     * Room emits when synthesising the v6→v7 `@AutoMigration`'s
+     * `ALTER TABLE … ADD COLUMN kwhSource TEXT NOT NULL DEFAULT 'MEASURED'`.
+     * Matches the original manual `MIGRATION_6_7` SQL byte-for-byte.
      */
+    @ColumnInfo(defaultValue = "MEASURED")
     val kwhSource: ChargeKwhSource = ChargeKwhSource.MEASURED,
     val createdAt: Long,
 )

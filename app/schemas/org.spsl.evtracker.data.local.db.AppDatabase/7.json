@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 7,
-    "identityHash": "a75f7f77fc8e0fae8b575fb138d37b44",
+    "identityHash": "e6d29933c5c3982bdf3161d94c86983e",
     "entities": [
       {
         "tableName": "cars",
@@ -62,7 +62,7 @@
       },
       {
         "tableName": "charge_events",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `carId` INTEGER NOT NULL, `eventDate` INTEGER NOT NULL, `odometerKm` REAL NOT NULL, `kwhAdded` REAL NOT NULL, `chargeType` TEXT NOT NULL, `costTotal` REAL, `costPerKwh` REAL, `currency` TEXT, `location` TEXT, `note` TEXT NOT NULL, `socBefore` REAL, `socAfter` REAL, `kwhSource` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, FOREIGN KEY(`carId`) REFERENCES `cars`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `carId` INTEGER NOT NULL, `eventDate` INTEGER NOT NULL, `odometerKm` REAL NOT NULL, `kwhAdded` REAL NOT NULL, `chargeType` TEXT NOT NULL, `costTotal` REAL, `costPerKwh` REAL, `currency` TEXT, `location` TEXT, `note` TEXT NOT NULL, `socBefore` REAL, `socAfter` REAL, `kwhSource` TEXT NOT NULL DEFAULT 'MEASURED', `createdAt` INTEGER NOT NULL, FOREIGN KEY(`carId`) REFERENCES `cars`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "id",
@@ -146,7 +146,8 @@
             "fieldPath": "kwhSource",
             "columnName": "kwhSource",
             "affinity": "TEXT",
-            "notNull": true
+            "notNull": true,
+            "defaultValue": "'MEASURED'"
           },
           {
             "fieldPath": "createdAt",
@@ -257,7 +258,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'a75f7f77fc8e0fae8b575fb138d37b44')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'e6d29933c5c3982bdf3161d94c86983e')"
     ]
   }
 }

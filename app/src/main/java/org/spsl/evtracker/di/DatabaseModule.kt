@@ -30,8 +30,9 @@ object DatabaseModule {
                 AppDatabase.MIGRATION_2_3,
                 AppDatabase.MIGRATION_3_4,
                 AppDatabase.MIGRATION_4_5,
-                AppDatabase.MIGRATION_5_6,
-                AppDatabase.MIGRATION_6_7,
+                // v5→v6 and v6→v7 run via @AutoMigration entries on
+                // AppDatabase's @Database annotation; auto-discovered
+                // by Room — no addMigrations(...) entry needed.
             )
             .build()
 
