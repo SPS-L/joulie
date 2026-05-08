@@ -98,6 +98,16 @@ android {
         jvmTarget = "17"
     }
 
+    // Bundle Room's exported schema JSONs ($projectDir/schemas/<db-class>/<version>.json)
+    // into the androidTest APK so MigrationTestHelper.createDatabase(name, N) can
+    // load `AppDatabase/N.json` at runtime. Required by the @AutoMigration tests
+    // (TASK-39) — auto-migration validation reads the start-version schema from
+    // test assets, and without this srcDir those tests fail with
+    // FileNotFoundException for the missing .json.
+    sourceSets {
+        getByName("androidTest").assets.srcDir("$projectDir/schemas")
+    }
+
     packaging {
         resources {
             // Required by the Drive backup path: google-api-client + google-http-client
