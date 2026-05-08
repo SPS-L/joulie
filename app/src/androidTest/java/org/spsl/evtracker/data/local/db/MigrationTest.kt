@@ -327,7 +327,9 @@ class MigrationTest {
         // @AutoMigration(from = 5, to = 6) adds nullable socBefore + socAfter
         // REAL columns to charge_events. Existing rows leave both at NULL.
         val v5 = helper.createDatabase(testDbName, 5)
-        v5.execSQL("INSERT INTO cars (id, name, createdAt) VALUES (1, 'A', 1000)")
+        // The Room-generated v5 schema declares cars.make and cars.model as
+        // NOT NULL without a SQL default, so every column must be supplied.
+        v5.execSQL("INSERT INTO cars (id, name, make, model, createdAt) VALUES (1, 'A', '', '', 1000)")
         v5.execSQL(
             "INSERT INTO charge_events " +
                 "(id, carId, eventDate, odometerKm, kwhAdded, chargeType, note, createdAt) " +
@@ -352,7 +354,9 @@ class MigrationTest {
         // legacy events were entered before the in-form calculator existed
         // and so cannot be DERIVED_FROM_SOC.
         val v5 = helper.createDatabase(testDbName, 5)
-        v5.execSQL("INSERT INTO cars (id, name, createdAt) VALUES (1, 'A', 1000)")
+        // The Room-generated v5 schema declares cars.make and cars.model as
+        // NOT NULL without a SQL default, so every column must be supplied.
+        v5.execSQL("INSERT INTO cars (id, name, make, model, createdAt) VALUES (1, 'A', '', '', 1000)")
         v5.execSQL(
             "INSERT INTO charge_events " +
                 "(id, carId, eventDate, odometerKm, kwhAdded, chargeType, note, createdAt) " +
