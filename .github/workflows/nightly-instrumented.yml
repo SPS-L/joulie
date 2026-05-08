@@ -121,6 +121,23 @@ jobs:
           echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
           echo "$ANDROID_HOME/emulator" >> "$GITHUB_PATH"
 
+      # The AVD cache only stores ~/.android/avd/* and ~/.android/adb*, not
+      # $ANDROID_HOME/emulator/ or $ANDROID_HOME/system-images/. On cache
+      # hit, the `reactivecircus/android-emulator-runner` step is skipped,
+      # so the emulator binary and the system image the cached AVD points
+      # at are never installed and Boot emulator fails with
+      # "emulator: command not found". Install both explicitly here so
+      # the step is correct regardless of cache state. sdkmanager is
+      # idempotent — when reactivecircus already installed these on the
+      # cache-miss path this is a no-op.
+      - name: Ensure emulator + system image installed
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install \
+            "emulator" \
+            "platform-tools" \
+            "system-images;android-${{ matrix.api-level }};default;x86_64" \
+            > /dev/null
+
       # `-no-snapshot` (= `-no-snapshot-load -no-snapshot-save`) forces a
       # cold boot. We deliberately don't rely on the cached snapshot — when
       # the runner image's emulator binary drifts ahead of the snapshot
