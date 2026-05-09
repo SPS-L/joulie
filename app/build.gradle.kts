@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.ktlint)
+    alias(libs.plugins.roborazzi)
 }
 
 val keystorePropertiesFile = rootProject.file("keystore.properties")
@@ -70,6 +71,11 @@ android {
         // logs ERROR-level for non-recoverable failures and the JVM tests
         // exercise those branches.
         unitTests.isReturnDefaultValues = true
+        // Robolectric (TASK-35 screenshot baselines) needs the resource
+        // table on the test classpath to render Android Views. Without
+        // this flag the JVM test run starts without compiled resources
+        // and Roborazzi captures empty bitmaps.
+        unitTests.isIncludeAndroidResources = true
     }
 
     lint {
@@ -133,6 +139,13 @@ ksp {
     arg("room.incremental", "true")
 }
 
+// TASK-35: keep Roborazzi baselines under src/test/screenshots/ so they
+// live next to the test code that produces them and reviewers see the
+// PNG diff in the same PR review surface as the test changes.
+roborazzi {
+    outputDir.set(file("src/test/screenshots"))
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
@@ -168,6 +181,15 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.hilt.android.testing)
     kspTest(libs.hilt.android.compiler)
+    // TASK-35: Roborazzi + Robolectric for JVM-side screenshot baselines.
+    // Drives Dashboard + Charts fragments through a stubbed-VM render path
+    // (no Hilt graph, no WorkManager init) so the PR gate stays clear of
+    // the Hilt/Robolectric/WorkManager brittleness pattern that took
+    // TASK-58..74 to stabilise on the nightly suite.
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.junit.rule)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.fragment.testing)
 
     androidTestImplementation(libs.androidx.room.testing)
     androidTestImplementation(libs.androidx.test.ext.junit)

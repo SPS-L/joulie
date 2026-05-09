@@ -1,0 +1,4 @@
+# Roborazzi screenshot baselines (TASK-35) are PNGs; force binary so Git
+# does not attempt to text-diff them and reviewers see "Binary files differ"
+# instead of garbled byte streams in the PR view.
+app/src/test/screenshots/*.png binary
