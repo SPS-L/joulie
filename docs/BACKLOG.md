@@ -15,7 +15,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-05 |  | ~~JVM unit tests for `EfficiencyPoint`~~, **closed, premise wrong** |  | ☒ |
 | TASK-06 | 🟡 | JVM unit tests for use cases |  | ☑ |
 | TASK-07 | 🟡 | Drive backup error handling & retry logic |  | ☑ |
-| TASK-08 | 🟢 | Replace `CarEditDialog` with a Compose `AlertDialog` (requires adding Compose) |  | ☐ |
+| TASK-08 |  | ~~Replace `CarEditDialog` with a Compose `AlertDialog`~~, **closed, scope vs value** |  | ☒ |
 | TASK-09 | 🟢 | CSV export of charge events with efficiency column, date-range picker |  | ☑ |
 | TASK-10 | 🟢 | In-app About / Info screen with SPS-Lab acknowledgment |  | ☑ |
 | TASK-11 | 🟡 | Odometer regression detection UX improvement |  | ☑ |
@@ -54,8 +54,8 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-44 | 🟡 | Fix `StatsCalculator.computeStats` cost accumulation (first event's cost silently dropped; inconsistent with `computeMonthlyBuckets`) |  | ☑ |
 | TASK-45 | 🟢 | Defensive SoC range guard (`require(...)`) in `KwhFromSocCalculator.compute` |  | ☑ |
 | TASK-46 | 🟡 | Battery-health card "Estimated" warning when heuristic over-estimates (>105% of nominal AND `isExact = false`) |  | ☑ |
-| TASK-47 | 🟢 | Charging power profile fields (`peakPowerKw`, `chargingDurationMinutes`), schema bump |  | ☐ |
-| TASK-48 | 🟢 | Time-of-use (ToU) tariff classification on charge events |  | ☐ |
+| TASK-47 | 🟢 | Charging power profile fields (`peakPowerKw`, `chargingDurationMinutes`), schema bump |  | ⏸ |
+| TASK-48 | 🟢 | Time-of-use (ToU) tariff classification on charge events |  | ⏸ |
 | TASK-49 | 🟢 | Per-event grid carbon intensity (extends TASK-20 with marginal emission factors) | TASK-20 | ☐ |
 | TASK-50 | 🔴 | Stabilise nightly instrumented suite, 21 failures across 4 root causes after WorkManager init landed | TASK-34 | ☑ |
 | TASK-51 | 🔴 | GPL-3.0-or-later license change (pending `play-services-auth` review) |  | ☑ |
@@ -325,45 +325,13 @@ interfaces with the Google Drive API. It must handle common failure modes.
 
 ---
 
-## 🟢 TASK-08, Replace `CarEditDialog` with a Compose `AlertDialog`
+## ☒ TASK-08, ~~Replace `CarEditDialog` with a Compose `AlertDialog`~~
 
-> **Premise correction (2026-04-30):** `CarEditDialog` is **not** a
-> `DialogFragment`. It is a Kotlin `object` wrapping
-> `MaterialAlertDialogBuilder` over `DialogEditCarBinding` (see
-> `app/src/main/java/org/spsl/evtracker/ui/cars/CarEditDialog.kt`). Compose is
-> also **not** in the dependency graph today, no `androidx.compose.*`
-> entries appear in `app/build.gradle.kts` or `gradle/libs.versions.toml`.
-> The work below therefore has two parts: introducing Compose to the project,
-> and porting the dialog. Treat introducing Compose as the gating decision —
-> if the team prefers staying on Views, close this task and the dialog can
-> stay as-is.
+**Closed 2026-05-09, scope vs value.** Compose is not in the dependency graph today, no Compose-first screens are planned, TASK-30 chose a custom `Canvas` `PieChartView` (not Compose Canvas), and the widget work in DESIGN.md §708 deliberately avoided the Compose / Glance runtime. The existing 56-line `CarEditDialog` object over `MaterialAlertDialogBuilder` + ViewBinding is fit for purpose; pulling in `compose-bom` + `ui` + `material3` + `activity-compose` + `buildFeatures.compose = true` for one dialog fails the YAGNI test.
 
-### Step 1, decide whether to adopt Compose
+**Reactivate if:** a Compose-first new screen lands on the backlog, or ViewBinding is being phased out project-wide.
 
-Pulling Compose in for a single dialog is rarely worth it. Reasonable triggers
-to actually adopt it: planned Compose-first new screens, the future
-`PieChartView` work in TASK-30 benefits from Compose Canvas, or a desire to
-phase out ViewBinding. If none of these apply, close this task.
-
-### Step 2, add Compose dependencies (only if Step 1 is "yes")
-
-Add to `gradle/libs.versions.toml` and reference from `app/build.gradle.kts`:
-
-- `androidx.compose:compose-bom` (use `platform(...)`)
-- `androidx.compose.ui:ui`
-- `androidx.compose.material3:material3`
-- `androidx.activity:activity-compose`
-- `androidx.fragment:fragment-compose` (or use `ComposeView` from a Fragment)
-
-Enable `buildFeatures.compose = true` and configure `composeOptions`. Verify
-release build still compiles (`./gradlew :app:assembleRelease`).
-
-### Step 3, port the dialog
-
-1. Create a Composable `CarEditDialogCompose(state: CarFormState, onConfirm: (CarFormState) -> Unit, onDismiss: () -> Unit)` rendering a Material3 `AlertDialog` with the same fields as `R.layout.dialog_edit_car` (name, make, model, battery kWh).
-2. Render it from `CarsFragment` via a `ComposeView` whose visibility is driven by `CarsViewModel` state (a `showDialog: CarFormState?` field plus an event).
-3. Delete `CarEditDialog.kt` and `R.layout.dialog_edit_car` once unreferenced. Confirm `CarsFragment` and `CarsViewModel` still compile.
-4. Add a UI test in `app/src/androidTest/.../CarsFragmentTest.kt` (or extend the existing one) asserting the dialog renders, validates blank names, and emits `onConfirm` with trimmed input.
+See `docs/superpowers/specs/2026-05-09-task08-close-design.md` for the closure rationale and diff.
 
 ---
 
@@ -1401,7 +1369,9 @@ never look at. There is currently **no notification code anywhere in
 >
 > **TASK-49 follow-up.** Stays open. The BACKLOG entry below should be updated to record the data-source survey findings (Electricity Maps €6k/yr, CO2Signal-via-Electricity-Maps, cyprusgrid.com WAF, ENTSO-E mix-derivation deferred). Nothing for TASK-49 to inherit from this PR's schema, `charge_events` schema unchanged at v7; the per-event `gridCarbonIntensityGCo2PerKwh` column remains TASK-49's to add at v7→v8 alongside the fetcher.
 
-## 🟢 TASK-20, CO₂ savings tracker
+## 🟢 TASK-20, CO₂ savings tracker ☑ Done (2026-05-04)
+
+> Original spec retained below for traceability; implementation outcome is documented in the entry above.
 
 This is the most research-aligned addition for SPS-Lab. The app already tracks
 kWh consumed and distance driven; it never contextualises the environmental
@@ -3661,7 +3631,7 @@ tests cover the threshold transition.
 
 ---
 
-## 🟢 TASK-47, Charging power profile fields (`peakPowerKw`, `chargingDurationMinutes`)
+## 🟢 TASK-47, Charging power profile fields (`peakPowerKw`, `chargingDurationMinutes`) ⏸ Under consideration (2026-05-09)
 
 > **Audit suggestion (RES-01, 2026-05-03):** The app records energy
 > (`kwhAdded`) but not charging *power over time*. Even a simple
@@ -3729,7 +3699,7 @@ count increases by ≥ 6 cases. No regression in existing tests.
 
 ---
 
-## 🟢 TASK-48, Time-of-use (ToU) tariff classification on charge events
+## 🟢 TASK-48, Time-of-use (ToU) tariff classification on charge events ⏸ Under consideration (2026-05-09)
 
 > **Audit suggestion (RES-02, 2026-05-03):** Cost field captures total
 > cost but not *when* the charge occurred relative to grid tariff
