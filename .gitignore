@@ -35,3 +35,12 @@ app/src/main/assets/adi-registration.properties
 # OS noise
 .DS_Store
 Thumbs.db
+
+# Roborazzi screenshot test artefacts (TASK-35).
+# Only the canonical baselines under app/src/test/screenshots/ are tracked;
+# Roborazzi writes the actual + diff PNGs alongside on a failed verify.
+app/src/test/screenshots/*.actual.png
+app/src/test/screenshots/*.diff.png
+app/src/test/screenshots/*_actual.png
+app/src/test/screenshots/*_diff.png
+app/build/outputs/roborazzi/
