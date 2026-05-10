@@ -37,6 +37,9 @@ private class LinkedSettings(initialFailures: Int = 0) : SettingsReader, Setting
     override val languageTag: Flow<String> get() = error("unused")
     override val iceBaselineLPer100km: Flow<Double> get() = error("unused")
     override val gridIntensityGCo2PerKwh: Flow<Double> get() = error("unused")
+    override val co2Enabled: Flow<Boolean> get() = error("unused")
+    override val electricityMapsApiKey: Flow<String> get() = error("unused")
+    override val electricityMapsZone: Flow<String> get() = error("unused")
 
     override suspend fun setActiveCarId(id: Long) = error("unused")
     override suspend fun setDriveEnabled(enabled: Boolean) = error("unused")
@@ -62,6 +65,9 @@ private class LinkedSettings(initialFailures: Int = 0) : SettingsReader, Setting
     override suspend fun setLanguageTag(value: String) = error("unused")
     override suspend fun setIceBaselineLPer100km(value: Double) = error("unused")
     override suspend fun setGridIntensityGCo2PerKwh(value: Double) = error("unused")
+    override suspend fun setCo2Enabled(enabled: Boolean) = error("unused")
+    override suspend fun setElectricityMapsApiKey(value: String) = error("unused")
+    override suspend fun setElectricityMapsZone(value: String) = error("unused")
 
     val currentFailures: Int get() = failuresFlow.value
 }

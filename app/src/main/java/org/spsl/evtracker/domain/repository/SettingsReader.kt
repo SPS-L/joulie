@@ -81,4 +81,27 @@ interface SettingsReader {
      * compute EV-side emissions per charge event.
      */
     val gridIntensityGCo2PerKwh: Flow<Double>
+
+    /**
+     * Opt-in master flag for CO₂ tracking. False by default on fresh
+     * installs: the Dashboard CO₂ card and the Charts CO₂ tab gate
+     * themselves on this value, so a user who never visits the new
+     * Settings section sees no CO₂ surfaces at all.
+     */
+    val co2Enabled: Flow<Boolean>
+
+    /**
+     * Electricity Maps API key. Empty string = unset; when blank with
+     * [co2Enabled] true, [SaveChargeEventUseCase] falls back to the static
+     * [gridIntensityGCo2PerKwh] preference.
+     */
+    val electricityMapsApiKey: Flow<String>
+
+    /**
+     * Electricity Maps grid-zone code (uppercase IETF/ISO 3166 region
+     * code, e.g. `"CY"`). Default `"CY"` matches the Cyprus-focused
+     * static-intensity default. Free-tier authorisation is scoped to a
+     * single zone per API key.
+     */
+    val electricityMapsZone: Flow<String>
 }

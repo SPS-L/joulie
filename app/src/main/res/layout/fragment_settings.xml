@@ -213,6 +213,72 @@
                 android:text="@string/settings_section_co2"
                 android:textAppearance="?attr/textAppearanceTitleSmall"/>
 
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/switch_co2_enabled"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:padding="8dp"
+                android:text="@string/settings_co2_enable_toggle"/>
+
+            <TextView
+                android:id="@+id/text_co2_helper"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_marginEnd="8dp"
+                android:layout_marginBottom="8dp"
+                android:text="@string/settings_co2_enable_helper"
+                android:textAppearance="?attr/textAppearanceBodySmall"/>
+
+            <LinearLayout
+                android:id="@+id/row_co2_api_key"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:minHeight="64dp"
+                android:gravity="center_vertical"
+                android:padding="8dp"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true">
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/settings_electricity_maps_api_key"
+                    android:textAppearance="?attr/textAppearanceBodyLarge"/>
+                <TextView
+                    android:id="@+id/summary_co2_api_key"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="?attr/textAppearanceBodyMedium"
+                    tools:text="••••••••"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/row_co2_zone"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:minHeight="64dp"
+                android:gravity="center_vertical"
+                android:padding="8dp"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true">
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/settings_electricity_maps_zone"
+                    android:textAppearance="?attr/textAppearanceBodyLarge"/>
+                <TextView
+                    android:id="@+id/summary_co2_zone"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="?attr/textAppearanceBodyMedium"
+                    tools:text="CY"/>
+            </LinearLayout>
+
             <LinearLayout
                 android:id="@+id/row_co2_ice_baseline"
                 android:layout_width="match_parent"

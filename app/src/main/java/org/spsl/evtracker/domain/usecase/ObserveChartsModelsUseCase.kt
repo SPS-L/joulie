@@ -48,6 +48,7 @@ class ObserveChartsModelsUseCase @Inject constructor(
         val cars: List<CarEntity>,
         val iceBaselineLPer100km: Double,
         val gridIntensityGCo2PerKwh: Double,
+        val co2Enabled: Boolean,
     )
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -57,8 +58,9 @@ class ObserveChartsModelsUseCase @Inject constructor(
             carReader.observeAll(),
             settingsReader.iceBaselineLPer100km,
             settingsReader.gridIntensityGCo2PerKwh,
-        ) { active, cars, iceL, gridG ->
-            ChartsSettings(active, cars, iceL, gridG)
+            settingsReader.co2Enabled,
+        ) { active, cars, iceL, gridG, co2On ->
+            ChartsSettings(active, cars, iceL, gridG, co2On)
         }.flatMapLatest { settings ->
             when {
                 settings.cars.isEmpty() || settings.activeCarId == -1L ->
@@ -102,10 +104,13 @@ class ObserveChartsModelsUseCase @Inject constructor(
         // of whether the chart is rendered (banner can also fire when the
         // remaining measured-event count is below the 3-point threshold).
         val derivedExcluded = capacityEstimator.countDerivedEvents(periodEvents)
-        // cumulative CO₂ trend across the period's events.
-        // Empty when both prefs are 0 — the CO₂ tab then renders the
-        // "set baseline + grid intensity" empty state.
-        val co2Cumulative = if (settings.iceBaselineLPer100km > 0.0 || settings.gridIntensityGCo2PerKwh > 0.0) {
+        // cumulative CO₂ trend across the period's events. Empty when the
+        // user has not opted in (co2Enabled=false) OR when both prefs are 0
+        // — the CO₂ tab then renders the "set baseline + grid intensity"
+        // empty state.
+        val co2Cumulative = if (settings.co2Enabled &&
+            (settings.iceBaselineLPer100km > 0.0 || settings.gridIntensityGCo2PerKwh > 0.0)
+        ) {
             co2Calculator.cumulativeTrend(
                 events = periodEvents,
                 iceBaselineLPer100km = settings.iceBaselineLPer100km,

@@ -43,6 +43,12 @@ data class SettingsUiState(
     val iceBaselineLPer100km: Double = 7.0,
     /** Grid carbon intensity (gCO₂/kWh) used for EV-side emissions. */
     val gridIntensityGCo2PerKwh: Double = 577.0,
+    /** Opt-in master switch for CO₂ tracking surfaces. */
+    val co2Enabled: Boolean = false,
+    /** Electricity Maps API key. Empty string = unset. */
+    val electricityMapsApiKey: String = "",
+    /** Electricity Maps grid-zone code (uppercase, e.g. `"CY"`). */
+    val electricityMapsZone: String = "CY",
     val activeCarId: Long = -1L,
     val activeCarName: String? = null,
     val customLocationCount: Int = 0,

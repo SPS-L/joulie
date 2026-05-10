@@ -18,7 +18,7 @@ data class BackupData(
     @SerializedName("custom_locations") val customLocations: List<CustomLocationDto>,
 ) {
     companion object {
-        const val CURRENT_VERSION = 7
+        const val CURRENT_VERSION = 8
 
         fun fromEntities(
             cars: List<CarEntity>,
@@ -84,6 +84,12 @@ data class ChargeEventDto(
      * backfill is `MEASURED` (legacy events predate the in-form calculator).
      */
     @SerializedName("kwh_source") val kwhSource: ChargeKwhSource? = null,
+    /**
+     * Per-event grid intensity in gCO₂/kWh captured at save time from
+     * the Electricity Maps live feed. Absent on v3..v7 backups — Gson
+     * defaults to `null`, which matches the entity's nullable contract.
+     */
+    @SerializedName("grid_intensity_g_co2_per_kwh") val gridIntensityGCo2PerKwh: Double? = null,
     @SerializedName("created_at") val createdAt: Long,
 ) {
     fun toEntity() = ChargeEventEntity(
@@ -101,6 +107,7 @@ data class ChargeEventDto(
         socBefore = socBefore,
         socAfter = socAfter,
         kwhSource = kwhSource ?: ChargeKwhSource.MEASURED,
+        gridIntensityGCo2PerKwh = gridIntensityGCo2PerKwh,
         createdAt = createdAt,
     )
 
@@ -120,6 +127,7 @@ data class ChargeEventDto(
             socBefore = e.socBefore,
             socAfter = e.socAfter,
             kwhSource = e.kwhSource,
+            gridIntensityGCo2PerKwh = e.gridIntensityGCo2PerKwh,
             createdAt = e.createdAt,
         )
     }

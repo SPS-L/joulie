@@ -90,6 +90,8 @@ class SettingsFragment : Fragment() {
         binding.rowLanguage.setOnClickListener { showLanguageDialog() }
         binding.rowCo2IceBaseline.setOnClickListener { showIceBaselineDialog() }
         binding.rowCo2GridIntensity.setOnClickListener { showGridIntensityDialog() }
+        binding.rowCo2ApiKey.setOnClickListener { showElectricityMapsApiKeyDialog() }
+        binding.rowCo2Zone.setOnClickListener { showElectricityMapsZoneDialog() }
         binding.rowManageLocations.setOnClickListener {
             findNavController().navigate(R.id.action_settings_to_manage_locations)
         }
@@ -110,8 +112,13 @@ class SettingsFragment : Fragment() {
                     // isChecked to the persisted state with NO listener
                     // attached, then attaches the listener for the first time.
                     // Subsequent transitions go through the same detach/set/
-                    // reattach rebind block as before.
+                    // reattach rebind block as before. The CO₂ switch follows
+                    // the same lazy-attach pattern for the same reason: view-state
+                    // restoration calls setChecked() between onCreateView and
+                    // onStart; binding the listener at that point would fire a
+                    // spurious onCo2EnabledToggled with the restored value.
                     var driveListenerAttached = false
+                    var co2ListenerAttached = false
                     viewModel.uiState.collect { state ->
                         if (!driveListenerAttached) {
                             binding.switchDrive.isChecked = state.driveEnabled
@@ -124,6 +131,19 @@ class SettingsFragment : Fragment() {
                             binding.switchDrive.isChecked = state.driveEnabled
                             binding.switchDrive.setOnCheckedChangeListener { _, isChecked ->
                                 if (isChecked) onUserToggledOn() else viewModel.onToggleDriveOff()
+                            }
+                        }
+                        if (!co2ListenerAttached) {
+                            binding.switchCo2Enabled.isChecked = state.co2Enabled
+                            binding.switchCo2Enabled.setOnCheckedChangeListener { _, isChecked ->
+                                onCo2SwitchUserToggled(isChecked, state.electricityMapsApiKey)
+                            }
+                            co2ListenerAttached = true
+                        } else if (binding.switchCo2Enabled.isChecked != state.co2Enabled) {
+                            binding.switchCo2Enabled.setOnCheckedChangeListener(null)
+                            binding.switchCo2Enabled.isChecked = state.co2Enabled
+                            binding.switchCo2Enabled.setOnCheckedChangeListener { _, isChecked ->
+                                onCo2SwitchUserToggled(isChecked, state.electricityMapsApiKey)
                             }
                         }
                         binding.switchDrive.isEnabled = !state.isAuthInFlight
@@ -217,6 +237,20 @@ class SettingsFragment : Fragment() {
             String.format(java.util.Locale.getDefault(), "%.1f L/100km", state.iceBaselineLPer100km)
         binding.summaryCo2GridIntensity.text =
             String.format(java.util.Locale.getDefault(), "%.0f gCO₂/kWh", state.gridIntensityGCo2PerKwh)
+        // Electricity Maps rows only render when CO₂ tracking is opted in.
+        // The static ICE baseline + grid intensity rows stay visible because
+        // they are the manual fallback when the API key is blank or fetch fails.
+        val emVisibility = if (state.co2Enabled) View.VISIBLE else View.GONE
+        binding.rowCo2ApiKey.visibility = emVisibility
+        binding.rowCo2Zone.visibility = emVisibility
+        binding.summaryCo2ApiKey.setText(
+            if (state.electricityMapsApiKey.isBlank()) {
+                R.string.settings_co2_api_key_summary_unset
+            } else {
+                R.string.settings_co2_api_key_summary_set
+            },
+        )
+        binding.summaryCo2Zone.text = state.electricityMapsZone
         binding.summaryManageLocations.text =
             if (state.customLocationCount == 0) {
                 ""
@@ -386,6 +420,103 @@ class SettingsFragment : Fragment() {
             currentValue = viewModel.uiState.value.gridIntensityGCo2PerKwh,
             onAccept = { viewModel.onGridIntensitySelected(it) },
         )
+    }
+
+    /**
+     * Handle a user-driven toggle of the CO₂ switch. Persisting the flag
+     * happens in the VM; if the user is turning the feature ON for the
+     * first time with a blank API key, immediately open the key dialog —
+     * the static fallback works fine without a key, so this is a nudge
+     * rather than a hard gate.
+     */
+    private fun onCo2SwitchUserToggled(isChecked: Boolean, currentApiKey: String) {
+        viewModel.onCo2EnabledToggled(isChecked)
+        if (isChecked && currentApiKey.isBlank()) {
+            showElectricityMapsApiKeyDialog()
+        }
+    }
+
+    /**
+     * `MaterialAlertDialog` with a password-masked text input for the
+     * Electricity Maps API key. Helper text links to the free-tier page;
+     * tapping it opens the URL in the default browser.
+     */
+    private fun showElectricityMapsApiKeyDialog() {
+        val ctx = requireContext()
+        val input = com.google.android.material.textfield.TextInputEditText(ctx).apply {
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or
+                android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+            setText(viewModel.uiState.value.electricityMapsApiKey)
+            setSelectAllOnFocus(true)
+        }
+        val container = com.google.android.material.textfield.TextInputLayout(
+            ctx,
+            null,
+            com.google.android.material.R.attr.textInputOutlinedStyle,
+        ).apply {
+            endIconMode = com.google.android.material.textfield.TextInputLayout.END_ICON_PASSWORD_TOGGLE
+            setPadding(48, 16, 48, 0)
+            helperText = getString(R.string.settings_co2_api_key_dialog_helper)
+            isHelperTextEnabled = true
+            addView(input)
+        }
+        MaterialAlertDialogBuilder(ctx)
+            .setTitle(R.string.settings_co2_api_key_dialog_title)
+            .setView(container)
+            .setPositiveButton(R.string.common_confirm) { _, _ ->
+                viewModel.onElectricityMapsApiKeySet(input.text?.toString().orEmpty())
+            }
+            .setNeutralButton(R.string.settings_co2_api_key_open_link) { _, _ ->
+                runCatching {
+                    startActivity(
+                        Intent(
+                            Intent.ACTION_VIEW,
+                            Uri.parse("https://electricitymaps.com/free-tier"),
+                        ),
+                    )
+                }
+            }
+            .setNegativeButton(R.string.common_cancel, null)
+            .show()
+    }
+
+    /**
+     * Zone-code dialog. Plain text input, capitalised to uppercase via
+     * keyboard hint; the VM also normalises before persisting.
+     * Validation: non-blank letters only.
+     */
+    private fun showElectricityMapsZoneDialog() {
+        val ctx = requireContext()
+        val input = com.google.android.material.textfield.TextInputEditText(ctx).apply {
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or
+                android.text.InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS
+            setText(viewModel.uiState.value.electricityMapsZone)
+            setSelectAllOnFocus(true)
+        }
+        val container = com.google.android.material.textfield.TextInputLayout(ctx).apply {
+            setPadding(48, 16, 48, 0)
+            helperText = getString(R.string.settings_co2_zone_dialog_helper)
+            isHelperTextEnabled = true
+            addView(input)
+        }
+        val dialog = MaterialAlertDialogBuilder(ctx)
+            .setTitle(R.string.settings_co2_zone_dialog_title)
+            .setView(container)
+            .setPositiveButton(R.string.common_confirm, null)
+            .setNegativeButton(R.string.common_cancel, null)
+            .create()
+        dialog.setOnShowListener {
+            dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).setOnClickListener {
+                val raw = input.text?.toString()?.trim().orEmpty()
+                if (raw.isBlank() || !raw.all { it.isLetter() }) {
+                    Snackbar.make(binding.root, R.string.settings_co2_zone_dialog_invalid, Snackbar.LENGTH_SHORT).show()
+                } else {
+                    viewModel.onElectricityMapsZoneSet(raw)
+                    dialog.dismiss()
+                }
+            }
+        }
+        dialog.show()
     }
 
     private fun showLanguageDialog() {

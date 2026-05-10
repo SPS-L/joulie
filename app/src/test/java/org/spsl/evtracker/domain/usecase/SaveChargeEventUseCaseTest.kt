@@ -14,10 +14,12 @@ import org.spsl.evtracker.data.local.entity.ChargeEventEntity
 import org.spsl.evtracker.domain.service.CostMode
 import org.spsl.evtracker.domain.service.CostParser
 import org.spsl.evtracker.testing.FakeBackupScheduler
+import org.spsl.evtracker.testing.FakeCarbonIntensitySource
 import org.spsl.evtracker.testing.FakeChargeEventQueries
 import org.spsl.evtracker.testing.FakeChargeEventWriter
 import org.spsl.evtracker.testing.FakeLocationWriter
 import org.spsl.evtracker.testing.FakeNowProvider
+import org.spsl.evtracker.testing.FakeSettingsReader
 import org.spsl.evtracker.testing.FakeWidgetRefresher
 
 class SaveChargeEventUseCaseTest {
@@ -25,6 +27,8 @@ class SaveChargeEventUseCaseTest {
     private fun build(
         initialEvents: List<ChargeEventEntity> = emptyList(),
         nowMs: Long = 0L,
+        settingsReader: FakeSettingsReader = FakeSettingsReader(),
+        carbonIntensitySource: FakeCarbonIntensitySource = FakeCarbonIntensitySource(),
     ): SaveSetup {
         val queries = FakeChargeEventQueries()
         queries.seed(initialEvents)
@@ -33,8 +37,18 @@ class SaveChargeEventUseCaseTest {
         val scheduler = FakeBackupScheduler()
         val widgetRefresher = FakeWidgetRefresher()
         val now = FakeNowProvider(nowMs)
-        val useCase = SaveChargeEventUseCase(queries, writer, locationWriter, scheduler, widgetRefresher, CostParser(), now)
-        return SaveSetup(useCase, queries, locationWriter, scheduler, widgetRefresher, now)
+        val useCase = SaveChargeEventUseCase(
+            chargeEventQueries = queries,
+            chargeEventWriter = writer,
+            locationWriter = locationWriter,
+            backupScheduler = scheduler,
+            widgetRefresher = widgetRefresher,
+            costParser = CostParser(),
+            settingsReader = settingsReader,
+            carbonIntensitySource = carbonIntensitySource,
+            now = now,
+        )
+        return SaveSetup(useCase, queries, locationWriter, scheduler, widgetRefresher, now, settingsReader, carbonIntensitySource)
     }
 
     private data class SaveSetup(
@@ -44,6 +58,8 @@ class SaveChargeEventUseCaseTest {
         val scheduler: FakeBackupScheduler,
         val widgetRefresher: FakeWidgetRefresher,
         val now: FakeNowProvider,
+        val settingsReader: FakeSettingsReader,
+        val carbonIntensitySource: FakeCarbonIntensitySource,
     )
 
     @Test

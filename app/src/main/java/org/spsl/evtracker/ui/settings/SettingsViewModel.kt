@@ -110,6 +110,21 @@ class SettingsViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
+            settingsReader.co2Enabled.collect { v ->
+                _uiState.update { it.copy(co2Enabled = v) }
+            }
+        }
+        viewModelScope.launch {
+            settingsReader.electricityMapsApiKey.collect { v ->
+                _uiState.update { it.copy(electricityMapsApiKey = v) }
+            }
+        }
+        viewModelScope.launch {
+            settingsReader.electricityMapsZone.collect { v ->
+                _uiState.update { it.copy(electricityMapsZone = v) }
+            }
+        }
+        viewModelScope.launch {
             settingsReader.activeCarId.collect { id ->
                 val name = if (id == -1L) null else carReader.getById(id)?.name
                 _uiState.update { it.copy(activeCarId = id, activeCarName = name) }
@@ -348,6 +363,28 @@ class SettingsViewModel @Inject constructor(
     fun onGridIntensitySelected(value: Double) {
         if (value <= 0.0) return
         viewModelScope.launch { settingsWriter.setGridIntensityGCo2PerKwh(value) }
+    }
+
+    /** Toggle the opt-in CO₂ master switch. */
+    fun onCo2EnabledToggled(enabled: Boolean) {
+        viewModelScope.launch { settingsWriter.setCo2Enabled(enabled) }
+    }
+
+    /** Persist the Electricity Maps API key (empty string clears it). */
+    fun onElectricityMapsApiKeySet(value: String) {
+        viewModelScope.launch { settingsWriter.setElectricityMapsApiKey(value.trim()) }
+    }
+
+    /**
+     * Persist the Electricity Maps grid-zone code. Always upper-cased
+     * so the API call uses a canonical form regardless of the dialog's
+     * keyboard hints. Blank input is silently dropped (the dialog
+     * already validates non-blank).
+     */
+    fun onElectricityMapsZoneSet(value: String) {
+        val normalized = value.trim().uppercase(Locale.US)
+        if (normalized.isBlank()) return
+        viewModelScope.launch { settingsWriter.setElectricityMapsZone(normalized) }
     }
 
     fun onResetPreferences() {

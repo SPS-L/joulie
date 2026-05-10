@@ -60,4 +60,13 @@ interface SettingsWriter {
 
     /** Persist the user-edited grid carbon intensity in gCO₂/kWh. */
     suspend fun setGridIntensityGCo2PerKwh(value: Double)
+
+    /** Toggle the opt-in CO₂ master switch. */
+    suspend fun setCo2Enabled(enabled: Boolean)
+
+    /** Persist the Electricity Maps API key (empty string = unset). */
+    suspend fun setElectricityMapsApiKey(value: String)
+
+    /** Persist the Electricity Maps grid-zone code (uppercase, e.g. `"CY"`). */
+    suspend fun setElectricityMapsZone(value: String)
 }

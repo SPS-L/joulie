@@ -23,11 +23,12 @@ import org.spsl.evtracker.data.local.entity.CustomLocationEntity
         ChargeEventEntity::class,
         CustomLocationEntity::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 5, to = 6),
         AutoMigration(from = 6, to = 7),
+        AutoMigration(from = 7, to = 8),
     ],
 )
 @TypeConverters(ChargeTypeConverter::class, ChargeKwhSourceConverter::class)
@@ -124,11 +125,12 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        // v5 → v6 (add socBefore + socAfter REAL columns) and
-        // v6 → v7 (add kwhSource TEXT NOT NULL DEFAULT 'MEASURED') run via
-        // @AutoMigration entries on the @Database annotation. Room's KSP
-        // synthesises the migration SQL from the exported schemas in
-        // app/schemas/ at compile time. Equivalent to the hand-written
-        // ALTER TABLE ADD COLUMN they replaced. See TASK-39.
+        // v5 → v6 (add socBefore + socAfter REAL columns),
+        // v6 → v7 (add kwhSource TEXT NOT NULL DEFAULT 'MEASURED'), and
+        // v7 → v8 (add nullable grid_intensity_g_co2_per_kwh REAL for the
+        // Electricity Maps live feed) run via @AutoMigration entries on the
+        // @Database annotation. Room's KSP synthesises the migration SQL
+        // from the exported schemas in app/schemas/ at compile time. See
+        // TASK-39 for the auto-migration convention.
     }
 }
