@@ -4,7 +4,6 @@
 
 package org.spsl.evtracker.screenshots
 
-import android.os.Looper
 import androidx.appcompat.app.AppCompatDelegate
 import org.robolectric.Robolectric
 import org.robolectric.android.controller.ActivityController
@@ -19,7 +18,6 @@ import java.time.Duration
 enum class ThemeMode(val suffix: String) {
     LIGHT("light"),
     DARK("dark"),
-    ;
 }
 
 /**

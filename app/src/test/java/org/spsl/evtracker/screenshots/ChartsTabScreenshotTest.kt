@@ -63,20 +63,33 @@ class ChartsTabScreenshotTest {
         hiltRule.inject()
     }
 
-    @Test fun trend_light()        = capture(TabKind.TREND,        ThemeMode.LIGHT)
-    @Test fun trend_dark()         = capture(TabKind.TREND,        ThemeMode.DARK)
-    @Test fun monthlyKwh_light()   = capture(TabKind.MONTHLY_KWH,  ThemeMode.LIGHT)
-    @Test fun monthlyKwh_dark()    = capture(TabKind.MONTHLY_KWH,  ThemeMode.DARK)
-    @Test fun monthlyCost_light()  = capture(TabKind.MONTHLY_COST, ThemeMode.LIGHT)
-    @Test fun monthlyCost_dark()   = capture(TabKind.MONTHLY_COST, ThemeMode.DARK)
-    @Test fun acDc_light()         = capture(TabKind.AC_DC,        ThemeMode.LIGHT)
-    @Test fun acDc_dark()          = capture(TabKind.AC_DC,        ThemeMode.DARK)
-    @Test fun locations_light()    = capture(TabKind.LOCATIONS,    ThemeMode.LIGHT)
-    @Test fun locations_dark()     = capture(TabKind.LOCATIONS,    ThemeMode.DARK)
-    @Test fun degradation_light()  = capture(TabKind.DEGRADATION,  ThemeMode.LIGHT)
-    @Test fun degradation_dark()   = capture(TabKind.DEGRADATION,  ThemeMode.DARK)
-    @Test fun co2_light()          = capture(TabKind.CO2,          ThemeMode.LIGHT)
-    @Test fun co2_dark()           = capture(TabKind.CO2,          ThemeMode.DARK)
+    @Test fun trend_light() = capture(TabKind.TREND, ThemeMode.LIGHT)
+
+    @Test fun trend_dark() = capture(TabKind.TREND, ThemeMode.DARK)
+
+    @Test fun monthlyKwh_light() = capture(TabKind.MONTHLY_KWH, ThemeMode.LIGHT)
+
+    @Test fun monthlyKwh_dark() = capture(TabKind.MONTHLY_KWH, ThemeMode.DARK)
+
+    @Test fun monthlyCost_light() = capture(TabKind.MONTHLY_COST, ThemeMode.LIGHT)
+
+    @Test fun monthlyCost_dark() = capture(TabKind.MONTHLY_COST, ThemeMode.DARK)
+
+    @Test fun acDc_light() = capture(TabKind.AC_DC, ThemeMode.LIGHT)
+
+    @Test fun acDc_dark() = capture(TabKind.AC_DC, ThemeMode.DARK)
+
+    @Test fun locations_light() = capture(TabKind.LOCATIONS, ThemeMode.LIGHT)
+
+    @Test fun locations_dark() = capture(TabKind.LOCATIONS, ThemeMode.DARK)
+
+    @Test fun degradation_light() = capture(TabKind.DEGRADATION, ThemeMode.LIGHT)
+
+    @Test fun degradation_dark() = capture(TabKind.DEGRADATION, ThemeMode.DARK)
+
+    @Test fun co2_light() = capture(TabKind.CO2, ThemeMode.LIGHT)
+
+    @Test fun co2_dark() = capture(TabKind.CO2, ThemeMode.DARK)
 
     private fun capture(kind: TabKind, theme: ThemeMode) {
         val state = ChartsFixtures.canonical()
