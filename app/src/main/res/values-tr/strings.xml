@@ -309,15 +309,8 @@
     <string name="charts_tab_locations">Konumlar</string>
     <string name="charts_tab_degradation">Bozunma</string>
     <string name="charts_tab_co2">CO₂</string>
-    <string name="charts_co2_legend_ev">EV emisyonları</string>
-    <string name="charts_co2_legend_ice">Benzin eşdeğeri</string>
-    <string name="charts_degradation_legend_effective">Efektif kapasite</string>
-    <string name="charts_degradation_legend_nominal">Nominal</string>
     <string name="charts_degradation_no_battery">Bu grafiği etkinleştirmek için Araçlar bölümünde aracın nominal pil kapasitesini ayarlayın</string>
     <string name="charts_degradation_need_three">En az 3 uygun şarj gerekli (tam şarj veya SoC değerleri girilmiş şarjlar)</string>
-    <string name="charts_trend_y_kmh">Verimlilik (km/kWh)</string>
-    <string name="charts_trend_y_mi">Verimlilik (mi/kWh)</string>
-    <string name="charts_trend_y_kwh100">Verimlilik (kWh/100km)</string>
     <string name="charts_trend_need_two">Eğilim göstermek için en az 2 şarj gerekli</string>
     <string name="charts_no_data_period">Bu dönem için veri yok</string>
     <string name="charts_no_cost_period">Bu dönem için maliyet verisi yok</string>

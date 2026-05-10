@@ -159,7 +159,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.lifecycle.livedata.ktx)
     implementation(libs.androidx.datastore.preferences)
-    implementation(libs.mpandroidchart)
+    implementation(libs.vico.views)
     // Drive auth: Authorization API (Identity.getAuthorizationClient) — no Firebase, no google-services.json.
     implementation(libs.play.services.auth)
     implementation(libs.google.api.client.android)

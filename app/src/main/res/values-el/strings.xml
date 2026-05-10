@@ -309,15 +309,8 @@
     <string name="charts_tab_locations">Τοποθεσίες</string>
     <string name="charts_tab_degradation">Υποβάθμιση</string>
     <string name="charts_tab_co2">CO₂</string>
-    <string name="charts_co2_legend_ev">Εκπομπές EV</string>
-    <string name="charts_co2_legend_ice">Αντίστοιχη βενζίνης</string>
-    <string name="charts_degradation_legend_effective">Ενεργός χωρητικότητα</string>
-    <string name="charts_degradation_legend_nominal">Ονομαστική</string>
     <string name="charts_degradation_no_battery">Ορίστε την ονομαστική χωρητικότητα μπαταρίας στα Αυτοκίνητα για να ενεργοποιήσετε αυτό το γράφημα</string>
     <string name="charts_degradation_need_three">Απαιτούνται τουλάχιστον 3 καταλληλές φορτίσεις (πλήρης φόρτιση ή φορτίσεις με καταχωρισμένες τιμές SoC)</string>
-    <string name="charts_trend_y_kmh">Αποδοτικότητα (km/kWh)</string>
-    <string name="charts_trend_y_mi">Αποδοτικότητα (mi/kWh)</string>
-    <string name="charts_trend_y_kwh100">Αποδοτικότητα (kWh/100km)</string>
     <string name="charts_trend_need_two">Απαιτούνται τουλάχιστον 2 φορτίσεις για εμφάνιση τάσης</string>
     <string name="charts_no_data_period">Δεν υπάρχουν δεδομένα για αυτήν την περίοδο</string>
     <string name="charts_no_cost_period">Δεν υπάρχουν δεδομένα κόστους για αυτήν την περίοδο</string>

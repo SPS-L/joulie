@@ -16,26 +16,29 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import com.github.mikephil.charting.charts.BarChart
-import com.github.mikephil.charting.charts.LineChart
-import com.github.mikephil.charting.charts.PieChart
-import com.github.mikephil.charting.data.BarData
-import com.github.mikephil.charting.data.BarDataSet
-import com.github.mikephil.charting.data.BarEntry
-import com.github.mikephil.charting.data.Entry
-import com.github.mikephil.charting.data.LineData
-import com.github.mikephil.charting.data.LineDataSet
-import com.github.mikephil.charting.data.PieData
-import com.github.mikephil.charting.data.PieDataSet
-import com.github.mikephil.charting.data.PieEntry
+import com.patrykandpatrick.vico.core.cartesian.CartesianChart
+import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
+import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
+import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
+import com.patrykandpatrick.vico.core.cartesian.data.columnSeries
+import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
+import com.patrykandpatrick.vico.core.cartesian.decoration.HorizontalLine
+import com.patrykandpatrick.vico.core.cartesian.layer.ColumnCartesianLayer
+import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
+import com.patrykandpatrick.vico.core.common.Fill
+import com.patrykandpatrick.vico.core.common.component.LineComponent
+import com.patrykandpatrick.vico.core.common.component.TextComponent
+import com.patrykandpatrick.vico.views.cartesian.CartesianChartView
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.spsl.evtracker.R
 import org.spsl.evtracker.core.model.ChartsScreenState
 import org.spsl.evtracker.core.model.ChartsUiState
 import org.spsl.evtracker.core.model.MonthBucket
 import org.spsl.evtracker.databinding.FragmentChartsTabBinding
 import org.spsl.evtracker.domain.service.UnitConverter
+import org.spsl.evtracker.ui.common.PieChartView
 import java.util.Calendar
 
 @AndroidEntryPoint
@@ -51,8 +54,6 @@ class ChartsTabFragment : Fragment() {
     private val kind: TabKind by lazy {
         TabKind.valueOf(requireArguments().getString(ARG_KIND)!!)
     }
-
-    private var firstRenderConsumed = false
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -79,8 +80,8 @@ class ChartsTabFragment : Fragment() {
         val banner = binding.chartsTabBanner
         container.removeAllViews()
         empty.isVisible = false
-        subtitle.isVisible = false // reset; only AC/DC turns this on
-        banner.isVisible = false // reset; only DEGRADATION turns this on
+        subtitle.isVisible = false
+        banner.isVisible = false
 
         val charts = state.charts
         if (charts !is ChartsUiState.Loaded) {
@@ -101,9 +102,6 @@ class ChartsTabFragment : Fragment() {
             TabKind.AC_DC -> renderAcDc(charts, container, empty, subtitle)
             TabKind.LOCATIONS -> renderLocations(charts, container, empty)
             TabKind.DEGRADATION -> {
-                // surface the count of derived events excluded from
-                // capacity tracking so the user understands why the chart is
-                // sparser than the visible event count would suggest.
                 val excluded = charts.derivedExcludedCount
                 if (excluded > 0) {
                     banner.text = resources.getQuantityString(
@@ -119,12 +117,65 @@ class ChartsTabFragment : Fragment() {
         }
     }
 
+    /** Build a configured CartesianChartView and add it to [container] with
+     *  match-parent layout params. Caller sets `chart = …` and pushes data
+     *  via [pushData] before returning. */
+    private fun newCartesianChartView(container: FrameLayout): CartesianChartView {
+        val view = CartesianChartView(requireContext())
+        container.addView(
+            view,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT,
+            ),
+        )
+        return view
+    }
+
     /**
-     * Cumulative EV-emissions vs ICE-counterfactual line chart.
-     * Two series, both running totals, anchored to the period's start —
-     * the user sees the gap between the lines grow over time as the EV
-     * accumulates "saved" CO₂.
+     * Build a transient [CartesianChartModelProducer], push a single
+     * transaction synchronously (the data is already in memory), and bind it
+     * to the chart view. The producer is kept alive by the chart view via
+     * its `modelProducer` field.
      */
+    private fun pushData(
+        view: CartesianChartView,
+        block: CartesianChartModelProducer.Transaction.() -> Unit,
+    ) {
+        val producer = CartesianChartModelProducer()
+        view.modelProducer = producer
+        // The block is in-memory data assembly only — no I/O — so blocking
+        // the main thread for one synchronous transaction is acceptable.
+        runBlocking { producer.runTransaction(block) }
+    }
+
+    private fun axisLabel(): TextComponent {
+        val color = ChartStyling.resolveAxisColors(requireContext()).text
+        return TextComponent(color = color)
+    }
+
+    private fun axisLine(): LineComponent {
+        val gridColor = ChartStyling.resolveAxisColors(requireContext()).grid
+        return LineComponent(fill = Fill(gridColor), thicknessDp = 1f)
+    }
+
+    private fun startAxis() = VerticalAxis.start(
+        label = axisLabel(),
+        line = axisLine(),
+        guideline = axisLine(),
+        tick = axisLine(),
+    )
+
+    private fun bottomAxis(
+        valueFormatter: com.patrykandpatrick.vico.core.cartesian.data.CartesianValueFormatter,
+    ) = HorizontalAxis.bottom(
+        label = axisLabel(),
+        line = axisLine(),
+        guideline = axisLine(),
+        tick = axisLine(),
+        valueFormatter = valueFormatter,
+    )
+
     private fun renderCo2(
         state: ChartsScreenState,
         charts: ChartsUiState.Loaded,
@@ -133,56 +184,37 @@ class ChartsTabFragment : Fragment() {
     ) {
         val points = charts.co2Cumulative
         if (points.isEmpty()) {
-            // Either both prefs are 0 (user hasn't configured Settings → CO₂)
-            // or the period has no events. Both fall through to the period-empty
-            // copy because the user-facing fix is the same: log charges +
-            // configure the prefs.
             empty.text = getString(R.string.charts_no_data_period)
             empty.isVisible = true
             return
         }
-        val chart = LineChart(requireContext())
-        ChartStyling.configureLineChart(chart)
         val (acColor, dcColor) = ChartStyling.resolveSeriesColors(requireContext())
         val windowStart = charts.periodStartMillis
+        val xValues = points.map { (it.eventTimeMillis - windowStart).toDouble() / ChartStyling.MILLIS_PER_DAY }
+        val evY = points.map { it.cumulativeEvCo2Kg }
+        val iceY = points.map { it.cumulativeIceCo2Kg }
 
-        val evEntries = points.map {
-            val xDays = ((it.eventTimeMillis - windowStart).toDouble() / ChartStyling.MILLIS_PER_DAY).toFloat()
-            Entry(xDays, it.cumulativeEvCo2Kg.toFloat(), it.eventTimeMillis as Any)
-        }
-        val iceEntries = points.map {
-            val xDays = ((it.eventTimeMillis - windowStart).toDouble() / ChartStyling.MILLIS_PER_DAY).toFloat()
-            Entry(xDays, it.cumulativeIceCo2Kg.toFloat(), it.eventTimeMillis as Any)
-        }
-        val evSet = LineDataSet(evEntries, getString(R.string.charts_co2_legend_ev)).apply {
-            color = acColor
-            setCircleColor(acColor)
-            lineWidth = 2f
-            setDrawValues(false)
-        }
-        val iceSet = LineDataSet(iceEntries, getString(R.string.charts_co2_legend_ice)).apply {
-            color = dcColor
-            setCircleColor(dcColor)
-            lineWidth = 2f
-            // ICE counterfactual is dashed to visually distinguish "would have
-            // emitted" from "actually emitted".
-            enableDashedLine(12f, 8f, 0f)
-            setDrawValues(false)
-        }
-        chart.data = LineData(evSet, iceSet)
-        chart.xAxis.valueFormatter = ChartStyling.dateLabelFormatter(windowStart, state.period)
-        chart.marker = ChartsMarkerView(requireContext(), getString(R.string.charts_co2_unit))
-        if (!firstRenderConsumed) {
-            chart.animateY(400)
-            firstRenderConsumed = true
-        }
-        container.addView(
-            chart,
-            FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT,
+        val view = newCartesianChartView(container)
+        view.chart = CartesianChart(
+            LineCartesianLayer(
+                lineProvider = LineCartesianLayer.LineProvider.series(
+                    LineCartesianLayer.Line(
+                        fill = LineCartesianLayer.LineFill.single(Fill(acColor)),
+                    ),
+                    LineCartesianLayer.Line(
+                        fill = LineCartesianLayer.LineFill.single(Fill(dcColor)),
+                    ),
+                ),
             ),
+            startAxis = startAxis(),
+            bottomAxis = bottomAxis(ChartStyling.dateLabelFormatter(windowStart, state.period)),
         )
+        pushData(view) {
+            lineSeries {
+                series(x = xValues, y = evY)
+                series(x = xValues, y = iceY)
+            }
+        }
     }
 
     private fun renderDegradation(
@@ -203,56 +235,37 @@ class ChartsTabFragment : Fragment() {
             empty.isVisible = true
             return
         }
-        val chart = LineChart(requireContext())
-        ChartStyling.configureLineChart(chart)
         val (acColor, _) = ChartStyling.resolveSeriesColors(requireContext())
         val windowStart = charts.periodStartMillis
+        val xValues = points.map { (it.eventDate - windowStart).toDouble() / ChartStyling.MILLIS_PER_DAY }
+        val yValues = points.map { it.effectiveCapacityKwh }
 
-        val entries = points.map {
-            val xDays = ((it.eventDate - windowStart).toDouble() / ChartStyling.MILLIS_PER_DAY).toFloat()
-            Entry(xDays, it.effectiveCapacityKwh.toFloat(), it.eventDate as Any)
-        }
-        val capacitySet = LineDataSet(entries, getString(R.string.charts_degradation_legend_effective)).apply {
-            color = acColor
-            setCircleColor(acColor)
-            lineWidth = 2f
-            circleRadius = 3.5f
-            setDrawValues(false)
-            setDrawFilled(false)
-        }
-
-        // Reference line at the car's nominal battery_kwh — drawn as a
-        // horizontal dashed limit-line on the Y-axis.
-        val limitLine = com.github.mikephil.charting.components.LimitLine(
-            nominal.toFloat(),
-            getString(R.string.charts_degradation_legend_nominal),
-        ).apply {
-            lineWidth = 1.5f
-            enableDashedLine(12f, 8f, 0f)
-            lineColor = acColor
-            textColor = acColor
-            textSize = 10f
-        }
-        chart.axisLeft.addLimitLine(limitLine)
-        chart.axisLeft.axisMinimum = 0f
-
-        chart.xAxis.valueFormatter = ChartStyling.dateLabelFormatter(windowStart, state.period)
-        chart.data = LineData(capacitySet)
-        if (!firstRenderConsumed) {
-            chart.animateY(400)
-            firstRenderConsumed = true
-        }
-        // Pass MATCH_PARENT LayoutParams explicitly: a bare `addView(chart)`
-        // would leave the chart at WRAP_CONTENT inside this FrameLayout
-        // container and crash during measure once the data list grows beyond
-        // zero entries. Matches the pattern used by every other render method.
-        container.addView(
-            chart,
-            FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT,
-            ),
+        val view = newCartesianChartView(container)
+        // Dashed reference line at nominal capacity as a HorizontalLine
+        // decoration; Vico's preferred replacement for MPAndroidChart's
+        // LimitLine.
+        val nominalReference = HorizontalLine(
+            y = { nominal },
+            line = LineComponent(fill = Fill(acColor), thicknessDp = 1f),
+            labelComponent = null,
         )
+        view.chart = CartesianChart(
+            LineCartesianLayer(
+                lineProvider = LineCartesianLayer.LineProvider.series(
+                    LineCartesianLayer.Line(
+                        fill = LineCartesianLayer.LineFill.single(Fill(acColor)),
+                    ),
+                ),
+            ),
+            startAxis = startAxis(),
+            bottomAxis = bottomAxis(ChartStyling.dateLabelFormatter(windowStart, state.period)),
+            decorations = listOf(nominalReference),
+        )
+        pushData(view) {
+            lineSeries {
+                series(x = xValues, y = yValues)
+            }
+        }
     }
 
     private fun renderTrend(
@@ -268,66 +281,60 @@ class ChartsTabFragment : Fragment() {
             empty.isVisible = true
             return
         }
-        val chart = LineChart(requireContext())
-        ChartStyling.configureLineChart(chart)
         val (acColor, dcColor) = ChartStyling.resolveSeriesColors(requireContext())
         val windowStart = charts.periodStartMillis
 
-        // Y-axis mode follows primaryMetric. The kwh_per_100km branch returns null
-        // for kmPerKwh <= 0 so the resulting Entry list skips invalid points instead
-        // of plotting +/-Infinity. The other two branches always produce a value.
-        val (yTransform, unitSuffix) = when (state.primaryMetric) {
-            "kwh_per_100km" -> Pair<(Double) -> Double?, String>(
-                { kmPerKwh -> if (kmPerKwh > 0.0) 100.0 / kmPerKwh else null },
-                getString(R.string.charts_trend_y_kwh100),
-            )
-            "mi_per_kwh" -> Pair<(Double) -> Double?, String>(
-                { kmPerKwh -> UnitConverter.kmPerKwhToMiPerKwh(kmPerKwh) },
-                getString(R.string.charts_trend_y_mi),
-            )
-            else -> Pair<(Double) -> Double?, String>(
-                { kmPerKwh -> kmPerKwh },
-                getString(R.string.charts_trend_y_kmh),
-            )
+        // Y-axis transform follows primaryMetric.
+        val yTransform: (Double) -> Double? = when (state.primaryMetric) {
+            "kwh_per_100km" -> { kpkwh -> if (kpkwh > 0.0) 100.0 / kpkwh else null }
+            "mi_per_kwh" -> { kpkwh -> UnitConverter.kmPerKwhToMiPerKwh(kpkwh) }
+            else -> { kpkwh -> kpkwh }
         }
 
-        // x = day offset from windowStart (Float-safe). Real millis stays in Entry.data
-        // so the marker view shows the exact date.
-        fun toEntries(points: List<org.spsl.evtracker.core.model.EfficiencyPoint>): List<Entry> =
-            points.mapNotNull {
-                val y = yTransform(it.kmPerKwh) ?: return@mapNotNull null
-                val xDays = ((it.eventTimeMillis - windowStart).toDouble() / ChartStyling.MILLIS_PER_DAY).toFloat()
-                Entry(xDays, y.toFloat(), it.eventTimeMillis as Any)
+        fun toXY(points: List<org.spsl.evtracker.core.model.EfficiencyPoint>): Pair<List<Double>, List<Double>> {
+            val xs = mutableListOf<Double>()
+            val ys = mutableListOf<Double>()
+            for (p in points) {
+                val y = yTransform(p.kmPerKwh) ?: continue
+                xs += (p.eventTimeMillis - windowStart).toDouble() / ChartStyling.MILLIS_PER_DAY
+                ys += y
             }
-        val sets = mutableListOf<LineDataSet>()
-        if (ac.isNotEmpty()) {
-            sets += LineDataSet(toEntries(ac), getString(R.string.charts_trend_legend_ac)).apply {
-                color = acColor
-                setCircleColor(acColor)
-                valueTextSize = 0f
+            return xs to ys
+        }
+        val (acX, acY) = toXY(ac)
+        val (dcX, dcY) = toXY(dc)
+
+        val lines = buildList {
+            if (acX.isNotEmpty()) {
+                add(
+                    LineCartesianLayer.Line(
+                        fill = LineCartesianLayer.LineFill.single(Fill(acColor)),
+                    ),
+                )
+            }
+            if (dcX.isNotEmpty()) {
+                add(
+                    LineCartesianLayer.Line(
+                        fill = LineCartesianLayer.LineFill.single(Fill(dcColor)),
+                    ),
+                )
             }
         }
-        if (dc.isNotEmpty()) {
-            sets += LineDataSet(toEntries(dc), getString(R.string.charts_trend_legend_dc)).apply {
-                color = dcColor
-                setCircleColor(dcColor)
-                valueTextSize = 0f
-            }
-        }
-        chart.data = LineData(sets.toList())
-        chart.xAxis.valueFormatter = ChartStyling.dateLabelFormatter(windowStart, state.period)
-        chart.marker = ChartsMarkerView(requireContext(), unitSuffix)
-        if (!firstRenderConsumed) {
-            chart.animateY(400)
-            firstRenderConsumed = true
-        }
-        container.addView(
-            chart,
-            FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT,
+
+        val view = newCartesianChartView(container)
+        view.chart = CartesianChart(
+            LineCartesianLayer(
+                lineProvider = LineCartesianLayer.LineProvider.series(lines),
             ),
+            startAxis = startAxis(),
+            bottomAxis = bottomAxis(ChartStyling.dateLabelFormatter(windowStart, state.period)),
         )
+        pushData(view) {
+            lineSeries {
+                if (acX.isNotEmpty()) series(x = acX, y = acY)
+                if (dcX.isNotEmpty()) series(x = dcX, y = dcY)
+            }
+        }
     }
 
     private fun renderMonthlyKwh(
@@ -340,30 +347,23 @@ class ChartsTabFragment : Fragment() {
             empty.isVisible = true
             return
         }
-        val chart = BarChart(requireContext())
-        ChartStyling.configureBarChart(chart)
         val (primary, _) = ChartStyling.resolveSeriesColors(requireContext())
-        val entries = charts.monthlyKwh.mapIndexed { i, b ->
-            BarEntry(i.toFloat(), b.totalKwh.toFloat(), bucketMillis(b) as Any)
-        }
-        val ds = BarDataSet(entries, "kWh").apply {
-            color = primary
-            valueTextSize = 0f
-        }
-        chart.data = BarData(ds)
-        chart.xAxis.valueFormatter = ChartStyling.monthBucketFormatter(charts.monthlyKwh)
-        chart.marker = ChartsMarkerView(requireContext(), "kWh")
-        if (!firstRenderConsumed) {
-            chart.animateY(400)
-            firstRenderConsumed = true
-        }
-        container.addView(
-            chart,
-            FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT,
+        val xs = charts.monthlyKwh.indices.map { it.toDouble() }
+        val ys = charts.monthlyKwh.map { it.totalKwh }
+
+        val view = newCartesianChartView(container)
+        view.chart = CartesianChart(
+            ColumnCartesianLayer(
+                columnProvider = ColumnCartesianLayer.ColumnProvider.series(
+                    LineComponent(fill = Fill(primary), thicknessDp = 12f),
+                ),
             ),
+            startAxis = startAxis(),
+            bottomAxis = bottomAxis(ChartStyling.monthBucketFormatter(charts.monthlyKwh)),
         )
+        pushData(view) {
+            columnSeries { series(x = xs, y = ys) }
+        }
     }
 
     private fun renderMonthlyCost(
@@ -372,9 +372,6 @@ class ChartsTabFragment : Fragment() {
         empty: TextView,
     ) {
         if (charts.mixedCurrency) {
-            // Spec §6.3: when mixedCurrency is true, the cost tab body is replaced
-            // by the multi_currency_banner string. The other four tabs render
-            // normally — there is intentionally no screen-global banner.
             empty.text = getString(R.string.multi_currency_banner)
             empty.isVisible = true
             return
@@ -384,31 +381,23 @@ class ChartsTabFragment : Fragment() {
             empty.isVisible = true
             return
         }
-        val chart = BarChart(requireContext())
-        ChartStyling.configureBarChart(chart)
         val (_, tertiary) = ChartStyling.resolveSeriesColors(requireContext())
-        val entries = charts.monthlyCost.mapIndexed { i, b ->
-            BarEntry(i.toFloat(), (b.totalCost ?: 0.0).toFloat(), bucketMillis(b) as Any)
-        }
-        val currency = charts.periodCurrency ?: ""
-        val ds = BarDataSet(entries, currency).apply {
-            color = tertiary
-            valueTextSize = 0f
-        }
-        chart.data = BarData(ds)
-        chart.xAxis.valueFormatter = ChartStyling.monthBucketFormatter(charts.monthlyCost)
-        chart.marker = ChartsMarkerView(requireContext(), currency)
-        if (!firstRenderConsumed) {
-            chart.animateY(400)
-            firstRenderConsumed = true
-        }
-        container.addView(
-            chart,
-            FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT,
+        val xs = charts.monthlyCost.indices.map { it.toDouble() }
+        val ys = charts.monthlyCost.map { it.totalCost ?: 0.0 }
+
+        val view = newCartesianChartView(container)
+        view.chart = CartesianChart(
+            ColumnCartesianLayer(
+                columnProvider = ColumnCartesianLayer.ColumnProvider.series(
+                    LineComponent(fill = Fill(tertiary), thicknessDp = 12f),
+                ),
             ),
+            startAxis = startAxis(),
+            bottomAxis = bottomAxis(ChartStyling.monthBucketFormatter(charts.monthlyCost)),
         )
+        pushData(view) {
+            columnSeries { series(x = xs, y = ys) }
+        }
     }
 
     private fun renderAcDc(
@@ -423,41 +412,26 @@ class ChartsTabFragment : Fragment() {
             empty.isVisible = true
             return
         }
-        val chart = PieChart(requireContext())
-        ChartStyling.configurePieChart(chart)
         val (acColor, dcColor) = ChartStyling.resolveSeriesColors(requireContext())
-        val entries = listOf(
-            PieEntry(charts.acDc.acCount.toFloat(), getString(R.string.charts_trend_legend_ac)),
-            PieEntry(charts.acDc.dcCount.toFloat(), getString(R.string.charts_trend_legend_dc)),
-        )
-        val ds = PieDataSet(entries, "").apply {
-            colors = listOf(acColor, dcColor)
-            valueTextSize = 12f
-            valueTextColor = android.graphics.Color.WHITE
-        }
-        chart.data = PieData(ds)
-        // Spec §6.4: centered hole text = total event count; sub-label below = kWh.
-        chart.centerText = resources.getQuantityString(
-            R.plurals.charts_acdc_count_center, total, total,
-        )
-        // Theme-aware centerText must run AFTER `centerText = ...` so the
-        // PieChartRenderer's paint cache is in a steady state.
-        ChartStyling.applyPieCenterTextColor(chart)
-        subtitle.text = getString(
-            R.string.charts_acdc_kwh_subtitle, charts.acDc.acKwh, charts.acDc.dcKwh,
-        )
-        subtitle.isVisible = true
-        if (!firstRenderConsumed) {
-            chart.animateY(400)
-            firstRenderConsumed = true
+        val pie = PieChartView(requireContext()).apply {
+            labelColor = ChartStyling.resolveAxisColors(context).text
+            slices = listOf(
+                PieChartView.Slice(getString(R.string.charts_trend_legend_ac), charts.acDc.acCount.toFloat(), acColor),
+                PieChartView.Slice(getString(R.string.charts_trend_legend_dc), charts.acDc.dcCount.toFloat(), dcColor),
+            )
+            centerText = resources.getQuantityString(R.plurals.charts_acdc_count_center, total, total)
         }
         container.addView(
-            chart,
+            pie,
             FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT,
             ),
         )
+        subtitle.text = getString(
+            R.string.charts_acdc_kwh_subtitle, charts.acDc.acKwh, charts.acDc.dcKwh,
+        )
+        subtitle.isVisible = true
     }
 
     private fun renderLocations(
@@ -470,24 +444,15 @@ class ChartsTabFragment : Fragment() {
             empty.isVisible = true
             return
         }
-        val chart = PieChart(requireContext())
-        ChartStyling.configurePieChart(chart)
-        val entries = charts.locations.map { slice ->
-            val label = if (slice.isOther) getString(R.string.charts_locations_other) else slice.label
-            PieEntry(slice.count.toFloat(), label)
-        }
-        val ds = PieDataSet(entries, "").apply {
-            colors = charts.locations.indices.map { ChartStyling.locationPalette(it) }
-            valueTextSize = 12f
-            valueTextColor = android.graphics.Color.WHITE
-        }
-        chart.data = PieData(ds)
-        if (!firstRenderConsumed) {
-            chart.animateY(400)
-            firstRenderConsumed = true
+        val pie = PieChartView(requireContext()).apply {
+            labelColor = ChartStyling.resolveAxisColors(context).text
+            slices = charts.locations.mapIndexed { i, slice ->
+                val label = if (slice.isOther) getString(R.string.charts_locations_other) else slice.label
+                PieChartView.Slice(label, slice.count.toFloat(), ChartStyling.locationPalette(i))
+            }
         }
         container.addView(
-            chart,
+            pie,
             FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -495,14 +460,13 @@ class ChartsTabFragment : Fragment() {
         )
     }
 
+    @Suppress("unused")
     private fun bucketMillis(b: MonthBucket): Long {
         val cal = Calendar.getInstance()
         cal.set(b.year, b.month - 1, 1, 0, 0, 0)
         cal.set(Calendar.MILLISECOND, 0)
         return cal.timeInMillis
     }
-
-    // (Monthly x-axis formatting now lives in ChartStyling.monthBucketFormatter.)
 
     override fun onDestroyView() {
         super.onDestroyView()
