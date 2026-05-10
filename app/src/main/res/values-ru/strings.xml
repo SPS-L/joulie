@@ -311,15 +311,8 @@
     <string name="charts_tab_locations">Места</string>
     <string name="charts_tab_degradation">Деградация</string>
     <string name="charts_tab_co2">CO₂</string>
-    <string name="charts_co2_legend_ev">Выбросы EV</string>
-    <string name="charts_co2_legend_ice">Бензиновый эквивалент</string>
-    <string name="charts_degradation_legend_effective">Эффективная ёмкость</string>
-    <string name="charts_degradation_legend_nominal">Номинальная</string>
     <string name="charts_degradation_no_battery">Укажите номинальную ёмкость батареи в разделе Автомобили, чтобы включить этот график</string>
     <string name="charts_degradation_need_three">Нужно не менее 3 подходящих зарядок (полная зарядка или зарядки с введёнными значениями SoC)</string>
-    <string name="charts_trend_y_kmh">Эффективность (km/kWh)</string>
-    <string name="charts_trend_y_mi">Эффективность (mi/kWh)</string>
-    <string name="charts_trend_y_kwh100">Эффективность (kWh/100km)</string>
     <string name="charts_trend_need_two">Нужно не менее 2 зарядок для отображения тренда</string>
     <string name="charts_no_data_period">Нет данных за этот период</string>
     <string name="charts_no_cost_period">Нет данных о стоимости за этот период</string>

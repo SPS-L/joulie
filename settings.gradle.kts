@@ -10,17 +10,9 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        // Scope JitPack to MPAndroidChart only — JitPack outages otherwise gate the entire build.
-        exclusiveContent {
-            forRepository {
-                maven {
-                    url = uri("https://jitpack.io")
-                }
-            }
-            filter {
-                includeGroup("com.github.PhilJay")
-            }
-        }
+        // JitPack scoping removed in TASK-30 (MPAndroidChart -> Vico migration).
+        // No remaining JitPack consumer; if a future dep needs JitPack, restore
+        // an `exclusiveContent { … filter { includeGroup(…) } }` block here.
     }
 }
 rootProject.name = "joulie"

@@ -4,8 +4,9 @@
 #   - Google API Client (com.google.api.client.**) — @Key-annotated fields
 #   - Google Drive services (com.google.api.services.drive.**) — model classes
 #   - Gson (org.spsl.evtracker.core.model.* DTOs) — @SerializedName fields
-#   - MPAndroidChart (com.github.mikephil.charting.**) — defensive
 # which crashes the app the moment Drive sync is toggled on.
+# (MPAndroidChart keep rule removed in TASK-30 / Vico migration; Vico ships
+# its own consumer ProGuard rules.)
 #
 # Hilt and Room ship their own consumer ProGuard rules in their AARs — see the
 # evidence comment near the bottom of this file. Do not duplicate those here.
@@ -58,14 +59,6 @@
 -keep class org.spsl.evtracker.core.model.CarDto { *; }
 -keep class org.spsl.evtracker.core.model.ChargeEventDto { *; }
 -keep class org.spsl.evtracker.core.model.CustomLocationDto { *; }
-
-# --- MPAndroidChart --------------------------------------------------------
-# MPAndroidChart ships no consumer ProGuard rules. Most of its release surface
-# is non-reflective, but renderers and IValueFormatter subclasses can still
-# bite under aggressive R8 (instantiation by class name from XML attributes
-# and per-platform reflective fallbacks). Keep the whole package defensively.
--keep class com.github.mikephil.charting.** { *; }
--dontwarn com.github.mikephil.charting.**
 
 # --- Hilt + Room: no app-side rules required -------------------------------
 # Both libraries ship comprehensive consumer ProGuard rules with their AARs.

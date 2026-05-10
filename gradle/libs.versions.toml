@@ -17,7 +17,7 @@ appcompat = "1.6.1"
 material = "1.11.0"
 constraintlayout = "2.1.4"
 datastorePreferences = "1.0.0"
-mpAndroidChart = "v3.1.0"
+vico = "2.0.0"
 playServicesAuth = "21.2.0"
 googleApiClientAndroid = "2.2.0"
 googleApiServicesDrive = "v3-rev20231128-2.0.0"
@@ -48,7 +48,7 @@ androidx-room-testing = { module = "androidx.room:room-testing", version.ref = "
 androidx-lifecycle-viewmodel-ktx = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx", version.ref = "lifecycle" }
 androidx-lifecycle-livedata-ktx = { module = "androidx.lifecycle:lifecycle-livedata-ktx", version.ref = "lifecycle" }
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastorePreferences" }
-mpandroidchart = { module = "com.github.PhilJay:MPAndroidChart", version.ref = "mpAndroidChart" }
+vico-views = { module = "com.patrykandpatrick.vico:views", version.ref = "vico" }
 play-services-auth = { module = "com.google.android.gms:play-services-auth", version.ref = "playServicesAuth" }
 google-api-client-android = { module = "com.google.api-client:google-api-client-android", version.ref = "googleApiClientAndroid" }
 google-api-services-drive = { module = "com.google.apis:google-api-services-drive", version.ref = "googleApiServicesDrive" }
