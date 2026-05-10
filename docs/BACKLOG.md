@@ -42,7 +42,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-32 | 🟡 | Bump AGP (and Gradle wrapper) to a version that officially supports `compileSdk = 35`; remove the `android.suppressUnsupportedCompileSdk` workaround |  | ☑ |
 | TASK-33 | 🟢 | Audit Kotlin 2.x / K2 + KSP + Hilt compatibility now that AGP 8.7.3 is in place | TASK-32 | ☐ |
 | TASK-34 | 🟡 | Nightly managed-AVD job for `connectedAndroidTest`, keep off the PR gate | TASK-16 | ☑ |
-| TASK-35 | 🟢 | Roborazzi screenshot tests for Dashboard + Charts (must land before TASK-30) — **Phase 1 (infra) done 2026-05-10**, Phase 2/3 (baselines) deferred to TASK-79 |  | ◐ |
+| TASK-35 | 🟢 | Roborazzi screenshot tests for ChartsTab — **Phase 1 (infra) + Phase 2/3 (14 ChartsTab baselines via TASK-79) done 2026-05-10**. Dashboard + outer ChartsFragment baselines remain forward-work. |  | ☑ |
 | TASK-36 | 🟡 | Inline-comment the "no `Result.retry()`" invariant in `DriveBackupWorker.doWork()` |  | ☑ |
 | TASK-37 | 🔴 | Replace Google Drive backup with a Storage Access Framework (SAF) implementation (F-Droid blocker) |  | ⏸ |
 | TASK-38 | 🟢 | Multi-vehicle comparative analytics, overlay 2 cars on a single Charts trend |  | ☐ |
@@ -86,7 +86,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-76 | 🟡 | Contrast audit on M3 tokens. **Done 2026-05-07** in `feat/task76-m3-contrast-audit` (v1.9.31). `M3ContrastAuditTest` audits 31 text/surface pairs (16 light + 15 dark) against WCAG 2.1 AA, locked against re-seed regression. All pairs clear: lowest text pair `light tertiary text` 6.43:1 (white on `#7F5700`), lowest UI pair `light outline on surface` 4.40:1, tightest decorative `light outlineVariant on surface` 1.66:1 against the 1.5 floor (decorative-only — M3 design intent for `outlineVariant` is intentionally subtle, used here only for Settings dividers + chart gridlines, both excluded from WCAG 1.4.11). Mutation kill verified pre-merge. The historical `#FB8C00` flag was already retired by TASK-57's tertiary re-seed. Component-state contrast and dynamic-color variants remain out of scope (forward-work). See `docs/DESIGN.md §11.2`. | TASK-18 | ☑ |
 | TASK-77 | 🟢 | `MaterialButtonToggleGroup` state-change announcements. **Done 2026-05-07** in `feat/task77-toggle-a11y-announcements` (v1.9.32). All three toggle groups in the app (ChargeEdit AC/DC, ChargeEdit cost-mode, Wizard km/miles) now fire `announceForAccessibility("<label> selected")` on each check transition via the `announceCheckedStateOnChange` extension in `ui/common/ToggleGroupA11y.kt`. Localised template `a11y_toggle_selected` shipped in en/el/tr/ru. TEST_PLAN.md §5c grew by three release-gate walkthrough rows. Native review of el/tr/ru phrasing remains forward-work. | TASK-18 | ☑ |
 | TASK-78 | 🟢 | TalkBack walkthrough notes from real-device session. Run TEST_PLAN.md §5c on a physical Pixel + a physical lower-end device (e.g. Moto G), file findings as concrete fixes. | TASK-18 | ☐ |
-| TASK-79 | 🟢 | Capture the 14 ChartsTab baseline PNGs (Phase 2/3 of TASK-35) with the rendering strategy refined: Hilt + Robolectric + JVM, `HiltTestApplication` to bypass WorkManager init, `@BindValue` fakes for `CarReader`/`ChargeEventQueries`/`SettingsReader`/etc. so the real `ChartsViewModel` runs with hardcoded fixture data. Acceptance gate for TASK-30. | TASK-35 | ☐ |
+| TASK-79 | 🟢 | Capture the 14 ChartsTab baseline PNGs. **Done 2026-05-10** in `feat/task79-chartstab-baselines`. Strategy actually used: mocked `ChartsViewModel` via fake parent fragment that overrides `defaultViewModelProviderFactory` (lighter than the originally-planned `@BindValue` graph; `ChartsTabFragment` only reads `viewModel.uiState` so a Mockito mock with a hardcoded `MutableStateFlow` is sufficient). `@GraphicsMode(NATIVE)` enables real Robolectric Canvas rendering; `ShadowLooper.idleMainLooper(800ms)` advances past `MPAndroidChart.animateY(400)`. CI gate live in `.github/workflows/ci.yml`. | TASK-35 | ☑ |
 
 **Priority legend:** 🔴 High (architecture/data safety) · 🟡 Medium (robustness/UX) · 🟢 Low (new feature)  
 **Status legend:** ☐ open · ☑ done · ☒ closed (premise no longer holds) · ⏸ under consideration (do not start without explicit go-ahead) · ◐ partially done (some scope landed, remainder filed as a follow-up)  
@@ -2002,6 +2002,8 @@ since AGP 8.0 disabled it by default).
 
 ## 🟢 TASK-30, Migrate from MPAndroidChart to Vico (line/bar) + custom `PieChartView` (pie tabs)
 
+> **Acceptance gate (2026-05-10).** `./gradlew :app:verifyRoborazziDebug` must pass after each tab is migrated — TASK-79 locked 14 ChartsTab baselines (7 tabs × light + dark) under `app/src/test/screenshots/` and the gate is live in `.github/workflows/ci.yml`. If a Vico migration produces a deliberate visual change that the team approves, regenerate via `./gradlew :app:recordRoborazziDebug` in a **separate PR** titled "screenshot baseline refresh" — never bundled with feature changes — so reviewers can scan the PNG diff for unintended pixel motion.
+
 A `grep -rln "com.github.mikephil.charting"` confirmed exactly three importer
 files: `ChartsMarkerView.kt`, `ChartStyling.kt`, `ChartsTabFragment.kt`. The
 six tabs map to Vico like this:
@@ -2666,13 +2668,13 @@ GitHub Actions' managed Android emulator action.
 
 ---
 
-## 🟢 TASK-35, Roborazzi screenshot tests for Dashboard + Charts ◐ Phase 1 done (2026-05-10)
+## 🟢 TASK-35, Roborazzi screenshot tests for ChartsTab ☑ Done (2026-05-10)
 
-> **Phase 1 outcome (merged 2026-05-10 on `feat/task35-roborazzi-baselines`).** Build infrastructure landed: Roborazzi 1.36.0 + Robolectric 4.13 pinned in `gradle/libs.versions.toml`; `io.github.takahirom.roborazzi` plugin applied; `testOptions.unitTests.isIncludeAndroidResources = true` enabled (Robolectric requires the resource table on the test classpath); test deps wired (`testImplementation(libs.roborazzi)` + junit-rule + robolectric + fragment-testing); `roborazzi { outputDir = src/test/screenshots }` block configured; `.gitattributes` forces binary diff for `app/src/test/screenshots/*.png`; `.gitignore` excludes Roborazzi's per-failure `*.actual.png` / `*.diff.png`. Verified locally: `./gradlew :app:assembleDebug` BUILD SUCCESSFUL, `:app:compileDebugUnitTestKotlin` resolves Roborazzi+Robolectric from mavenCentral and compiles clean, `:app:tasks --group=verification | grep robo` registers `recordRoborazziDebug` + `verifyRoborazziDebug` + 6 siblings.
+> **Resolved by TASK-79 on 2026-05-10.** Phase 2/3 (the actual baseline PNGs) shipped on `feat/task79-chartstab-baselines`; see TASK-79 outcome below for details. The 14-PNG ChartsTab matrix is now the live `:app:verifyRoborazziDebug` gate, which means TASK-30 (MPAndroidChart → Vico migration) has the "looks identical" acceptance criterion it was waiting on. Dashboard + outer ChartsFragment baselines remain forward-work; their absence is a documented coverage gap, not a TASK-30 blocker (TASK-30 changes only chart rendering).
 >
-> **Phase 2/3 deferred to TASK-79.** The original spec's "stub VM, no Hilt" rendering path proved incompatible with the codebase: both `DashboardFragment` and `ChartsFragment` are `@AndroidEntryPoint`, which requires either Hilt setup or production-code factory hooks to substitute their `ChartsViewModel` / `DashboardViewModel`. The narrowed-to-ChartsTab scope still needs a Hilt-bound host activity for the same reason (the tab fragment's `viewModels({ requireParentFragment() })` resolves through the `@AndroidEntryPoint` chain). Generating 14 baseline PNGs without real-time visual feedback risks locking incorrect rendering as truth — worse than no baselines. TASK-79 picks this up with the rendering strategy refined (Hilt + Robolectric + JVM, `HiltTestApplication` to bypass WorkManager init) and is the actual prerequisite TASK-30 waits on.
+> **Phase 1 outcome (merged 2026-05-10 on `feat/task35-roborazzi-baselines`, v1.9.34).** Build infrastructure landed: Roborazzi 1.36.0 + Robolectric 4.13 pinned in `gradle/libs.versions.toml`; `io.github.takahirom.roborazzi` plugin applied; `testOptions.unitTests.isIncludeAndroidResources = true` enabled (Robolectric requires the resource table on the test classpath); test deps wired (`testImplementation(libs.roborazzi)` + junit-rule + robolectric + fragment-testing); `roborazzi { outputDir = src/test/screenshots }` block configured; `.gitattributes` forces binary diff for `app/src/test/screenshots/*.png`; `.gitignore` excludes Roborazzi's per-failure `*.actual.png` / `*.diff.png`.
 >
-> Spec: `docs/superpowers/specs/2026-05-09-task35-roborazzi-baselines-design.md` (the spec records the full original 7-tab × 2-theme design; TASK-79 references it as the source of truth for fixtures + theme matrix).
+> Specs: `docs/superpowers/specs/2026-05-09-task35-roborazzi-baselines-design.md` (Phase 1 design + original full-spec fixtures), `docs/superpowers/specs/2026-05-10-task79-chartstab-baselines-design.md` (refined rendering strategy actually used).
 
 The `#FB8C00` DC orange (M3 tertiary palette seed, `docs/DESIGN.md §6`)
 ships a known-untested contrast risk on dark surfaces, TASK-18 (a11y
@@ -5202,9 +5204,23 @@ The translatable strings need el/tr/ru entries per the
 
 ---
 
-## 🟢 TASK-79, Capture the 14 ChartsTab baseline PNGs (Phase 2/3 of TASK-35)
+## 🟢 TASK-79, Capture the 14 ChartsTab baseline PNGs (Phase 2/3 of TASK-35) ☑ Done (2026-05-10)
 
-**Spawned 2026-05-10 from TASK-35 Phase 1 outcome.** TASK-35 landed the build infrastructure (Roborazzi 1.36.0 + Robolectric 4.13 + the verify/record Gradle tasks); the actual baseline PNGs are deferred here so they can be captured with real-time visual feedback rather than guessed at autonomously. This task is the genuine prerequisite TASK-30 waits on.
+> **Outcome (merged 2026-05-10 on `feat/task79-chartstab-baselines`).** All 14 ChartsTab baselines committed under `app/src/test/screenshots/`. `:app:verifyRoborazziDebug` is now a live PR gate in `.github/workflows/ci.yml`. Test artefacts: `RoborazziSetup.kt` (host + theme + looper-idle helper), `ChartsFixtures.kt` (canonical 12-month state with all six metric fields populated), `FakeChartsParentFragment.kt` (non-Hilt parent that exposes a Mockito-mocked `ChartsViewModel` via `defaultViewModelProviderFactory` — `ChartsTabFragment.viewModels({ requireParentFragment() })` resolves to the mock), and `ChartsTabScreenshotTest.kt` (`@HiltAndroidTest` + `@RunWith(RobolectricTestRunner)` + `@Config(application = HiltTestApplication::class, sdk = [33], qualifiers = "w411dp-h891dp-mdpi")` + `@GraphicsMode(NATIVE)` for real Canvas rendering).
+>
+> **Spec deviation noted:** the spec proposed `@BindValue` fakes for the eight `ObserveChartsModelsUseCase` collaborators so the real `ChartsViewModel` would run with hardcoded data. In practice, `ChartsTabFragment` only reads `viewModel.uiState`, so a Mockito mock with a fixed `MutableStateFlow` is sufficient and ~150 LOC lighter. The Hilt graph still has to bootstrap (the test activity is `@AndroidEntryPoint`), but no fakes need to be bound.
+>
+> **Animation determinism.** MPAndroidChart's `animateY(400)` runs against `ValueAnimator` → `Choreographer`, which Robolectric's PAUSED looper does not auto-advance. After fragment commit, `ShadowLooper.idleMainLooper(800ms, MILLISECONDS)` advances the clock past the animation duration so the captured frame is the chart's final state rather than a partial render.
+>
+> **Capture path.** `View.captureRoboImage("src/test/screenshots/charts_<tab>_<theme>.png")` — explicit relative path because Roborazzi's default location is project-root-relative, not the plugin's `outputDir` (that setting is for the report, not for the capture target). 14 PNGs land at `app/src/test/screenshots/`.
+>
+> **Verified:** `./gradlew :app:recordRoborazziDebug` produces all 14 PNGs (~17–31 KB each); `./gradlew :app:verifyRoborazziDebug` BUILD SUCCESSFUL with no diff. CI workflow gains the verify step + `roborazzi-diffs` failure-artefact upload.
+>
+> Spec: `docs/superpowers/specs/2026-05-10-task79-chartstab-baselines-design.md`.
+
+**Original task body preserved below for traceability.**
+
+
 
 ### Why split
 
