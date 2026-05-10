@@ -128,8 +128,9 @@ class ChartsFragmentTest {
     @Test fun tabSwitch_showsCorrectChart() {
         runBlocking {
             // Seed a shape that produces a different visible signal per tab so the
-            // assertions can distinguish them via Espresso (MPAndroidChart legends and
-            // axis labels are canvas-drawn and are NOT visible to Espresso). We use:
+            // assertions can distinguish them via Espresso (Vico's chart axis labels
+            // and the PieChartView donut are canvas-drawn and are NOT visible to
+            // Espresso). We use:
             //  - 2 AC events spanning two months, mono-currency EUR-costed → Trend &
             //    Monthly kWh & Monthly cost have data (chart container populated;
             //    per-tab empty message GONE)

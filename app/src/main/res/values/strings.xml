@@ -373,7 +373,7 @@
     <string name="about_disclaimer_title">Disclaimer</string>
     <string name="about_disclaimer_body">This application is provided for research and personal use only. Efficiency and cost estimates are based on user-entered data and do not constitute professional energy or financial advice. The SPS-Lab and Cyprus University of Technology accept no liability for decisions made based on data recorded or displayed by this app.</string>
     <string name="about_oss_title">Open Source Libraries</string>
-    <string name="about_oss_body" translatable="false">• Room (Apache 2.0)\n• Hilt / Dagger (Apache 2.0)\n• MPAndroidChart (Apache 2.0)\n• Kotlin Coroutines (Apache 2.0)\n• Google Drive API client (Apache 2.0)</string>
+    <string name="about_oss_body" translatable="false">• Room (Apache 2.0)\n• Hilt / Dagger (Apache 2.0)\n• Vico (Apache 2.0)\n• Kotlin Coroutines (Apache 2.0)\n• Google Drive API client (Apache 2.0)</string>
 
     <!-- Settings, About entry point -->
     <string name="settings_about">About</string>

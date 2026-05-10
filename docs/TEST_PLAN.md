@@ -568,7 +568,7 @@ Uses the same `@UninstallModules(BackupModule::class)` + local `TestBackupModule
 
 The release APK runs through R8 with the keep rules in `app/proguard-rules.pro`.
 Pre-merge gates and instrumented Espresso tests use the **debug** APK, which
-does **not** exercise minification, Drive sign-in, MPAndroidChart renderers,
+does **not** exercise minification, Drive sign-in, Vico's chart canvases,
 Gson reflection on backup DTOs, and Room's generated DAOs all need to be
 verified against the minified release APK before publishing the GitHub Release.
 
@@ -589,7 +589,7 @@ adb install -r app/build/outputs/apk/release/app-release.apk
 | 3 | Settings → Cars → add a car | Car appears in list; Dashboard now shows the active car |
 | 4 | Dashboard FAB → log a charge with cost (e.g. 30 kWh / €12.50) | Save returns to Dashboard; total kWh + cost rows render correct values |
 | 5 | Add a second event so efficiency can compute | Efficiency stat is no longer "—"; the configured primary metric (default `kwh_per_100km`) renders a number |
-| 6 | Bottom nav → Charts; cycle every tab (Trend / Monthly kWh / Monthly cost / AC vs DC / Locations / Degradation) | Each tab renders without crash; MPAndroidChart canvases are non-empty (this exercises the new keep rule). The Degradation tab shows an empty-state for cars with no nominal `battery_kwh` set or fewer than 3 qualifying charges, that's expected, not a failure. |
+| 6 | Bottom nav → Charts; cycle every tab (Trend / Monthly kWh / Monthly cost / AC vs DC / Locations / Degradation / CO₂) | Each tab renders without crash; Vico's `CartesianChartView` canvases (and the custom `PieChartView` for AC vs DC + Locations) are non-empty. The Degradation tab shows an empty-state for cars with no nominal `battery_kwh` set or fewer than 3 qualifying charges, that's expected, not a failure. |
 | 6b | **Switch system to Dark mode** (Settings → Display → Dark theme) **and re-cycle all six Charts tabs** | Axis labels, legend text, AC vs DC center text, and gridlines are all readable against the dark surface. AC vs DC + Locations + Degradation tabs render without crash. This step guards against theme-aware-text drift (e.g. PieChart paths that touch `chart.xAxis` on a renderer chain without an XAxisRenderer) and against missing `LayoutParams.MATCH_PARENT` on chart inflation. |
 | 7 | Settings → enable Drive backup → sign in (allow-listed Google account) → wait for first backup | Snackbar reports success; verify `evtracker_backup.json` lands in the App Data folder via `files.list?spaces=appDataFolder` |
 | 8 | Add another charge event after Drive is enabled | WorkManager fires a follow-up backup; remote `modifiedTime` advances |
@@ -606,7 +606,10 @@ adb install -r app/build/outputs/apk/release/app-release.apk
 file an issue, and **do not publish the GitHub Release**, keep it in draft
 until the regression is fixed and the matrix re-runs cleanly. R8 regressions
 typically manifest as `NoSuchMethodError`, `NoSuchFieldError`, or
-`ClassNotFoundException` from inside Drive / Gson / MPAndroidChart frames.
+`ClassNotFoundException` from inside Drive / Gson frames (Vico ships its
+own consumer ProGuard rules; if R8 strips one of its renderers, file the
+gap upstream and add a temporary keep rule with a TODO referencing the
+Vico issue).
 
 ---
 
@@ -631,7 +634,7 @@ Optional during development: `scripts/run-instrumented.sh` exercises Espresso's 
 
 ## 5d. Screenshot baselines (TASK-79)
 
-Roborazzi 1.36.0 + Robolectric 4.13 (`@GraphicsMode(NATIVE)`) capture 14 baseline PNGs covering the seven `ChartsTabFragment` tabs × light + dark themes. Run as part of `:app:testDebugUnitTest`; `:app:verifyRoborazziDebug` is the gate.
+Roborazzi 1.59.0 + Robolectric 4.14.1 (`@GraphicsMode(NATIVE)`) capture 14 baseline PNGs covering the seven `ChartsTabFragment` tabs × light + dark themes. Run as part of `:app:testDebugUnitTest`; `:app:verifyRoborazziDebug` is the gate.
 
 Test class: `app/src/test/java/org/spsl/evtracker/screenshots/ChartsTabScreenshotTest.kt`. Fixture: `ChartsFixtures.canonical()` (12-month dataset on a Tesla Model 3 60 kWh, AC/DC ratio 18:6, EUR costs, 4 location slices, 5 capacity points showing 60.0 → 57.5 kWh degradation, 12 cumulative CO₂ points). Hosting: `FakeChartsParentFragment` exposes a Mockito-mocked `ChartsViewModel` to the tab fragment via `defaultViewModelProviderFactory`; `ChartsTabFragment.viewModels({ requireParentFragment() })` resolves to the mock.
 
