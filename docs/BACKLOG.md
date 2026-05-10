@@ -37,10 +37,10 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-27 | 🟡 | Decouple bottom-nav visibility from hardcoded `hideOn` set in `MainActivity` |  | ☑ |
 | TASK-28 | 🟡 | Consolidate time on existing `NowProvider`; remove direct `System.currentTimeMillis()` from entities and helpers; drop the parallel `() -> Long` clock in `WorkerModule` |  | ☑ |
 | TASK-29 | 🟢 | Add explicit `debug` build type with `applicationIdSuffix` and `BuildConfig` flags |  | ☑ |
-| TASK-30 | 🟢 | Migrate from MPAndroidChart to Vico (line/bar) + custom `Canvas` `PieChartView` (pie tabs) |  | ☐ |
+| TASK-30 | 🟢 | Migrate from MPAndroidChart to Vico (line/bar) + custom `Canvas` `PieChartView` (pie tabs). **Gated on TASK-33** (Vico 2.x requires Kotlin 2.1+; we are on 1.9.21). Custom `PieChartView` + slice-math test landed 2026-05-10 as standalone forward progress; all other migration work waits for the Kotlin upgrade. | TASK-33 | ⏸ |
 | TASK-31 | 🟡 | Manual Drive controls in Settings: "Back up now" (force overwrite) and "Wipe remote backup" (delete the App Data file) |  | ☑ |
 | TASK-32 | 🟡 | Bump AGP (and Gradle wrapper) to a version that officially supports `compileSdk = 35`; remove the `android.suppressUnsupportedCompileSdk` workaround |  | ☑ |
-| TASK-33 | 🟢 | Audit Kotlin 2.x / K2 + KSP + Hilt compatibility now that AGP 8.7.3 is in place | TASK-32 | ☐ |
+| TASK-33 | 🟡 | Audit Kotlin 2.x / K2 + KSP + Hilt compatibility now that AGP 8.7.3 is in place. **Unblocks TASK-30** (Vico 2.x is Kotlin 2.1-only); audit outcome should be yes/no on adoption, and if yes either bundle the upgrade in TASK-33 itself or split off a TASK-33b for the upgrade so TASK-30 has a path to land. | TASK-32 | ☐ |
 | TASK-34 | 🟡 | Nightly managed-AVD job for `connectedAndroidTest`, keep off the PR gate | TASK-16 | ☑ |
 | TASK-35 | 🟢 | Roborazzi screenshot tests for ChartsTab — **Phase 1 (infra) + Phase 2/3 (14 ChartsTab baselines via TASK-79) done 2026-05-10**. Dashboard + outer ChartsFragment baselines remain forward-work. |  | ☑ |
 | TASK-36 | 🟡 | Inline-comment the "no `Result.retry()`" invariant in `DriveBackupWorker.doWork()` |  | ☑ |
@@ -2000,9 +2000,15 @@ since AGP 8.0 disabled it by default).
 
 ---
 
-## 🟢 TASK-30, Migrate from MPAndroidChart to Vico (line/bar) + custom `PieChartView` (pie tabs)
+## 🟢 TASK-30, Migrate from MPAndroidChart to Vico (line/bar) + custom `PieChartView` (pie tabs) ⏸ Under consideration (2026-05-10)
 
-> **Acceptance gate (2026-05-10).** `./gradlew :app:verifyRoborazziDebug` must pass after each tab is migrated — TASK-79 locked 14 ChartsTab baselines (7 tabs × light + dark) under `app/src/test/screenshots/` and the gate is live in `.github/workflows/ci.yml`. If a Vico migration produces a deliberate visual change that the team approves, regenerate via `./gradlew :app:recordRoborazziDebug` in a **separate PR** titled "screenshot baseline refresh" — never bundled with feature changes — so reviewers can scan the PNG diff for unintended pixel motion.
+> **Investigation outcome (2026-05-10).** Vico 2.x is Kotlin 2.1-only (build error: `binary version of its metadata is 2.1.0, expected version is 1.9.0`); we are pinned at Kotlin 1.9.21. Vico 1.x compiles but the API is markedly different and on a maintenance-only track — adopting it means writing the migration twice (1.x now, 2.x after the eventual Kotlin upgrade). **TASK-30 is therefore gated on TASK-33** (Kotlin 2.x audit + upgrade) rather than open. See `docs/superpowers/specs/2026-05-10-task30-vico-investigation-outcome.md` for the full investigation, the rendering-plan table that survives the deferral, and the pre-approved policy decisions (bundle baselines with the migration PR; Vico 2.x not 1.x; custom `PieChartView`; pinch-zoom out of scope).
+>
+> **Forward progress that did land (2026-05-10).** `app/src/main/java/org/spsl/evtracker/ui/common/PieChartView.kt` (~210 LOC, `Canvas`-driven donut + slice-centroid labels + wrap-aware legend + optional centre text + 0°→360° sweep animation) is in tree alongside its slice-math unit test. Currently has no production call sites — the AC/DC and Locations tabs still render via MPAndroidChart `PieChart`. When TASK-30 unblocks, the `renderAcDc` / `renderLocations` flip is the only call-site change needed.
+>
+> **Bundle-with-migration policy (pre-approved 2026-05-10):** when TASK-30 eventually lands, the 14 Roborazzi baseline PNGs MUST be regenerated and committed in the same PR as the migration code — explicit deviation from the standard "screenshot baseline refresh is its own PR" convention. Rationale: TASK-30 *is* the feature whose entire purpose is changing rendering; bundling is the opposite of stealth.
+>
+> **Acceptance gate (still applies once unblocked).** `./gradlew :app:verifyRoborazziDebug` must pass after each tab is migrated — TASK-79 locked 14 ChartsTab baselines (7 tabs × light + dark) under `app/src/test/screenshots/` and the gate is live in `.github/workflows/ci.yml`.
 
 A `grep -rln "com.github.mikephil.charting"` confirmed exactly three importer
 files: `ChartsMarkerView.kt`, `ChartStyling.kt`, `ChartsTabFragment.kt`. The
