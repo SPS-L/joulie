@@ -629,6 +629,26 @@ Optional during development: `scripts/run-instrumented.sh` exercises Espresso's 
 
 ---
 
+## 5d. Screenshot baselines (TASK-79)
+
+Roborazzi 1.36.0 + Robolectric 4.13 (`@GraphicsMode(NATIVE)`) capture 14 baseline PNGs covering the seven `ChartsTabFragment` tabs × light + dark themes. Run as part of `:app:testDebugUnitTest`; `:app:verifyRoborazziDebug` is the gate.
+
+Test class: `app/src/test/java/org/spsl/evtracker/screenshots/ChartsTabScreenshotTest.kt`. Fixture: `ChartsFixtures.canonical()` (12-month dataset on a Tesla Model 3 60 kWh, AC/DC ratio 18:6, EUR costs, 4 location slices, 5 capacity points showing 60.0 → 57.5 kWh degradation, 12 cumulative CO₂ points). Hosting: `FakeChartsParentFragment` exposes a Mockito-mocked `ChartsViewModel` to the tab fragment via `defaultViewModelProviderFactory`; `ChartsTabFragment.viewModels({ requireParentFragment() })` resolves to the mock.
+
+| File | What it verifies |
+|---|---|
+| `charts_trend_{light,dark}.png` | AC + DC line series, M3 colorOnSurface axis labels, legend |
+| `charts_monthly_kwh_{light,dark}.png` | 12 stacked monthly bars (TASK-30 risk: ColumnCartesianLayer port) |
+| `charts_monthly_cost_{light,dark}.png` | 12 EUR cost bars |
+| `charts_ac_dc_{light,dark}.png` | Donut with AC + DC slices, "24 charges" center text, kWh subtitle |
+| `charts_locations_{light,dark}.png` | Donut with 4 slices via LOCATION_PALETTE |
+| `charts_degradation_{light,dark}.png` | Capacity line + dashed nominal-`battery_kwh` reference + "1 estimated event excluded" banner |
+| `charts_co2_{light,dark}.png` | Two-series cumulative: solid EV + dashed ICE counterfactual |
+
+Recapture is **a separate PR** titled "screenshot baseline refresh" — never bundled with feature changes — so reviewers can scan the PNG diff for unintended pixel motion. Recapture command: `./gradlew :app:recordRoborazziDebug`.
+
+---
+
 ## 6. Coverage Targets
 
 | Layer | Target |

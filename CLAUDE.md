@@ -64,12 +64,15 @@ PRs and pushes to `main` are gated by `.github/workflows/ci.yml`. The same gate 
 ./gradlew ktlintCheck                          # ktlint 12.1.1, Kotlin official style; auto-fix with ktlintFormat
 ./gradlew :app:lint                            # Android Lint, error-mode for HardcodedText/MissingTranslation/TypographyDashes/UnusedResources
 ./gradlew :app:testDebugUnitTest               # bundled into the same CI job
+./gradlew :app:verifyRoborazziDebug            # screenshot baselines (TASK-79); diff-fails the build on visual regression
 ```
 
 - Style is anchored by the repo-root `.editorconfig` (`ktlint_code_style = intellij_idea`, 4-space indent). The IDE's reformat output and ktlint's check agree.
 - Pre-existing lint offenses are absorbed by `app/lint-baseline.xml`. **Only new violations break the build.** Regenerate the baseline only when retiring a rule (`./gradlew :app:updateLintBaseline`); do not regenerate to "clean up", the baseline is append-only-by-omission.
 - `MissingTranslation` is in error mode and protects coverage across the four shipped locales (`values/`, `values-el/`, `values-tr/`, `values-ru/`). New translatable strings must land in every locale file or the build fails.
 - The release workflow (`.github/workflows/release.yml`) is independent; tag pushes still go through it.
+
+**Screenshot baselines (TASK-79).** `app/src/test/screenshots/` holds 14 PNGs covering the 7 `ChartsTabFragment` tabs (Trend, Monthly kWh, Monthly cost, AC vs DC, Locations, Degradation, CO₂) × light + dark themes. They render via Roborazzi 1.36.0 + Robolectric 4.13 in `@GraphicsMode(NATIVE)` mode, hosted under a `FakeChartsParentFragment` with a Mockito-mocked `ChartsViewModel` so the test doesn't drag the full Hilt graph through. Recapture is **a separate PR** titled `screenshot baseline refresh` — never bundle baseline regeneration with feature changes, so reviewers can scan the PNG diff for unintended pixel motion. Recapture command: `./gradlew :app:recordRoborazziDebug`. The acceptance gate for TASK-30 (MPAndroidChart → Vico migration) is `verifyRoborazziDebug` passing after each tab is migrated.
 
 ## Release & CI
 

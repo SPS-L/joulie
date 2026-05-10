@@ -36,6 +36,9 @@ jobs:
       - name: JVM unit tests
         run: ./gradlew :app:testDebugUnitTest --no-daemon --stacktrace
 
+      - name: Roborazzi screenshot verify (TASK-79)
+        run: ./gradlew :app:verifyRoborazziDebug --no-daemon --stacktrace
+
       - name: Release smoke (unsigned APK — keystore absent in CI)
         run: ./gradlew :app:assembleRelease --no-daemon --stacktrace
 
@@ -62,3 +65,12 @@ jobs:
           name: unit-test-report
           path: app/build/reports/tests/testDebugUnitTest/
           if-no-files-found: ignore
+
+      - name: Upload Roborazzi diff artefacts on failure (TASK-79)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: roborazzi-diffs
+          path: app/build/outputs/roborazzi/
+          if-no-files-found: ignore
+          retention-days: 7
