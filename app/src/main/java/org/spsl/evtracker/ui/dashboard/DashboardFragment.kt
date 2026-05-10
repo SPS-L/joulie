@@ -228,7 +228,7 @@ class DashboardFragment : Fragment() {
             stats.costPerKm != null &&
             !state.dashboard.showMultiCurrencyBanner
         binding.dashboardCardCost.isVisible = showCost
-        if (showCost && stats != null) {
+        if (showCost) {
             val ccy = stats.currency!!
             binding.dashboardCostTotal.text = MoneyFormat.format(stats.totalCost!!, ccy)
             binding.dashboardCostPerKm.text = MoneyFormat.format(stats.costPerKm!!, ccy) + " / km"

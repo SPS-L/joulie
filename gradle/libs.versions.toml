@@ -1,12 +1,14 @@
 [versions]
-agp = "8.7.3"
-kotlin = "1.9.21"
-ksp = "1.9.21-1.0.16"
-hilt = "2.50"
+# TASK-33b (2026-05-10): coordinated Kotlin 2.x bump per audit findings
+# at docs/superpowers/specs/2026-05-10-task33-kotlin2-audit.md.
+agp = "8.9.2"
+kotlin = "2.1.20"
+ksp = "2.1.20-1.0.32"
+hilt = "2.56.2"
 room = "2.6.1"
-lifecycle = "2.7.0"
-navigation = "2.7.6"
-coroutines = "1.7.3"
+lifecycle = "2.8.7"
+navigation = "2.8.5"
+coroutines = "1.10.2"
 work = "2.9.0"
 hiltNavFragment = "1.1.0"
 hiltWork = "1.1.0"
@@ -23,13 +25,13 @@ gson = "2.10.1"
 coreSplashscreen = "1.0.1"
 junit = "4.13.2"
 mockito = "5.10.0"
-mockitoKotlin = "5.2.1"
+mockitoKotlin = "5.4.0"
 androidxTestExtJunit = "1.1.5"
 espressoCore = "3.5.1"
 fragmentTesting = "1.6.2"
 ktlint = "12.1.1"
-roborazzi = "1.36.0"
-robolectric = "4.13"
+roborazzi = "1.59.0"
+robolectric = "4.14.1"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
