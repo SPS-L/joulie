@@ -67,7 +67,13 @@ class MainViewModelTest {
         }
         runner.failNext = failNext
         val scheduler = FakeBackupScheduler()
-        val useCase = ResetAllDataUseCase(runner, writer, scheduler, org.spsl.evtracker.testing.FakeWidgetRefresher())
+        val useCase = ResetAllDataUseCase(
+            resetRunner = runner,
+            settingsWriter = writer,
+            backupScheduler = scheduler,
+            widgetRefresher = org.spsl.evtracker.testing.FakeWidgetRefresher(),
+            carbonIntensitySource = org.spsl.evtracker.testing.FakeCarbonIntensitySource(),
+        )
         val vm = MainViewModel(reader, writer, useCase)
         return Rig(vm, reader, writer, runner, scheduler)
     }

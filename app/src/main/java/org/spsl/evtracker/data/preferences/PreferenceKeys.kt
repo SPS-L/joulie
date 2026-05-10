@@ -64,4 +64,29 @@ object PreferenceKeys {
      * CO₂ tracker. Default 577 = Cyprus 2025 grid average per cyprusgrid.com.
      */
     val GRID_INTENSITY_G_CO2_PER_KWH = doublePreferencesKey("gridIntensityGCo2PerKwh")
+
+    /**
+     * Opt-in master switch for CO₂ tracking. Default `false` on fresh
+     * installs so the dashboard CO₂ card + chart CO₂ series are hidden
+     * until the user explicitly enables them. When false the Electricity
+     * Maps fetch is short-circuited and `SaveChargeEventUseCase` stores
+     * `null` on the entity's per-event intensity column.
+     */
+    val CO2_ENABLED = booleanPreferencesKey("co2Enabled")
+
+    /**
+     * Electricity Maps API key. Empty string = unset; when blank but
+     * [CO2_ENABLED] is true, the static [GRID_INTENSITY_G_CO2_PER_KWH]
+     * preference is used as a manual fallback. Stored verbatim; no salting
+     * because the value is a per-account read token, not a credential.
+     */
+    val ELECTRICITY_MAPS_API_KEY = stringPreferencesKey("electricityMapsApiKey")
+
+    /**
+     * Electricity Maps grid-zone code (uppercase IETF/ISO 3166 region
+     * code, e.g. `CY`, `DE`, `FR`). Default `CY` mirrors the existing
+     * static-intensity default. Bound by the live-data subscription —
+     * the free tier scopes calls to one zone per request.
+     */
+    val ELECTRICITY_MAPS_ZONE = stringPreferencesKey("electricityMapsZone")
 }

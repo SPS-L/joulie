@@ -61,6 +61,15 @@ class SettingsRepository @Inject constructor(
     override val gridIntensityGCo2PerKwh: Flow<Double> =
         dataStore.data.map { it[PreferenceKeys.GRID_INTENSITY_G_CO2_PER_KWH] ?: 577.0 }
 
+    override val co2Enabled: Flow<Boolean> =
+        dataStore.data.map { it[PreferenceKeys.CO2_ENABLED] ?: false }
+
+    override val electricityMapsApiKey: Flow<String> =
+        dataStore.data.map { it[PreferenceKeys.ELECTRICITY_MAPS_API_KEY] ?: "" }
+
+    override val electricityMapsZone: Flow<String> =
+        dataStore.data.map { it[PreferenceKeys.ELECTRICITY_MAPS_ZONE] ?: "CY" }
+
     // ACTIVE_CAR_ID stays an `intPreferencesKey` (didn't touch DataStore
     // backing types — switching `intPreferencesKey` to `longPreferencesKey` with
     // the same key name would silently lose the existing Int value). We widen
@@ -150,6 +159,18 @@ class SettingsRepository @Inject constructor(
 
     override suspend fun setGridIntensityGCo2PerKwh(value: Double) {
         dataStore.edit { it[PreferenceKeys.GRID_INTENSITY_G_CO2_PER_KWH] = value }
+    }
+
+    override suspend fun setCo2Enabled(enabled: Boolean) {
+        dataStore.edit { it[PreferenceKeys.CO2_ENABLED] = enabled }
+    }
+
+    override suspend fun setElectricityMapsApiKey(value: String) {
+        dataStore.edit { it[PreferenceKeys.ELECTRICITY_MAPS_API_KEY] = value }
+    }
+
+    override suspend fun setElectricityMapsZone(value: String) {
+        dataStore.edit { it[PreferenceKeys.ELECTRICITY_MAPS_ZONE] = value }
     }
 
     /** Flips `setupComplete` back to `false` so the wizard re-fires on next launch. */

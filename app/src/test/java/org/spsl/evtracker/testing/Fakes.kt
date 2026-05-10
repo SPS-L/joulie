@@ -140,6 +140,9 @@ class FakeSettingsReader(
     languageTagInit: String = "",
     iceBaselineLPer100kmInit: Double = 7.0,
     gridIntensityGCo2PerKwhInit: Double = 577.0,
+    co2EnabledInit: Boolean = false,
+    electricityMapsApiKeyInit: String = "",
+    electricityMapsZoneInit: String = "CY",
 ) : SettingsReader {
     private val activeCar = MutableStateFlow(activeCarIdInit)
     private val metric = MutableStateFlow(primaryMetricInit)
@@ -156,6 +159,9 @@ class FakeSettingsReader(
     private val languageTagFlow = MutableStateFlow(languageTagInit)
     private val iceBaselineFlow = MutableStateFlow(iceBaselineLPer100kmInit)
     private val gridIntensityFlow = MutableStateFlow(gridIntensityGCo2PerKwhInit)
+    private val co2EnabledFlow = MutableStateFlow(co2EnabledInit)
+    private val electricityMapsApiKeyFlow = MutableStateFlow(electricityMapsApiKeyInit)
+    private val electricityMapsZoneFlow = MutableStateFlow(electricityMapsZoneInit)
     override val activeCarId: Flow<Long> = activeCar
     override val primaryMetric: Flow<String> = metric
     override val distanceUnit: Flow<String> = unit
@@ -171,6 +177,9 @@ class FakeSettingsReader(
     override val languageTag: Flow<String> = languageTagFlow
     override val iceBaselineLPer100km: Flow<Double> = iceBaselineFlow
     override val gridIntensityGCo2PerKwh: Flow<Double> = gridIntensityFlow
+    override val co2Enabled: Flow<Boolean> = co2EnabledFlow
+    override val electricityMapsApiKey: Flow<String> = electricityMapsApiKeyFlow
+    override val electricityMapsZone: Flow<String> = electricityMapsZoneFlow
     fun setActiveCarId(id: Long) {
         activeCar.value = id
     }
@@ -216,6 +225,15 @@ class FakeSettingsReader(
     fun setGridIntensityGCo2PerKwh(value: Double) {
         gridIntensityFlow.value = value
     }
+    fun setCo2Enabled(value: Boolean) {
+        co2EnabledFlow.value = value
+    }
+    fun setElectricityMapsApiKey(value: String) {
+        electricityMapsApiKeyFlow.value = value
+    }
+    fun setElectricityMapsZone(value: String) {
+        electricityMapsZoneFlow.value = value
+    }
 }
 
 class FakeSettingsWriter(
@@ -250,6 +268,12 @@ class FakeSettingsWriter(
     var iceBaselineLPer100km: Double = 7.0
         private set
     var gridIntensityGCo2PerKwh: Double = 577.0
+        private set
+    var co2Enabled: Boolean = false
+        private set
+    var electricityMapsApiKey: String = ""
+        private set
+    var electricityMapsZone: String = "CY"
         private set
 
     override suspend fun setActiveCarId(id: Long) {
@@ -329,6 +353,18 @@ class FakeSettingsWriter(
     override suspend fun setGridIntensityGCo2PerKwh(value: Double) {
         callRecorder?.add("setGridIntensityGCo2PerKwh($value)")
         gridIntensityGCo2PerKwh = value
+    }
+    override suspend fun setCo2Enabled(enabled: Boolean) {
+        callRecorder?.add("setCo2Enabled($enabled)")
+        co2Enabled = enabled
+    }
+    override suspend fun setElectricityMapsApiKey(value: String) {
+        callRecorder?.add("setElectricityMapsApiKey($value)")
+        electricityMapsApiKey = value
+    }
+    override suspend fun setElectricityMapsZone(value: String) {
+        callRecorder?.add("setElectricityMapsZone($value)")
+        electricityMapsZone = value
     }
 }
 
@@ -446,6 +482,8 @@ class FakeSaveChargeEventGateway {
     val widgetRefresher = FakeWidgetRefresher()
     val costParser = org.spsl.evtracker.domain.service.CostParser()
     val nowProvider = FakeNowProvider()
+    val settingsReader = FakeSettingsReader()
+    val carbonIntensitySource = FakeCarbonIntensitySource()
 
     val useCase: org.spsl.evtracker.domain.usecase.SaveChargeEventUseCase =
         org.spsl.evtracker.domain.usecase.SaveChargeEventUseCase(
@@ -455,11 +493,45 @@ class FakeSaveChargeEventGateway {
             backupScheduler = backupScheduler,
             widgetRefresher = widgetRefresher,
             costParser = costParser,
+            settingsReader = settingsReader,
+            carbonIntensitySource = carbonIntensitySource,
             now = nowProvider,
         )
 
     fun seedEvents(events: List<ChargeEventEntity>) {
         store.value = events
+    }
+}
+
+/**
+ * In-memory fake for [org.spsl.evtracker.domain.repository.CarbonIntensitySource].
+ * `nextValue` is returned by every `fetchCarbonIntensity` call until
+ * overwritten; `callCount` records how many times the fetch was invoked so
+ * tests can assert the 1-hour cache hit/miss behaviour at the use-case
+ * level. [clearCache] invocations are also recorded for `ResetAllDataUseCase`
+ * coverage.
+ */
+class FakeCarbonIntensitySource(
+    var nextValue: Double? = null,
+) : org.spsl.evtracker.domain.repository.CarbonIntensitySource {
+    var callCount: Int = 0
+        private set
+    var clearCacheCallCount: Int = 0
+        private set
+    var lastZone: String? = null
+        private set
+    var lastApiKey: String? = null
+        private set
+
+    override suspend fun fetchCarbonIntensity(zone: String, apiKey: String): Double? {
+        callCount++
+        lastZone = zone
+        lastApiKey = apiKey
+        return nextValue
+    }
+
+    override fun clearCache() {
+        clearCacheCallCount++
     }
 }
 

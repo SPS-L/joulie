@@ -64,5 +64,19 @@ data class ChargeEventEntity(
      */
     @ColumnInfo(defaultValue = "MEASURED")
     val kwhSource: ChargeKwhSource = ChargeKwhSource.MEASURED,
+    /**
+     * Grid carbon intensity in gCO₂/kWh captured at the time of this
+     * charge event. `null` when CO₂ tracking is disabled OR the
+     * Electricity Maps fetch failed AND no manual fallback was set.
+     *
+     * Stored per-event so the historical CO₂ chart reflects the actual
+     * grid mix at the time of charging — switching zones or watching the
+     * grid decarbonise must not retroactively rewrite past emissions.
+     * Added in v8 via Room `@AutoMigration` (no `@ColumnInfo` default
+     * needed: the column is nullable, so legacy rows correctly migrate to
+     * `NULL`).
+     */
+    @ColumnInfo(name = "grid_intensity_g_co2_per_kwh")
+    val gridIntensityGCo2PerKwh: Double? = null,
     val createdAt: Long,
 )

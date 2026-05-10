@@ -207,10 +207,10 @@ class BackupSerializerTest {
     }
 
     @Test
-    fun currentVersion_isSeven() {
+    fun currentVersion_isEight() {
         // Sanity check so a future bump that forgets to update the version
         // constant gets caught.
-        assertEquals(7, BackupData.CURRENT_VERSION)
+        assertEquals(8, BackupData.CURRENT_VERSION)
     }
 
     @Test

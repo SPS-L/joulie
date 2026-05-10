@@ -5,6 +5,7 @@
 package org.spsl.evtracker.domain.usecase
 
 import org.spsl.evtracker.domain.backup.BackupScheduler
+import org.spsl.evtracker.domain.repository.CarbonIntensitySource
 import org.spsl.evtracker.domain.repository.DataResetTransactionRunner
 import org.spsl.evtracker.domain.repository.SettingsWriter
 import org.spsl.evtracker.domain.widget.WidgetRefresher
@@ -15,6 +16,7 @@ class ResetAllDataUseCase @Inject constructor(
     private val settingsWriter: SettingsWriter,
     private val backupScheduler: BackupScheduler,
     private val widgetRefresher: WidgetRefresher,
+    private val carbonIntensitySource: CarbonIntensitySource,
 ) {
     suspend operator fun invoke() {
         // Step 1 — atomic flag flip; if we crash between here and Step 3, the next
@@ -23,6 +25,12 @@ class ResetAllDataUseCase @Inject constructor(
 
         // Step 2 — atomic Room transaction across the three tables.
         resetRunner.clearAllTables()
+
+        // Reset opt-in CO₂ preferences so the user re-confirms after a wipe.
+        settingsWriter.setCo2Enabled(false)
+        settingsWriter.setElectricityMapsApiKey("")
+        settingsWriter.setElectricityMapsZone("CY")
+        carbonIntensitySource.clearCache()
 
         // Step 3 — clear the flag. AFTER this commits, the reset is committed.
         settingsWriter.setResetInProgress(false)

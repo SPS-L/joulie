@@ -94,7 +94,13 @@ class SettingsViewModelTest {
         val csvSink = FakeCsvFileSink()
         val resetActive = ResetActiveCarDataUseCase(chargeEventWriter, scheduler, widgetRefresher)
         val resetRunner = FakeDataResetTransactionRunner()
-        val resetAll = ResetAllDataUseCase(resetRunner, writer, scheduler, widgetRefresher)
+        val resetAll = ResetAllDataUseCase(
+            resetRunner = resetRunner,
+            settingsWriter = writer,
+            backupScheduler = scheduler,
+            widgetRefresher = widgetRefresher,
+            carbonIntensitySource = org.spsl.evtracker.testing.FakeCarbonIntensitySource(),
+        )
         val exportCsv = ExportCsvUseCase(carReader, chargeEventQueries, csvSink)
         val pushBackupNow = PushBackupNowUseCase(backupRepo, writer, org.spsl.evtracker.testing.FakeNowProvider(time = 1_700_000_000_000L))
         val wipeRemoteBackup = WipeRemoteBackupUseCase(backupRepo, writer)
