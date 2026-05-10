@@ -26,11 +26,11 @@ UI (Fragments + ViewModels)  →  Domain (use cases + services)  →  Repositori
 - Single-Activity host with the **Navigation Component**; ViewBinding for views.
 - **Hilt** for dependency injection. **KSP** (not kapt) for Room and Hilt code generation.
 - **Room v7** with explicit migrations for the local database; **DataStore Preferences** for user settings.
-- **MPAndroidChart** for the charts tab.
+- **Vico 2.0.0** (line / column charts) + custom `ui/common/PieChartView` (donut tabs, since Vico ships no pie primitive) for the charts tab.
 - **WorkManager** for Drive backup scheduling (uniqueness via `enqueueUniqueWork`).
 - **Material 3** with light/dark token palettes.
 
-Min SDK 26 · target / compile SDK 35 · JDK 17 · Gradle 8.9 · AGP 8.7.3 · Kotlin 1.9.21.
+Min SDK 26 · target / compile SDK 35 · JDK 17 · Gradle 8.11.1 · AGP 8.9.2 · Kotlin 2.1.20.
 
 The full technical design lives in [`docs/DESIGN.md`](docs/DESIGN.md).
 

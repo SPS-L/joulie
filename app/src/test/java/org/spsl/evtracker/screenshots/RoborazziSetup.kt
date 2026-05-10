@@ -23,8 +23,9 @@ enum class ThemeMode(val suffix: String) {
 /**
  * Builds a [HiltTestActivity] with a [FakeChartsParentFragment] hosting a
  * [ChartsTabFragment] of the requested kind, applies the requested theme,
- * idles the looper long enough for MPAndroidChart's `animateY(400)` to
- * complete, and returns the activity controller for screenshot capture.
+ * idles the looper long enough for Vico's chart entry animation (and
+ * [PieChartView]'s 400 ms sweep on the AC/DC + Locations tabs) to complete,
+ * and returns the activity controller for screenshot capture.
  *
  * Caller must set [FakeChartsParentFragment.nextMockedVm] BEFORE calling
  * [host] — the parent fragment reads the slot during VM resolution, which
@@ -32,9 +33,10 @@ enum class ThemeMode(val suffix: String) {
  */
 object RoborazziSetup {
 
-    /** Idle budget after fragment commit. Covers MPAndroidChart's
-     *  `animateY(400)` + a safety margin for post-animation invalidation
-     *  passes. Bump to 1500 ms if CI flakes. */
+    /** Idle budget after fragment commit. Covers Vico's default chart
+     *  enter animation + [PieChartView]'s 400 ms sweep + a safety margin
+     *  for post-animation invalidation passes. Bump to 1500 ms if CI
+     *  flakes. */
     private val ANIMATION_IDLE = Duration.ofMillis(800)
 
     fun host(

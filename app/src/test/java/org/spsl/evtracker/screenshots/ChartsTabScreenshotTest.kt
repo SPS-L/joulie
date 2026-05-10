@@ -40,7 +40,8 @@ import org.spsl.evtracker.ui.charts.ChartsViewModel
  *      [FakeChartsParentFragment] that exposes the mocked VM via
  *      `defaultViewModelProviderFactory`. The tab fragment's
  *      `viewModels({ requireParentFragment() })` resolves to the mock.
- *   4. Idles the main looper past MPAndroidChart's `animateY(400)`
+ *   4. Idles the main looper past Vico's default chart enter animation
+ *      (and [PieChartView]'s 400 ms sweep on the AC/DC + Locations tabs)
  *      so the captured frame is the chart's final state.
  *   5. Captures the rendered View via Roborazzi.
  *

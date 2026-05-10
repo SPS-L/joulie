@@ -14,7 +14,7 @@
 [![CI](https://github.com/SPS-L/joulie/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/SPS-L/joulie/actions/workflows/ci.yml)
 [![Release build](https://github.com/SPS-L/joulie/actions/workflows/release.yml/badge.svg)](https://github.com/SPS-L/joulie/actions/workflows/release.yml)
 [![Min SDK](https://img.shields.io/badge/minSdk-26-brightgreen)](https://developer.android.com/about/versions/oreo)
-[![Kotlin](https://img.shields.io/badge/kotlin-1.9.21-blueviolet)](https://kotlinlang.org)
+[![Kotlin](https://img.shields.io/badge/kotlin-2.1.20-blueviolet)](https://kotlinlang.org)
 
 Track EV charging sessions, efficiency, cost, and CO₂, one joule at a time. Built and maintained by the [Sustainable Power Systems Lab (SPS-Lab)](https://sps-lab.org/) at Cyprus University of Technology.
 

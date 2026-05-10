@@ -19,29 +19,22 @@ import kotlin.math.min
 import kotlin.math.sin
 
 /**
- * Custom donut/pie chart drawn directly with [Canvas]. Built as preparation for
- * TASK-30 (MPAndroidChart → Vico migration): Vico has no pie chart primitive,
- * and pulling a second chart library for one tab class doesn't justify the
- * bloat, so the AC/DC and Locations tabs will switch to this view when the
- * migration eventually lands.
+ * Custom donut/pie chart drawn directly with [Canvas]. Used by the AC/DC and
+ * Locations tabs of [org.spsl.evtracker.ui.charts.ChartsTabFragment]; Vico
+ * (the line/column chart library) ships no pie primitive, and pulling in a
+ * second chart library for one tab class wasn't worth the bloat. Slice-angle
+ * math is covered by `PieChartViewSliceMathTest`.
  *
- * **Currently unreferenced in production.** TASK-30 itself is paused (⏸,
- * gated on TASK-33's Kotlin 2.x upgrade — Vico 2.x requires Kotlin 2.1+, our
- * project is on 1.9.21, see TASK-30 BACKLOG entry). Lands here as forward
- * progress so the migration's biggest unknown (custom Canvas pie + legend +
- * animation) is solved, reviewed, and unit-tested before the migration PR is
- * opened. Slice-angle math is covered by `PieChartViewSliceMathTest`.
- *
- * Designed-in behavioural parity with the existing MPAndroidChart configuration
- * (preserves the look users see today on the AC/DC and Locations tabs):
- * - donut style (configurable hole radius; default 0.55× matches the prior look).
+ * Behavioural surface (set by the caller's [renderAcDc] / [renderLocations]):
+ * - donut style (configurable hole radius; default 0.55× of outer radius).
  * - per-slice label drawn at the slice centroid (value + label), skipped when
  *   the slice's sweep is too small to fit text without overlap.
  * - legend below the donut, one row, items wrap to additional rows when needed.
  * - optional centre text (used by AC/DC for the "N charges" total).
- * - 0°→360° sweep animation on the first data set, default 400 ms (mirrors
- *   the previous `chart.animateY(400)` cadence so TASK-79's 800 ms looper
- *   idle still settles deterministically once the call sites flip).
+ * - 0°→360° sweep animation on the first data set, default 400 ms; TASK-79's
+ *   `RoborazziSetup` idles the test looper for 800 ms after fragment commit
+ *   so screenshot baselines capture the post-animation final state
+ *   deterministically.
  *
  * Theme awareness: [labelColor] should be set by the caller from
  * `?attr/colorOnSurface`. Slice colours come in via [Slice.color].
