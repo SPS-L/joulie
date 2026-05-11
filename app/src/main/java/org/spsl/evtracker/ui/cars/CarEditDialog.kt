@@ -6,10 +6,11 @@ package org.spsl.evtracker.ui.cars
 
 import android.content.Context
 import android.view.LayoutInflater
+import android.view.WindowManager
 import android.widget.ArrayAdapter
+import android.widget.AutoCompleteTextView
 import androidx.lifecycle.LifecycleCoroutineScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.textfield.MaterialAutoCompleteTextView
 import kotlinx.coroutines.launch
 import org.spsl.evtracker.R
 import org.spsl.evtracker.core.model.CarFormState
@@ -21,20 +22,24 @@ import org.spsl.evtracker.databinding.DialogEditCarBinding
  * Add / Edit Car dialog (TASK-91).
  *
  * Wraps the existing `dialog_edit_car.xml` form with EV-database
- * autocomplete: the Make and Model fields are
- * [com.google.android.material.textfield.MaterialAutoCompleteTextView]
- * instances backed by a plain [ArrayAdapter] (Material's recommended
- * pattern for freeform autocomplete with prefix filtering). Tapping
- * the end-arrow icon shows the full list; typing filters by prefix.
- * Picking a model auto-fills the battery field and stashes the WLTP
- * figure onto [CarFormState] so the Add / Update use case persists
- * it. All fields remain manually editable — the autocomplete is a
- * convenience, not a lock.
+ * autocomplete. The Make and Model fields are stock
+ * `android.widget.AutoCompleteTextView` instances backed by a plain
+ * [ArrayAdapter] (default prefix-match `ArrayFilter`).
+ *
+ * The earlier v1.13.0 / v1.13.2 attempts used Material's
+ * `MaterialAutoCompleteTextView` wrapped in a TextInputLayout with the
+ * `ExposedDropdownMenu` style. That combination produced a known but
+ * undocumented bug inside `MaterialAlertDialog`: the popup window was
+ * created (the trailing arrow icon rotated to "open") but never
+ * appeared visibly. v1.13.3 drops Material's variant and uses the
+ * stock widget, which renders the popup reliably inside any dialog.
  *
  * Display format for the model dropdown: `"$model · $variant"` if the
  * variant is non-blank (Brand Guide §1 voice rule — no em-dash). The
  * caller selects from the displayed strings; the dialog round-trips
- * back to `(model, variant)` via the in-memory lookup map.
+ * back to `(model, variant)` via the in-memory lookup map. All fields
+ * remain manually editable — the autocomplete is a convenience, not
+ * a lock — so users with rare or modded vehicles aren't locked out.
  */
 object CarEditDialog {
 
@@ -152,7 +157,7 @@ object CarEditDialog {
             }
         }
 
-        MaterialAlertDialogBuilder(context)
+        val dialog = MaterialAlertDialogBuilder(context)
             .setTitle(titleRes)
             .setView(binding.root)
             .setPositiveButton(R.string.car_dialog_save) { _, _ ->
@@ -168,7 +173,16 @@ object CarEditDialog {
                 )
             }
             .setNegativeButton(R.string.car_dialog_cancel, null)
-            .show()
+            .create()
+
+        // SOFT_INPUT_ADJUST_RESIZE (the default for many themes)
+        // shrinks the dialog when the keyboard opens, which can
+        // collapse the room available for the AutoCompleteTextView
+        // popup. ADJUST_PAN keeps the dialog at full height and pans
+        // it up — the popup has predictable vertical space below the
+        // anchor.
+        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN)
+        dialog.show()
     }
 
     /**
@@ -181,36 +195,25 @@ object CarEditDialog {
         if (variant.isBlank()) model else "$model · $variant"
 
     /**
-     * Wire a freeform autocomplete on a [MaterialAutoCompleteTextView].
+     * Wire a freeform autocomplete on a plain [AutoCompleteTextView].
      *
-     * Uses Material's stock `setSimpleItems(...)` path — the dropdown
-     * arrow on the `ExposedDropdownMenu` `TextInputLayout` shows the
-     * full list on tap; typing then filters to entries that start with
-     * the prefix (case-insensitive). Earlier iterations used a
-     * subclassed `ArrayAdapter` with a custom substring `Filter`; that
-     * combination silently broke the popup on real devices (the popup
-     * never appeared even though the adapter held data). The
-     * `setSimpleItems` path is the canonical Material recipe and is
-     * known to interop correctly with the M3 `MaterialAutoCompleteTextView`.
-     *
-     * Free typing is preserved because `MaterialAutoCompleteTextView`
-     * does not call `setKeyListener(null)`; users can still type a
-     * make like `"Lucid"` that isn't in the bundled dataset, and the
-     * field accepts it on save.
+     * Installs:
+     *   - A stock [ArrayAdapter] with default prefix-match `ArrayFilter`
+     *     so typing filters the dropdown by the typed prefix.
+     *   - An [AutoCompleteTextView.setOnFocusChangeListener] that calls
+     *     [AutoCompleteTextView.showDropDown] when the field gains
+     *     focus. Compensates for the missing M3 "dropdown arrow" end
+     *     icon: tapping the field is equivalent to tapping the arrow,
+     *     and the popup appears with the full list.
+     *   - An [AutoCompleteTextView.setOnClickListener] that calls
+     *     [AutoCompleteTextView.showDropDown] on every tap (covers the
+     *     case where the field already had focus and a second tap is
+     *     expected to re-open a dismissed popup).
      */
-    private fun MaterialAutoCompleteTextView.bindAutocomplete(
+    private fun AutoCompleteTextView.bindAutocomplete(
         context: Context,
         items: List<String>,
     ) {
-        // setSimpleItems uses MaterialArrayAdapter + a no-op filter,
-        // which keeps the FULL list visible regardless of typed input
-        // — equivalent to a permanent "show everything" affordance.
-        // We layer prefix filtering on top by also installing a plain
-        // ArrayAdapter as the active adapter (setSimpleItems sets one,
-        // setAdapter overrides it with a stock ArrayAdapter whose
-        // default ArrayFilter does prefix matching). The dropdown
-        // arrow on the TextInputLayout's ExposedDropdownMenu style
-        // shows the list on tap regardless of typed input.
         setAdapter(
             ArrayAdapter(
                 context,
@@ -218,5 +221,15 @@ object CarEditDialog {
                 items,
             ),
         )
+        setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus && !isPopupShowing && adapter != null && adapter.count > 0) {
+                showDropDown()
+            }
+        }
+        setOnClickListener {
+            if (!isPopupShowing && adapter != null && adapter.count > 0) {
+                showDropDown()
+            }
+        }
     }
 }
