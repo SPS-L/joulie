@@ -234,8 +234,8 @@
     <string name="carbon_bucket_very_high">Πολύ υψηλή</string>
     <string name="carbon_intensity_fetching">Λήψη δεδομένων δικτύου…</string>
     <string name="carbon_intensity_tap_to_retry">Πατήστε για επανάληψη</string>
-    <string name="carbon_intensity_updated_ago">Ενημερώθηκε πριν %1$s</string>
-    <string name="carbon_intensity_a11y_description">Ένταση άνθρακα %1$s γραμμάρια CO₂ ανά κιλοβατώρα, %2$s, ενημερώθηκε πριν %3$s. Πατήστε για ανανέωση.</string>
+    <string name="carbon_intensity_updated_ago">Ενημερώθηκε %1$s</string>
+    <string name="carbon_intensity_a11y_description">Ένταση άνθρακα %1$s γραμμάρια CO₂ ανά κιλοβατώρα, %2$s, ενημερώθηκε %3$s. Πατήστε για ανανέωση.</string>
     <string name="carbon_intensity_a11y_loading">Λήψη έντασης άνθρακα του δικτύου.</string>
     <string name="carbon_intensity_error_auth">Το κλειδί API απορρίφθηκε. Η ζώνη μπορεί να μην ταιριάζει με το κλειδί σας.</string>
     <string name="carbon_intensity_error_network">Δεν υπάρχει σύνδεση στο διαδίκτυο</string>

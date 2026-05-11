@@ -171,8 +171,8 @@
     <string name="carbon_intensity_value" translatable="false">%1$s gCO₂eq/kWh</string>
     <string name="carbon_intensity_fetching">Fetching live grid data…</string>
     <string name="carbon_intensity_tap_to_retry">Tap to retry</string>
-    <string name="carbon_intensity_updated_ago">Updated %1$s ago</string>
-    <string name="carbon_intensity_a11y_description">Carbon intensity %1$s grams CO₂ per kilowatt-hour, %2$s, updated %3$s ago. Tap to refresh.</string>
+    <string name="carbon_intensity_updated_ago">Updated %1$s</string>
+    <string name="carbon_intensity_a11y_description">Carbon intensity %1$s grams CO₂ per kilowatt-hour, %2$s, updated %3$s. Tap to refresh.</string>
     <string name="carbon_intensity_a11y_loading">Fetching grid carbon intensity.</string>
     <string name="carbon_intensity_error_auth">API key rejected. Zone may not match your key.</string>
     <string name="carbon_intensity_error_network">No internet connection</string>

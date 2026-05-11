@@ -234,8 +234,8 @@
     <string name="carbon_bucket_very_high">Çok yüksek</string>
     <string name="carbon_intensity_fetching">Şebeke verisi alınıyor…</string>
     <string name="carbon_intensity_tap_to_retry">Yeniden denemek için dokunun</string>
-    <string name="carbon_intensity_updated_ago">%1$s önce güncellendi</string>
-    <string name="carbon_intensity_a11y_description">Karbon yoğunluğu %1$s gram CO₂ kilovat saat başına, %2$s, %3$s önce güncellendi. Yenilemek için dokunun.</string>
+    <string name="carbon_intensity_updated_ago">Son güncelleme: %1$s</string>
+    <string name="carbon_intensity_a11y_description">Karbon yoğunluğu %1$s gram CO₂ kilovat saat başına, %2$s, son güncelleme %3$s. Yenilemek için dokunun.</string>
     <string name="carbon_intensity_a11y_loading">Şebeke karbon yoğunluğu alınıyor.</string>
     <string name="carbon_intensity_error_auth">API anahtarı reddedildi. Bölge anahtarınızla uyuşmuyor olabilir.</string>
     <string name="carbon_intensity_error_network">İnternet bağlantısı yok</string>

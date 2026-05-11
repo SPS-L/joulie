@@ -234,8 +234,8 @@
     <string name="carbon_bucket_very_high">Очень высокая</string>
     <string name="carbon_intensity_fetching">Загрузка данных сети…</string>
     <string name="carbon_intensity_tap_to_retry">Нажмите, чтобы повторить</string>
-    <string name="carbon_intensity_updated_ago">Обновлено %1$s назад</string>
-    <string name="carbon_intensity_a11y_description">Углеродная интенсивность %1$s граммов CO₂ на киловатт-час, %2$s, обновлено %3$s назад. Нажмите для обновления.</string>
+    <string name="carbon_intensity_updated_ago">Обновлено %1$s</string>
+    <string name="carbon_intensity_a11y_description">Углеродная интенсивность %1$s граммов CO₂ на киловатт-час, %2$s, обновлено %3$s. Нажмите для обновления.</string>
     <string name="carbon_intensity_a11y_loading">Загрузка углеродной интенсивности сети.</string>
     <string name="carbon_intensity_error_auth">Ключ API отклонён. Зона может не совпадать с вашим ключом.</string>
     <string name="carbon_intensity_error_network">Нет соединения с интернетом</string>
