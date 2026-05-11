@@ -24,8 +24,10 @@ class BackupSerializer @Inject constructor() {
      * Accept `backup_version` 3 (legacy `"DC"` chargeType),
      * 4 (`ChargeType` enum), 5 (widened DTO ids `Int` → `Long`),
      * 6 (optional `socBefore`/`socAfter` fields on charge events),
-     * 7 (`kwhSource` provenance flag), and 8 (current; per-event
-     * `gridIntensityGCo2PerKwh` from the Electricity Maps live feed).
+     * 7 (`kwhSource` provenance flag), 8 (per-event
+     * `gridIntensityGCo2PerKwh` from the Electricity Maps live feed),
+     * and 9 (current; nullable `wltpKwhPer100km` on cars for TASK-91's
+     * EV-model autocomplete reference data).
      *
      * Older backups simply leave new fields at their defaults — Gson
      * tolerates absent JSON keys for fields with Kotlin defaults. The
@@ -33,8 +35,9 @@ class BackupSerializer @Inject constructor() {
      * so v3's `"DC"` decodes to [ChargeType.DC_FAST]; the kwhSource
      * adapter similarly defaults to `MEASURED` for v3..v6 backups, which
      * is the correct backfill (those events predate the in-form calculator).
-     * v3..v7 backups have no per-event grid intensity, which correctly
-     * round-trips to `null` on the entity.
+     * v3..v7 backups have no per-event grid intensity, and v3..v8 backups
+     * have no per-car WLTP figure; both correctly round-trip to `null`
+     * on the entity.
      */
     fun fromJson(json: String): BackupData {
         val parsed = gson.fromJson(json, BackupData::class.java)
@@ -45,6 +48,6 @@ class BackupSerializer @Inject constructor() {
     }
 
     companion object {
-        private val SUPPORTED_VERSIONS = setOf(3, 4, 5, 6, 7, 8)
+        private val SUPPORTED_VERSIONS = setOf(3, 4, 5, 6, 7, 8, 9)
     }
 }

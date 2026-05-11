@@ -375,6 +375,26 @@ class MigrationTest {
     }
 
     @Test
+    fun migrate_8_to_9_addsWltpColumnOnCars() = runBlocking {
+        // @AutoMigration(from = 8, to = 9) adds a nullable
+        // wltpKwhPer100km REAL column on the `cars` table (TASK-91).
+        // Legacy rows backfill cleanly to NULL.
+        val v8 = helper.createDatabase(testDbName, 8)
+        v8.execSQL(
+            "INSERT INTO cars (id, name, make, model, year, batteryKwh, createdAt) " +
+                "VALUES (1, 'A', 'Tesla', 'Model 3', 2024, 75.0, 1000)",
+        )
+        v8.close()
+
+        val v9 = helper.runMigrationsAndValidate(testDbName, 9, true)
+        v9.query("SELECT wltpKwhPer100km FROM cars WHERE id = 1").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertTrue("wltpKwhPer100km should default to NULL on legacy rows", cursor.isNull(0))
+        }
+        v9.close()
+    }
+
+    @Test
     fun migrate_1_to_7_validatesSchema() = runBlocking {
         val v1 = buildV1Database()
         v1.execSQL("INSERT INTO cars (name, createdAt) VALUES ('A', 1000)")

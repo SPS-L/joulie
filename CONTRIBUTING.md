@@ -155,6 +155,21 @@ To turn deploys on the first time, set **Settings → Pages → Source to *GitHu
 
 When editing the page, follow the Brand Guide voice rules: plain English, numbers always have units, never use the em-dash. Reuse the existing assets under `docs/branding/`; don't bake in new colours.
 
+## EV reference dataset (TASK-92)
+
+[`scripts/update_ev_db.py`](scripts/update_ev_db.py) pulls the latest [OpenEV Data](https://github.com/open-ev-data/open-ev-data-dataset) release, transforms each vehicle into Joulie's compact schema (`make`, `model`, `variant`, `year`, `battery_kwh`, `wltp_kwh_100km`), filters out rows missing a battery size or below 5 kWh, sorts by make → model → year, and publishes the result as the `ev_models.json` asset on the `ev-db-latest` GitHub release of this repo. The Android app downloads from that URL when the user taps **Settings → Update EV database** (TASK-91).
+
+Scheduled via [`.github/workflows/ev-db-update.yml`](.github/workflows/ev-db-update.yml) on the first of every month at 03:00 UTC, plus `workflow_dispatch` for manual refreshes from the Actions tab. The auto-issued `secrets.GITHUB_TOKEN` already carries the `contents: write` scope, so no PAT lifecycle is involved.
+
+To run manually from a contributor's laptop:
+
+```bash
+pip install -r scripts/requirements.txt
+GITHUB_TOKEN=<pat-with-contents-write> python3 scripts/update_ev_db.py
+```
+
+The script is idempotent: a second consecutive run replaces the existing asset on `ev-db-latest` and leaves the repo in a clean state. It never creates a git tag or a commit, it only manages the release asset.
+
 ## Project documentation
 
 | File | Purpose |

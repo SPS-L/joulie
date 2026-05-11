@@ -4,48 +4,51 @@
 
 package org.spsl.evtracker.domain.usecase
 
-import kotlinx.coroutines.flow.first
 import org.spsl.evtracker.core.model.CarFormState
-import org.spsl.evtracker.data.local.entity.CarEntity
 import org.spsl.evtracker.domain.backup.BackupScheduler
+import org.spsl.evtracker.domain.repository.CarReader
 import org.spsl.evtracker.domain.repository.CarWriter
-import org.spsl.evtracker.domain.repository.SettingsReader
-import org.spsl.evtracker.domain.repository.SettingsWriter
 import org.spsl.evtracker.domain.widget.WidgetRefresher
 import javax.inject.Inject
 
-class AddCarUseCase @Inject constructor(
+/**
+ * Full-row update for the Edit Car dialog (TASK-91).
+ *
+ * The pre-TASK-91 flow only persisted the renamed `name` through a
+ * dedicated rename use case, make / model / year / battery edits in
+ * the dialog were silently discarded. With the EV-database
+ * autocomplete promoting Make and Model to canonical values (and
+ * auto-filling battery + WLTP), the dialog now needs an honest write
+ * path. This use case fans out exactly the same way [AddCarUseCase]
+ * does on success, enqueue a Drive backup + refresh the home-screen
+ * widget.
+ */
+class UpdateCarUseCase @Inject constructor(
+    private val carReader: CarReader,
     private val carWriter: CarWriter,
-    private val settingsReader: SettingsReader,
-    private val settingsWriter: SettingsWriter,
     private val backupScheduler: BackupScheduler,
     private val widgetRefresher: WidgetRefresher,
-    private val now: NowProvider,
 ) {
-    suspend operator fun invoke(form: CarFormState): Result {
+    suspend operator fun invoke(carId: Long, form: CarFormState): Result {
         if (form.name.isBlank()) return Result.NameBlank
-        val entity = CarEntity(
+        val existing = carReader.getById(carId) ?: return Result.NotFound
+        val updated = existing.copy(
             name = form.name.trim(),
             make = form.make.trim(),
             model = form.model.trim(),
             year = form.year.toIntOrNull(),
             batteryKwh = form.batteryKwh.toDoubleOrNull(),
             wltpKwhPer100km = form.wltpKwhPer100km,
-            createdAt = now.nowMillis(),
         )
-        val newId = carWriter.insert(entity)
-        if (newId <= 0L) return Result.PersistenceFailed
-        if (settingsReader.activeCarId.first() == -1L) {
-            settingsWriter.setActiveCarId(newId)
-        }
+        carWriter.update(updated)
         backupScheduler.enqueueBackup()
         widgetRefresher.refresh()
-        return Result.Success(newId)
+        return Result.Success
     }
 
     sealed class Result {
-        data class Success(val id: Long) : Result()
+        object Success : Result()
         object NameBlank : Result()
-        object PersistenceFailed : Result()
+        object NotFound : Result()
     }
 }

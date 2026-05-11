@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.map
 import org.spsl.evtracker.data.local.entity.CarEntity
 import org.spsl.evtracker.data.local.entity.ChargeEventEntity
 import org.spsl.evtracker.data.local.entity.CustomLocationEntity
+import org.spsl.evtracker.data.local.evdb.EvModel
 import org.spsl.evtracker.domain.backup.BackupRepository
 import org.spsl.evtracker.domain.backup.BackupScheduler
 import org.spsl.evtracker.domain.backup.DriveAuthManager
@@ -17,10 +18,12 @@ import org.spsl.evtracker.domain.repository.CarReader
 import org.spsl.evtracker.domain.repository.CarWriter
 import org.spsl.evtracker.domain.repository.ChargeEventQueries
 import org.spsl.evtracker.domain.repository.ChargeEventWriter
+import org.spsl.evtracker.domain.repository.EvModelReader
 import org.spsl.evtracker.domain.repository.LocationReader
 import org.spsl.evtracker.domain.repository.LocationWriter
 import org.spsl.evtracker.domain.repository.SettingsReader
 import org.spsl.evtracker.domain.repository.SettingsWriter
+import org.spsl.evtracker.domain.repository.UpdateResult
 import org.spsl.evtracker.domain.usecase.NowProvider
 import org.spsl.evtracker.domain.widget.WidgetRefresher
 import java.io.IOException
@@ -145,6 +148,9 @@ class FakeSettingsReader(
     electricityMapsCacheZoneInit: String = "",
     electricityMapsCacheIntensityInit: Double = 0.0,
     electricityMapsCacheFetchedAtMsInit: Long = 0L,
+    evDbLastUpdatedAtInit: Long = 0L,
+    evDbVersionInit: String = "",
+    evDbVehicleCountInit: Int = 0,
 ) : SettingsReader {
     private val activeCar = MutableStateFlow(activeCarIdInit)
     private val metric = MutableStateFlow(primaryMetricInit)
@@ -166,6 +172,9 @@ class FakeSettingsReader(
     private val electricityMapsCacheZoneFlow = MutableStateFlow(electricityMapsCacheZoneInit)
     private val electricityMapsCacheIntensityFlow = MutableStateFlow(electricityMapsCacheIntensityInit)
     private val electricityMapsCacheFetchedAtMsFlow = MutableStateFlow(electricityMapsCacheFetchedAtMsInit)
+    private val evDbLastUpdatedAtFlow = MutableStateFlow(evDbLastUpdatedAtInit)
+    private val evDbVersionFlow = MutableStateFlow(evDbVersionInit)
+    private val evDbVehicleCountFlow = MutableStateFlow(evDbVehicleCountInit)
     override val activeCarId: Flow<Long> = activeCar
     override val primaryMetric: Flow<String> = metric
     override val distanceUnit: Flow<String> = unit
@@ -186,6 +195,9 @@ class FakeSettingsReader(
     override val electricityMapsCacheZone: Flow<String> = electricityMapsCacheZoneFlow
     override val electricityMapsCacheIntensity: Flow<Double> = electricityMapsCacheIntensityFlow
     override val electricityMapsCacheFetchedAtMs: Flow<Long> = electricityMapsCacheFetchedAtMsFlow
+    override val evDbLastUpdatedAt: Flow<Long> = evDbLastUpdatedAtFlow
+    override val evDbVersion: Flow<String> = evDbVersionFlow
+    override val evDbVehicleCount: Flow<Int> = evDbVehicleCountFlow
     fun setActiveCarId(id: Long) {
         activeCar.value = id
     }
@@ -242,6 +254,12 @@ class FakeSettingsReader(
         electricityMapsCacheIntensityFlow.value = intensity
         electricityMapsCacheFetchedAtMsFlow.value = fetchedAtMs
     }
+
+    fun setEvDbCache(lastUpdatedAtMs: Long, version: String, vehicleCount: Int) {
+        evDbLastUpdatedAtFlow.value = lastUpdatedAtMs
+        evDbVersionFlow.value = version
+        evDbVehicleCountFlow.value = vehicleCount
+    }
 }
 
 class FakeSettingsWriter(
@@ -286,6 +304,12 @@ class FakeSettingsWriter(
     var electricityMapsCacheIntensity: Double = 0.0
         private set
     var electricityMapsCacheFetchedAtMs: Long = 0L
+        private set
+    var evDbLastUpdatedAt: Long = 0L
+        private set
+    var evDbVersion: String = ""
+        private set
+    var evDbVehicleCount: Int = 0
         private set
 
     override suspend fun setActiveCarId(id: Long) {
@@ -389,6 +413,16 @@ class FakeSettingsWriter(
         electricityMapsCacheZone = ""
         electricityMapsCacheIntensity = 0.0
         electricityMapsCacheFetchedAtMs = 0L
+    }
+    override suspend fun setEvDbCache(
+        lastUpdatedAtMs: Long,
+        version: String,
+        vehicleCount: Int,
+    ) {
+        callRecorder?.add("setEvDbCache($lastUpdatedAtMs,$version,$vehicleCount)")
+        evDbLastUpdatedAt = lastUpdatedAtMs
+        evDbVersion = version
+        evDbVehicleCount = vehicleCount
     }
 }
 
@@ -626,6 +660,10 @@ class FakeCarRepository(initial: List<CarEntity> = emptyList()) : CarReader, Car
         state.value = state.value.map { if (it.id == carId) it.copy(name = newName) else it }
     }
 
+    override suspend fun update(car: CarEntity) {
+        state.value = state.value.map { if (it.id == car.id) car else it }
+    }
+
     override suspend fun deleteById(carId: Long) {
         state.value = state.value.filter { it.id != carId }
     }
@@ -762,5 +800,55 @@ class FakeCsvFileSink : org.spsl.evtracker.domain.backup.CsvFileSink {
         body(java.io.StringWriter())
         // android.net.Uri.parse() stubs throw RuntimeException in JVM unit tests; use a mock instead.
         return org.mockito.kotlin.mock()
+    }
+}
+
+/**
+ * Fake [EvModelReader] for JVM tests (TASK-91).
+ *
+ * Seeded with a small in-memory `vehicles` list, the queries
+ * (`makes()` / `modelsForMake()`) apply the same case-insensitive
+ * sort + dedup contracts as the real [org.spsl.evtracker.data.repository.EvModelRepository].
+ * [updateFromRemote] returns [nextUpdateResult] (defaults to a
+ * synthetic Success) and records the call count so VM-level tests can
+ * assert one-shot behaviour.
+ */
+class FakeEvModelReader(
+    initial: List<EvModel> = emptyList(),
+    var nextUpdateResult: UpdateResult = UpdateResult.Success(version = "test", vehicleCount = 0),
+) : EvModelReader {
+    private var vehicles: List<EvModel> = initial
+
+    var updateFromRemoteCallCount: Int = 0
+        private set
+
+    fun seed(rows: List<EvModel>) {
+        vehicles = rows
+    }
+
+    override suspend fun makes(): List<String> =
+        vehicles.asSequence()
+            .map { it.make.trim() }
+            .filter { it.isNotEmpty() }
+            .distinct()
+            .sortedWith(String.CASE_INSENSITIVE_ORDER)
+            .toList()
+
+    override suspend fun modelsForMake(make: String): List<EvModel> {
+        val needle = make.trim()
+        if (needle.isEmpty()) return emptyList()
+        val byModel = Comparator<EvModel> { a, b ->
+            String.CASE_INSENSITIVE_ORDER.compare(a.model, b.model)
+        }
+        return vehicles
+            .asSequence()
+            .filter { it.make.equals(needle, ignoreCase = true) }
+            .sortedWith(byModel.thenBy { it.year ?: Int.MAX_VALUE })
+            .toList()
+    }
+
+    override suspend fun updateFromRemote(): UpdateResult {
+        updateFromRemoteCallCount++
+        return nextUpdateResult
     }
 }

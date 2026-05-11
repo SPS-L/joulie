@@ -1,0 +1,27 @@
+{
+  "version": "bundled",
+  "source": "bundled",
+  "vehicle_count": 20,
+  "vehicles": [
+    { "make": "BMW", "model": "i3", "variant": "120 Ah", "year": 2021, "battery_kwh": 37.9, "wltp_kwh_100km": 16.3 },
+    { "make": "BMW", "model": "i4", "variant": "eDrive40", "year": 2024, "battery_kwh": 80.7, "wltp_kwh_100km": 16.1 },
+    { "make": "BYD", "model": "Atto 3", "variant": "Comfort", "year": 2024, "battery_kwh": 60.5, "wltp_kwh_100km": 16.0 },
+    { "make": "Citroën", "model": "ë-C4", "variant": "50 kWh", "year": 2023, "battery_kwh": 46.3, "wltp_kwh_100km": 15.5 },
+    { "make": "Fiat", "model": "500e", "variant": "42 kWh", "year": 2023, "battery_kwh": 37.3, "wltp_kwh_100km": 14.4 },
+    { "make": "Ford", "model": "Mustang Mach-E", "variant": "Standard Range RWD", "year": 2024, "battery_kwh": 70.0, "wltp_kwh_100km": 16.5 },
+    { "make": "Hyundai", "model": "Ioniq 5", "variant": "Long Range RWD", "year": 2024, "battery_kwh": 77.4, "wltp_kwh_100km": 16.7 },
+    { "make": "Hyundai", "model": "Kona Electric", "variant": "64 kWh", "year": 2023, "battery_kwh": 64.0, "wltp_kwh_100km": 14.7 },
+    { "make": "Kia", "model": "EV6", "variant": "Long Range RWD", "year": 2024, "battery_kwh": 77.4, "wltp_kwh_100km": 16.5 },
+    { "make": "Kia", "model": "Niro EV", "variant": "Long Range", "year": 2023, "battery_kwh": 64.8, "wltp_kwh_100km": 16.2 },
+    { "make": "Mercedes-Benz", "model": "EQA", "variant": "250", "year": 2024, "battery_kwh": 66.5, "wltp_kwh_100km": 17.7 },
+    { "make": "MG", "model": "MG4", "variant": "Standard Range", "year": 2024, "battery_kwh": 51.0, "wltp_kwh_100km": 16.0 },
+    { "make": "Nissan", "model": "Leaf", "variant": "40 kWh", "year": 2022, "battery_kwh": 39.0, "wltp_kwh_100km": 17.1 },
+    { "make": "Peugeot", "model": "e-208", "variant": "50 kWh", "year": 2023, "battery_kwh": 46.3, "wltp_kwh_100km": 15.8 },
+    { "make": "Renault", "model": "Megane E-Tech", "variant": "EV60", "year": 2024, "battery_kwh": 60.0, "wltp_kwh_100km": 16.1 },
+    { "make": "Renault", "model": "Zoe", "variant": "R135", "year": 2023, "battery_kwh": 52.0, "wltp_kwh_100km": 17.2 },
+    { "make": "Tesla", "model": "Model 3", "variant": "Long Range RWD", "year": 2024, "battery_kwh": 75.0, "wltp_kwh_100km": 14.0 },
+    { "make": "Tesla", "model": "Model Y", "variant": "Long Range", "year": 2024, "battery_kwh": 75.0, "wltp_kwh_100km": 15.7 },
+    { "make": "Volkswagen", "model": "ID.3", "variant": "Pro", "year": 2024, "battery_kwh": 58.0, "wltp_kwh_100km": 15.0 },
+    { "make": "Volkswagen", "model": "ID.4", "variant": "Pro", "year": 2024, "battery_kwh": 77.0, "wltp_kwh_100km": 17.0 }
+  ]
+}

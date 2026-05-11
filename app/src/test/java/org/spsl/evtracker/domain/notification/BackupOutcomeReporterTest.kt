@@ -42,6 +42,9 @@ private class LinkedSettings(initialFailures: Int = 0) : SettingsReader, Setting
     override val electricityMapsCacheZone: Flow<String> get() = error("unused")
     override val electricityMapsCacheIntensity: Flow<Double> get() = error("unused")
     override val electricityMapsCacheFetchedAtMs: Flow<Long> get() = error("unused")
+    override val evDbLastUpdatedAt: Flow<Long> get() = error("unused")
+    override val evDbVersion: Flow<String> get() = error("unused")
+    override val evDbVehicleCount: Flow<Int> get() = error("unused")
 
     override suspend fun setActiveCarId(id: Long) = error("unused")
     override suspend fun setDriveEnabled(enabled: Boolean) = error("unused")
@@ -75,6 +78,11 @@ private class LinkedSettings(initialFailures: Int = 0) : SettingsReader, Setting
         fetchedAtMs: Long,
     ) = error("unused")
     override suspend fun clearElectricityMapsCache() = error("unused")
+    override suspend fun setEvDbCache(
+        lastUpdatedAtMs: Long,
+        version: String,
+        vehicleCount: Int,
+    ) = error("unused")
 
     val currentFailures: Int get() = failuresFlow.value
 }

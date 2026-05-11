@@ -107,4 +107,25 @@ object PreferenceKeys {
     val ELECTRICITY_MAPS_CACHE_ZONE = stringPreferencesKey("electricityMapsCacheZone")
     val ELECTRICITY_MAPS_CACHE_INTENSITY = doublePreferencesKey("electricityMapsCacheIntensity")
     val ELECTRICITY_MAPS_CACHE_FETCHED_AT_MS = longPreferencesKey("electricityMapsCacheFetchedAtMs")
+
+    /**
+     * Wall-clock epoch-ms when the user last refreshed the EV models
+     * database from the GitHub release asset (TASK-91). Zero (default)
+     * means "still using the bundled fallback".
+     */
+    val EV_DB_LAST_UPDATED_AT = longPreferencesKey("evDbLastUpdatedAt")
+
+    /**
+     * `version` string from the JSON root of the most recently
+     * downloaded EV models database (e.g. `"2026-06-01"`). Empty string =
+     * bundled fallback.
+     */
+    val EV_DB_VERSION = stringPreferencesKey("evDbVersion")
+
+    /**
+     * Vehicle count cached at the time the EV models database was last
+     * refreshed. Lets the summary line render `"Last updated, N vehicles"`
+     * without re-parsing the JSON. Zero = bundled fallback.
+     */
+    val EV_DB_VEHICLE_COUNT = intPreferencesKey("evDbVehicleCount")
 }

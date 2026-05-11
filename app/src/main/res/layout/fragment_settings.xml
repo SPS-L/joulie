@@ -388,6 +388,65 @@
                 android:layout_marginBottom="8dp"
                 android:background="?attr/colorOutlineVariant"/>
 
+            <!-- EV Database section (TASK-91) -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="4dp"
+                android:text="@string/settings_ev_db_header"
+                android:textAppearance="?attr/textAppearanceTitleSmall"/>
+
+            <LinearLayout
+                android:id="@+id/row_ev_db_status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:minHeight="64dp"
+                android:gravity="center_vertical"
+                android:padding="8dp">
+                <TextView
+                    android:id="@+id/summary_ev_db_status"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="?attr/textAppearanceBodyMedium"
+                    tools:text="Using bundled database"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:minHeight="64dp"
+                android:gravity="center_vertical"
+                android:padding="8dp">
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/button_update_ev_db"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="@string/settings_ev_db_update_button"/>
+                <com.google.android.material.progressindicator.CircularProgressIndicator
+                    android:id="@+id/progress_update_ev_db"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:visibility="gone"
+                    android:indeterminate="true"
+                    app:indicatorSize="24dp"
+                    app:trackThickness="3dp"/>
+            </LinearLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="8dp"
+                android:background="?attr/colorOutlineVariant"/>
+
             <!-- Reset section -->
             <LinearLayout
                 android:id="@+id/row_reset_preferences"

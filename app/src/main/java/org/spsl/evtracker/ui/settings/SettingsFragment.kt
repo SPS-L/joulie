@@ -107,6 +107,7 @@ class SettingsFragment : Fragment() {
             findNavController().navigate(R.id.action_settings_to_about)
         }
         binding.rowResetAll.setOnClickListener { showResetAllDialog() }
+        binding.buttonUpdateEvDb.setOnClickListener { viewModel.onUpdateEvDatabase() }
 
         viewLifecycleOwner.lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -270,6 +271,7 @@ class SettingsFragment : Fragment() {
             } else {
                 getString(R.string.settings_manage_locations_summary, state.customLocationCount)
             }
+        renderEvDbRow(state)
 
         val activeName = state.activeCarName
         binding.titleResetActiveCar.text =
@@ -289,6 +291,45 @@ class SettingsFragment : Fragment() {
         binding.rowExportCsvRange.alpha = if (activeCarMissing) 0.5f else 1f
         binding.rowExportCsvRange.isClickable = !activeCarMissing
         binding.rowExportCsvRange.isFocusable = !activeCarMissing
+    }
+
+    /**
+     * Render the Settings → "EV Database" row (TASK-91): summary line,
+     * progress indicator, and Snackbar emission for the one-shot
+     * update outcome. Called from [renderPreferenceRows] on every
+     * state emission.
+     */
+    private fun renderEvDbRow(state: SettingsUiState) {
+        binding.summaryEvDbStatus.text = when {
+            state.evDbLastUpdatedAt > 0L && state.evDbVehicleCount > 0 -> {
+                val dateText = formatLastBackup(state.evDbLastUpdatedAt)
+                getString(
+                    R.string.settings_ev_db_last_updated_summary,
+                    dateText,
+                    state.evDbVehicleCount,
+                )
+            }
+            else -> getString(R.string.settings_ev_db_using_bundled)
+        }
+        val loading = state.evDbState is org.spsl.evtracker.core.model.EvDbUpdateState.Loading
+        binding.buttonUpdateEvDb.isEnabled = !loading
+        binding.progressUpdateEvDb.visibility = if (loading) View.VISIBLE else View.GONE
+
+        when (val s = state.evDbState) {
+            is org.spsl.evtracker.core.model.EvDbUpdateState.Success -> {
+                Snackbar.make(
+                    binding.root,
+                    getString(R.string.settings_ev_db_update_success, s.vehicleCount),
+                    Snackbar.LENGTH_LONG,
+                ).show()
+                viewModel.onEvDbStateConsumed()
+            }
+            is org.spsl.evtracker.core.model.EvDbUpdateState.Failure -> {
+                Snackbar.make(binding.root, s.reasonRes, Snackbar.LENGTH_LONG).show()
+                viewModel.onEvDbStateConsumed()
+            }
+            else -> Unit
+        }
     }
 
     /**

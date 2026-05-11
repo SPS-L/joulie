@@ -337,6 +337,17 @@
     <string name="car_form_model">Μοντέλο</string>
     <string name="car_form_year">Έτος</string>
     <string name="car_form_battery_kwh">Μπαταρία (kWh)</string>
+    <!-- TASK-91 αυτόματη συμπλήρωση μοντέλου ΗΟ -->
+    <string name="car_form_make_helper">Πληκτρολογήστε για αναζήτηση στη βάση δεδομένων</string>
+    <string name="car_form_model_helper">Επιλέξτε μοντέλο για αυτόματη συμπλήρωση μπαταρίας</string>
+    <string name="settings_ev_db_header">Βάση δεδομένων ΗΟ</string>
+    <string name="settings_ev_db_using_bundled">Χρήση ενσωματωμένης βάσης</string>
+    <string name="settings_ev_db_last_updated_summary">Τελευταία ενημέρωση %1$s, %2$d οχήματα</string>
+    <string name="settings_ev_db_update_button">Ενημέρωση βάσης ΗΟ</string>
+    <string name="settings_ev_db_update_success">Η βάση ενημερώθηκε, %1$d οχήματα</string>
+    <string name="settings_ev_db_error_network">Δεν υπάρχει σύνδεση στο διαδίκτυο</string>
+    <string name="settings_ev_db_error_parse">Η ενημέρωση απέτυχε, μη έγκυρα δεδομένα</string>
+    <string name="settings_ev_db_error_validation">Η ενημέρωση απέτυχε, πολύ λίγα οχήματα στο φορτίο</string>
 
     <!-- Charts -->
     <string name="charts_title">Γραφήματα</string>

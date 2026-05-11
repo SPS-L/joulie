@@ -337,6 +337,17 @@
     <string name="car_form_model">Model</string>
     <string name="car_form_year">Yıl</string>
     <string name="car_form_battery_kwh">Pil (kWh)</string>
+    <!-- TASK-91 EV model otomatik tamamlama -->
+    <string name="car_form_make_helper">EV veritabanında aramak için yazın</string>
+    <string name="car_form_model_helper">Pil değerini otomatik doldurmak için bir model seçin</string>
+    <string name="settings_ev_db_header">EV Veritabanı</string>
+    <string name="settings_ev_db_using_bundled">Yerleşik veritabanı kullanılıyor</string>
+    <string name="settings_ev_db_last_updated_summary">Son güncelleme %1$s, %2$d araç</string>
+    <string name="settings_ev_db_update_button">EV veritabanını güncelle</string>
+    <string name="settings_ev_db_update_success">Veritabanı güncellendi, %1$d araç</string>
+    <string name="settings_ev_db_error_network">İnternet bağlantısı yok</string>
+    <string name="settings_ev_db_error_parse">Güncelleme başarısız, geçersiz veri</string>
+    <string name="settings_ev_db_error_validation">Güncelleme başarısız, içerikte çok az araç</string>
 
     <!-- Charts -->
     <string name="charts_title">Grafikler</string>

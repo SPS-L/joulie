@@ -23,9 +23,10 @@ import org.spsl.evtracker.core.model.CarsEvent
 import org.spsl.evtracker.data.local.entity.CarEntity
 import org.spsl.evtracker.domain.usecase.AddCarUseCase
 import org.spsl.evtracker.domain.usecase.DeleteCarUseCase
-import org.spsl.evtracker.domain.usecase.RenameCarUseCase
+import org.spsl.evtracker.domain.usecase.UpdateCarUseCase
 import org.spsl.evtracker.testing.FakeBackupScheduler
 import org.spsl.evtracker.testing.FakeCarRepository
+import org.spsl.evtracker.testing.FakeEvModelReader
 import org.spsl.evtracker.testing.FakeNowProvider
 import org.spsl.evtracker.testing.FakeSettingsReader
 import org.spsl.evtracker.testing.FakeSettingsWriter
@@ -51,9 +52,10 @@ class CarsViewModelTest {
         val scheduler = FakeBackupScheduler()
         val widgetRefresher = org.spsl.evtracker.testing.FakeWidgetRefresher()
         val add = AddCarUseCase(repo, reader, writer, scheduler, widgetRefresher, FakeNowProvider())
-        val rename = RenameCarUseCase(repo, scheduler, widgetRefresher)
+        val update = UpdateCarUseCase(repo, repo, scheduler, widgetRefresher)
         val delete = DeleteCarUseCase(repo, repo, reader, writer, scheduler, widgetRefresher)
-        val vm = CarsViewModel(repo, reader, writer, add, rename, delete)
+        val evModels = FakeEvModelReader()
+        val vm = CarsViewModel(repo, reader, writer, add, update, delete, evModels)
         return VmFixture(vm, repo, writer, scheduler)
     }
 

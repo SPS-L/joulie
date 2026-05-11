@@ -339,6 +339,17 @@
     <string name="car_form_model">Модель</string>
     <string name="car_form_year">Год</string>
     <string name="car_form_battery_kwh">Батарея (kWh)</string>
+    <!-- TASK-91 автозаполнение модели электромобиля -->
+    <string name="car_form_make_helper">Введите запрос для поиска по базе</string>
+    <string name="car_form_model_helper">Выберите модель для автозаполнения батареи</string>
+    <string name="settings_ev_db_header">База данных ЭА</string>
+    <string name="settings_ev_db_using_bundled">Используется встроенная база</string>
+    <string name="settings_ev_db_last_updated_summary">Обновлено %1$s, %2$d автомобилей</string>
+    <string name="settings_ev_db_update_button">Обновить базу ЭА</string>
+    <string name="settings_ev_db_update_success">База обновлена, %1$d автомобилей</string>
+    <string name="settings_ev_db_error_network">Нет подключения к интернету</string>
+    <string name="settings_ev_db_error_parse">Обновление не удалось, некорректные данные</string>
+    <string name="settings_ev_db_error_validation">Обновление не удалось, слишком мало автомобилей в данных</string>
 
     <!-- Charts -->
     <string name="charts_title">Графики</string>
