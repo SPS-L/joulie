@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
@@ -18,32 +19,47 @@
             android:inputType="textCapWords"/>
     </com.google.android.material.textfield.TextInputLayout>
 
+    <!-- Make + Model use plain AutoCompleteTextView (not Material's
+         MaterialAutoCompleteTextView) because the popup rendered
+         unreliably for users inside a MaterialAlertDialog with
+         Material's variant: the popup window was created but never
+         appeared visibly (TASK-91 v1.13.3 fix). AutoCompleteTextView
+         is the standard Android widget and shows the popup
+         correctly inside any dialog. We lose the M3 "dropdown arrow"
+         end icon (an ExposedDropdownMenu affordance), but
+         CarEditDialog.kt installs explicit OnClickListener +
+         OnFocusChangeListener handlers that call showDropDown(),
+         so tapping the field still opens the list. -->
     <com.google.android.material.textfield.TextInputLayout
-        style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="@string/car_form_make"
         app:helperText="@string/car_form_make_helper">
-        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+        <AutoCompleteTextView
             android:id="@+id/car_dialog_make"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:inputType="textCapWords"
-            android:completionThreshold="1"/>
+            android:completionThreshold="1"
+            android:imeOptions="actionNext"
+            tools:ignore="LabelFor"/>
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout
-        style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="@string/car_form_model"
         app:helperText="@string/car_form_model_helper">
-        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+        <AutoCompleteTextView
             android:id="@+id/car_dialog_model"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:inputType="textCapWords"
-            android:completionThreshold="1"/>
+            android:completionThreshold="1"
+            android:imeOptions="actionNext"
+            tools:ignore="LabelFor"/>
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout
