@@ -237,6 +237,7 @@
     <string name="carbon_intensity_updated_ago">Обновлено %1$s</string>
     <string name="carbon_intensity_a11y_description">Углеродная интенсивность %1$s граммов CO₂ на киловатт-час, %2$s, обновлено %3$s. Нажмите для обновления.</string>
     <string name="carbon_intensity_a11y_loading">Загрузка углеродной интенсивности сети.</string>
+    <string name="charts_co2_current_intensity_banner">Сейчас: %1$s гCO₂экв/кВт·ч · %2$s</string>
     <string name="carbon_intensity_error_auth">Ключ API отклонён. Зона может не совпадать с вашим ключом.</string>
     <string name="carbon_intensity_error_network">Нет соединения с интернетом</string>
     <string name="carbon_intensity_error_rate_limited">Лимит запросов исчерпан. Попробуйте через час.</string>

@@ -169,6 +169,7 @@
     <string name="carbon_bucket_high">High</string>
     <string name="carbon_bucket_very_high">Very high</string>
     <string name="carbon_intensity_value" translatable="false">%1$s gCO₂eq/kWh</string>
+    <string name="charts_co2_current_intensity_banner">Right now: %1$s gCO₂eq/kWh · %2$s</string>
     <string name="carbon_intensity_fetching">Fetching live grid data…</string>
     <string name="carbon_intensity_tap_to_retry">Tap to retry</string>
     <string name="carbon_intensity_updated_ago">Updated %1$s</string>

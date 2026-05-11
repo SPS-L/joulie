@@ -237,6 +237,7 @@
     <string name="carbon_intensity_updated_ago">Ενημερώθηκε %1$s</string>
     <string name="carbon_intensity_a11y_description">Ένταση άνθρακα %1$s γραμμάρια CO₂ ανά κιλοβατώρα, %2$s, ενημερώθηκε %3$s. Πατήστε για ανανέωση.</string>
     <string name="carbon_intensity_a11y_loading">Λήψη έντασης άνθρακα του δικτύου.</string>
+    <string name="charts_co2_current_intensity_banner">Αυτή τη στιγμή: %1$s gCO₂eq/kWh · %2$s</string>
     <string name="carbon_intensity_error_auth">Το κλειδί API απορρίφθηκε. Η ζώνη μπορεί να μην ταιριάζει με το κλειδί σας.</string>
     <string name="carbon_intensity_error_network">Δεν υπάρχει σύνδεση στο διαδίκτυο</string>
     <string name="carbon_intensity_error_rate_limited">Το όριο αιτημάτων εξαντλήθηκε. Δοκιμάστε σε μία ώρα.</string>
