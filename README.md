@@ -42,9 +42,11 @@ Joulie is a clean, no-nonsense Android app for electric vehicle drivers who want
 
 - Multi-car support with a top-bar switcher
 - Home-screen widget showing your last charge at a glance
+- kWh-from-SoC calculator for chargers that show only state-of-charge percentages
 - Optional Google Drive backup (opt-in, stored in your private App Data folder only)
 - CSV export via the standard Android share sheet
 - Material 3 theming with light, dark, and system modes
+- Themed icons on Android 13+; the bolt-J adopts your wallpaper accent
 - Available in English, Greek, Turkish, and Russian
 
 **Privacy by design.** No analytics, no telemetry, no crash reporting. Your charge data stays on your device unless you explicitly enable Drive backup.
@@ -66,6 +68,7 @@ You can also open the APK on the device after enabling **Install from unknown so
 - The app does not collect analytics, telemetry, or crash reports.
 - All charge data is stored locally in the app's private Room database.
 - Google Drive backup is **opt-in**. When enabled, a JSON snapshot is written to the app's private **App Data folder** on your Drive, hidden from the Drive UI and accessible only to this app's signing certificate. The scope is `https://www.googleapis.com/auth/drive.appdata`, the app cannot read or modify any other files on your Drive.
+- The Electricity Maps grid-intensity feed is also **opt-in**. When enabled, the only payload sent off-device is `(zone_code, api_key)`, for example `"CY"` plus the personal API token you typed in. No charge data, no location, no personally-identifiable information. Calls are throttled to one request per zone per hour and the result is cached locally.
 - CSV export writes to the app's external-files directory and is shared only via the Android share sheet at your request.
 
 Full policy: [`PRIVACY.md`](PRIVACY.md), or live at [sps-l.github.io/joulie/privacy](https://sps-l.github.io/joulie/privacy).
