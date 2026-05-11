@@ -7,10 +7,10 @@ package org.spsl.evtracker.ui.cars
 import android.content.Context
 import android.view.LayoutInflater
 import android.widget.ArrayAdapter
-import android.widget.AutoCompleteTextView
 import androidx.lifecycle.LifecycleCoroutineScope
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.textfield.MaterialAutoCompleteTextView
 import kotlinx.coroutines.launch
 import org.spsl.evtracker.R
 import org.spsl.evtracker.core.model.CarFormState
@@ -21,23 +21,33 @@ import org.spsl.evtracker.databinding.DialogEditCarBinding
 /**
  * Add / Edit Car form (TASK-91).
  *
- * Hosted in a `BottomSheetDialog` (v1.13.4 fix). Earlier iterations
- * used `MaterialAlertDialog`, but the AutoCompleteTextView popup
- * window does not render reliably inside MaterialAlertDialog on real
- * devices — neither Material's `MaterialAutoCompleteTextView`
- * (v1.13.0–v1.13.2) nor the stock `android.widget.AutoCompleteTextView`
- * (v1.13.3) showed the dropdown despite the adapter holding the full
- * 1,189-row dataset. BottomSheetDialog uses a different window layer
- * where popups render correctly.
+ * Layout: [MaterialAutoCompleteTextView] inside `TextInputLayout` with
+ * the `Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu`
+ * style — the canonical Material 3 autocomplete pattern, same as the
+ * working wizard currency picker (`fragment_wizard_page3.xml`).
  *
- * The Make and Model fields are stock `AutoCompleteTextView` instances
- * backed by a plain [ArrayAdapter] (default prefix-match `ArrayFilter`).
- * Tapping a field calls `showDropDown()` via the explicit
- * OnFocusChangeListener / OnClickListener wired below; typing filters
- * by prefix. Picking a model auto-fills the battery field and stashes
- * the WLTP figure onto [CarFormState] so the Add / Update use case
- * persists it. All fields remain manually editable — the autocomplete
- * is a convenience, not a lock.
+ * Host: [BottomSheetDialog] (v1.13.4 layer change kept). The popup
+ * window does not render reliably inside `MaterialAlertDialog` on real
+ * devices.
+ *
+ * Fix history:
+ *   - v1.13.0–v1.13.2: Material widget in `MaterialAlertDialog` →
+ *     popup clipped by the alert-dialog window layer.
+ *   - v1.13.3–v1.13.4: switched to plain `android.widget.AutoCompleteTextView`
+ *     to avoid Material's popup heuristics, then moved the host to
+ *     `BottomSheetDialog`. The popup still did not appear because
+ *     `TextInputLayout`'s box / floating-label integration is only
+ *     defined for `TextInputEditText` and `MaterialAutoCompleteTextView`
+ *     — a plain `AutoCompleteTextView` child made the label position
+ *     and popup anchor unreliable.
+ *   - v1.13.5 (this revision): the canonical Material pattern inside
+ *     `BottomSheetDialog`. This combination was not tried in any
+ *     earlier attempt.
+ *
+ * Adapter: plain [ArrayAdapter] (default prefix-match `ArrayFilter`),
+ * which is the supported interop point with `MaterialAutoCompleteTextView`.
+ * The custom substring `Filter` used in v1.13.0 interacted badly with
+ * Material's internal popup-show heuristic (see v1.13.2 commit).
  *
  * Display format for the model dropdown: `"$model · $variant"` if the
  * variant is non-blank (Brand Guide §1 voice rule — no em-dash). The
@@ -198,20 +208,18 @@ object CarEditDialog {
         if (variant.isBlank()) model else "$model · $variant"
 
     /**
-     * Wire a freeform autocomplete on a plain [AutoCompleteTextView].
+     * Wire a freeform autocomplete on a [MaterialAutoCompleteTextView].
      *
-     * Installs:
-     *   - A stock [ArrayAdapter] with default prefix-match `ArrayFilter`
-     *     so typing filters the dropdown by the typed prefix.
-     *   - An [AutoCompleteTextView.setOnFocusChangeListener] that
-     *     defers `showDropDown()` to the next frame (`view.post {…}`),
-     *     so the view is fully attached + windowToken'd by the time
-     *     the popup window is requested.
-     *   - An [AutoCompleteTextView.setOnClickListener] that does the
-     *     same, covering the case where the field already has focus
-     *     and a tap is expected to re-open the popup.
+     * Installs a plain [ArrayAdapter] with the default prefix-match
+     * `ArrayFilter` so typing filters the dropdown by the typed prefix.
+     *
+     * Tap-to-show is handled natively by the `ExposedDropdownMenu`
+     * style's trailing arrow icon — no explicit `OnClickListener` /
+     * `OnFocusChangeListener` workaround is needed (and earlier
+     * workarounds were the symptom-fix half of the v1.13.3 bug, not
+     * the root cause).
      */
-    private fun AutoCompleteTextView.bindAutocomplete(
+    private fun MaterialAutoCompleteTextView.bindAutocomplete(
         context: Context,
         items: List<String>,
     ) {
@@ -222,11 +230,5 @@ object CarEditDialog {
                 items,
             ),
         )
-        setOnFocusChangeListener { view, hasFocus ->
-            if (hasFocus) view.post { showDropDown() }
-        }
-        setOnClickListener { view ->
-            view.post { showDropDown() }
-        }
     }
 }
