@@ -28,6 +28,7 @@ import org.spsl.evtracker.core.model.DashboardScreenState
 import org.spsl.evtracker.core.model.DashboardUiState
 import org.spsl.evtracker.data.local.entity.CarEntity
 import org.spsl.evtracker.domain.repository.CarReader
+import org.spsl.evtracker.domain.repository.CarbonIntensitySource
 import org.spsl.evtracker.domain.repository.SettingsReader
 import org.spsl.evtracker.domain.repository.SettingsWriter
 import org.spsl.evtracker.domain.service.CarbonIntensityFormatter
@@ -45,6 +46,7 @@ class DashboardViewModel @Inject constructor(
     private val settingsWriter: SettingsWriter,
     private val refreshCarbonIntensity: RefreshCarbonIntensityUseCase,
     private val carbonIntensityFormatter: CarbonIntensityFormatter,
+    private val carbonIntensitySource: CarbonIntensitySource,
     private val now: NowProvider,
 ) : ViewModel() {
 
@@ -158,7 +160,7 @@ class DashboardViewModel @Inject constructor(
     }
 
     val carbonIntensity: StateFlow<CarbonIntensityUiState> =
-        combine(carbonInputs, isRefreshingCarbon) { inputs, refreshing ->
+        combine(carbonInputs, isRefreshingCarbon, carbonIntensitySource.lastError) { inputs, refreshing, lastError ->
             carbonIntensityFormatter.format(
                 co2Enabled = inputs.co2Enabled,
                 apiKey = inputs.apiKey,
@@ -168,6 +170,7 @@ class DashboardViewModel @Inject constructor(
                 cacheFetchedAtMs = inputs.cacheFetchedAtMs,
                 nowMs = now.nowMillis(),
                 isRefreshing = refreshing,
+                lastError = lastError,
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CarbonIntensityUiState.Hidden)
 

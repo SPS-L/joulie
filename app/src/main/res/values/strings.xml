@@ -174,7 +174,24 @@
     <string name="carbon_intensity_updated_ago">Updated %1$s ago</string>
     <string name="carbon_intensity_a11y_description">Carbon intensity %1$s grams CO₂ per kilowatt-hour, %2$s, updated %3$s ago. Tap to refresh.</string>
     <string name="carbon_intensity_a11y_loading">Fetching grid carbon intensity.</string>
-    <string name="carbon_intensity_a11y_error">Grid carbon intensity unavailable. Tap to retry.</string>
+    <string name="carbon_intensity_error_auth">API key rejected. Zone may not match your key.</string>
+    <string name="carbon_intensity_error_network">No internet connection</string>
+    <string name="carbon_intensity_error_rate_limited">Rate limit reached. Try again in an hour.</string>
+    <string name="carbon_intensity_error_server">Electricity Maps unreachable</string>
+    <string name="carbon_intensity_error_unknown">Couldn\'t fetch grid data</string>
+    <string name="carbon_intensity_a11y_error_auth">API key rejected, zone may not match your key. Tap to retry.</string>
+    <string name="carbon_intensity_a11y_error_network">No internet connection. Tap to retry.</string>
+    <string name="carbon_intensity_a11y_error_rate_limited">Rate limit reached, try again in an hour. Tap to retry.</string>
+    <string name="carbon_intensity_a11y_error_server">Electricity Maps unreachable. Tap to retry.</string>
+    <string name="carbon_intensity_a11y_error_unknown">Could not fetch grid data. Tap to retry.</string>
+    <string name="settings_co2_api_key_test">Test</string>
+    <string name="settings_co2_api_key_test_in_progress">Testing…</string>
+    <string name="settings_co2_api_key_test_success">Key works. %1$s, %2$s gCO₂eq/kWh.</string>
+    <string name="settings_co2_api_key_test_auth">Rejected. Zone may not match your key.</string>
+    <string name="settings_co2_api_key_test_network">No internet connection.</string>
+    <string name="settings_co2_api_key_test_rate_limited">Rate limit reached. Try again in an hour.</string>
+    <string name="settings_co2_api_key_test_server">Electricity Maps unreachable.</string>
+    <string name="settings_co2_api_key_test_empty">Enter a key first.</string>
     <string name="history_event_co2_line" translatable="false">⚡ %1$s kg CO₂  ·  %2$s g/kWh</string>
     <string name="settings_co2_enable_toggle">Enable CO₂ tracking</string>
     <string name="settings_co2_enable_helper">Off by default. When off, CO₂ stats and charts are hidden and no network calls are made.</string>

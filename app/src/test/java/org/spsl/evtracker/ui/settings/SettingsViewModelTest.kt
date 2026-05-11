@@ -111,6 +111,7 @@ class SettingsViewModelTest {
             resetActive, resetAll, exportCsv,
             pushBackupNow, wipeRemoteBackup,
             localeApplier,
+            org.spsl.evtracker.testing.FakeCarbonIntensitySource(),
         )
         return Setup(
             vm, reader, writer, backupRepo, scheduler, workManager,

@@ -11,6 +11,7 @@ import org.junit.Test
 import org.spsl.evtracker.core.model.ChargeType
 import org.spsl.evtracker.core.model.SaveChargeEventInput
 import org.spsl.evtracker.core.model.SaveChargeEventResult
+import org.spsl.evtracker.domain.repository.intensityOrNull
 import org.spsl.evtracker.testing.FakeCarbonIntensitySource
 import org.spsl.evtracker.testing.FakeSaveChargeEventGateway
 
@@ -117,11 +118,11 @@ class SaveChargeEventCo2Test {
 
     @Test
     fun fakeCarbonIntensitySource_passesThroughAndCounts() = runTest {
-        val src = FakeCarbonIntensitySource(nextValue = 250.0)
+        val src = FakeCarbonIntensitySource().apply { nextValue = 250.0 }
         val first = src.fetchCarbonIntensity("CY", "k")
         val second = src.fetchCarbonIntensity("DE", "k2")
-        assertEquals(250.0, first!!, 0.0)
-        assertEquals(250.0, second!!, 0.0)
+        assertEquals(250.0, first.intensityOrNull!!, 0.0)
+        assertEquals(250.0, second.intensityOrNull!!, 0.0)
         assertEquals(2, src.callCount)
         assertEquals("DE", src.lastZone)
         assertEquals("k2", src.lastApiKey)

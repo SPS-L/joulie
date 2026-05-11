@@ -5,18 +5,22 @@
 package org.spsl.evtracker.domain.service
 
 import org.spsl.evtracker.core.model.CarbonIntensityBucket
+import org.spsl.evtracker.core.model.CarbonIntensityErrorReason
 import org.spsl.evtracker.core.model.CarbonIntensityUiState
 import org.spsl.evtracker.data.repository.ElectricityMapsRepository
+import org.spsl.evtracker.domain.repository.FetchOutcome
 import javax.inject.Inject
 
 /**
  * Pure-domain mapper from the persistent Electricity Maps cache + the
- * live Settings flags to a [CarbonIntensityUiState] (TASK-82).
+ * live Settings flags + the latest fetch outcome to a
+ * [CarbonIntensityUiState] (TASK-82 / TASK-90).
  *
  * Inputs come from `SettingsReader` flows (cache zone / intensity /
- * fetchedAtMs, the user-configurable zone + apiKey + co2Enabled), plus
- * a `now` clock and the ViewModel's `isRefreshing` flag. Output is one
- * of the four sealed states defined on [CarbonIntensityUiState].
+ * fetchedAtMs, the user-configurable zone + apiKey + co2Enabled), the
+ * ViewModel's `isRefreshing` flag, a `now` clock, and the repo's
+ * `lastError` StateFlow. Output is one of the four sealed states
+ * defined on [CarbonIntensityUiState].
  *
  * No Android types touched — JVM-testable with one row per transition.
  */
@@ -31,6 +35,7 @@ class CarbonIntensityFormatter @Inject constructor() {
         cacheFetchedAtMs: Long,
         nowMs: Long,
         isRefreshing: Boolean,
+        lastError: FetchOutcome?,
     ): CarbonIntensityUiState {
         if (!co2Enabled) return CarbonIntensityUiState.Hidden
         if (apiKey.isBlank()) return CarbonIntensityUiState.Hidden
@@ -48,6 +53,19 @@ class CarbonIntensityFormatter @Inject constructor() {
             )
         }
         if (isRefreshing) return CarbonIntensityUiState.Loading
-        return CarbonIntensityUiState.Error
+        return CarbonIntensityUiState.Error(lastError.toReason())
+    }
+
+    private fun FetchOutcome?.toReason(): CarbonIntensityErrorReason = when (this) {
+        FetchOutcome.AuthError -> CarbonIntensityErrorReason.AUTH
+        FetchOutcome.NetworkError -> CarbonIntensityErrorReason.NETWORK
+        FetchOutcome.RateLimited -> CarbonIntensityErrorReason.RATE_LIMITED
+        FetchOutcome.ServerError -> CarbonIntensityErrorReason.SERVER
+        // Disabled / Success / null — Disabled is handled upstream by the
+        // !co2Enabled || apiKey.isBlank() gate; Success shouldn't be stored
+        // as `lastError`; null means we haven't seen a failure yet but the
+        // cache is also stale (e.g. first boot before fetch returned). Map
+        // all three to UNKNOWN so the pill still surfaces something.
+        else -> CarbonIntensityErrorReason.UNKNOWN
     }
 }

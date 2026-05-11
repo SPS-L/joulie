@@ -29,6 +29,8 @@ import org.spsl.evtracker.domain.backup.BackupScheduler
 import org.spsl.evtracker.domain.backup.DriveAuthRequiredException
 import org.spsl.evtracker.domain.locale.LocaleApplier
 import org.spsl.evtracker.domain.repository.CarReader
+import org.spsl.evtracker.domain.repository.CarbonIntensitySource
+import org.spsl.evtracker.domain.repository.FetchOutcome
 import org.spsl.evtracker.domain.repository.LocationReader
 import org.spsl.evtracker.domain.repository.SettingsReader
 import org.spsl.evtracker.domain.repository.SettingsWriter
@@ -61,6 +63,7 @@ class SettingsViewModel @Inject constructor(
     private val pushBackupNowUseCase: PushBackupNowUseCase,
     private val wipeRemoteBackupUseCase: WipeRemoteBackupUseCase,
     private val localeApplier: LocaleApplier,
+    private val carbonIntensitySource: CarbonIntensitySource,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -363,6 +366,61 @@ class SettingsViewModel @Inject constructor(
     fun onElectricityMapsApiKeySet(value: String) {
         viewModelScope.launch { settingsWriter.setElectricityMapsApiKey(value.trim()) }
     }
+
+    @Volatile private var apiKeyTestInFlight = false
+
+    /**
+     * TASK-90: probe the [candidateKey] against the user's currently-selected
+     * Electricity Maps zone WITHOUT writing it to Settings. Lets the
+     * dialog's "Test" button validate a key (or a key+zone pair) before
+     * the user saves it. The result is emitted as an [SettingsEvent] so
+     * the Fragment can update the inline status text inside the dialog.
+     */
+    fun onTestElectricityMapsApiKey(candidateKey: String) {
+        if (apiKeyTestInFlight) return
+        val trimmed = candidateKey.trim()
+        if (trimmed.isBlank()) {
+            _events.tryEmit(
+                SettingsEvent.ApiKeyTestFinished(R.string.settings_co2_api_key_test_empty),
+            )
+            return
+        }
+        apiKeyTestInFlight = true
+        _events.tryEmit(SettingsEvent.ApiKeyTestStarted)
+        viewModelScope.launch {
+            try {
+                val zone = settingsReader.electricityMapsZone.first()
+                val outcome = carbonIntensitySource.probeApiKey(zone, trimmed)
+                _events.tryEmit(outcome.toApiKeyTestEvent(zone))
+            } finally {
+                apiKeyTestInFlight = false
+            }
+        }
+    }
+
+    private fun FetchOutcome.toApiKeyTestEvent(zone: String): SettingsEvent.ApiKeyTestFinished =
+        when (this) {
+            is FetchOutcome.Success -> SettingsEvent.ApiKeyTestFinished(
+                resultStringRes = R.string.settings_co2_api_key_test_success,
+                zone = zone,
+                intensity = intensityGCo2PerKwh,
+            )
+            FetchOutcome.AuthError -> SettingsEvent.ApiKeyTestFinished(
+                resultStringRes = R.string.settings_co2_api_key_test_auth,
+            )
+            FetchOutcome.NetworkError -> SettingsEvent.ApiKeyTestFinished(
+                resultStringRes = R.string.settings_co2_api_key_test_network,
+            )
+            FetchOutcome.RateLimited -> SettingsEvent.ApiKeyTestFinished(
+                resultStringRes = R.string.settings_co2_api_key_test_rate_limited,
+            )
+            FetchOutcome.ServerError -> SettingsEvent.ApiKeyTestFinished(
+                resultStringRes = R.string.settings_co2_api_key_test_server,
+            )
+            FetchOutcome.Disabled -> SettingsEvent.ApiKeyTestFinished(
+                resultStringRes = R.string.settings_co2_api_key_test_empty,
+            )
+        }
 
     /**
      * Persist the Electricity Maps grid-zone code. Always upper-cased

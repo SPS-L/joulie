@@ -6,9 +6,9 @@ package org.spsl.evtracker.domain.usecase
 
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.spsl.evtracker.domain.repository.FetchOutcome
 import org.spsl.evtracker.testing.FakeCarbonIntensitySource
 import org.spsl.evtracker.testing.FakeSettingsReader
 
@@ -23,44 +23,58 @@ class RefreshCarbonIntensityUseCaseTest {
     }
 
     @Test
-    fun co2Disabled_returnsFalse_doesNotFetch() = runTest {
+    fun co2Disabled_returnsDisabled_doesNotFetch() = runTest {
         val (useCase, _, source) = build()
-        // Default FakeSettingsReader: co2EnabledInit = false.
         val result = useCase()
-        assertFalse(result)
+        assertEquals(FetchOutcome.Disabled, result)
         assertEquals(0, source.callCount)
     }
 
     @Test
-    fun apiKeyBlank_returnsFalse_doesNotFetch() = runTest {
+    fun apiKeyBlank_returnsDisabled_doesNotFetch() = runTest {
         val (useCase, reader, source) = build()
         reader.setCo2Enabled(true)
         reader.setElectricityMapsApiKey("")
         val result = useCase()
-        assertFalse(result)
+        assertEquals(FetchOutcome.Disabled, result)
         assertEquals(0, source.callCount)
     }
 
     @Test
-    fun co2OnAndKeySet_andFetchReturnsValue_returnsTrue() = runTest {
-        val (useCase, reader, source) = build(source = FakeCarbonIntensitySource(nextValue = 412.0))
+    fun co2OnAndKeySet_andFetchReturnsValue_returnsSuccess() = runTest {
+        val (useCase, reader, source) = build(source = FakeCarbonIntensitySource().apply { nextValue = 412.0 })
         reader.setCo2Enabled(true)
         reader.setElectricityMapsApiKey("k")
         reader.setElectricityMapsZone("CY")
         val result = useCase()
-        assertTrue(result)
+        assertTrue(result is FetchOutcome.Success)
+        assertEquals(412.0, (result as FetchOutcome.Success).intensityGCo2PerKwh, 0.0)
         assertEquals(1, source.callCount)
         assertEquals("CY", source.lastZone)
         assertEquals("k", source.lastApiKey)
     }
 
     @Test
-    fun co2OnAndKeySet_andFetchReturnsNull_returnsFalse() = runTest {
-        val (useCase, reader, source) = build(source = FakeCarbonIntensitySource(nextValue = null))
+    fun co2OnAndKeySet_andFetchReturnsAuthError_propagates() = runTest {
+        val (useCase, reader, source) = build(
+            source = FakeCarbonIntensitySource(initialOutcome = FetchOutcome.AuthError),
+        )
         reader.setCo2Enabled(true)
         reader.setElectricityMapsApiKey("k")
         val result = useCase()
-        assertFalse(result)
+        assertEquals(FetchOutcome.AuthError, result)
         assertEquals("fetch was called", 1, source.callCount)
+    }
+
+    @Test
+    fun co2OnAndKeySet_andFetchReturnsNetworkError_propagates() = runTest {
+        val (useCase, reader, source) = build(
+            source = FakeCarbonIntensitySource(initialOutcome = FetchOutcome.NetworkError),
+        )
+        reader.setCo2Enabled(true)
+        reader.setElectricityMapsApiKey("k")
+        val result = useCase()
+        assertEquals(FetchOutcome.NetworkError, result)
+        assertEquals(1, source.callCount)
     }
 }
