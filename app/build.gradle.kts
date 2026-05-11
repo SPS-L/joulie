@@ -8,6 +8,12 @@ plugins {
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.ktlint)
     alias(libs.plugins.roborazzi)
+    // TASK-21: consumer side of the Android Baseline Profile pipeline. The
+    // plugin reads the generated `baseline-prof.txt` (committed under
+    // src/main/) at release-build time and bundles it as the AOT-compile
+    // hint for ART. The producer plugin lives on the sibling :baselineprofile
+    // module, which generates the txt via macro-benchmark.
+    alias(libs.plugins.androidx.baselineprofile)
 }
 
 val keystorePropertiesFile = rootProject.file("keystore.properties")
@@ -23,8 +29,8 @@ android {
         applicationId = "org.spsl.evtracker"
         minSdk = 26
         targetSdk = 35
-        versionCode = 66
-        versionName = "1.12.5"
+        versionCode = 67
+        versionName = "1.12.6"
         testInstrumentationRunner = "org.spsl.evtracker.HiltTestRunner"
     }
 
@@ -139,6 +145,18 @@ ksp {
     arg("room.incremental", "true")
 }
 
+// TASK-21: consumer-side configuration for the Android Baseline Profile.
+// The plugin's `automaticGenerationDuringBuild` flag would regenerate the
+// profile on every release `assemble`, which would dominate CI wall-clock
+// and produce a constantly-shifting `baseline-prof.txt` diff. We refresh
+// it manually on a cadence (see "Baseline profile cadence" in
+// `../CLAUDE.md`) and commit the resulting file so release builds are
+// reproducible.
+baselineProfile {
+    automaticGenerationDuringBuild = false
+    saveInSrc = true
+}
+
 // TASK-35: keep Roborazzi baselines under src/test/screenshots/ so they
 // live next to the test code that produces them and reviewers see the
 // PNG diff in the same PR review surface as the test changes.
@@ -173,6 +191,16 @@ dependencies {
     ksp(libs.androidx.hilt.compiler)
     implementation(libs.androidx.hilt.navigation.fragment)
     implementation(libs.androidx.core.splashscreen)
+    // TASK-21: ART reads the bundled Baseline Profile via ProfileInstaller at
+    // first launch (or when WorkManager runs ProfileInstallerInitializer on
+    // background). Without this dep the committed `baseline-prof.txt` ships
+    // but is never compiled into machine code at install time.
+    implementation(libs.androidx.profileinstaller)
+
+    // TASK-21: consumer wiring. The androidx.baselineprofile plugin pulls
+    // the generated profile out of the :baselineprofile module's build
+    // outputs and merges it into the release APK at assemble time.
+    baselineProfile(project(":baselineprofile"))
 
     testImplementation(libs.junit)
     testImplementation(libs.mockito.core)

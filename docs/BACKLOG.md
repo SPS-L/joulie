@@ -28,7 +28,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-18 | 🟡 | Accessibility (a11y) pass, TalkBack, contentDescription, contrast, touch targets — **PR 1 lock-in** done; PR 2 cleanup + 3 follow-ups filed below (TASK-75/76/77/78) |  | ☑ |
 | TASK-19 | 🟡 | Backup failure notification channel + Android 13+ `POST_NOTIFICATIONS` handling |  | ☑ |
 | TASK-20 | 🟢 | CO₂ savings tracker (ICE baseline, Cyprus grid intensity, methodology doc) |  | ☑ |
-| TASK-21 | 🟢 | Android Baseline Profile module for cold-start performance |  | ☐ |
+| TASK-21 | 🟢 | Android Baseline Profile module for cold-start performance | 1.12.6 | ☑ |
 | TASK-22 | 🔴 | Upgrade `targetSdk` and `compileSdk` to API 35 | TASK-16 | ☑ |
 | TASK-23 | 🔴 | Move startup `isLoading` state into `MainViewModel` |  | ☑ |
 | TASK-24 | 🔴 | Enforce ViewModel/Activity consumption of the existing narrow domain interfaces (no concrete `data.repository.*` imports outside `di/`) | TASK-23 | ☑ |
@@ -1453,7 +1453,34 @@ default makes the result locally meaningful.
 
 ---
 
-## 🟢 TASK-21, Android Baseline Profile for cold-start performance
+## 🟢 TASK-21, Android Baseline Profile for cold-start performance ☑ Done (2026-05-11)
+
+> **Outcome:** New `:baselineprofile` Gradle module (sibling of `:app`)
+> applying `com.android.test` + `androidx.baselineprofile` 1.3.4 drives a
+> macro-benchmark over `:app`'s auto-created `nonMinifiedRelease` variant
+> via UIAutomator. `BaselineProfileGenerator` walks the four hot cold-
+> startup journeys called out in the original task body: `pm clear` →
+> cold start → wizard (4 pages + accept switch) → dashboard → FAB tap →
+> bottom-nav Charts. `StartupBenchmark` is a parameterized benchmark
+> measuring `StartupTimingMetric` cold-start under `CompilationMode.None()`
+> vs `CompilationMode.Partial(BaselineProfileMode.Require)` so the
+> profile efficacy is verifiable on demand. `:app` now applies the
+> consumer plugin with `automaticGenerationDuringBuild = false`
+> (manual regeneration only) and pulls in `androidx.profileinstaller`
+> so ART can read the bundled profile at first launch. Six new
+> dependencies registered in the version catalog: `benchmark 1.3.4`,
+> `profileinstaller 1.4.1`, `uiautomator 2.3.0`, plus the
+> `android.test` + `androidx.baselineprofile` Gradle plugins. CI gains
+> `.github/workflows/baselineprofile.yml` (workflow_dispatch only;
+> uploads the regenerated `baseline-prof.txt` as a downloadable
+> artifact for manual commit, per Step 6 of the original task body).
+> Cadence and regeneration trigger conditions documented in
+> `CLAUDE.md` under "Baseline profile cadence (TASK-21)". The
+> `baseline-prof.txt` file itself is **not** committed in this PR — it
+> requires a connected device or AVD to generate; the first regen
+> belongs in a follow-up commit on the release branch that ships
+> v1.13.0+. The original task text is preserved below for historical
+> context.
 
 App cold start currently traverses Room init + Hilt graph build + DataStore
 reads + the wizard gate, all in the main-thread path. A Baseline Profile
