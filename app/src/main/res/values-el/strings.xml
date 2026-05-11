@@ -265,7 +265,7 @@
     <string name="settings_co2_api_key_summary_set">••••••••</string>
     <string name="settings_co2_api_key_summary_unset">Δεν έχει οριστεί</string>
     <string name="settings_co2_zone_dialog_title">Ζώνη δικτύου Electricity Maps</string>
-    <string name="settings_co2_zone_dialog_helper">Τυπικός κωδικός ζώνης, π.χ. CY, DE, FR. Πλήρης λίστα στο electricitymaps.com.</string>
+    <string name="settings_co2_zone_dialog_helper">Τυπικός κωδικός ζώνης, π.χ. CY, DE, FR. Πρέπει να ταιριάζει με τη ζώνη που επιλέξατε όταν δημιουργήσατε το κλειδί API στο Electricity Maps. Η αλλαγή εκεί επιτρέπεται μία φορά κάθε 30 ημέρες.</string>
     <string name="settings_co2_zone_dialog_invalid">Εισαγάγετε κωδικό ζώνης (μόνο γράμματα).</string>
     <string name="cost_card_per_km">Κόστος ανά km</string>
     <string name="cost_card_per_100km">Κόστος ανά 100 km</string>

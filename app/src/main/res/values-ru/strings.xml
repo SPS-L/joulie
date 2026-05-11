@@ -265,7 +265,7 @@
     <string name="settings_co2_api_key_summary_set">••••••••</string>
     <string name="settings_co2_api_key_summary_unset">Не задано</string>
     <string name="settings_co2_zone_dialog_title">Зона Electricity Maps</string>
-    <string name="settings_co2_zone_dialog_helper">Стандартный код зоны, например CY, DE, FR. Полный список на electricitymaps.com.</string>
+    <string name="settings_co2_zone_dialog_helper">Стандартный код зоны, например CY, DE, FR. Должен совпадать с зоной, выбранной при создании ключа API Electricity Maps. Менять её там можно не чаще одного раза в 30 дней.</string>
     <string name="settings_co2_zone_dialog_invalid">Введите код зоны (только буквы).</string>
     <string name="cost_card_per_km">Стоимость за км</string>
     <string name="cost_card_per_100km">Стоимость за 100 км</string>
