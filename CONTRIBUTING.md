@@ -32,6 +32,8 @@ UI (Fragments + ViewModels)  →  Domain (use cases + services)  →  Repositori
 
 Min SDK 26 · target / compile SDK 35 · JDK 17 · Gradle 8.11.1 · AGP 8.9.2 · Kotlin 2.1.20.
 
+The Gradle build is multi-module: `:app` ships the application APK; `:baselineprofile` is a sibling `com.android.test` module that drives a macro-benchmark over `:app`'s release variant to regenerate `app/src/main/baseline-prof.txt` for ART AOT compilation at install time. See [CLAUDE.md → Baseline profile cadence](CLAUDE.md) for when to refresh.
+
 The full technical design lives in [`docs/DESIGN.md`](docs/DESIGN.md).
 
 ## Building from source
@@ -123,6 +125,16 @@ To cut a release:
    ```
 
 The workflow can also be triggered manually from the **Actions** tab via `workflow_dispatch`.
+
+### Baseline profile regeneration
+
+Profile-guided AOT compilation is fed by `app/src/main/baseline-prof.txt`. Regeneration is **manual** (it requires a device or AVD and adds ~15 min of wall-clock):
+
+```bash
+./gradlew :app:generateBaselineProfile
+```
+
+CI exposes the same job as a `workflow_dispatch`-only run in [`.github/workflows/baselineprofile.yml`](.github/workflows/baselineprofile.yml). Trigger it from the Actions tab, download the `baseline-prof-txt` artifact, replace the committed file, and push a commit on `main`. Cadence guidance (when to refresh) lives in [`CLAUDE.md`](CLAUDE.md) under *Baseline profile cadence*.
 
 ## Landing page (GitHub Pages)
 
