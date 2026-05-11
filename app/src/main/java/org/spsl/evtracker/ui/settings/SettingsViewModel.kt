@@ -105,11 +105,6 @@ class SettingsViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
-            settingsReader.gridIntensityGCo2PerKwh.collect { v ->
-                _uiState.update { it.copy(gridIntensityGCo2PerKwh = v) }
-            }
-        }
-        viewModelScope.launch {
             settingsReader.co2Enabled.collect { v ->
                 _uiState.update { it.copy(co2Enabled = v) }
             }
@@ -357,12 +352,6 @@ class SettingsViewModel @Inject constructor(
     fun onIceBaselineSelected(value: Double) {
         if (value <= 0.0) return
         viewModelScope.launch { settingsWriter.setIceBaselineLPer100km(value) }
-    }
-
-    /** Persist the user-edited grid intensity in gCO₂/kWh. */
-    fun onGridIntensitySelected(value: Double) {
-        if (value <= 0.0) return
-        viewModelScope.launch { settingsWriter.setGridIntensityGCo2PerKwh(value) }
     }
 
     /** Toggle the opt-in CO₂ master switch. */

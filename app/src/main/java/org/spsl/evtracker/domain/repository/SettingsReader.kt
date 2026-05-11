@@ -76,32 +76,36 @@ interface SettingsReader {
     val iceBaselineLPer100km: Flow<Double>
 
     /**
-     * Grid carbon intensity in gCO₂/kWh (default 577 — Cyprus
-     * 2025 grid average per cyprusgrid.com). Used by [CO2Calculator] to
-     * compute EV-side emissions per charge event.
-     */
-    val gridIntensityGCo2PerKwh: Flow<Double>
-
-    /**
      * Opt-in master flag for CO₂ tracking. False by default on fresh
      * installs: the Dashboard CO₂ card and the Charts CO₂ tab gate
      * themselves on this value, so a user who never visits the new
-     * Settings section sees no CO₂ surfaces at all.
+     * Settings section sees no CO₂ surfaces at all. Even when true, no
+     * CO₂ is computed without a working Electricity Maps key — there is
+     * no static-intensity fallback.
      */
     val co2Enabled: Flow<Boolean>
 
     /**
      * Electricity Maps API key. Empty string = unset; when blank with
-     * [co2Enabled] true, [SaveChargeEventUseCase] falls back to the static
-     * [gridIntensityGCo2PerKwh] preference.
+     * [co2Enabled] true, [SaveChargeEventUseCase] stores `null` for the
+     * per-event grid intensity and the dashboard / charts CO₂ surfaces
+     * stay hidden — there is no manual fallback.
      */
     val electricityMapsApiKey: Flow<String>
 
     /**
      * Electricity Maps grid-zone code (uppercase IETF/ISO 3166 region
-     * code, e.g. `"CY"`). Default `"CY"` matches the Cyprus-focused
-     * static-intensity default. Free-tier authorisation is scoped to a
-     * single zone per API key.
+     * code, e.g. `"CY"`). Default `"CY"`. Free-tier authorisation is
+     * scoped to a single zone per API key.
      */
     val electricityMapsZone: Flow<String>
+
+    /**
+     * Persistent 1-hour throttle for the Electricity Maps API. Three
+     * flows must be read together; if [electricityMapsCacheZone] is empty
+     * (default) the cache is uninitialised.
+     */
+    val electricityMapsCacheZone: Flow<String>
+    val electricityMapsCacheIntensity: Flow<Double>
+    val electricityMapsCacheFetchedAtMs: Flow<Long>
 }

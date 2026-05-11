@@ -139,10 +139,12 @@ class FakeSettingsReader(
     lastSeenRemoteBackupExportedAtInit: String = "",
     languageTagInit: String = "",
     iceBaselineLPer100kmInit: Double = 7.0,
-    gridIntensityGCo2PerKwhInit: Double = 577.0,
     co2EnabledInit: Boolean = false,
     electricityMapsApiKeyInit: String = "",
     electricityMapsZoneInit: String = "CY",
+    electricityMapsCacheZoneInit: String = "",
+    electricityMapsCacheIntensityInit: Double = 0.0,
+    electricityMapsCacheFetchedAtMsInit: Long = 0L,
 ) : SettingsReader {
     private val activeCar = MutableStateFlow(activeCarIdInit)
     private val metric = MutableStateFlow(primaryMetricInit)
@@ -158,10 +160,12 @@ class FakeSettingsReader(
     private val lastSeenRemoteBackupExportedAtFlow = MutableStateFlow(lastSeenRemoteBackupExportedAtInit)
     private val languageTagFlow = MutableStateFlow(languageTagInit)
     private val iceBaselineFlow = MutableStateFlow(iceBaselineLPer100kmInit)
-    private val gridIntensityFlow = MutableStateFlow(gridIntensityGCo2PerKwhInit)
     private val co2EnabledFlow = MutableStateFlow(co2EnabledInit)
     private val electricityMapsApiKeyFlow = MutableStateFlow(electricityMapsApiKeyInit)
     private val electricityMapsZoneFlow = MutableStateFlow(electricityMapsZoneInit)
+    private val electricityMapsCacheZoneFlow = MutableStateFlow(electricityMapsCacheZoneInit)
+    private val electricityMapsCacheIntensityFlow = MutableStateFlow(electricityMapsCacheIntensityInit)
+    private val electricityMapsCacheFetchedAtMsFlow = MutableStateFlow(electricityMapsCacheFetchedAtMsInit)
     override val activeCarId: Flow<Long> = activeCar
     override val primaryMetric: Flow<String> = metric
     override val distanceUnit: Flow<String> = unit
@@ -176,10 +180,12 @@ class FakeSettingsReader(
     override val lastSeenRemoteBackupExportedAt: Flow<String> = lastSeenRemoteBackupExportedAtFlow
     override val languageTag: Flow<String> = languageTagFlow
     override val iceBaselineLPer100km: Flow<Double> = iceBaselineFlow
-    override val gridIntensityGCo2PerKwh: Flow<Double> = gridIntensityFlow
     override val co2Enabled: Flow<Boolean> = co2EnabledFlow
     override val electricityMapsApiKey: Flow<String> = electricityMapsApiKeyFlow
     override val electricityMapsZone: Flow<String> = electricityMapsZoneFlow
+    override val electricityMapsCacheZone: Flow<String> = electricityMapsCacheZoneFlow
+    override val electricityMapsCacheIntensity: Flow<Double> = electricityMapsCacheIntensityFlow
+    override val electricityMapsCacheFetchedAtMs: Flow<Long> = electricityMapsCacheFetchedAtMsFlow
     fun setActiveCarId(id: Long) {
         activeCar.value = id
     }
@@ -222,9 +228,6 @@ class FakeSettingsReader(
     fun setIceBaselineLPer100km(value: Double) {
         iceBaselineFlow.value = value
     }
-    fun setGridIntensityGCo2PerKwh(value: Double) {
-        gridIntensityFlow.value = value
-    }
     fun setCo2Enabled(value: Boolean) {
         co2EnabledFlow.value = value
     }
@@ -233,6 +236,11 @@ class FakeSettingsReader(
     }
     fun setElectricityMapsZone(value: String) {
         electricityMapsZoneFlow.value = value
+    }
+    fun setElectricityMapsCache(zone: String, intensity: Double, fetchedAtMs: Long) {
+        electricityMapsCacheZoneFlow.value = zone
+        electricityMapsCacheIntensityFlow.value = intensity
+        electricityMapsCacheFetchedAtMsFlow.value = fetchedAtMs
     }
 }
 
@@ -267,13 +275,17 @@ class FakeSettingsWriter(
         private set
     var iceBaselineLPer100km: Double = 7.0
         private set
-    var gridIntensityGCo2PerKwh: Double = 577.0
-        private set
     var co2Enabled: Boolean = false
         private set
     var electricityMapsApiKey: String = ""
         private set
     var electricityMapsZone: String = "CY"
+        private set
+    var electricityMapsCacheZone: String = ""
+        private set
+    var electricityMapsCacheIntensity: Double = 0.0
+        private set
+    var electricityMapsCacheFetchedAtMs: Long = 0L
         private set
 
     override suspend fun setActiveCarId(id: Long) {
@@ -350,10 +362,6 @@ class FakeSettingsWriter(
         callRecorder?.add("setIceBaselineLPer100km($value)")
         iceBaselineLPer100km = value
     }
-    override suspend fun setGridIntensityGCo2PerKwh(value: Double) {
-        callRecorder?.add("setGridIntensityGCo2PerKwh($value)")
-        gridIntensityGCo2PerKwh = value
-    }
     override suspend fun setCo2Enabled(enabled: Boolean) {
         callRecorder?.add("setCo2Enabled($enabled)")
         co2Enabled = enabled
@@ -365,6 +373,22 @@ class FakeSettingsWriter(
     override suspend fun setElectricityMapsZone(value: String) {
         callRecorder?.add("setElectricityMapsZone($value)")
         electricityMapsZone = value
+    }
+    override suspend fun setElectricityMapsCache(
+        zone: String,
+        intensityGCo2PerKwh: Double,
+        fetchedAtMs: Long,
+    ) {
+        callRecorder?.add("setElectricityMapsCache($zone,$intensityGCo2PerKwh,$fetchedAtMs)")
+        electricityMapsCacheZone = zone
+        electricityMapsCacheIntensity = intensityGCo2PerKwh
+        electricityMapsCacheFetchedAtMs = fetchedAtMs
+    }
+    override suspend fun clearElectricityMapsCache() {
+        callRecorder?.add("clearElectricityMapsCache")
+        electricityMapsCacheZone = ""
+        electricityMapsCacheIntensity = 0.0
+        electricityMapsCacheFetchedAtMs = 0L
     }
 }
 
@@ -530,7 +554,7 @@ class FakeCarbonIntensitySource(
         return nextValue
     }
 
-    override fun clearCache() {
+    override suspend fun clearCache() {
         clearCacheCallCount++
     }
 }

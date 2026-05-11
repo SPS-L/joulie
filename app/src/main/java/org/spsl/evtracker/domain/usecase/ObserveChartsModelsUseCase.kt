@@ -47,7 +47,6 @@ class ObserveChartsModelsUseCase @Inject constructor(
         val activeCarId: Long,
         val cars: List<CarEntity>,
         val iceBaselineLPer100km: Double,
-        val gridIntensityGCo2PerKwh: Double,
         val co2Enabled: Boolean,
     )
 
@@ -57,10 +56,9 @@ class ObserveChartsModelsUseCase @Inject constructor(
             settingsReader.activeCarId,
             carReader.observeAll(),
             settingsReader.iceBaselineLPer100km,
-            settingsReader.gridIntensityGCo2PerKwh,
             settingsReader.co2Enabled,
-        ) { active, cars, iceL, gridG, co2On ->
-            ChartsSettings(active, cars, iceL, gridG, co2On)
+        ) { active, cars, iceL, co2On ->
+            ChartsSettings(active, cars, iceL, co2On)
         }.flatMapLatest { settings ->
             when {
                 settings.cars.isEmpty() || settings.activeCarId == -1L ->
@@ -104,17 +102,16 @@ class ObserveChartsModelsUseCase @Inject constructor(
         // of whether the chart is rendered (banner can also fire when the
         // remaining measured-event count is below the 3-point threshold).
         val derivedExcluded = capacityEstimator.countDerivedEvents(periodEvents)
-        // cumulative CO₂ trend across the period's events. Empty when the
-        // user has not opted in (co2Enabled=false) OR when both prefs are 0
-        // — the CO₂ tab then renders the "set baseline + grid intensity"
-        // empty state.
-        val co2Cumulative = if (settings.co2Enabled &&
-            (settings.iceBaselineLPer100km > 0.0 || settings.gridIntensityGCo2PerKwh > 0.0)
-        ) {
+        // Cumulative CO₂ trend across the period's events. The CO₂ tab
+        // renders the "enable Electricity Maps to track CO₂" empty state
+        // when this list is empty. Empty whenever the user has not opted
+        // in (co2Enabled=false) OR no event in the period carries a live
+        // per-event grid intensity — `CO2Calculator.cumulativeTrend`
+        // enforces the latter and returns emptyList itself.
+        val co2Cumulative = if (settings.co2Enabled) {
             co2Calculator.cumulativeTrend(
                 events = periodEvents,
                 iceBaselineLPer100km = settings.iceBaselineLPer100km,
-                gridIntensityGCo2PerKwh = settings.gridIntensityGCo2PerKwh,
             )
         } else {
             emptyList()

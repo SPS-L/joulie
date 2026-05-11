@@ -45,7 +45,6 @@ class ObserveDashboardStatsUseCase @Inject constructor(
         val activeCarId: Long,
         val cars: List<CarEntity>,
         val iceBaselineLPer100km: Double,
-        val gridIntensityGCo2PerKwh: Double,
         val co2Enabled: Boolean,
     )
 
@@ -55,10 +54,9 @@ class ObserveDashboardStatsUseCase @Inject constructor(
             settingsReader.activeCarId,
             carReader.observeAll(),
             settingsReader.iceBaselineLPer100km,
-            settingsReader.gridIntensityGCo2PerKwh,
             settingsReader.co2Enabled,
-        ) { activeCarId, cars, iceL, gridG, co2On ->
-            CombinedSettings(activeCarId, cars, iceL, gridG, co2On)
+        ) { activeCarId, cars, iceL, co2On ->
+            CombinedSettings(activeCarId, cars, iceL, co2On)
         }.flatMapLatest { settings ->
             when {
                 settings.cars.isEmpty() || settings.activeCarId == -1L ->
@@ -122,19 +120,15 @@ class ObserveDashboardStatsUseCase @Inject constructor(
                 batteryHealthIsHeuristic = isHeuristic,
                 batteryHealthIsOverestimated = isOverestimated,
             )
-            // CO₂ stats. Both numbers are null when the user hasn't
-            // opted in (co2Enabled=false) or hasn't configured the
-            // corresponding preference (zero or unset). Dashboard hides the
-            // entire CO₂ card if either is null. EV emissions prefer the
-            // per-event intensity stored on the entity (live snapshot from
-            // Electricity Maps at save time) when present; otherwise the
-            // static manual preference applies.
-            val evCo2 = if (settings.co2Enabled) {
-                evCo2ForFiltered(filtered, settings.gridIntensityGCo2PerKwh)
-            } else {
-                null
-            }
-            val iceCo2 = if (settings.co2Enabled &&
+            // CO₂ stats. Both numbers are null when the user has not opted
+            // in (co2Enabled=false), OR when no event in the filtered period
+            // carries a live per-event grid intensity (no Electricity Maps
+            // key set, or every save's fetch returned null). The dashboard
+            // hides the entire CO₂ card on null. The ICE counterfactual is
+            // gated on the EV side being computable — surfacing only ICE
+            // would be misleading.
+            val evCo2 = if (settings.co2Enabled) co2Calculator.evCo2Kg(filtered) else null
+            val iceCo2 = if (evCo2 != null &&
                 settings.iceBaselineLPer100km > 0.0 &&
                 baseStats.totalDistanceKm > 0.0
             ) {
@@ -148,34 +142,5 @@ class ObserveDashboardStatsUseCase @Inject constructor(
             val stats = baseStats.copy(evCo2Kg = evCo2, iceCo2Kg = iceCo2)
             DashboardUiState(stats = stats, showMultiCurrencyBanner = stats.mixedCurrency)
         }
-    }
-
-    /**
-     * EV-side emissions using the per-event grid intensity stored on each
-     * row when present (the Electricity Maps snapshot at save time), and
-     * the static manual preference for any row missing one (legacy events
-     * pre-feature, or events saved while CO₂ was off and the user has now
-     * turned it on). Returns `null` when no event contributes a positive
-     * intensity — that's the "CO₂ enabled but nothing to display yet" state
-     * and the Dashboard card hides on null.
-     */
-    private fun evCo2ForFiltered(
-        filtered: List<ChargeEventEntity>,
-        manualIntensity: Double,
-    ): Double? {
-        var total = 0.0
-        var contributed = false
-        for (e in filtered) {
-            val intensity = e.gridIntensityGCo2PerKwh ?: manualIntensity
-            if (intensity <= 0.0) continue
-            if (e.kwhAdded <= 0.0) continue
-            total += e.kwhAdded * intensity / CO2_G_PER_KG
-            contributed = true
-        }
-        return if (contributed) total else null
-    }
-
-    private companion object {
-        private const val CO2_G_PER_KG = 1000.0
     }
 }

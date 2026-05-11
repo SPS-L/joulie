@@ -224,7 +224,6 @@
     <string name="co2_card_footnote">На основе среднегодового показателя сети Кипра 2025, фактические выбросы зависят от времени суток.</string>
     <string name="settings_section_co2">Учёт CO₂</string>
     <string name="settings_co2_ice_baseline">Расход бензина (L/100km)</string>
-    <string name="settings_co2_grid_intensity">Углеродность сети (gCO₂/kWh)</string>
     <string name="settings_co2_dialog_invalid">Введите положительное число.</string>
     <string name="settings_co2_enable_toggle">Включить учёт CO₂</string>
     <string name="settings_co2_enable_helper">По умолчанию выключено. Когда выключено, карточки и графики CO₂ скрыты и сетевые запросы не выполняются.</string>
