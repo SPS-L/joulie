@@ -203,7 +203,7 @@
     <string name="settings_co2_api_key_summary_set">••••••••</string>
     <string name="settings_co2_api_key_summary_unset">Not set</string>
     <string name="settings_co2_zone_dialog_title">Electricity Maps grid zone</string>
-    <string name="settings_co2_zone_dialog_helper">Standard zone code, e.g. CY, DE, FR. Full list at electricitymaps.com.</string>
+    <string name="settings_co2_zone_dialog_helper">Standard zone code, e.g. CY, DE, FR. Must match the zone you selected when creating your Electricity Maps API key. Changing it there is rate-limited to once per 30 days.</string>
     <string name="settings_co2_zone_dialog_invalid">Enter a zone code (letters only).</string>
     <string name="settings_theme_system">System default</string>
     <string name="settings_theme_light">Light</string>

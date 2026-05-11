@@ -265,7 +265,7 @@
     <string name="settings_co2_api_key_summary_set">••••••••</string>
     <string name="settings_co2_api_key_summary_unset">Ayarlanmadı</string>
     <string name="settings_co2_zone_dialog_title">Electricity Maps şebeke bölgesi</string>
-    <string name="settings_co2_zone_dialog_helper">Standart bölge kodu, ör. CY, DE, FR. Tam liste electricitymaps.com adresinde.</string>
+    <string name="settings_co2_zone_dialog_helper">Standart bölge kodu, ör. CY, DE, FR. Electricity Maps API anahtarınızı oluştururken seçtiğiniz bölgeyle eşleşmelidir. Orada bölgeyi değiştirmek 30 günde bir ile sınırlıdır.</string>
     <string name="settings_co2_zone_dialog_invalid">Bölge kodu girin (yalnızca harfler).</string>
     <string name="cost_card_per_km">km başına maliyet</string>
     <string name="cost_card_per_100km">100 km başına maliyet</string>
