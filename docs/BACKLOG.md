@@ -99,6 +99,8 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-82 | 🟢 | Carbon-intensity dashboard widget + boot refresh + History CO₂ row. **Done 2026-05-11** in `feat/task82-carbon-intensity-widget`. Top-of-dashboard pill shows the live grid intensity from Electricity Maps colour-coded across five bands (`VERY_LOW < 150` / `LOW < 400` / `MODERATE < 650` / `HIGH < 900` / `VERY_HIGH ≥ 900`). State machine: `Hidden` (CO₂ off OR no key) / `Loading` (refreshing + no fresh cache) / `Ready(value, bucket, fetchedAtMs)` / `Error` (tap to retry). Refreshes triggered from `MainViewModel.init` (boot) + `DashboardViewModel.init` (belt-and-suspenders) + `SaveChargeEventUseCase` (per-save, unchanged) + tap-to-retry — all serialised by the existing TASK-81 persistent 1-hour throttle. New `RefreshCarbonIntensityUseCase` (thin wrapper) + `CarbonIntensityFormatter` (pure JVM, 8-input → state mapper) + `CarbonIntensityRenderer` (view glue). History list adds a third metadata line `"⚡ X kg CO₂  ·  Y g/kWh"` gated on `co2Enabled` AND `event.gridIntensityGCo2PerKwh != null`. Bundled TASK-83 (website/README/PRIVACY refresh) in the same merge so the landing page describes v1.11.4 correctly. 13 new JVM tests (formatter state machine + bucket boundaries + use case branches). Patch bump v1.11.3 → v1.11.4. |  | ☑ |
 | TASK-81 | 🔴 | Drop the static `gridIntensityGCo2PerKwh` preference; add a persistent 1-hour API throttle. **Done 2026-05-11** in `feat/task81-drop-static-grid-intensity`. Either Electricity Maps live data flows or NO CO₂ surfaces show — there is no user-typed grid-intensity fallback (guessing CO₂ from a typed number is misleading). Removed: the `GRID_INTENSITY_G_CO2_PER_KWH` DataStore key, the `SettingsReader.gridIntensityGCo2PerKwh` / `SettingsWriter.setGridIntensityGCo2PerKwh` API, the Settings → CO₂ "Grid intensity (gCO₂/kWh)" row + string in all four locales, the manual-fallback branch in `SaveChargeEventUseCase`, and the per-row fallback in `ObserveDashboardStatsUseCase.evCo2ForFiltered`. `CO2Calculator.evCo2Kg` now returns `Double?` (null when no event in the period carries a per-event intensity) and `cumulativeTrend` returns empty under the same condition. `ObserveDashboardStatsUseCase` gates the ICE counterfactual on the EV side being computable so the dashboard never shows ICE without EV. Persistent throttle: three new DataStore keys (`electricityMapsCacheZone` / `electricityMapsCacheIntensity` / `electricityMapsCacheFetchedAtMs`) plus an atomic `setElectricityMapsCache(zone, intensity, fetchedAtMs)` setter. `ElectricityMapsRepository` now consults both in-memory cache AND the persisted (zone, fetchedAt) before making any HTTP call — the once-per-zone-per-hour guarantee survives process restart. A `Mutex` serialises concurrent fetches. `CarbonIntensitySource.clearCache` is `suspend` so the persistent layer can be cleared too. `ResetAllDataUseCase` calls it unchanged at the call site. 11 new + 8 rewritten JVM tests across CO2Calculator, SaveChargeEventCo2Test, ObserveDashboardStatsCo2GateTest, ElectricityMapsRepositoryTest (incl. the cold-start-within-an-hour case proving the persistent throttle works across "process restart"). Patch bump v1.11.2 → v1.11.3. |  | ☑ |
 | TASK-80 | 🟢 | Electricity Maps live CO₂ integration (issue #1). **Done 2026-05-11** in `feat/task80-electricity-maps`. Opt-in `co2Enabled` master switch + `electricityMapsApiKey` (password-masked dialog) + `electricityMapsZone` (uppercase, CY default) DataStore keys; new `CarbonIntensitySource` domain interface bound to `ElectricityMapsRepository` — `HttpURLConnection` + 30-char regex JSON parse (the `org.json.JSONObject` stub on the JVM test classpath returns 0/null for every getter, so the parse must avoid it) with a 1 h in-memory cache; no new transitive deps. Room v7→v8 `@AutoMigration` adds the nullable `grid_intensity_g_co2_per_kwh` column to `charge_events`; `backup_version` 7→8, new field optional on v3..v7 backups. `SaveChargeEventUseCase` resolves intensity in a strict hierarchy: off → null; on + blank key → manual fallback; on + key + fetch returns value → live; on + key + fetch returns null → manual fallback. `ObserveDashboardStatsUseCase` hides both EV + ICE stats when `co2Enabled=false`; when on, EV emissions prefer the per-event column and fall back to the static manual pref per row (so legacy rows backfill cleanly). `ObserveChartsModelsUseCase` omits the cumulative CO₂ series when off. `ResetAllDataUseCase` resets the three new prefs + calls `CarbonIntensitySource.clearCache()`. 17 new JVM tests across the cache (8), CO₂ gate (4), and save-time hierarchy (5). Settings layout: `MaterialSwitch switch_co2_enabled` + helper text + `row_co2_api_key` + `row_co2_zone` (visibility gated on `co2Enabled`); password-masked text input via `END_ICON_PASSWORD_TOGGLE`; "Open electricitymaps.com" neutral button on the key dialog. Strings shipped in all 4 locales (en/el/tr/ru). Z-bump v1.11.1 → v1.11.2. |  | ☑ |
+| TASK-91 | 🟢 | EV-model autocomplete in the Add/Edit Car dialog, backed by a bundled `ev_models.json` asset with an optional manual remote refresh from a GitHub Release asset. Adds nullable `wltpKwhPer100km` column to `cars` (Room v8→v9). | TASK-92 (soft) | ☐ |
+| TASK-92 | 🟢 | `scripts/update_ev_db.py` — Python 3.10+ pipeline that pulls the latest OpenEV Data dataset, transforms it into Joulie's compact schema, and publishes the result as the `ev_models.json` asset on the `ev-db-latest` GitHub release. Scheduled monthly via GitHub Actions workflow (preferred over server-side cron). |  | ☐ |
 
 **Priority legend:** 🔴 High (architecture/data safety) · 🟡 Medium (robustness/UX) · 🟢 Low (new feature)  
 **Status legend:** ☐ open · ☑ done · ☒ closed (premise no longer holds) · ⏸ under consideration (do not start without explicit go-ahead) · ◐ partially done (some scope landed, remainder filed as a follow-up)  
@@ -5340,3 +5342,208 @@ The original TASK-35 spec assumed a "stub VM, no Hilt" rendering path. That assu
 
 - The TASK-35 design doc at `docs/superpowers/specs/2026-05-09-task35-roborazzi-baselines-design.md` remains the source of truth for the fixture dataset, theme matrix, and per-tab "notable visible content" table. TASK-79 inherits all of that wholesale; only the rendering strategy section changes from "stubbed VM, no Hilt" to "Hilt + Robolectric + @BindValue fakes."
 - This work is unlocked by TASK-35 Phase 1 (build wiring is in place); a maintainer can open the TASK-79 branch off `main` and the Gradle tasks already register.
+
+---
+
+## 🟢 TASK-91, EV-model autocomplete in Add/Edit Car dialog
+
+The Add / Edit Car dialog currently asks the user to free-type **Make**, **Model**, **Year**, and **Battery (kWh)**. There is no validation, no cross-reference data, and no quality floor — a user who types "tesla" / "Tesla" / "TESLA" produces three different makes in the `cars` table. This task introduces a curated EV reference dataset shipped as a bundled JSON asset (with an optional remote refresh, see TASK-92) and turns the four free-text fields into a guided autocomplete flow. Once a vehicle is picked, `batteryKwh` and the new `wltpKwhPer100km` field auto-fill, but all fields stay manually editable so users with rare or modded vehicles aren't locked out.
+
+### Strategic note
+
+For SPS-Lab research relevance, a clean Make/Model corpus matters: anonymised exports (TASK-40) become groupable by canonical make/model when the reference dataset is the source of truth. WLTP figures additionally unlock a per-car efficiency-vs-WLTP comparison (forward-work) for "is this user driving above or below the spec sheet?"
+
+### Scope
+
+1. **Schema bump.** Add nullable `wltpKwhPer100km: Double?` to `CarEntity` at `data/local/entity/CarEntity.kt:11`. Room v8 → v9 via `@AutoMigration(from = 8, to = 9)` on `@Database` (TASK-39 convention for additive bumps). Pre-launch carve-out: there are no current users, so if the auto-migration retrofit turns out to be awkward (e.g. test-fixture interactions), `fallbackToDestructiveMigration()` is a documented acceptable fallback for this task only — but the auto-migration path is one line and preserves the convention for after launch.
+2. **Backup version bump.** `backup_version` 8 → 9 in `BackupSerializer`. `CarDto.wltpKwhPer100km` is optional on v3..v8 backups (Gson rounds an absent field to `null` already). Update the authoritative field list in `docs/DESIGN.md §8` and the `BackupSerializer.fromJson` accepted-versions set to `{3..9}`. CLAUDE.md needs the new version listed in the migration table.
+3. **EV reference data model.** New `data/local/evdb/EvModel.kt`:
+
+       data class EvModel(
+           val make: String,
+           val model: String,
+           val variant: String,
+           val year: Int?,
+           @SerializedName("battery_kwh") val batteryKwh: Double,
+           @SerializedName("wltp_kwh_100km") val wltpKwhPer100km: Double?,
+       )
+
+   Gson is already the project's JSON library (no new dependency). The `@SerializedName` annotations are mandatory because the bundled JSON uses snake_case for compactness, but Kotlin fields stay camelCase.
+4. **Bundled JSON asset.** New `app/src/main/assets/ev_models.json` (assets/, NOT res/raw/ — `assets/` is the conventional location for content that has a user-replaceable counterpart at `context.filesDir`, and pathing is consistent across the bundled and user-cached copies). Placeholder root:
+
+       {
+         "version": "bundled",
+         "source": "bundled",
+         "vehicle_count": 2,
+         "vehicles": [
+           { "make": "Tesla", "model": "Model 3", "variant": "Long Range RWD", "year": 2024, "battery_kwh": 82.0, "wltp_kwh_100km": 14.0 },
+           { "make": "Renault", "model": "Zoe", "variant": "R135", "year": 2023, "battery_kwh": 52.0, "wltp_kwh_100km": 17.2 }
+         ]
+       }
+
+   Real curated data ships from TASK-92 onto the GitHub release; the bundled asset is a fallback for first-launch / offline users.
+5. **Narrow domain interface (CLAUDE.md rule).** New `domain/repository/EvModelReader`:
+
+       interface EvModelReader {
+           suspend fun load(): List<EvModel>
+           suspend fun makes(): List<String>
+           suspend fun modelsForMake(make: String): List<EvModel>
+           suspend fun updateFromRemote(): UpdateResult
+       }
+
+       sealed class UpdateResult {
+           data class Success(val version: String, val vehicleCount: Int) : UpdateResult()
+           data class Failure(val reason: String, val cause: Throwable? = null) : UpdateResult()
+       }
+
+   Concrete `data/repository/EvModelRepository` implements it; bound in `di/RepositoryModule` via `@Binds`. ViewModels and use cases depend only on `EvModelReader`, never the concrete class.
+6. **`EvModelRepository` behaviour.**
+   - Constructor: `@ApplicationContext private val context: Context`, `private val settingsWriter: SettingsWriter`, `private val gson: Gson`.
+   - `load()` order: (a) check `context.filesDir/ev_models.json`; (b) fall back to `context.assets.open("ev_models.json")`; (c) parse with Gson; (d) cache the parsed `List<EvModel>` in-memory; subsequent calls are instant. `Mutex`-serialise to prevent two concurrent first-loads from double-parsing the JSON.
+   - `makes()` returns distinct sorted make names (locale-aware sort).
+   - `modelsForMake(make)` returns the make's models sorted by `model` then `year` (nulls last).
+   - `updateFromRemote()`:
+     1. Fetch `REMOTE_URL = "https://github.com/SPS-L/joulie/releases/download/ev-db-latest/ev_models.json"` (companion `const`).
+     2. Run on `Dispatchers.IO` (TASK-90 lesson: `HttpURLConnection` on Main throws `NetworkOnMainThreadException` and the bare-catch pattern eats the failure).
+     3. Parse + validate (`vehicles.size >= 50`).
+     4. Atomically write the JSON to `context.filesDir/ev_models.json` via a `.tmp` rename.
+     5. Invalidate the in-memory cache.
+     6. Call `settingsWriter.setEvDbCache(lastUpdatedAtMs, version, vehicleCount)` — atomic multi-key write to keep the "Last updated" UI line consistent.
+     7. Return `UpdateResult.Success(version, vehicleCount)` or `UpdateResult.Failure(reason, cause)`. Typed failure reasons mirror the TASK-90 `FetchOutcome` precedent (`NetworkError`, `ParseError`, `ValidationError`, `ServerError`) so the Settings UI can localise per-cause.
+7. **DataStore preference keys.** Append to `PreferenceKeys.kt`:
+
+       val EV_DB_LAST_UPDATED_AT = longPreferencesKey("evDbLastUpdatedAt")
+       val EV_DB_VERSION = stringPreferencesKey("evDbVersion")
+       val EV_DB_VEHICLE_COUNT = intPreferencesKey("evDbVehicleCount")
+
+   (Storing `vehicleCount` lets the summary line read it without re-parsing the JSON.) Add corresponding `SettingsReader` getters + a single atomic `SettingsWriter.setEvDbCache(...)` setter that writes all three keys in one DataStore transaction.
+8. **CarEditDialog autocomplete.** In `ui/cars/CarEditDialog.kt`:
+   - Replace the "Make" `TextInputEditText` with an `AutoCompleteTextView` (Material `ExposedDropdownMenu` style, see existing M3 examples in `Settings → currency` dropdown).
+   - Replace the "Model" `TextInputEditText` with a second `AutoCompleteTextView`. The display string is `model` if `variant.isBlank()` else `"$model · $variant"` (Brand Guide §1: **no em-dash**; use middle-dot or comma). Selecting a row maps back to `(model, variant)` via a lookup table on the ViewModel state.
+   - Custom `Filter` for substring matching on make + model dropdowns. Default `ArrayAdapter<String>` does prefix-only — "3" wouldn't match "Model 3". The filter normalises with `String.lowercase()` + a `contains()` predicate.
+   - Selecting a model: autofill `batteryKwh` from `EvModel.batteryKwh` and persist `wltpKwhPer100km` onto the dialog's `CarFormState`. Both fields remain manually editable (`AutoCompleteTextView` allows free-text input by default — do not call `setKeyListener(null)`).
+   - The Year field stays a plain `TextInputEditText` — the dataset has thin year coverage and locking the user out hurts more than it helps.
+9. **Settings → "EV Database" group.** New section in `fragment_settings.xml`, placed after the CO₂ tracker group:
+   - Header row "EV Database".
+   - Summary `TextView`: `"Last updated: <human date>"` when `EV_DB_LAST_UPDATED_AT > 0`, else `"Using bundled database"`. Both strings translatable.
+   - "Update EV database" `MaterialButton`. While `EvDbUpdateState.Loading`, the button disables and a small `CircularProgressIndicator` shows beside it. On Success: Snackbar "EV database updated (N vehicles)". On Failure: Snackbar with the typed reason.
+10. **ViewModel pattern.** New `UpdateEvDatabaseUseCase` (thin wrapper, ~10 LOC) so `SettingsViewModel` depends on the use case, not directly on `EvModelReader`. `SettingsViewModel` gains:
+
+        val evDbState: StateFlow<EvDbUpdateState>   // Idle / Loading / Success / Error
+        fun onUpdateEvDatabase()                    // viewModelScope.launch { state.value = Loading; … }
+
+11. **Hilt wiring.** `EvModelRepository` is `@Singleton`. Inject via `EvModelReader` IF into `CarsViewModel` (for the dialog) and into `UpdateEvDatabaseUseCase`.
+12. **Strings (all 4 locales).** Approximately 8 new keys: `settings_ev_db_header`, `settings_ev_db_last_updated`, `settings_ev_db_using_bundled`, `settings_ev_db_update_button`, `settings_ev_db_update_success` (with `%1$d` for vehicle count), `settings_ev_db_error_network`, `settings_ev_db_error_parse`, `settings_ev_db_error_validation`. Ship in `values/`, `values-el/`, `values-tr/`, `values-ru/` — `MissingTranslation` is a lint error per TASK-15.
+13. **JVM tests.**
+    - `EvModelRepositoryTest`: bundled-asset fallback, cache-file priority over bundled, in-memory cache reused on second `load()` call, `updateFromRemote()` writes file + invalidates cache + persists prefs atomically, validation rejects payloads with `<50` vehicles, malformed JSON returns `Failure(ParseError)`, network failure returns `Failure(NetworkError)`.
+    - `CarsViewModelTest`: dropdown content is the right shape (mocked `EvModelReader`); selecting a model autofills `batteryKwh` + `wltpKwhPer100km` on the form state.
+    - `SettingsViewModelTest`: `onUpdateEvDatabase()` walks Idle → Loading → Success / Error correctly.
+    - `Fakes.kt` gains `FakeEvModelReader` (configurable bundled / cached / failure paths).
+14. **DESIGN.md.** Append `wltpKwhPer100km` to the `Car` entity field list (§4 or wherever cars are described). Document the bundled-vs-cached fallback contract under a new "EV reference data" subsection.
+15. **CLAUDE.md.** Update the **Database, Room v9** section heading + migration list with the new auto-migration. Update the **DataStore keys** section with the three new keys.
+16. **TASK-40 coordination (soft).** When the anonymised research export (TASK-40) ships, it should denormalise `wltp_kwh_per_100km` onto each row alongside `nominal_battery_kwh` so research consumers can compute realised-vs-spec efficiency without joining back to a make/model table.
+17. **CSV export.** No change — `ExportCsvUseCase` is per-charge-event, not per-car.
+18. **No new third-party dependencies.** Gson, Hilt, `AutoCompleteTextView`, DataStore all present.
+19. **SPDX headers** on every new Kotlin file (per CLAUDE.md / CONTRIBUTING.md).
+20. **Version bump.** Z-bump (patch release).
+
+### Notes
+
+- The REMOTE_URL is hard-coded for v1. A Settings entry to override it is forward-work; until then, the only way to point at a non-default dataset is a custom build.
+- `validateOnUpdate(vehicles.size >= 50)` is a deliberate floor — a corrupt or empty release asset shouldn't replace a working bundled dataset. The TASK-92 pipeline currently produces ~1000+ vehicles, so 50 is a generous safety net.
+- Substring-match on the autocomplete (rather than prefix) is intentional: users search by model number ("3", "Y", "Zoe") more often than by full make name. Confirmed via informal user testing during brainstorming.
+- The "Model · Variant" display format with the middle-dot is a Brand Guide §1 voice-rule lift; do **not** introduce an em-dash here, even though it would be the typographically conventional separator.
+- Pre-launch carve-out: the user has confirmed there are no production users yet, so a destructive Room migration is acceptable if needed. The recommended path (`@AutoMigration`) is still the cleanest for an additive column.
+
+### Acceptance
+
+- New `wltpKwhPer100km` column round-trips through Room + backup + restore.
+- "Make" and "Model" autocomplete populates from the bundled asset on a freshly-installed device with no network access.
+- "Update EV database" button refreshes the asset from the GitHub release and updates the summary line within 5 s on a typical mobile connection.
+- All four-locale strings ship; `:app:lint` passes with `MissingTranslation` in error mode.
+- JVM test count rises by ≥10; ktlintCheck, :app:testDebugUnitTest, :app:verifyRoborazziDebug, :app:assembleRelease all green.
+
+---
+
+## 🟢 TASK-92, OpenEV Data → ev_models.json release-asset pipeline
+
+Companion to TASK-91. A self-contained Python script + a GitHub Actions workflow that, on the first of every month, pulls the latest OpenEV Data dataset, transforms it into Joulie's compact schema, and publishes it as the `ev_models.json` asset on the `ev-db-latest` GitHub release. The Android app (TASK-91) consumes this asset on demand via Settings → "Update EV database".
+
+### Why GitHub Actions over server cron
+
+The original brief proposed a server-side cron job. GitHub Actions is a strictly better fit:
+- No external host to provision or secure.
+- `${{ secrets.GITHUB_TOKEN }}` is auto-issued with `contents: write` scope on the repo, so no PAT lifecycle to manage.
+- Same `workflow_dispatch` pattern as the existing `.github/workflows/baselineprofile.yml` slow on-demand job — established convention in this repo.
+- The script remains usable as a CLI tool for manual runs from any contributor's laptop; the workflow is just one of two entry points.
+
+### Scope
+
+1. **`scripts/update_ev_db.py`** — Python 3.10+, ~150 LOC, self-contained.
+   - Stdlib + `requests >= 2.31` only.
+   - SPDX header (Python `#` comments) + module docstring + suggested-crontab comment block.
+2. **Upstream fetch.** GET `https://api.github.com/repos/open-ev-data/open-ev-data-dataset/releases/latest`. From the assets list, pick the asset whose `name` ends in `.json` and contains "JSON" (case-insensitive). Stream-download it and parse as a JSON array of vehicle objects.
+3. **Field-name resilience.** Upstream may use any of: `make_name` / `brand` for make, `model_name` / `model` for model, `variant_name` / `variant` for variant (may be absent), `release_year` / `year` for year, `battery_capacity_usable_kwh` for battery (**prefer usable over gross**), `energy_consumption_wltp_kwh_100km` for WLTP. The script has a small adapter table mapping all known aliases to the canonical Joulie names; unknown fields are dropped silently.
+4. **Output schema** (matches what TASK-91's `EvModel.kt` consumes):
+
+       {
+         "version":       "<YYYY-MM-DD of today>",
+         "source":        "<upstream release tag, e.g. v1.4.2>",
+         "vehicle_count": 1123,
+         "vehicles": [
+           {
+             "make":           "Renault",
+             "model":          "Zoe",
+             "variant":        "R135",
+             "year":           2023,
+             "battery_kwh":    52.0,
+             "wltp_kwh_100km": 17.2
+           },
+           …
+         ]
+       }
+
+5. **Filtering rules.**
+   - Drop rows where `battery_kwh` is null or missing.
+   - Drop rows where `battery_kwh < 5.0` (almost certainly data-entry errors — e-bikes / hybrids leaking through).
+   - Keep rows where `wltp_kwh_100km` is null (battery info alone is still useful for the autocomplete).
+6. **Sorting.** Ascending by `make`, then `model`, then `year` (nulls last).
+7. **GitHub Release upload.**
+   - `GITHUB_TOKEN` env var required; validate before any network call; fail fast with `[ERROR] GITHUB_TOKEN env var not set` and exit code 1 if missing.
+   - Check if `tag_name == "ev-db-latest"` already has a release: `GET https://api.github.com/repos/SPS-L/joulie/releases/tags/ev-db-latest`.
+   - If exists: delete any existing asset named `ev_models.json` via `DELETE /repos/SPS-L/joulie/releases/assets/{asset_id}`; keep the release itself.
+   - If absent: create the release with `tag_name: "ev-db-latest"`, `name: "EV Models Database"`, `body: "Auto-updated from OpenEV Data <source_version>. Generated: <today>"`, `prerelease: false`.
+   - Upload the new `ev_models.json` via the releases upload API (`https://uploads.github.com/repos/SPS-L/joulie/releases/{release_id}/assets?name=ev_models.json`).
+8. **Logging.** Structured single-line records per major step:
+
+       [INFO]  Fetched 1247 vehicles from OpenEV Data v1.4.2
+       [INFO]  After filtering: 1198 vehicles retained
+       [INFO]  Output size: 187.3 KB
+       [INFO]  Uploaded ev_models.json to SPS-L/joulie release ev-db-latest
+
+   On unrecoverable error: `[ERROR] <message>` and `sys.exit(1)`.
+9. **Idempotency.** Running twice in a row produces the same release asset. No git tags or commits are ever created — the script manages the release asset only. This matters because the workflow runs on the `main` branch but doesn't push anything back.
+10. **`scripts/requirements.txt`.** Single line: `requests>=2.31`. SPDX header (`#` comments).
+11. **GitHub Actions workflow** `.github/workflows/ev-db-update.yml`:
+    - Triggers: `schedule: cron: '0 3 1 * *'` (UTC, first of every month, 03:00) + `workflow_dispatch` for manual runs.
+    - Steps: checkout, setup-python@v5 with 3.11, `pip install -r scripts/requirements.txt`, run `python3 scripts/update_ev_db.py` with `env: GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}`.
+    - Single job, `runs-on: ubuntu-latest`, < 2 min wall-clock.
+12. **CONTRIBUTING.md.** New "EV reference dataset" section: what the pipeline does, how it's scheduled, how to trigger a manual run via the Actions tab, how to run the script locally (`GITHUB_TOKEN=… python3 scripts/update_ev_db.py`).
+13. **SPDX headers** on `update_ev_db.py` and `requirements.txt`.
+14. **No hardcoded tokens anywhere.** `GITHUB_TOKEN` reads from `os.environ`; the workflow injects it as a step env.
+
+### Notes
+
+- The OpenEV Data dataset is at `https://github.com/open-ev-data/open-ev-data-dataset`. Verify the schema field names against the actual JSON before merging (the adapter table is best-effort against a 2026-05-11 reading of the README; real data might have rotated).
+- The 50-vehicle validation floor TASK-91 enforces is well above the realistic noise threshold — OpenEV Data ships hundreds of vehicles per release.
+- Manual runs from the Actions tab are useful for backfilling a missed scheduled run or for testing a script change.
+- A future iteration could publish the same asset to a CDN (Cloudflare R2, S3) for faster downloads, but a single GitHub release asset is plenty for a once-a-month manual refresh from a few thousand users.
+
+### Acceptance
+
+- `scripts/update_ev_db.py` runs end-to-end on a developer laptop with a PAT (or in CI with `GITHUB_TOKEN`) and produces a valid `ev_models.json` matching the TASK-91 schema.
+- The `ev-db-latest` release exists on `SPS-L/joulie` with a single `ev_models.json` asset.
+- The Actions workflow has executed at least one scheduled or manual run.
+- The asset URL `https://github.com/SPS-L/joulie/releases/download/ev-db-latest/ev_models.json` returns the latest JSON.
+- CONTRIBUTING.md gains the pipeline section.
+- Script is idempotent: a second consecutive run replaces the asset cleanly with no extra release / no extra tag.
