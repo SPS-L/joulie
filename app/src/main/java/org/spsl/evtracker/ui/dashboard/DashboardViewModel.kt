@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -189,6 +190,47 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
+    private var periodicRefreshJob: Job? = null
+
+    /**
+     * TASK-84: start the periodic foreground refresh loop. Called by the
+     * Fragment from `onStart`. The loop ticks every
+     * [PERIODIC_REFRESH_INTERVAL_MS]: each tick is a cheap cache read
+     * unless the persistent 1-hour cache has expired, at which point the
+     * next tick flips the pill from "stale Ready" to "fresh Ready"
+     * without the user needing to tap. The refresh use case short-circuits
+     * when CO₂ is off or the API key is blank, so the loop is a no-op
+     * when the feature is disabled.
+     *
+     * Idempotent: calling twice while the job is alive is a no-op.
+     */
+    fun startPeriodicRefresh() {
+        if (periodicRefreshJob?.isActive == true) return
+        periodicRefreshJob = viewModelScope.launch {
+            while (true) {
+                kotlinx.coroutines.delay(PERIODIC_REFRESH_INTERVAL_MS)
+                if (isRefreshingCarbon.value) continue
+                isRefreshingCarbon.value = true
+                try {
+                    runCatching { refreshCarbonIntensity() }
+                } finally {
+                    isRefreshingCarbon.value = false
+                }
+            }
+        }
+    }
+
+    /**
+     * Stop the TASK-84 periodic-refresh loop. Called by the Fragment
+     * from `onStop` so the loop doesn't keep ticking while the user is
+     * looking at another screen. Safe to call when the loop isn't
+     * running.
+     */
+    fun stopPeriodicRefresh() {
+        periodicRefreshJob?.cancel()
+        periodicRefreshJob = null
+    }
+
     fun onRefreshCarbonIntensity() {
         if (isRefreshingCarbon.value) return
         viewModelScope.launch {
@@ -199,5 +241,14 @@ class DashboardViewModel @Inject constructor(
                 isRefreshingCarbon.value = false
             }
         }
+    }
+
+    companion object {
+        /** TASK-84 periodic-refresh tick. Set just under the cache TTL so a
+         *  user who's been on the dashboard for more than an hour reliably
+         *  picks up the next fetch without manual interaction; the repo's
+         *  throttle ensures we don't actually hit the network until the
+         *  cached value expires. */
+        internal const val PERIODIC_REFRESH_INTERVAL_MS: Long = 15L * 60L * 1_000L
     }
 }

@@ -39,8 +39,14 @@ class DashboardViewModelTest {
         Dispatchers.setMain(UnconfinedTestDispatcher())
     }
 
+    /** Track every VM that [build] creates so the TASK-84 periodic refresh
+     *  loop (when started by a test) can be torn down. */
+    private val createdVms = mutableListOf<DashboardViewModel>()
+
     @After
-    fun resetMainDispatcher() {
+    fun tearDown() {
+        createdVms.forEach { it.stopPeriodicRefresh() }
+        createdVms.clear()
         Dispatchers.resetMain()
     }
 
@@ -71,6 +77,7 @@ class DashboardViewModelTest {
             dateRangeResolver = DateRangeResolver(),
             now = FakeNowProvider(System.currentTimeMillis()),
         )
+        val carbonIntensitySource = org.spsl.evtracker.testing.FakeCarbonIntensitySource()
         val vm = DashboardViewModel(
             observeDashboardStats = useCase,
             carReader = carReader,
@@ -78,16 +85,22 @@ class DashboardViewModelTest {
             settingsWriter = settingsWriter,
             refreshCarbonIntensity = org.spsl.evtracker.domain.usecase.RefreshCarbonIntensityUseCase(
                 settingsReader = settingsReader,
-                carbonIntensitySource = org.spsl.evtracker.testing.FakeCarbonIntensitySource(),
+                carbonIntensitySource = carbonIntensitySource,
             ),
             carbonIntensityFormatter = org.spsl.evtracker.domain.service.CarbonIntensityFormatter(),
-            carbonIntensitySource = org.spsl.evtracker.testing.FakeCarbonIntensitySource(),
+            carbonIntensitySource = carbonIntensitySource,
             now = FakeNowProvider(System.currentTimeMillis()),
         )
-        return VmFixture(vm, settingsWriter)
+        createdVms += vm
+        return VmFixture(vm, settingsWriter, settingsReader, carbonIntensitySource)
     }
 
-    private data class VmFixture(val vm: DashboardViewModel, val settingsWriter: FakeSettingsWriter)
+    private data class VmFixture(
+        val vm: DashboardViewModel,
+        val settingsWriter: FakeSettingsWriter,
+        val settingsReader: FakeSettingsReader,
+        val carbonIntensitySource: org.spsl.evtracker.testing.FakeCarbonIntensitySource,
+    )
 
     @Test
     fun noCar_emitsNoCarEmptyState() = runTest {
@@ -201,5 +214,92 @@ class DashboardViewModelTest {
         vm.uiState.first { it.activeCarId == -1L }
         vm.onFabClick()
         assertNull(vm.events.replayCache.firstOrNull())
+    }
+
+    // ── TASK-84: periodic foreground refresh ─────────────────────────────
+
+    @Test
+    fun periodicRefresh_advancingPastOneInterval_firesOneAdditionalRefresh() = runTest {
+        val fix = build()
+        try {
+            fix.settingsReader.setCo2Enabled(true)
+            fix.settingsReader.setElectricityMapsApiKey("k")
+            fix.carbonIntensitySource.nextValue = 412.0
+            // Drain the init belt-and-suspenders call BEFORE starting the
+            // periodic loop. Otherwise advanceUntilIdle would race the
+            // infinite delay-loop and never return.
+            testScheduler.advanceUntilIdle()
+            val callsBeforePeriodic = fix.carbonIntensitySource.callCount
+
+            fix.vm.startPeriodicRefresh()
+            testScheduler.advanceTimeBy(DashboardViewModel.PERIODIC_REFRESH_INTERVAL_MS + 1_000L)
+            testScheduler.runCurrent()
+
+            assertEquals(
+                "periodic loop should fire exactly one additional refresh per interval",
+                callsBeforePeriodic + 1,
+                fix.carbonIntensitySource.callCount,
+            )
+        } finally {
+            fix.vm.stopPeriodicRefresh()
+        }
+    }
+
+    @Test
+    fun periodicRefresh_advancingPastThreeIntervals_firesThreeAdditionalRefreshes() = runTest {
+        val fix = build()
+        try {
+            fix.settingsReader.setCo2Enabled(true)
+            fix.settingsReader.setElectricityMapsApiKey("k")
+            fix.carbonIntensitySource.nextValue = 412.0
+            testScheduler.advanceUntilIdle()
+            val callsBefore = fix.carbonIntensitySource.callCount
+
+            fix.vm.startPeriodicRefresh()
+            testScheduler.advanceTimeBy(3 * DashboardViewModel.PERIODIC_REFRESH_INTERVAL_MS + 1_000L)
+            testScheduler.runCurrent()
+
+            assertEquals(callsBefore + 3, fix.carbonIntensitySource.callCount)
+        } finally {
+            fix.vm.stopPeriodicRefresh()
+        }
+    }
+
+    @Test
+    fun periodicRefresh_neverStarted_doesNotFire() = runTest {
+        val fix = build()
+        try {
+            fix.settingsReader.setCo2Enabled(true)
+            fix.settingsReader.setElectricityMapsApiKey("k")
+            fix.carbonIntensitySource.nextValue = 412.0
+            testScheduler.advanceUntilIdle()
+            val callsBefore = fix.carbonIntensitySource.callCount
+
+            // No startPeriodicRefresh() call; advance time well past one interval.
+            testScheduler.advanceTimeBy(5 * DashboardViewModel.PERIODIC_REFRESH_INTERVAL_MS + 1_000L)
+            testScheduler.runCurrent()
+
+            assertEquals(
+                "loop must NOT fire until startPeriodicRefresh() is called",
+                callsBefore,
+                fix.carbonIntensitySource.callCount,
+            )
+        } finally {
+            fix.vm.stopPeriodicRefresh()
+        }
+    }
+
+    @Test
+    fun periodicRefresh_intervalIsReasonable_underTtl() {
+        // Regression guard: the interval must be small enough that a user
+        // sitting on the dashboard for >1 h reliably picks up the post-TTL
+        // refresh, but large enough that we're not spamming the repo
+        // mutex. Anything in [5min, CACHE_TTL_MS-5min] is acceptable.
+        val interval = DashboardViewModel.PERIODIC_REFRESH_INTERVAL_MS
+        assertTrue("interval too small: $interval", interval >= 5L * 60L * 1_000L)
+        assertTrue(
+            "interval too large vs cache TTL: $interval",
+            interval <= org.spsl.evtracker.data.repository.ElectricityMapsRepository.CACHE_TTL_MS - 5L * 60L * 1_000L,
+        )
     }
 }
