@@ -1,87 +1,123 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:padding="16dp">
+    android:fillViewport="true">
 
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/car_dialog_name_layout"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="@string/car_form_name">
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/car_dialog_name"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <TextView
+            android:id="@+id/car_dialog_title"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:inputType="textCapWords"/>
-    </com.google.android.material.textfield.TextInputLayout>
+            android:layout_marginBottom="16dp"
+            android:textAppearance="?attr/textAppearanceHeadlineSmall"
+            tools:text="@string/car_dialog_add_title"/>
 
-    <!-- Make + Model use plain AutoCompleteTextView (not Material's
-         MaterialAutoCompleteTextView) because the popup rendered
-         unreliably for users inside a MaterialAlertDialog with
-         Material's variant: the popup window was created but never
-         appeared visibly (TASK-91 v1.13.3 fix). AutoCompleteTextView
-         is the standard Android widget and shows the popup
-         correctly inside any dialog. We lose the M3 "dropdown arrow"
-         end icon (an ExposedDropdownMenu affordance), but
-         CarEditDialog.kt installs explicit OnClickListener +
-         OnFocusChangeListener handlers that call showDropDown(),
-         so tapping the field still opens the list. -->
-    <com.google.android.material.textfield.TextInputLayout
-        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="@string/car_form_make"
-        app:helperText="@string/car_form_make_helper">
-        <AutoCompleteTextView
-            android:id="@+id/car_dialog_make"
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/car_dialog_name_layout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:inputType="textCapWords"
-            android:completionThreshold="1"
-            android:imeOptions="actionNext"
-            tools:ignore="LabelFor"/>
-    </com.google.android.material.textfield.TextInputLayout>
+            android:hint="@string/car_form_name">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/car_dialog_name"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textCapWords"/>
+        </com.google.android.material.textfield.TextInputLayout>
 
-    <com.google.android.material.textfield.TextInputLayout
-        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="@string/car_form_model"
-        app:helperText="@string/car_form_model_helper">
-        <AutoCompleteTextView
-            android:id="@+id/car_dialog_model"
+        <!-- Make + Model are plain AutoCompleteTextView (not Material's
+             MaterialAutoCompleteTextView) hosted inside a
+             BottomSheetDialog (v1.13.4 fix). MaterialAlertDialog
+             reliably hides the autocomplete popup window on real
+             devices regardless of widget choice; BottomSheetDialog
+             uses a different window layer where popups render
+             correctly. CarEditDialog.kt installs explicit
+             OnClickListener + OnFocusChangeListener handlers that
+             call showDropDown() so tapping the field opens the
+             list. -->
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:inputType="textCapWords"
-            android:completionThreshold="1"
-            android:imeOptions="actionNext"
-            tools:ignore="LabelFor"/>
-    </com.google.android.material.textfield.TextInputLayout>
+            android:hint="@string/car_form_make"
+            app:helperText="@string/car_form_make_helper">
+            <AutoCompleteTextView
+                android:id="@+id/car_dialog_make"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textCapWords"
+                android:completionThreshold="1"
+                android:imeOptions="actionNext"
+                tools:ignore="LabelFor"/>
+        </com.google.android.material.textfield.TextInputLayout>
 
-    <com.google.android.material.textfield.TextInputLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="@string/car_form_year">
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/car_dialog_year"
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:inputType="number"/>
-    </com.google.android.material.textfield.TextInputLayout>
+            android:hint="@string/car_form_model"
+            app:helperText="@string/car_form_model_helper">
+            <AutoCompleteTextView
+                android:id="@+id/car_dialog_model"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textCapWords"
+                android:completionThreshold="1"
+                android:imeOptions="actionNext"
+                tools:ignore="LabelFor"/>
+        </com.google.android.material.textfield.TextInputLayout>
 
-    <com.google.android.material.textfield.TextInputLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="@string/car_form_battery_kwh">
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/car_dialog_battery"
+        <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:inputType="numberDecimal"/>
-    </com.google.android.material.textfield.TextInputLayout>
+            android:hint="@string/car_form_year">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/car_dialog_year"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="number"/>
+        </com.google.android.material.textfield.TextInputLayout>
 
-</LinearLayout>
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/car_form_battery_kwh">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/car_dialog_battery"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="numberDecimal"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="end"
+            android:layout_marginTop="16dp">
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/car_dialog_cancel"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:text="@string/car_dialog_cancel"/>
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/car_dialog_save"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/car_dialog_save"/>
+        </LinearLayout>
+
+    </LinearLayout>
+
+</androidx.core.widget.NestedScrollView>
