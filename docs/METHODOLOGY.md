@@ -78,7 +78,7 @@ Both sides of the comparison are tank-to-wheel. **Well-to-wheel** numbers (which
 
 ### Average vs marginal grid intensity
 
-The intensity Electricity Maps returns is an **average** value, what a kWh "looks like" on the user's zone as a whole at that moment. But every additional kWh the user draws is met by the **marginal** plant on the margin, which is almost always the most expensive (typically oil-fired) generator in the merit order. Marginal intensity is usually *higher* than average. Researchers comparing EV impact should treat the per-event values stored by Joulie as a lower bound for genuinely-induced emissions; TASK-49 in the backlog tracks an opt-in marginal-factor extension for research-grade exports.
+The intensity Electricity Maps returns is an **average** value, what a kWh "looks like" on the user's zone as a whole at that moment. But every additional kWh the user draws is met by the **marginal** plant on the margin, which is almost always the most expensive (typically oil-fired) generator in the merit order. Marginal intensity is usually *higher* than average. Researchers comparing EV impact should treat the per-event values stored by Joulie as a lower bound for genuinely-induced emissions. A marginal-factor refinement would need either a paid Electricity Maps tier or an ENTSO-E mix-derivation model, neither in scope today.
 
 ### Period scoping
 
