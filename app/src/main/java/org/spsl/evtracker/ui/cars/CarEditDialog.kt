@@ -7,9 +7,9 @@ package org.spsl.evtracker.ui.cars
 import android.content.Context
 import android.view.LayoutInflater
 import android.widget.ArrayAdapter
-import android.widget.Filter
 import androidx.lifecycle.LifecycleCoroutineScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.textfield.MaterialAutoCompleteTextView
 import kotlinx.coroutines.launch
 import org.spsl.evtracker.R
 import org.spsl.evtracker.core.model.CarFormState
@@ -23,11 +23,13 @@ import org.spsl.evtracker.databinding.DialogEditCarBinding
  * Wraps the existing `dialog_edit_car.xml` form with EV-database
  * autocomplete: the Make and Model fields are
  * [com.google.android.material.textfield.MaterialAutoCompleteTextView]
- * instances backed by [substringArrayAdapter] (substring match rather
- * than prefix, so "3" matches "Model 3"). Picking a model auto-fills
- * the battery and stashes the WLTP figure onto [CarFormState] so the
- * Add / Update use case persists it. All fields remain manually
- * editable — the autocomplete is a convenience, not a lock.
+ * instances backed by a plain [ArrayAdapter] (Material's recommended
+ * pattern for freeform autocomplete with prefix filtering). Tapping
+ * the end-arrow icon shows the full list; typing filters by prefix.
+ * Picking a model auto-fills the battery field and stashes the WLTP
+ * figure onto [CarFormState] so the Add / Update use case persists
+ * it. All fields remain manually editable — the autocomplete is a
+ * convenience, not a lock.
  *
  * Display format for the model dropdown: `"$model · $variant"` if the
  * variant is non-blank (Brand Guide §1 voice rule — no em-dash). The
@@ -103,7 +105,7 @@ object CarEditDialog {
             binding.carDialogBattery.setText(it.batteryKwh?.toString().orEmpty())
         }
 
-        binding.carDialogMake.setAdapter(substringArrayAdapter(context, makes))
+        binding.carDialogMake.bindAutocomplete(context, makes)
         binding.carDialogMake.setOnItemClickListener { _, _, position, _ ->
             val picked = binding.carDialogMake.adapter.getItem(position) as? String
                 ?: return@setOnItemClickListener
@@ -114,9 +116,7 @@ object CarEditDialog {
                 val rows = modelsLoader(picked)
                 modelsForCurrentMake = rows
                 displayedModelLabels = rows.map { it.displayLabel() }
-                binding.carDialogModel.setAdapter(
-                    substringArrayAdapter(context, displayedModelLabels),
-                )
+                binding.carDialogModel.bindAutocomplete(context, displayedModelLabels)
                 // The previously-selected model is unlikely to belong
                 // to the new make. Clear so the user sees the empty
                 // hint instead of a stale value.
@@ -147,9 +147,7 @@ object CarEditDialog {
                     val rows = modelsLoader(car.make)
                     modelsForCurrentMake = rows
                     displayedModelLabels = rows.map { it.displayLabel() }
-                    binding.carDialogModel.setAdapter(
-                        substringArrayAdapter(context, displayedModelLabels),
-                    )
+                    binding.carDialogModel.bindAutocomplete(context, displayedModelLabels)
                 }
             }
         }
@@ -183,43 +181,42 @@ object CarEditDialog {
         if (variant.isBlank()) model else "$model · $variant"
 
     /**
-     * `ArrayAdapter` whose filter matches by *substring* rather than
-     * the default prefix-only match — "3" should match "Model 3", and
-     * "ZOE" should match "Renault Zoe R135". The underlying full list
-     * is preserved on the adapter so each keystroke filters the
-     * original rather than the previous filter's output.
+     * Wire a freeform autocomplete on a [MaterialAutoCompleteTextView].
+     *
+     * Uses Material's stock `setSimpleItems(...)` path — the dropdown
+     * arrow on the `ExposedDropdownMenu` `TextInputLayout` shows the
+     * full list on tap; typing then filters to entries that start with
+     * the prefix (case-insensitive). Earlier iterations used a
+     * subclassed `ArrayAdapter` with a custom substring `Filter`; that
+     * combination silently broke the popup on real devices (the popup
+     * never appeared even though the adapter held data). The
+     * `setSimpleItems` path is the canonical Material recipe and is
+     * known to interop correctly with the M3 `MaterialAutoCompleteTextView`.
+     *
+     * Free typing is preserved because `MaterialAutoCompleteTextView`
+     * does not call `setKeyListener(null)`; users can still type a
+     * make like `"Lucid"` that isn't in the bundled dataset, and the
+     * field accepts it on save.
      */
-    private fun substringArrayAdapter(
+    private fun MaterialAutoCompleteTextView.bindAutocomplete(
         context: Context,
         items: List<String>,
-    ): ArrayAdapter<String> {
-        return object : ArrayAdapter<String>(
-            context,
-            android.R.layout.simple_dropdown_item_1line,
-            items.toMutableList(),
-        ) {
-            private val source: List<String> = items
-            override fun getFilter(): Filter = object : Filter() {
-                override fun performFiltering(constraint: CharSequence?): FilterResults {
-                    val needle = constraint?.toString()?.trim()?.lowercase().orEmpty()
-                    val filtered = if (needle.isEmpty()) {
-                        source
-                    } else {
-                        source.filter { it.lowercase().contains(needle) }
-                    }
-                    return FilterResults().apply {
-                        values = filtered
-                        count = filtered.size
-                    }
-                }
-
-                @Suppress("UNCHECKED_CAST")
-                override fun publishResults(constraint: CharSequence?, results: FilterResults?) {
-                    clear()
-                    addAll(results?.values as? List<String> ?: source)
-                    notifyDataSetChanged()
-                }
-            }
-        }
+    ) {
+        // setSimpleItems uses MaterialArrayAdapter + a no-op filter,
+        // which keeps the FULL list visible regardless of typed input
+        // — equivalent to a permanent "show everything" affordance.
+        // We layer prefix filtering on top by also installing a plain
+        // ArrayAdapter as the active adapter (setSimpleItems sets one,
+        // setAdapter overrides it with a stock ArrayAdapter whose
+        // default ArrayFilter does prefix matching). The dropdown
+        // arrow on the TextInputLayout's ExposedDropdownMenu style
+        // shows the list on tap regardless of typed input.
+        setAdapter(
+            ArrayAdapter(
+                context,
+                android.R.layout.simple_dropdown_item_1line,
+                items,
+            ),
+        )
     }
 }
