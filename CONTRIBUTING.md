@@ -25,7 +25,7 @@ UI (Fragments + ViewModels)  →  Domain (use cases + services)  →  Repositori
 
 - Single-Activity host with the **Navigation Component**; ViewBinding for views.
 - **Hilt** for dependency injection. **KSP** (not kapt) for Room and Hilt code generation.
-- **Room v7** with explicit migrations for the local database; **DataStore Preferences** for user settings.
+- **Room v8** with explicit migrations for the local database; **DataStore Preferences** for user settings.
 - **Vico 2.0.0** (line / column charts) + custom `ui/common/PieChartView` (donut tabs, since Vico ships no pie primitive) for the charts tab.
 - **WorkManager** for Drive backup scheduling (uniqueness via `enqueueUniqueWork`).
 - **Material 3** with light/dark token palettes.
@@ -51,7 +51,7 @@ The debug APK lands at `app/build/outputs/apk/debug/app-debug.apk`.
 ### Tests
 
 ```bash
-./gradlew test                  # JVM unit tests (~430)
+./gradlew test                  # JVM unit tests (~535)
 ./gradlew connectedAndroidTest  # Espresso / Room, needs API 26+ device or emulator
 ```
 
@@ -86,13 +86,15 @@ Drive backup on debug and release builds requires Google Cloud OAuth Android cli
 PRs and pushes to `main` are gated by [`.github/workflows/ci.yml`](.github/workflows/ci.yml), which runs:
 
 - `./gradlew ktlintCheck`, code style.
-- `./gradlew :app:lint`, Android Lint, with `HardcodedText`, `MissingTranslation`, `TypographyDashes`, and `UnusedResources` promoted to errors.
+- `./gradlew :app:lint`, Android Lint, with `HardcodedText`, `MissingTranslation`, `TypographyDashes`, `UnusedResources`, `ContentDescription`, `LabelFor`, and `KeyboardInaccessibleWidget` promoted to errors.
 - `./gradlew :app:testDebugUnitTest`, JVM unit tests.
+- `./gradlew :app:verifyRoborazziDebug`, Roborazzi screenshot baselines (TASK-79 / TASK-86); a diff fails the build.
+- `./gradlew :app:assembleRelease`, release smoke build (unsigned in CI because `keystore.properties` is absent).
 
 Run the full gate locally before opening a PR:
 
 ```bash
-./gradlew ktlintCheck :app:lint :app:testDebugUnitTest
+./gradlew ktlintCheck :app:lint :app:testDebugUnitTest :app:verifyRoborazziDebug :app:assembleRelease
 ./gradlew ktlintFormat   # auto-fix style violations
 ```
 

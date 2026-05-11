@@ -4117,7 +4117,7 @@ is instrumented-only work); instrumented-test count may grow by
 
 - The package root is `org.spsl.evtracker`.
 - The project uses Kotlin DSL (`build.gradle.kts`), Hilt for DI, Room for
-  local persistence (currently at schema version 7), and Kotlin Coroutines
+  local persistence (currently at schema version 8), and Kotlin Coroutines
   with Flow throughout.
 - All new classes must follow the existing naming and packaging conventions
   documented in [`../CLAUDE.md`](../CLAUDE.md).
@@ -4125,12 +4125,16 @@ is instrumented-only work); instrumented-test count may grow by
   `app/build.gradle.kts` first. Prefer libraries already present.
 - After any structural change, run `./gradlew test` (JVM) and
   `./gradlew connectedAndroidTest` (instrumented) to verify no regressions.
-- Room schema version is currently **7**. Any migration must bump it to **8**
-  and add a corresponding migration file under `app/schemas/`. The migration
-  list in `AppDatabase.companion` and `DatabaseModule.provideDatabase` must
-  both be updated; `BackupData.CURRENT_VERSION` and
-  `BackupSerializer.SUPPORTED_VERSIONS` need a coordinated bump when the
-   schema change touches a field that's serialized to the Drive backup.
+- Room schema version is currently **8**. Any migration must bump it to **9**
+  and add a corresponding migration file under `app/schemas/`. Additive
+  bumps default to `@AutoMigration(from, to)` on `@Database` (TASK-39
+  convention); reserve hand-written `Migration` constants for cell-value
+  rewrites, table renames or drops, and column type changes. Any
+  non-nullable column added via auto-migration must declare
+  `@ColumnInfo(defaultValue = "…")` on the entity field so KSP can emit
+  the SQL default in the generated `ALTER TABLE`. `BackupData.CURRENT_VERSION`
+  and `BackupSerializer.SUPPORTED_VERSIONS` need a coordinated bump when
+  the schema change touches a field that's serialized to the Drive backup.
 
 ---
 

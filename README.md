@@ -36,7 +36,7 @@ Joulie is a clean, no-nonsense Android app for electric vehicle drivers who want
 - Cost per km or per 100 km, with mixed-currency warnings when relevant
 - AC vs DC breakdown charts, monthly kWh and cost trends, and battery degradation over time
 - CO₂ emissions versus a petrol-car baseline, fed by an opt-in [Electricity Maps](https://www.electricitymaps.com/free-tier) live grid-intensity feed (zone-pick your region; on-device 1-hour cache so you don't burn API quota)
-- A dashboard pill showing the current grid intensity colour-coded across five bands, so you know at a glance whether now is a good time to charge — and every charge event is logged with the grid intensity at save time
+- A dashboard pill showing the current grid intensity colour-coded across five bands, so you know at a glance whether now is a good time to charge. Every charge event is logged with the grid intensity at save time.
 
 **Other features:**
 
