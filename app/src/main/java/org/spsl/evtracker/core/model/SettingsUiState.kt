@@ -74,4 +74,18 @@ sealed class SettingsEvent {
     data class BackupNowFailed(@StringRes val msgRes: Int) : SettingsEvent()
     object WipeSucceeded : SettingsEvent()
     data class WipeFailed(@StringRes val msgRes: Int) : SettingsEvent()
+
+    // — Electricity Maps API key probe (TASK-90):
+    /** Probe is in flight — show "Testing…" in the dialog. */
+    object ApiKeyTestStarted : SettingsEvent()
+
+    /** Probe came back. [resultStringRes] is a pre-resolved string id;
+     *  the Fragment renders it as-is. On Success, [zone] + [intensity]
+     *  fill the format args so the user sees the actual value the API
+     *  returned (a stronger sanity check than just "OK"). */
+    data class ApiKeyTestFinished(
+        @StringRes val resultStringRes: Int,
+        val zone: String? = null,
+        val intensity: Double? = null,
+    ) : SettingsEvent()
 }

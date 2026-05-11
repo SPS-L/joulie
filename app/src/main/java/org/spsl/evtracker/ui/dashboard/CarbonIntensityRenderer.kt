@@ -15,7 +15,8 @@ import org.spsl.evtracker.core.model.CarbonIntensityUiState
 import org.spsl.evtracker.databinding.WidgetCarbonIntensityBinding
 
 /**
- * Maps a [CarbonIntensityUiState] onto the pill's child views (TASK-82).
+ * Maps a [CarbonIntensityUiState] onto the pill's child views (TASK-82,
+ * TASK-90 reason text).
  *
  * The renderer is intentionally view-shaped — it knows nothing about the
  * ViewModel or DataStore. Pass it the binding and a state and it tints,
@@ -68,16 +69,16 @@ object CarbonIntensityRenderer {
                 )
                 card.setOnClickListener(null)
             }
-            CarbonIntensityUiState.Error -> {
+            is CarbonIntensityUiState.Error -> {
                 card.visibility = View.VISIBLE
                 card.isClickable = true
                 card.isFocusable = true
-                tint(card, R.color.md_theme_light_surfaceVariant)
-                paintText(binding, R.color.md_theme_light_onSurfaceVariant)
-                binding.widgetCarbonValue.text = context.getString(R.string.carbon_intensity_tap_to_retry)
+                tint(card, state.reason.backgroundColorRes)
+                paintText(binding, state.reason.textColorRes)
+                binding.widgetCarbonValue.text = context.getString(state.reason.labelRes)
                 binding.widgetCarbonBucket.text = ""
-                binding.widgetCarbonSubtitle.text = ""
-                card.contentDescription = context.getString(R.string.carbon_intensity_a11y_error)
+                binding.widgetCarbonSubtitle.text = context.getString(R.string.carbon_intensity_tap_to_retry)
+                card.contentDescription = context.getString(state.reason.a11yRes)
                 card.setOnClickListener { onRetry() }
             }
         }

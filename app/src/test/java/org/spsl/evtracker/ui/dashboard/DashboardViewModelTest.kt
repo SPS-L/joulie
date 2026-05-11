@@ -81,6 +81,7 @@ class DashboardViewModelTest {
                 carbonIntensitySource = org.spsl.evtracker.testing.FakeCarbonIntensitySource(),
             ),
             carbonIntensityFormatter = org.spsl.evtracker.domain.service.CarbonIntensityFormatter(),
+            carbonIntensitySource = org.spsl.evtracker.testing.FakeCarbonIntensitySource(),
             now = FakeNowProvider(System.currentTimeMillis()),
         )
         return VmFixture(vm, settingsWriter)

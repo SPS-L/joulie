@@ -8,36 +8,34 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.spsl.evtracker.domain.repository.FetchOutcome
+import org.spsl.evtracker.domain.repository.intensityOrNull
 import org.spsl.evtracker.testing.FakeSettingsReader
 import org.spsl.evtracker.testing.FakeSettingsWriter
 
 /**
  * JVM-side cache + throttle behaviour for [ElectricityMapsRepository]
- * (TASK-80, TASK-81). The repo guarantees the Electricity Maps API is
- * called at most once per zone per hour. Two layers enforce it:
+ * (TASK-80, TASK-81, TASK-90).
+ *
+ * The repo guarantees the Electricity Maps API is called at most once
+ * per zone per hour. Two layers enforce it:
  *
  *  1. In-memory cache (fast path within a single process).
  *  2. Persistent cache in DataStore (survives process restart).
  *
- * The repo exposes two `internal` seams for tests:
- *  - `clock`: replaces `System.currentTimeMillis()` so the 1-hour TTL is
- *    deterministic without sleeping.
- *  - `httpFetcher`: replaces the real `HttpURLConnection` call so the
- *    test runs without a network.
- *
- * The persistent-cache layer is exercised through a paired
- * `FakeSettingsReader` + `FakeSettingsWriter`: writes record into the
- * writer, and we re-seed the reader from the writer state to simulate
- * a process restart (a fresh repository instance pointing at the same
- * persisted state).
+ * TASK-90 turned the return type into a sealed [FetchOutcome] so the UI
+ * can render specific reasons for failure. The test seam
+ * [ElectricityMapsRepository.httpFetcher] now returns [ElectricityMapsRepository.HttpResult]
+ * so tests can inject auth / rate-limit / server / network failure modes
+ * deterministically.
  */
 class ElectricityMapsRepositoryTest {
 
     private class Rig(
         val repo: ElectricityMapsRepository,
         val callLog: MutableMap<String, Int>,
-        val nowMs: () -> Long,
         val setNowMs: (Long) -> Unit,
     )
 
@@ -45,7 +43,7 @@ class ElectricityMapsRepositoryTest {
         initialNow: Long = 1_000_000L,
         readerInit: FakeSettingsReader = FakeSettingsReader(),
         writer: FakeSettingsWriter = FakeSettingsWriter(),
-        responses: MutableMap<String, MutableList<String?>> = mutableMapOf(),
+        responses: MutableMap<String, MutableList<ElectricityMapsRepository.HttpResult>> = mutableMapOf(),
     ): Rig {
         var nowState = initialNow
         val repo = ElectricityMapsRepository(readerInit, writer)
@@ -55,17 +53,16 @@ class ElectricityMapsRepositoryTest {
             callLog[zone] = (callLog[zone] ?: 0) + 1
             val q = responses[zone]
             if (q != null && q.isNotEmpty()) {
-                // removeAt returns the element (which CAN be null — that's
-                // how the test injects a network failure); the size check
-                // above disambiguates "empty queue → use default".
                 q.removeAt(0)
             } else {
                 // Default: unique value per call so cache hits are visible
                 // as "same value as the first hit" vs "new value".
-                "{\"carbonIntensity\": ${100 + (callLog[zone] ?: 1)}}"
+                ElectricityMapsRepository.HttpResult.Body(
+                    "{\"carbonIntensity\": ${100 + (callLog[zone] ?: 1)}}",
+                )
             }
         }
-        return Rig(repo, callLog, { nowState }, { nowState = it })
+        return Rig(repo, callLog) { nowState = it }
     }
 
     @Test
@@ -73,8 +70,8 @@ class ElectricityMapsRepositoryTest {
         val rig = mkRepo()
         val first = rig.repo.fetchCarbonIntensity("CY", "k")
         val second = rig.repo.fetchCarbonIntensity("CY", "k")
-        assertEquals(101.0, first!!, 0.0)
-        assertEquals(101.0, second!!, 0.0)
+        assertEquals(101.0, first.intensityOrNull!!, 0.0)
+        assertEquals(101.0, second.intensityOrNull!!, 0.0)
         assertEquals(1, rig.callLog["CY"])
     }
 
@@ -82,29 +79,86 @@ class ElectricityMapsRepositoryTest {
     fun fetchPastOneHourTtl_reFetchesFromNetwork() = runTest {
         val rig = mkRepo(initialNow = 0L)
         val first = rig.repo.fetchCarbonIntensity("CY", "k")
-        rig.setNowMs(ElectricityMapsRepository.CACHE_TTL_MS) // exact TTL boundary → cache expired (strict `<`).
+        rig.setNowMs(ElectricityMapsRepository.CACHE_TTL_MS)
         val second = rig.repo.fetchCarbonIntensity("CY", "k")
-        assertEquals(101.0, first!!, 0.0)
-        assertEquals(102.0, second!!, 0.0)
+        assertEquals(101.0, first.intensityOrNull!!, 0.0)
+        assertEquals(102.0, second.intensityOrNull!!, 0.0)
         assertEquals(2, rig.callLog["CY"])
     }
 
     @Test
-    fun blankApiKey_returnsNull_andDoesNotCallNetwork() = runTest {
+    fun blankApiKey_returnsDisabled_andDoesNotCallNetwork() = runTest {
         val rig = mkRepo()
-        assertNull(rig.repo.fetchCarbonIntensity("CY", ""))
+        assertEquals(FetchOutcome.Disabled, rig.repo.fetchCarbonIntensity("CY", ""))
         assertEquals(null, rig.callLog["CY"])
     }
 
     @Test
-    fun networkFailure_returnsNull_andDoesNotCacheFailure() = runTest {
-        val responses = mutableMapOf("CY" to mutableListOf<String?>(null, "{\"carbonIntensity\": 412}"))
+    fun networkFailure_returnsNetworkError_andDoesNotCacheFailure() = runTest {
+        val responses = mutableMapOf(
+            "CY" to mutableListOf<ElectricityMapsRepository.HttpResult>(
+                ElectricityMapsRepository.HttpResult.Network,
+                ElectricityMapsRepository.HttpResult.Body("{\"carbonIntensity\": 412}"),
+            ),
+        )
         val rig = mkRepo(initialNow = 0L, responses = responses)
         val first = rig.repo.fetchCarbonIntensity("CY", "k")
-        assertNull(first)
+        assertEquals(FetchOutcome.NetworkError, first)
+        assertEquals(FetchOutcome.NetworkError, rig.repo.lastError.value)
         val second = rig.repo.fetchCarbonIntensity("CY", "k")
-        assertEquals(412.0, second!!, 0.0)
+        assertEquals(412.0, second.intensityOrNull!!, 0.0)
+        assertNull("lastError clears on subsequent success", rig.repo.lastError.value)
         assertEquals(2, rig.callLog["CY"])
+    }
+
+    @Test
+    fun authFailure_returnsAuthError_andUpdatesLastError() = runTest {
+        val responses = mutableMapOf(
+            "CY" to mutableListOf<ElectricityMapsRepository.HttpResult>(
+                ElectricityMapsRepository.HttpResult.Auth,
+            ),
+        )
+        val rig = mkRepo(responses = responses)
+        val outcome = rig.repo.fetchCarbonIntensity("CY", "k")
+        assertEquals(FetchOutcome.AuthError, outcome)
+        assertEquals(FetchOutcome.AuthError, rig.repo.lastError.value)
+    }
+
+    @Test
+    fun rateLimitedResponse_returnsRateLimited() = runTest {
+        val responses = mutableMapOf(
+            "CY" to mutableListOf<ElectricityMapsRepository.HttpResult>(
+                ElectricityMapsRepository.HttpResult.RateLimited,
+            ),
+        )
+        val rig = mkRepo(responses = responses)
+        assertEquals(FetchOutcome.RateLimited, rig.repo.fetchCarbonIntensity("CY", "k"))
+        assertEquals(FetchOutcome.RateLimited, rig.repo.lastError.value)
+    }
+
+    @Test
+    fun serverErrorResponse_returnsServerError() = runTest {
+        val responses = mutableMapOf(
+            "CY" to mutableListOf<ElectricityMapsRepository.HttpResult>(
+                ElectricityMapsRepository.HttpResult.Server,
+            ),
+        )
+        val rig = mkRepo(responses = responses)
+        assertEquals(FetchOutcome.ServerError, rig.repo.fetchCarbonIntensity("CY", "k"))
+    }
+
+    @Test
+    fun clearCache_resetsLastError() = runTest {
+        val responses = mutableMapOf(
+            "CY" to mutableListOf<ElectricityMapsRepository.HttpResult>(
+                ElectricityMapsRepository.HttpResult.Auth,
+            ),
+        )
+        val rig = mkRepo(responses = responses)
+        rig.repo.fetchCarbonIntensity("CY", "k")
+        assertEquals(FetchOutcome.AuthError, rig.repo.lastError.value)
+        rig.repo.clearCache()
+        assertNull(rig.repo.lastError.value)
     }
 
     @Test
@@ -125,15 +179,27 @@ class ElectricityMapsRepositoryTest {
     }
 
     @Test
-    fun unparseableJson_returnsNull() = runTest {
-        val rig = mkRepo(responses = mutableMapOf("CY" to mutableListOf<String?>("not-json")))
-        assertNull(rig.repo.fetchCarbonIntensity("CY", "k"))
+    fun unparseableJson_returnsServerError() = runTest {
+        val rig = mkRepo(
+            responses = mutableMapOf(
+                "CY" to mutableListOf<ElectricityMapsRepository.HttpResult>(
+                    ElectricityMapsRepository.HttpResult.Body("not-json"),
+                ),
+            ),
+        )
+        assertEquals(FetchOutcome.ServerError, rig.repo.fetchCarbonIntensity("CY", "k"))
     }
 
     @Test
-    fun missingCarbonIntensityField_returnsNull() = runTest {
-        val rig = mkRepo(responses = mutableMapOf("CY" to mutableListOf<String?>("{\"zone\": \"CY\"}")))
-        assertNull(rig.repo.fetchCarbonIntensity("CY", "k"))
+    fun missingCarbonIntensityField_returnsServerError() = runTest {
+        val rig = mkRepo(
+            responses = mutableMapOf(
+                "CY" to mutableListOf<ElectricityMapsRepository.HttpResult>(
+                    ElectricityMapsRepository.HttpResult.Body("{\"zone\": \"CY\"}"),
+                ),
+            ),
+        )
+        assertEquals(FetchOutcome.ServerError, rig.repo.fetchCarbonIntensity("CY", "k"))
     }
 
     /**
@@ -149,11 +215,9 @@ class ElectricityMapsRepositoryTest {
         val readerA = FakeSettingsReader()
         val rigA = mkRepo(initialNow = 1_000_000L, readerInit = readerA, writer = writerA)
         val first = rigA.repo.fetchCarbonIntensity("CY", "k")
-        assertEquals(101.0, first!!, 0.0)
+        assertEquals(101.0, first.intensityOrNull!!, 0.0)
         assertEquals(1, rigA.callLog["CY"])
 
-        // Simulate process restart: new reader pre-loaded with the
-        // writer's persisted state; new repo instance.
         val readerB = FakeSettingsReader(
             electricityMapsCacheZoneInit = writerA.electricityMapsCacheZone,
             electricityMapsCacheIntensityInit = writerA.electricityMapsCacheIntensity,
@@ -161,13 +225,12 @@ class ElectricityMapsRepositoryTest {
         )
         val writerB = FakeSettingsWriter()
         val rigB = mkRepo(
-            // Advance by 30 min — still within the 1-hour TTL.
             initialNow = writerA.electricityMapsCacheFetchedAtMs + 30L * 60_000L,
             readerInit = readerB,
             writer = writerB,
         )
         val second = rigB.repo.fetchCarbonIntensity("CY", "k")
-        assertEquals("persistent cache must serve same value", 101.0, second!!, 0.0)
+        assertEquals("persistent cache must serve same value", 101.0, second.intensityOrNull!!, 0.0)
         assertEquals("network must not be called after restart", null, rigB.callLog["CY"])
     }
 
@@ -178,7 +241,6 @@ class ElectricityMapsRepositoryTest {
         val rigA = mkRepo(initialNow = 0L, readerInit = readerA, writer = writerA)
         rigA.repo.fetchCarbonIntensity("CY", "k")
 
-        // Simulate restart 2 hours later — persistent entry is expired.
         val readerB = FakeSettingsReader(
             electricityMapsCacheZoneInit = writerA.electricityMapsCacheZone,
             electricityMapsCacheIntensityInit = writerA.electricityMapsCacheIntensity,
@@ -191,7 +253,7 @@ class ElectricityMapsRepositoryTest {
             writer = writerB,
         )
         val second = rigB.repo.fetchCarbonIntensity("CY", "k")
-        assertEquals("expired persistent must re-fetch", 101.0, second!!, 0.0)
+        assertEquals("expired persistent must re-fetch", 101.0, second.intensityOrNull!!, 0.0)
         assertEquals("network was called on cold-start re-fetch", 1, rigB.callLog["CY"])
     }
 
@@ -202,8 +264,6 @@ class ElectricityMapsRepositoryTest {
         val rigA = mkRepo(readerInit = readerA, writer = writerA)
         rigA.repo.fetchCarbonIntensity("CY", "k")
 
-        // User switched zone to DE. The persisted CY cache must not be
-        // served for DE.
         val readerB = FakeSettingsReader(
             electricityMapsCacheZoneInit = writerA.electricityMapsCacheZone,
             electricityMapsCacheIntensityInit = writerA.electricityMapsCacheIntensity,
@@ -212,7 +272,7 @@ class ElectricityMapsRepositoryTest {
         val writerB = FakeSettingsWriter()
         val rigB = mkRepo(readerInit = readerB, writer = writerB)
         val second = rigB.repo.fetchCarbonIntensity("DE", "k")
-        assertEquals("zone change must re-fetch", 101.0, second!!, 0.0)
+        assertEquals("zone change must re-fetch", 101.0, second.intensityOrNull!!, 0.0)
         assertEquals(1, rigB.callLog["DE"])
     }
 
@@ -225,5 +285,46 @@ class ElectricityMapsRepositoryTest {
         assertEquals("DE", writer.electricityMapsCacheZone)
         assertEquals(101.0, writer.electricityMapsCacheIntensity, 0.0)
         assertEquals(42L, writer.electricityMapsCacheFetchedAtMs)
+    }
+
+    @Test
+    fun probeApiKey_bypassesCache_anddoesNotPollutePersistent() = runTest {
+        val writer = FakeSettingsWriter()
+        val rig = mkRepo(writer = writer)
+        // Pre-warm a cache entry for CY so we know probe doesn't disturb it.
+        rig.repo.fetchCarbonIntensity("CY", "k")
+        val zoneBefore = writer.electricityMapsCacheZone
+        val intensityBefore = writer.electricityMapsCacheIntensity
+        val fetchedAtBefore = writer.electricityMapsCacheFetchedAtMs
+
+        rig.repo.probeApiKey("DE", "candidate")
+
+        assertEquals(zoneBefore, writer.electricityMapsCacheZone)
+        assertEquals(intensityBefore, writer.electricityMapsCacheIntensity, 0.0)
+        assertEquals(fetchedAtBefore, writer.electricityMapsCacheFetchedAtMs)
+    }
+
+    @Test
+    fun probeApiKey_doesNotUpdateLastError_evenOnFailure() = runTest {
+        val responses = mutableMapOf(
+            "DE" to mutableListOf<ElectricityMapsRepository.HttpResult>(
+                ElectricityMapsRepository.HttpResult.Auth,
+            ),
+        )
+        val rig = mkRepo(responses = responses)
+        val outcome = rig.repo.probeApiKey("DE", "bad-key")
+        assertEquals(FetchOutcome.AuthError, outcome)
+        assertNull(
+            "probeApiKey must not touch lastError so the dashboard pill stays unaffected",
+            rig.repo.lastError.value,
+        )
+    }
+
+    @Test
+    fun probeApiKey_blankInputs_returnsDisabled() = runTest {
+        val rig = mkRepo()
+        assertEquals(FetchOutcome.Disabled, rig.repo.probeApiKey("", "k"))
+        assertEquals(FetchOutcome.Disabled, rig.repo.probeApiKey("CY", ""))
+        assertTrue("no HTTP call when inputs are blank", rig.callLog.isEmpty())
     }
 }

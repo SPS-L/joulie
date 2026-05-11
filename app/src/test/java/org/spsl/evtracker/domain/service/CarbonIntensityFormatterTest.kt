@@ -7,8 +7,10 @@ package org.spsl.evtracker.domain.service
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.spsl.evtracker.core.model.CarbonIntensityBucket
+import org.spsl.evtracker.core.model.CarbonIntensityErrorReason
 import org.spsl.evtracker.core.model.CarbonIntensityUiState
 import org.spsl.evtracker.data.repository.ElectricityMapsRepository
+import org.spsl.evtracker.domain.repository.FetchOutcome
 
 class CarbonIntensityFormatterTest {
 
@@ -27,6 +29,7 @@ class CarbonIntensityFormatterTest {
             cacheFetchedAtMs = 1_000L,
             nowMs = 2_000L,
             isRefreshing = false,
+            lastError = null,
         )
         assertEquals(CarbonIntensityUiState.Hidden, state)
     }
@@ -42,6 +45,7 @@ class CarbonIntensityFormatterTest {
             cacheFetchedAtMs = 1_000L,
             nowMs = 2_000L,
             isRefreshing = false,
+            lastError = null,
         )
         assertEquals(CarbonIntensityUiState.Hidden, state)
     }
@@ -57,6 +61,7 @@ class CarbonIntensityFormatterTest {
             cacheFetchedAtMs = 1_000L,
             nowMs = 1_000L + 30L * 60 * 1_000L,
             isRefreshing = false,
+            lastError = null,
         )
         assertEquals(
             CarbonIntensityUiState.Ready(
@@ -69,7 +74,7 @@ class CarbonIntensityFormatterTest {
     }
 
     @Test
-    fun zoneMismatch_andNotRefreshing_returnsError() {
+    fun zoneMismatch_andNotRefreshing_returnsErrorUnknown() {
         val state = fmt.format(
             co2Enabled = true,
             apiKey = "k",
@@ -79,12 +84,13 @@ class CarbonIntensityFormatterTest {
             cacheFetchedAtMs = 1_000L,
             nowMs = 1_000L + 30L * 60 * 1_000L,
             isRefreshing = false,
+            lastError = null,
         )
-        assertEquals(CarbonIntensityUiState.Error, state)
+        assertEquals(CarbonIntensityUiState.Error(CarbonIntensityErrorReason.UNKNOWN), state)
     }
 
     @Test
-    fun expiredCache_andNotRefreshing_returnsError() {
+    fun expiredCache_andNotRefreshing_returnsErrorUnknown() {
         val state = fmt.format(
             co2Enabled = true,
             apiKey = "k",
@@ -94,8 +100,9 @@ class CarbonIntensityFormatterTest {
             cacheFetchedAtMs = 0L,
             nowMs = ElectricityMapsRepository.CACHE_TTL_MS + 1L,
             isRefreshing = false,
+            lastError = null,
         )
-        assertEquals(CarbonIntensityUiState.Error, state)
+        assertEquals(CarbonIntensityUiState.Error(CarbonIntensityErrorReason.UNKNOWN), state)
     }
 
     @Test
@@ -109,12 +116,13 @@ class CarbonIntensityFormatterTest {
             cacheFetchedAtMs = 0L,
             nowMs = 1_000L,
             isRefreshing = true,
+            lastError = null,
         )
         assertEquals(CarbonIntensityUiState.Loading, state)
     }
 
     @Test
-    fun missingCache_andNotRefreshing_returnsError() {
+    fun missingCache_andNotRefreshing_returnsErrorUnknown() {
         val state = fmt.format(
             co2Enabled = true,
             apiKey = "k",
@@ -124,8 +132,69 @@ class CarbonIntensityFormatterTest {
             cacheFetchedAtMs = 0L,
             nowMs = 1_000L,
             isRefreshing = false,
+            lastError = null,
         )
-        assertEquals(CarbonIntensityUiState.Error, state)
+        assertEquals(CarbonIntensityUiState.Error(CarbonIntensityErrorReason.UNKNOWN), state)
+    }
+
+    // ── Error sub-state mapping (TASK-90) ────────────────────────────────
+
+    @Test
+    fun authError_propagatesToErrorAuth() {
+        val state = fmt.format(
+            co2Enabled = true, apiKey = "k", currentZone = "CY",
+            cacheZone = "", cacheIntensityGCo2PerKwh = 0.0, cacheFetchedAtMs = 0L,
+            nowMs = 1_000L, isRefreshing = false,
+            lastError = FetchOutcome.AuthError,
+        )
+        assertEquals(CarbonIntensityUiState.Error(CarbonIntensityErrorReason.AUTH), state)
+    }
+
+    @Test
+    fun networkError_propagatesToErrorNetwork() {
+        val state = fmt.format(
+            co2Enabled = true, apiKey = "k", currentZone = "CY",
+            cacheZone = "", cacheIntensityGCo2PerKwh = 0.0, cacheFetchedAtMs = 0L,
+            nowMs = 1_000L, isRefreshing = false,
+            lastError = FetchOutcome.NetworkError,
+        )
+        assertEquals(CarbonIntensityUiState.Error(CarbonIntensityErrorReason.NETWORK), state)
+    }
+
+    @Test
+    fun rateLimited_propagatesToErrorRateLimited() {
+        val state = fmt.format(
+            co2Enabled = true, apiKey = "k", currentZone = "CY",
+            cacheZone = "", cacheIntensityGCo2PerKwh = 0.0, cacheFetchedAtMs = 0L,
+            nowMs = 1_000L, isRefreshing = false,
+            lastError = FetchOutcome.RateLimited,
+        )
+        assertEquals(CarbonIntensityUiState.Error(CarbonIntensityErrorReason.RATE_LIMITED), state)
+    }
+
+    @Test
+    fun serverError_propagatesToErrorServer() {
+        val state = fmt.format(
+            co2Enabled = true, apiKey = "k", currentZone = "CY",
+            cacheZone = "", cacheIntensityGCo2PerKwh = 0.0, cacheFetchedAtMs = 0L,
+            nowMs = 1_000L, isRefreshing = false,
+            lastError = FetchOutcome.ServerError,
+        )
+        assertEquals(CarbonIntensityUiState.Error(CarbonIntensityErrorReason.SERVER), state)
+    }
+
+    @Test
+    fun disabledOutcome_collapsesToUnknown() {
+        // FetchOutcome.Disabled isn't a real "error" but if it ever lands
+        // in lastError (e.g. a fast key→blank toggle) we'd rather show
+        // UNKNOWN than have the renderer crash.
+        val state = fmt.format(
+            co2Enabled = true, apiKey = "k", currentZone = "CY",
+            cacheZone = "", cacheIntensityGCo2PerKwh = 0.0, cacheFetchedAtMs = 0L,
+            nowMs = 1_000L, isRefreshing = false,
+            lastError = FetchOutcome.Disabled,
+        )
+        assertEquals(CarbonIntensityUiState.Error(CarbonIntensityErrorReason.UNKNOWN), state)
     }
 
     // ── Bucket boundaries ────────────────────────────────────────────────

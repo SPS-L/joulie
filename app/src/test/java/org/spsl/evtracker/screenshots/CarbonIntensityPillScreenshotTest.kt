@@ -21,6 +21,7 @@ import org.robolectric.annotation.GraphicsMode
 import org.robolectric.shadows.ShadowLooper
 import org.spsl.evtracker.HiltTestActivity
 import org.spsl.evtracker.core.model.CarbonIntensityBucket
+import org.spsl.evtracker.core.model.CarbonIntensityErrorReason
 import org.spsl.evtracker.core.model.CarbonIntensityUiState
 import org.spsl.evtracker.databinding.WidgetCarbonIntensityBinding
 import org.spsl.evtracker.screenshots.fixtures.CarbonIntensityFixtures
@@ -100,7 +101,39 @@ class CarbonIntensityPillScreenshotTest {
     fun loading() = capture("loading", ThemeMode.LIGHT, CarbonIntensityUiState.Loading)
 
     @Test
-    fun error() = capture("error", ThemeMode.LIGHT, CarbonIntensityUiState.Error)
+    fun error_unknown() = capture(
+        "error_unknown",
+        ThemeMode.LIGHT,
+        CarbonIntensityUiState.Error(CarbonIntensityErrorReason.UNKNOWN),
+    )
+
+    @Test
+    fun error_auth() = capture(
+        "error_auth",
+        ThemeMode.LIGHT,
+        CarbonIntensityUiState.Error(CarbonIntensityErrorReason.AUTH),
+    )
+
+    @Test
+    fun error_network() = capture(
+        "error_network",
+        ThemeMode.LIGHT,
+        CarbonIntensityUiState.Error(CarbonIntensityErrorReason.NETWORK),
+    )
+
+    @Test
+    fun error_rate_limited() = capture(
+        "error_rate_limited",
+        ThemeMode.LIGHT,
+        CarbonIntensityUiState.Error(CarbonIntensityErrorReason.RATE_LIMITED),
+    )
+
+    @Test
+    fun error_server() = capture(
+        "error_server",
+        ThemeMode.LIGHT,
+        CarbonIntensityUiState.Error(CarbonIntensityErrorReason.SERVER),
+    )
 
     private fun captureReady(bucket: CarbonIntensityBucket, theme: ThemeMode) {
         capture(

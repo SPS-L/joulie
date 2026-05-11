@@ -21,8 +21,8 @@ import org.spsl.evtracker.R
  *    flight. The user has CO₂ on AND a key set, but no valid cache yet.
  *  - [Ready]: the cached value is for the current zone and within the
  *    1-hour TTL. Show value + bucket label + "updated X ago".
- *  - [Error]: refresh failed (network down, blank/invalid response).
- *    The pill becomes tappable with a "Tap to retry" affordance.
+ *  - [Error]: refresh failed. The pill becomes tappable with a
+ *    reason-specific message and a "tap to retry" affordance.
  */
 sealed class CarbonIntensityUiState {
     data object Hidden : CarbonIntensityUiState()
@@ -32,7 +32,60 @@ sealed class CarbonIntensityUiState {
         val bucket: CarbonIntensityBucket,
         val fetchedAtMs: Long,
     ) : CarbonIntensityUiState()
-    data object Error : CarbonIntensityUiState()
+    data class Error(val reason: CarbonIntensityErrorReason) : CarbonIntensityUiState()
+}
+
+/**
+ * Reasons the carbon-intensity pill can be in [CarbonIntensityUiState.Error].
+ *
+ * Each value owns the localized string resource the renderer should
+ * display in the pill's value slot. Keep this enum stable — the
+ * Roborazzi baselines reference each member by file-suffix name.
+ */
+enum class CarbonIntensityErrorReason(
+    @StringRes val labelRes: Int,
+    @StringRes val a11yRes: Int,
+) {
+    /** HTTP 401/403. Wrong API key, or the free-tier key was issued for
+     *  a different zone than the one Joulie is requesting. */
+    AUTH(
+        labelRes = R.string.carbon_intensity_error_auth,
+        a11yRes = R.string.carbon_intensity_a11y_error_auth,
+    ),
+
+    /** Transport failure: no internet, DNS, TLS, timeout. */
+    NETWORK(
+        labelRes = R.string.carbon_intensity_error_network,
+        a11yRes = R.string.carbon_intensity_a11y_error_network,
+    ),
+
+    /** HTTP 429. Free tier shares 50 req/h across all clients using
+     *  this key, so it's possible to trip this even with our throttle. */
+    RATE_LIMITED(
+        labelRes = R.string.carbon_intensity_error_rate_limited,
+        a11yRes = R.string.carbon_intensity_a11y_error_rate_limited,
+    ),
+
+    /** HTTP 5xx — Electricity Maps unavailable, retry later. */
+    SERVER(
+        labelRes = R.string.carbon_intensity_error_server,
+        a11yRes = R.string.carbon_intensity_a11y_error_server,
+    ),
+
+    /** Catch-all for "something unexpected went wrong" — kept as a real
+     *  enum value rather than a nullable Error.reason so the formatter
+     *  always has a renderable state when it doesn't know what failed. */
+    UNKNOWN(
+        labelRes = R.string.carbon_intensity_error_unknown,
+        a11yRes = R.string.carbon_intensity_a11y_error_unknown,
+    ),
+    ;
+
+    @get:ColorRes
+    val backgroundColorRes: Int = R.color.md_theme_light_surfaceVariant
+
+    @get:ColorRes
+    val textColorRes: Int = R.color.md_theme_light_onSurfaceVariant
 }
 
 /**

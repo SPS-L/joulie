@@ -44,6 +44,11 @@ class SettingsFragment : Fragment() {
     private var _binding: FragmentSettingsBinding? = null
     private val binding get() = _binding!!
 
+    /** Status text inside the live "Electricity Maps API key" dialog, when
+     *  one is showing. Null at all other times. The events collector writes
+     *  to it on [SettingsEvent.ApiKeyTestStarted] / [SettingsEvent.ApiKeyTestFinished]. */
+    private var apiKeyTestStatusView: android.widget.TextView? = null
+
     private val consentLauncher = registerForActivityResult(
         ActivityResultContracts.StartIntentSenderForResult(),
     ) { result ->
@@ -174,6 +179,16 @@ class SettingsFragment : Fragment() {
                                 Snackbar.make(binding.root, R.string.drive_wipe_success, Snackbar.LENGTH_SHORT).show()
                             is SettingsEvent.WipeFailed ->
                                 Snackbar.make(binding.root, ev.msgRes, Snackbar.LENGTH_LONG).show()
+                            SettingsEvent.ApiKeyTestStarted ->
+                                apiKeyTestStatusView?.text = getString(R.string.settings_co2_api_key_test_in_progress)
+                            is SettingsEvent.ApiKeyTestFinished -> {
+                                val text = if (ev.zone != null && ev.intensity != null) {
+                                    getString(ev.resultStringRes, ev.zone, "%.0f".format(ev.intensity))
+                                } else {
+                                    getString(ev.resultStringRes)
+                                }
+                                apiKeyTestStatusView?.text = text
+                            }
                         }
                     }
                 }
@@ -429,7 +444,9 @@ class SettingsFragment : Fragment() {
     /**
      * `MaterialAlertDialog` with a password-masked text input for the
      * Electricity Maps API key. Helper text links to the free-tier page;
-     * tapping it opens the URL in the default browser.
+     * tapping it opens the URL in the default browser. The "Test" button
+     * (TASK-90) probes the candidate key against the user's current zone
+     * and shows the outcome inline so users can validate before saving.
      */
     private fun showElectricityMapsApiKeyDialog() {
         val ctx = requireContext()
@@ -439,17 +456,38 @@ class SettingsFragment : Fragment() {
             setText(viewModel.uiState.value.electricityMapsApiKey)
             setSelectAllOnFocus(true)
         }
-        val container = com.google.android.material.textfield.TextInputLayout(
+        val textLayout = com.google.android.material.textfield.TextInputLayout(
             ctx,
             null,
             com.google.android.material.R.attr.textInputOutlinedStyle,
         ).apply {
             endIconMode = com.google.android.material.textfield.TextInputLayout.END_ICON_PASSWORD_TOGGLE
-            setPadding(48, 16, 48, 0)
             helperText = getString(R.string.settings_co2_api_key_dialog_helper)
             isHelperTextEnabled = true
             addView(input)
         }
+        val testButton = com.google.android.material.button.MaterialButton(
+            ctx,
+            null,
+            com.google.android.material.R.attr.materialButtonOutlinedStyle,
+        ).apply {
+            text = getString(R.string.settings_co2_api_key_test)
+            setOnClickListener {
+                viewModel.onTestElectricityMapsApiKey(input.text?.toString().orEmpty())
+            }
+        }
+        val statusView = android.widget.TextView(ctx).apply {
+            setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_BodySmall)
+            text = ""
+        }
+        val container = android.widget.LinearLayout(ctx).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setPadding(48, 16, 48, 0)
+            addView(textLayout)
+            addView(testButton)
+            addView(statusView)
+        }
+        apiKeyTestStatusView = statusView
         MaterialAlertDialogBuilder(ctx)
             .setTitle(R.string.settings_co2_api_key_dialog_title)
             .setView(container)
@@ -467,6 +505,7 @@ class SettingsFragment : Fragment() {
                 }
             }
             .setNegativeButton(R.string.common_cancel, null)
+            .setOnDismissListener { apiKeyTestStatusView = null }
             .show()
     }
 

@@ -529,16 +529,37 @@ class FakeSaveChargeEventGateway {
 
 /**
  * In-memory fake for [org.spsl.evtracker.domain.repository.CarbonIntensitySource].
- * `nextValue` is returned by every `fetchCarbonIntensity` call until
+ * `nextOutcome` is returned by every `fetchCarbonIntensity` call until
  * overwritten; `callCount` records how many times the fetch was invoked so
  * tests can assert the 1-hour cache hit/miss behaviour at the use-case
  * level. [clearCache] invocations are also recorded for `ResetAllDataUseCase`
- * coverage.
+ * coverage. `probeApiKey` shares `nextProbeOutcome` unless tests set it
+ * separately.
+ *
+ * Convenience setter: `nextValue` lets old tests keep the `Double?`
+ * mental model — assigning null produces [FetchOutcome.NetworkError]
+ * (which collapses to `intensityOrNull == null` in callers), assigning
+ * a number wraps it in [FetchOutcome.Success].
  */
 class FakeCarbonIntensitySource(
-    var nextValue: Double? = null,
+    initialOutcome: org.spsl.evtracker.domain.repository.FetchOutcome =
+        org.spsl.evtracker.domain.repository.FetchOutcome.NetworkError,
 ) : org.spsl.evtracker.domain.repository.CarbonIntensitySource {
+    var nextOutcome: org.spsl.evtracker.domain.repository.FetchOutcome = initialOutcome
+    var nextProbeOutcome: org.spsl.evtracker.domain.repository.FetchOutcome = initialOutcome
+    var nextValue: Double?
+        get() = (nextOutcome as? org.spsl.evtracker.domain.repository.FetchOutcome.Success)?.intensityGCo2PerKwh
+        set(value) {
+            nextOutcome = if (value != null) {
+                org.spsl.evtracker.domain.repository.FetchOutcome.Success(value)
+            } else {
+                org.spsl.evtracker.domain.repository.FetchOutcome.NetworkError
+            }
+        }
+
     var callCount: Int = 0
+        private set
+    var probeCount: Int = 0
         private set
     var clearCacheCallCount: Int = 0
         private set
@@ -546,16 +567,45 @@ class FakeCarbonIntensitySource(
         private set
     var lastApiKey: String? = null
         private set
+    var lastProbeZone: String? = null
+        private set
+    var lastProbeApiKey: String? = null
+        private set
 
-    override suspend fun fetchCarbonIntensity(zone: String, apiKey: String): Double? {
+    private val _lastError =
+        kotlinx.coroutines.flow.MutableStateFlow<org.spsl.evtracker.domain.repository.FetchOutcome?>(null)
+    override val lastError: kotlinx.coroutines.flow.StateFlow<org.spsl.evtracker.domain.repository.FetchOutcome?> =
+        _lastError
+
+    override suspend fun fetchCarbonIntensity(
+        zone: String,
+        apiKey: String,
+    ): org.spsl.evtracker.domain.repository.FetchOutcome {
         callCount++
         lastZone = zone
         lastApiKey = apiKey
-        return nextValue
+        val outcome = nextOutcome
+        _lastError.value = if (outcome is org.spsl.evtracker.domain.repository.FetchOutcome.Success) {
+            null
+        } else {
+            outcome
+        }
+        return outcome
+    }
+
+    override suspend fun probeApiKey(
+        zone: String,
+        apiKey: String,
+    ): org.spsl.evtracker.domain.repository.FetchOutcome {
+        probeCount++
+        lastProbeZone = zone
+        lastProbeApiKey = apiKey
+        return nextProbeOutcome
     }
 
     override suspend fun clearCache() {
         clearCacheCallCount++
+        _lastError.value = null
     }
 }
 

@@ -14,6 +14,7 @@ import org.spsl.evtracker.domain.repository.ChargeEventQueries
 import org.spsl.evtracker.domain.repository.ChargeEventWriter
 import org.spsl.evtracker.domain.repository.LocationWriter
 import org.spsl.evtracker.domain.repository.SettingsReader
+import org.spsl.evtracker.domain.repository.intensityOrNull
 import org.spsl.evtracker.domain.service.CostParser
 import org.spsl.evtracker.domain.widget.WidgetRefresher
 import javax.inject.Inject
@@ -56,7 +57,7 @@ class SaveChargeEventUseCase @Inject constructor(
                 carbonIntensitySource.fetchCarbonIntensity(
                     settingsReader.electricityMapsZone.first(),
                     apiKey,
-                )
+                ).intensityOrNull
             } else {
                 null
             }
