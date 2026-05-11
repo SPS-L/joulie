@@ -1,0 +1,103 @@
+name: Baseline profile regeneration
+
+# TASK-21: regenerates app/src/main/baseline-prof.txt against the
+# current source tree. Kept on `workflow_dispatch` only because the
+# job:
+#
+#   - boots a managed AVD (cold boot ~60s with KVM, but the macro-
+#     benchmark + BaselineProfileGenerator drives 25+ cold restarts
+#     so total wall-clock is ~15 minutes per run);
+#   - emits a non-trivial diff in `baseline-prof.txt` that needs human
+#     review (the file is committed and AGP bundles it into release
+#     APKs for ART AOT compilation at install time);
+#   - would mask code-change regressions if it ran on every PR.
+#
+# Operator workflow:
+#
+#   1. Trigger this workflow from the Actions tab before each release
+#      tag (or when the BACKLOG cadence rule fires — see
+#      "Baseline profile cadence" in CLAUDE.md).
+#   2. Download the `baseline-prof-txt` artifact.
+#   3. Replace `app/src/main/baseline-prof.txt` locally with the
+#      downloaded file, commit, push, then continue with the release
+#      flow.
+#
+# Done as a manual download + commit rather than an auto-open PR
+# because the diff is opaque (sorted method list) and the only
+# meaningful review is "did the methods change *categories* roughly
+# as expected for the source delta", which a reviewer can spot from
+# the file size and a handful of grep checks.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: baseline-profile-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  generate:
+    name: generateBaselineProfile (API 34)
+    runs-on: ubuntu-latest
+    # 35 min: 5 for setup + ~25 for the macro-benchmark loop + headroom.
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Enable KVM permissions
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      # API 34 (Android 14) is the sweet spot for profile capture:
+      # > = 31 is required for the macro-benchmark profileable shell
+      # entry, and API 34 closely matches the median Joulie user device
+      # mix per the Play Console. API 35 emulators sometimes pause on
+      # the first cold boot under -no-snapshot; 34 is more reliable on
+      # GitHub-hosted runners.
+      - name: Generate baseline profile
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: aosp_atd
+          arch: x86_64
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: ./gradlew :app:generateBaselineProfile --no-daemon --stacktrace
+
+      - name: Upload regenerated profile
+        uses: actions/upload-artifact@v4
+        with:
+          name: baseline-prof-txt
+          path: app/src/main/baseline-prof.txt
+          if-no-files-found: error
+
+      - name: Upload macro-benchmark results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: baseline-profile-build-output
+          path: |
+            baselineprofile/build/outputs/managed_device_android_test_additional_output/
+            baselineprofile/build/outputs/connected_android_test_additional_output/
+          if-no-files-found: ignore
