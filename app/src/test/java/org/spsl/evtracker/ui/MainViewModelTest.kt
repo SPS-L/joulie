@@ -74,7 +74,11 @@ class MainViewModelTest {
             widgetRefresher = org.spsl.evtracker.testing.FakeWidgetRefresher(),
             carbonIntensitySource = org.spsl.evtracker.testing.FakeCarbonIntensitySource(),
         )
-        val vm = MainViewModel(reader, writer, useCase)
+        val refresh = org.spsl.evtracker.domain.usecase.RefreshCarbonIntensityUseCase(
+            settingsReader = reader,
+            carbonIntensitySource = org.spsl.evtracker.testing.FakeCarbonIntensitySource(),
+        )
+        val vm = MainViewModel(reader, writer, useCase, refresh)
         return Rig(vm, reader, writer, runner, scheduler)
     }
 

@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- TASK-82: dashboard top-pill widget showing the live grid carbon
+     intensity from Electricity Maps. Tinted background, 1-line value,
+     1-line "updated X ago" subtitle. Tappable in the Error state only. -->
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/widget_carbon_intensity_card"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="8dp"
+    android:layout_marginBottom="8dp"
+    android:minHeight="64dp"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="0dp"
+    tools:cardBackgroundColor="@color/carbon_moderate">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/widget_carbon_title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/dashboard_carbon_intensity_title"
+                android:textAppearance="?attr/textAppearanceLabelLarge"
+                tools:textColor="@color/carbon_text_on_light"/>
+
+            <TextView
+                android:id="@+id/widget_carbon_bucket"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="?attr/textAppearanceLabelLarge"
+                tools:text="Moderate"
+                tools:textColor="@color/carbon_text_on_light"/>
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/widget_carbon_value"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textAppearance="?attr/textAppearanceHeadlineSmall"
+            tools:text="412 gCO₂eq/kWh"
+            tools:textColor="@color/carbon_text_on_light"/>
+
+        <TextView
+            android:id="@+id/widget_carbon_subtitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?attr/textAppearanceBodySmall"
+            tools:text="Updated 8 minutes ago"
+            tools:textColor="@color/carbon_text_on_light"/>
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

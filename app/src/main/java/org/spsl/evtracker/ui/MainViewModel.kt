@@ -18,6 +18,7 @@ import kotlinx.coroutines.launch
 import org.spsl.evtracker.domain.notification.BackupOutcomeReporter
 import org.spsl.evtracker.domain.repository.SettingsReader
 import org.spsl.evtracker.domain.repository.SettingsWriter
+import org.spsl.evtracker.domain.usecase.RefreshCarbonIntensityUseCase
 import org.spsl.evtracker.domain.usecase.ResetAllDataUseCase
 import javax.inject.Inject
 
@@ -26,6 +27,7 @@ class MainViewModel @Inject constructor(
     private val settingsReader: SettingsReader,
     private val settingsWriter: SettingsWriter,
     private val resetAllDataUseCase: ResetAllDataUseCase,
+    private val refreshCarbonIntensityUseCase: RefreshCarbonIntensityUseCase,
 ) : ViewModel() {
 
     sealed class StartupState {
@@ -56,6 +58,12 @@ class MainViewModel @Inject constructor(
 
     init {
         runStartupSequence()
+        // TASK-82: cold-start refresh of the dashboard carbon-intensity pill.
+        // Fire-and-forget; the repo's persistent 1-hour throttle makes this
+        // a no-op when the cached value is still fresh. Failures are silent
+        // — DashboardViewModel.init does its own fallback fetch + the user
+        // can tap-to-retry from the pill's Error state.
+        viewModelScope.launch { runCatching { refreshCarbonIntensityUseCase() } }
     }
 
     /** Sticky write — never reverted. Called when the user denies the rationale or the system prompt. */
