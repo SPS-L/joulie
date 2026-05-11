@@ -237,6 +237,7 @@
     <string name="carbon_intensity_updated_ago">Son güncelleme: %1$s</string>
     <string name="carbon_intensity_a11y_description">Karbon yoğunluğu %1$s gram CO₂ kilovat saat başına, %2$s, son güncelleme %3$s. Yenilemek için dokunun.</string>
     <string name="carbon_intensity_a11y_loading">Şebeke karbon yoğunluğu alınıyor.</string>
+    <string name="charts_co2_current_intensity_banner">Şu an: %1$s gCO₂eq/kWh · %2$s</string>
     <string name="carbon_intensity_error_auth">API anahtarı reddedildi. Bölge anahtarınızla uyuşmuyor olabilir.</string>
     <string name="carbon_intensity_error_network">İnternet bağlantısı yok</string>
     <string name="carbon_intensity_error_rate_limited">İstek sınırına ulaşıldı. Bir saat sonra tekrar deneyin.</string>

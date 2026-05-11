@@ -79,7 +79,7 @@ class ChartsViewModelTest {
             DateRangeResolver(),
             now = now, aggregationContext = EmptyCoroutineContext,
         )
-        vm = ChartsViewModel(useCase, settings)
+        vm = ChartsViewModel(useCase, settings, now)
     }
 
     private fun ev(date: Long, odo: Double) = ChargeEventEntity(

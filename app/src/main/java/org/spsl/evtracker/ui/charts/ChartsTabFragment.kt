@@ -113,7 +113,31 @@ class ChartsTabFragment : Fragment() {
                 }
                 renderDegradation(state, charts, container, empty)
             }
-            TabKind.CO2 -> renderCo2(state, charts, container, empty)
+            TabKind.CO2 -> {
+                state.currentCarbonReady?.let { ready ->
+                    val bucketLabel = getString(ready.bucket.labelRes)
+                    val valueText = "%.0f".format(ready.intensityGCo2PerKwh)
+                    banner.text = getString(
+                        R.string.charts_co2_current_intensity_banner,
+                        valueText,
+                        bucketLabel,
+                    )
+                    banner.setBackgroundColor(
+                        androidx.core.content.ContextCompat.getColor(
+                            requireContext(),
+                            ready.bucket.backgroundColorRes,
+                        ),
+                    )
+                    banner.setTextColor(
+                        androidx.core.content.ContextCompat.getColor(
+                            requireContext(),
+                            ready.bucket.textColorRes,
+                        ),
+                    )
+                    banner.isVisible = true
+                }
+                renderCo2(state, charts, container, empty)
+            }
         }
     }
 
