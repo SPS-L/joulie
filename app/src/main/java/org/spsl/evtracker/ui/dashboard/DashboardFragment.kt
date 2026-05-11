@@ -305,6 +305,19 @@ class DashboardFragment : Fragment() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        // TASK-84: tick the carbon-intensity pill while the user is on
+        // the dashboard so it picks up the 1-hour-TTL refresh without
+        // requiring a manual tap. Paired with onStop below.
+        viewModel.startPeriodicRefresh()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        viewModel.stopPeriodicRefresh()
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
