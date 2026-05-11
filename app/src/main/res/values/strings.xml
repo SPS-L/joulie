@@ -161,6 +161,21 @@
     <string name="settings_section_co2">CO₂ tracker</string>
     <string name="settings_co2_ice_baseline">Petrol baseline (L/100km)</string>
     <string name="settings_co2_dialog_invalid">Enter a positive number.</string>
+    <!-- TASK-82: dashboard carbon-intensity widget + history CO₂ line -->
+    <string name="dashboard_carbon_intensity_title">Carbon intensity</string>
+    <string name="carbon_bucket_very_low">Very low</string>
+    <string name="carbon_bucket_low">Low</string>
+    <string name="carbon_bucket_moderate">Moderate</string>
+    <string name="carbon_bucket_high">High</string>
+    <string name="carbon_bucket_very_high">Very high</string>
+    <string name="carbon_intensity_value" translatable="false">%1$s gCO₂eq/kWh</string>
+    <string name="carbon_intensity_fetching">Fetching live grid data…</string>
+    <string name="carbon_intensity_tap_to_retry">Tap to retry</string>
+    <string name="carbon_intensity_updated_ago">Updated %1$s ago</string>
+    <string name="carbon_intensity_a11y_description">Carbon intensity %1$s grams CO₂ per kilowatt-hour, %2$s, updated %3$s ago. Tap to refresh.</string>
+    <string name="carbon_intensity_a11y_loading">Fetching grid carbon intensity.</string>
+    <string name="carbon_intensity_a11y_error">Grid carbon intensity unavailable. Tap to retry.</string>
+    <string name="history_event_co2_line" translatable="false">⚡ %1$s kg CO₂  ·  %2$s g/kWh</string>
     <string name="settings_co2_enable_toggle">Enable CO₂ tracking</string>
     <string name="settings_co2_enable_helper">Off by default. When off, CO₂ stats and charts are hidden and no network calls are made.</string>
     <string name="settings_electricity_maps_api_key">Electricity Maps API key</string>

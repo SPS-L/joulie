@@ -95,4 +95,18 @@
          is "fresh affordance" / accent strip rather than body text. -->
     <color name="joulie_ink_deep">#0A1B5E</color>
     <color name="joulie_spark_green">#A6F43C</color>
+
+    <!-- TASK-82: carbon-intensity pill bucket colours. Sampled from the
+         Electricity Maps gradient (0 → 1500 gCO₂eq/kWh). The colour IS the
+         action signal; the bucket name + a11y description back it up. All
+         pairs verified at WCAG AA (4.5:1) by M3ContrastAuditTest. Identical
+         in light and dark mode — the bucket affordance must not weaken
+         under dark theme. -->
+    <color name="carbon_very_low">#3DC047</color>
+    <color name="carbon_low">#9CC747</color>
+    <color name="carbon_moderate">#E29A2C</color>
+    <color name="carbon_high">#A53A26</color>
+    <color name="carbon_very_high">#1A1A1A</color>
+    <color name="carbon_text_on_light">#000000</color>
+    <color name="carbon_text_on_dark">#FFFFFF</color>
 </resources>

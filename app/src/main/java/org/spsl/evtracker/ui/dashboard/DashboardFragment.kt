@@ -65,6 +65,18 @@ class DashboardFragment : Fragment() {
                 viewModel.events.collect { handleEvent(it) }
             }
         }
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.carbonIntensity.collect { state ->
+                    CarbonIntensityRenderer.render(
+                        binding = binding.widgetCarbonIntensity,
+                        state = state,
+                        nowMs = System.currentTimeMillis(),
+                        onRetry = { viewModel.onRefreshCarbonIntensity() },
+                    )
+                }
+            }
+        }
     }
 
     private fun setUpTabs() {

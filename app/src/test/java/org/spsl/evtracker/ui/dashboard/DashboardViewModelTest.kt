@@ -76,6 +76,12 @@ class DashboardViewModelTest {
             carReader = carReader,
             settingsReader = settingsReader,
             settingsWriter = settingsWriter,
+            refreshCarbonIntensity = org.spsl.evtracker.domain.usecase.RefreshCarbonIntensityUseCase(
+                settingsReader = settingsReader,
+                carbonIntensitySource = org.spsl.evtracker.testing.FakeCarbonIntensitySource(),
+            ),
+            carbonIntensityFormatter = org.spsl.evtracker.domain.service.CarbonIntensityFormatter(),
+            now = FakeNowProvider(System.currentTimeMillis()),
         )
         return VmFixture(vm, settingsWriter)
     }

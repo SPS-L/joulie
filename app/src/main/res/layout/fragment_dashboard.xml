@@ -68,6 +68,13 @@
                     android:text="@string/period_custom"/>
             </com.google.android.material.tabs.TabLayout>
 
+            <!-- TASK-82: live grid carbon-intensity pill. Refreshes at app
+                 boot + when the user first opens Dashboard + on tap retry,
+                 all serialised by the existing 1-hour throttle. -->
+            <include
+                android:id="@+id/widget_carbon_intensity"
+                layout="@layout/widget_carbon_intensity"/>
+
             <com.google.android.material.chip.ChipGroup
                 android:id="@+id/dashboard_filter_chips"
                 android:layout_width="match_parent"

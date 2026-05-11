@@ -67,6 +67,7 @@ class HistoryFragment : Fragment() {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.uiState.collect { state ->
                     adapter.setDistanceUnit(state.distanceUnit)
+                    adapter.setCo2Enabled(state.co2Enabled)
                     adapter.submitList(state.rows)
                     val visibleEmpty = state.isEmpty && state.activeCarId != -1L
                     binding.historyEmpty.isVisible = visibleEmpty

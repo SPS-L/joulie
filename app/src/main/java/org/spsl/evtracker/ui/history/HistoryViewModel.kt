@@ -60,6 +60,7 @@ class HistoryViewModel @Inject constructor(
         val distanceUnit: String,
         val filter: ChargeTypeFilter,
         val pending: Map<Long, PendingDelete>,
+        val co2Enabled: Boolean,
     )
 
     val uiState: StateFlow<HistoryUiState> = combine(
@@ -67,7 +68,8 @@ class HistoryViewModel @Inject constructor(
         settingsReader.distanceUnit,
         filter,
         pendingDeletes,
-    ) { active, unit, f, pending -> Inputs(active, unit, f, pending) }
+        settingsReader.co2Enabled,
+    ) { active, unit, f, pending, co2On -> Inputs(active, unit, f, pending, co2On) }
         .flatMapLatest { inputs ->
             if (inputs.activeCarId == -1L) {
                 flowOf(
@@ -75,6 +77,7 @@ class HistoryViewModel @Inject constructor(
                         activeCarId = -1L,
                         distanceUnit = inputs.distanceUnit,
                         filter = inputs.filter,
+                        co2Enabled = inputs.co2Enabled,
                     ),
                 )
             } else {
@@ -98,6 +101,7 @@ class HistoryViewModel @Inject constructor(
                         filter = inputs.filter,
                         distanceUnit = inputs.distanceUnit,
                         activeCarId = inputs.activeCarId,
+                        co2Enabled = inputs.co2Enabled,
                     )
                 }
             }

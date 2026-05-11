@@ -225,6 +225,19 @@
     <string name="settings_section_co2">Учёт CO₂</string>
     <string name="settings_co2_ice_baseline">Расход бензина (L/100km)</string>
     <string name="settings_co2_dialog_invalid">Введите положительное число.</string>
+    <!-- TASK-82 -->
+    <string name="dashboard_carbon_intensity_title">Углеродная интенсивность</string>
+    <string name="carbon_bucket_very_low">Очень низкая</string>
+    <string name="carbon_bucket_low">Низкая</string>
+    <string name="carbon_bucket_moderate">Умеренная</string>
+    <string name="carbon_bucket_high">Высокая</string>
+    <string name="carbon_bucket_very_high">Очень высокая</string>
+    <string name="carbon_intensity_fetching">Загрузка данных сети…</string>
+    <string name="carbon_intensity_tap_to_retry">Нажмите, чтобы повторить</string>
+    <string name="carbon_intensity_updated_ago">Обновлено %1$s назад</string>
+    <string name="carbon_intensity_a11y_description">Углеродная интенсивность %1$s граммов CO₂ на киловатт-час, %2$s, обновлено %3$s назад. Нажмите для обновления.</string>
+    <string name="carbon_intensity_a11y_loading">Загрузка углеродной интенсивности сети.</string>
+    <string name="carbon_intensity_a11y_error">Углеродная интенсивность сети недоступна. Нажмите, чтобы повторить.</string>
     <string name="settings_co2_enable_toggle">Включить учёт CO₂</string>
     <string name="settings_co2_enable_helper">По умолчанию выключено. Когда выключено, карточки и графики CO₂ скрыты и сетевые запросы не выполняются.</string>
     <string name="settings_electricity_maps_api_key">Ключ API Electricity Maps</string>

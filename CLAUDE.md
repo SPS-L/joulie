@@ -90,8 +90,9 @@ UI:       Fragments + ViewModels (Wizard, Dashboard, ChargeEdit, Cars, History, 
           ui/common/        MoneyFormat · DateFormat · PeriodLabels (pure helpers)
           core/model/ states DashboardScreenState · ChargeEditUiState · CarsUiState · CarFormState · HistoryUiState
 Domain:   Use cases  SaveChargeEvent · DeleteChargeEvent · ObserveDashboardStats · RestoreBackup · ExportCsv
-                     AddCar · RenameCar · DeleteCar · PushBackupNow · WipeRemoteBackup
+                     AddCar · RenameCar · DeleteCar · PushBackupNow · WipeRemoteBackup · RefreshCarbonIntensity
           Services   StatsCalculator · CostParser · UnitConverter · DateRangeResolver · BackupSerializer · CapacityEstimator
+                     CarbonIntensityFormatter (in domain/service/, TASK-82 pure pill-state mapper)
                      BackupOutcomeReporter (in domain/notification/)
                      LastChargeWidgetSnapshot (in domain/widget/)
           Narrow IFs CarReader · CarWriter · ChargeEventQueries · ChargeEventWriter · LocationReader · LocationWriter · SettingsReader · SettingsWriter

@@ -225,6 +225,19 @@
     <string name="settings_section_co2">CO₂ takibi</string>
     <string name="settings_co2_ice_baseline">Benzin tüketimi (L/100km)</string>
     <string name="settings_co2_dialog_invalid">Pozitif bir sayı girin.</string>
+    <!-- TASK-82 -->
+    <string name="dashboard_carbon_intensity_title">Karbon yoğunluğu</string>
+    <string name="carbon_bucket_very_low">Çok düşük</string>
+    <string name="carbon_bucket_low">Düşük</string>
+    <string name="carbon_bucket_moderate">Orta</string>
+    <string name="carbon_bucket_high">Yüksek</string>
+    <string name="carbon_bucket_very_high">Çok yüksek</string>
+    <string name="carbon_intensity_fetching">Şebeke verisi alınıyor…</string>
+    <string name="carbon_intensity_tap_to_retry">Yeniden denemek için dokunun</string>
+    <string name="carbon_intensity_updated_ago">%1$s önce güncellendi</string>
+    <string name="carbon_intensity_a11y_description">Karbon yoğunluğu %1$s gram CO₂ kilovat saat başına, %2$s, %3$s önce güncellendi. Yenilemek için dokunun.</string>
+    <string name="carbon_intensity_a11y_loading">Şebeke karbon yoğunluğu alınıyor.</string>
+    <string name="carbon_intensity_a11y_error">Şebeke karbon yoğunluğu kullanılamıyor. Yeniden denemek için dokunun.</string>
     <string name="settings_co2_enable_toggle">CO₂ takibini etkinleştir</string>
     <string name="settings_co2_enable_helper">Varsayılan olarak kapalı. Kapalıyken CO₂ kartları ve grafikleri gizlenir, ağ çağrısı yapılmaz.</string>
     <string name="settings_electricity_maps_api_key">Electricity Maps API anahtarı</string>

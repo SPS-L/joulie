@@ -48,9 +48,17 @@ You can export your charge history as a CSV file at any time via **Settings → 
 
 ---
 
-## CO₂ Tracker
+## CO₂ Tracker (Opt-In)
 
-The CO₂ tracker computes emission estimates using two values you can configure in Settings (a grid CO₂ intensity in gCO₂/kWh and an ICE-counterfactual baseline in L/100 km). The defaults reflect the Cyprus 2025 grid average and the EU real-world fleet average. All computation happens locally on your device; no data leaves the app.
+CO₂ tracking is **disabled by default**. When you enable it in **Settings → CO₂ tracker**, the app uses a configurable petrol baseline in L/100 km (default: EU real-world fleet average) for the ICE counterfactual, plus a live grid carbon intensity for your zone fetched from the [Electricity Maps API](https://www.electricitymaps.com/). What this means for your data:
+
+- The only payload sent off-device is `(zone_code, api_key)` — for example `"CY"` plus the personal API token you typed in. No charge data, no location, no personally-identifiable information.
+- Calls are throttled to **at most one request per zone per hour**, even across app restarts (the result is cached locally for 1 hour).
+- The fetch fires at three moments only: app boot, when you log a new charge event, and when you tap the dashboard pill to retry. There is no background polling.
+- You can disable the feature at any time in Settings; toggling it off stops all fetches and hides every CO₂ surface.
+- Electricity Maps' own [terms of service](https://www.electricitymaps.com/free-tier) and privacy policy apply to data you exchange with their API.
+
+All emission computations happen locally on your device. The fetched grid intensity is stored on the relevant charge event and in a one-row local cache; nothing is uploaded anywhere by Joulie itself.
 
 ---
 
@@ -58,7 +66,7 @@ The CO₂ tracker computes emission estimates using two values you can configure
 
 | Permission | Why it is needed |
 |---|---|
-| `INTERNET` | Google Drive backup only (when enabled) |
+| `INTERNET` | Google Drive backup (when enabled) and Electricity Maps API (when CO₂ tracker is enabled with a key configured) |
 | `POST_NOTIFICATIONS` | Drive-backup failure alerts only, requested after the third consecutive failure, never on launch, never re-prompted after a denial |
 | No location permission | Location labels are free text you type or pick from chips; the app does not access GPS, Wi-Fi-derived location, or any other location signal |
 | No contacts / camera / microphone | The app does not request any of these |

@@ -75,6 +75,17 @@
         tools:text="€5.50"
         tools:visibility="visible"/>
 
+    <!-- TASK-82: per-event CO₂ line. Visible only when CO₂ tracking is on
+         AND the event was saved with a live grid-intensity. -->
+    <TextView
+        android:id="@+id/item_charge_co2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?attr/textAppearanceBodySmall"
+        android:visibility="gone"
+        tools:text="⚡ 4.12 kg CO₂  ·  412 g/kWh"
+        tools:visibility="visible"/>
+
     <TextView
         android:id="@+id/item_charge_note"
         android:layout_width="wrap_content"

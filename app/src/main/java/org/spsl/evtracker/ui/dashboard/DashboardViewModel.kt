@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import org.spsl.evtracker.core.model.CarbonIntensityUiState
 import org.spsl.evtracker.core.model.ChargeTypeFilter
 import org.spsl.evtracker.core.model.DashboardEvent
 import org.spsl.evtracker.core.model.DashboardPeriod
@@ -29,7 +30,10 @@ import org.spsl.evtracker.data.local.entity.CarEntity
 import org.spsl.evtracker.domain.repository.CarReader
 import org.spsl.evtracker.domain.repository.SettingsReader
 import org.spsl.evtracker.domain.repository.SettingsWriter
+import org.spsl.evtracker.domain.service.CarbonIntensityFormatter
+import org.spsl.evtracker.domain.usecase.NowProvider
 import org.spsl.evtracker.domain.usecase.ObserveDashboardStatsUseCase
+import org.spsl.evtracker.domain.usecase.RefreshCarbonIntensityUseCase
 import javax.inject.Inject
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -39,6 +43,9 @@ class DashboardViewModel @Inject constructor(
     carReader: CarReader,
     settingsReader: SettingsReader,
     private val settingsWriter: SettingsWriter,
+    private val refreshCarbonIntensity: RefreshCarbonIntensityUseCase,
+    private val carbonIntensityFormatter: CarbonIntensityFormatter,
+    private val now: NowProvider,
 ) : ViewModel() {
 
     private val period = MutableStateFlow<DashboardPeriod>(DashboardPeriod.Last30Days)
@@ -116,5 +123,78 @@ class DashboardViewModel @Inject constructor(
 
     fun onManageCarsClick() {
         _events.tryEmit(DashboardEvent.NavigateToManageCars)
+    }
+
+    // ── TASK-82: Carbon-intensity pill ───────────────────────────────────
+
+    private val isRefreshingCarbon = MutableStateFlow(false)
+
+    /**
+     * Bundle of inputs the carbon-intensity formatter folds into one
+     * [CarbonIntensityUiState]. Bundled to keep the `combine` arity
+     * manageable (6 sources is at the edge of what Kotlin Flow's
+     * built-in combine variants support).
+     */
+    private data class CarbonInputs(
+        val co2Enabled: Boolean,
+        val apiKey: String,
+        val zone: String,
+        val cacheZone: String,
+        val cacheIntensity: Double,
+        val cacheFetchedAtMs: Long,
+    )
+
+    private val carbonInputs: Flow<CarbonInputs> = combine(
+        settingsReader.co2Enabled,
+        settingsReader.electricityMapsApiKey,
+        settingsReader.electricityMapsZone,
+        settingsReader.electricityMapsCacheZone,
+        combine(
+            settingsReader.electricityMapsCacheIntensity,
+            settingsReader.electricityMapsCacheFetchedAtMs,
+        ) { intensity, fetchedAt -> intensity to fetchedAt },
+    ) { co2On, key, zone, cacheZone, (intensity, fetchedAt) ->
+        CarbonInputs(co2On, key, zone, cacheZone, intensity, fetchedAt)
+    }
+
+    val carbonIntensity: StateFlow<CarbonIntensityUiState> =
+        combine(carbonInputs, isRefreshingCarbon) { inputs, refreshing ->
+            carbonIntensityFormatter.format(
+                co2Enabled = inputs.co2Enabled,
+                apiKey = inputs.apiKey,
+                currentZone = inputs.zone,
+                cacheZone = inputs.cacheZone,
+                cacheIntensityGCo2PerKwh = inputs.cacheIntensity,
+                cacheFetchedAtMs = inputs.cacheFetchedAtMs,
+                nowMs = now.nowMillis(),
+                isRefreshing = refreshing,
+            )
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CarbonIntensityUiState.Hidden)
+
+    init {
+        // Belt-and-suspenders with MainViewModel.init's boot fetch:
+        // serves users who land on the Dashboard after the boot fetch failed
+        // (e.g. flaky network at startup). Repo's Mutex + persistent cache
+        // make the duplicate call essentially free.
+        viewModelScope.launch {
+            isRefreshingCarbon.value = true
+            try {
+                runCatching { refreshCarbonIntensity() }
+            } finally {
+                isRefreshingCarbon.value = false
+            }
+        }
+    }
+
+    fun onRefreshCarbonIntensity() {
+        if (isRefreshingCarbon.value) return
+        viewModelScope.launch {
+            isRefreshingCarbon.value = true
+            try {
+                runCatching { refreshCarbonIntensity() }
+            } finally {
+                isRefreshingCarbon.value = false
+            }
+        }
     }
 }
