@@ -56,7 +56,7 @@ Tasks 1–15 were generated from a senior Android developer code review of the `
 | TASK-46 | 🟡 | Battery-health card "Estimated" warning when heuristic over-estimates (>105% of nominal AND `isExact = false`) |  | ☑ |
 | TASK-47 | 🟢 | Charging power profile fields (`peakPowerKw`, `chargingDurationMinutes`), schema bump |  | ⏸ |
 | TASK-48 | 🟢 | Time-of-use (ToU) tariff classification on charge events |  | ⏸ |
-| TASK-49 | 🟢 | Per-event grid carbon intensity (extends TASK-20 with marginal emission factors) | TASK-20 | ☐ |
+| TASK-49 |  | ~~Per-event grid carbon intensity (extends TASK-20 with marginal emission factors)~~, **closed 2026-05-11, premise largely shipped via TASK-80/81/82** (per-event live Electricity Maps intensity column + boot/save refresh + dashboard pill). Residual marginal-factor scope blocked on no free-tier data source. | TASK-20 | ☒ |
 | TASK-50 | 🔴 | Stabilise nightly instrumented suite, 21 failures across 4 root causes after WorkManager init landed | TASK-34 | ☑ |
 | TASK-51 | 🔴 | GPL-3.0-or-later license change (pending `play-services-auth` review) |  | ☑ |
 | TASK-52 | 🟡 | CSV escape hardening in `ExportCsvUseCase`, quote `\r` and tabs, neutralise spreadsheet formula-injection prefixes (`=`, `+`, `-`, `@`) in user-supplied fields |  | ☑ |
@@ -3809,9 +3809,10 @@ count increases by ≥ 6 cases. No regression in existing tests.
   automatic per-zone cost rate suggestion, dynamic ToU (sub-day
   variation beyond 4 zones). This task lands the *classification*;
   rate modeling stays user-entered as today.
-- Coordinate with TASK-49 (grid carbon intensity), both extend the
-  per-event metadata; ideally merged in a single schema bump if both
-  land in the same release window.
+- Per-event grid carbon intensity already shipped via TASK-80 as a
+  nullable column on `charge_events`. If TASK-48 lands additive
+  fields, bundle them in a single schema bump with any other pending
+  additive columns when timing allows.
 - Local-time inference must use the device's current zone (not the
   zone of `eventDate`). A user logging a charge while travelling
   abroad will typically still want the home-tariff schedule applied
@@ -3826,7 +3827,11 @@ inference and the FLAT-default backfill.
 
 ---
 
-## 🟢 TASK-49, Per-event grid carbon intensity (extends TASK-20)
+## ☒ TASK-49, ~~Per-event grid carbon intensity (extends TASK-20)~~
+
+> **Closed 2026-05-11, premise largely shipped via TASK-80/81/82.** The per-event `grid_intensity_g_co2_per_kwh` column on `charge_events` (Room v8 auto-migration), the live Electricity Maps fetch at save time, the persistent once-per-zone-per-hour throttle, the boot + per-save + tap-to-retry refresh triggers, and the 5-band dashboard pill all landed in TASK-80 / TASK-81 / TASK-82. What remained of this task was the **marginal** (vs average) emission factor refinement for SPS-Lab research-grade exports, plus a historical-backfill action. Both are blocked on a data source: Electricity Maps charges ~€6k/yr/zone for marginal factors, and an ENTSO-E-derived marginal model is ~200–300 LOC against an uncertain modelling assumption. If marginal-factor research becomes a hard requirement, file a fresh task scoped to ENTSO-E mix-derivation or a TSOC direct-API agreement; do not revive this entry as-is.
+
+> **Original spec retained below for traceability.**
 
 > **Data-source survey (2026-05-04, recorded during TASK-20 implementation).** Originally scoped to merge with TASK-20 (Option 1 in the brainstorm) but deferred because no free real-time Cyprus grid-intensity API was found:
 > - **Electricity Maps API**, ~€6,000/year per zone for Carbon Intensity. Out of scope.
