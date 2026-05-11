@@ -89,7 +89,6 @@ class SettingsFragment : Fragment() {
         binding.rowTheme.setOnClickListener { showThemeDialog() }
         binding.rowLanguage.setOnClickListener { showLanguageDialog() }
         binding.rowCo2IceBaseline.setOnClickListener { showIceBaselineDialog() }
-        binding.rowCo2GridIntensity.setOnClickListener { showGridIntensityDialog() }
         binding.rowCo2ApiKey.setOnClickListener { showElectricityMapsApiKeyDialog() }
         binding.rowCo2Zone.setOnClickListener { showElectricityMapsZoneDialog() }
         binding.rowManageLocations.setOnClickListener {
@@ -229,17 +228,16 @@ class SettingsFragment : Fragment() {
         // autonym lookup. Autonym strings are translatable=false so they
         // always render in their own script regardless of the current locale.
         binding.summaryLanguage.text = languageLabelFor(state.languageTag)
-        // CO₂ row summaries. Numbers are formatted in the
-        // user's default locale via Locale-aware DecimalFormat — Greek
-        // / Russian readers see comma decimals, English readers see
-        // dot decimals. Units stay non-localised (L/100km, gCO₂/kWh).
+        // CO₂ row summaries. The petrol baseline is formatted in the
+        // user's default locale (Greek / Russian readers see comma
+        // decimals); the unit stays non-localised (L/100km). The grid
+        // intensity has no static surface — it's captured per-event from
+        // the Electricity Maps live feed, or not at all.
         binding.summaryCo2IceBaseline.text =
             String.format(java.util.Locale.getDefault(), "%.1f L/100km", state.iceBaselineLPer100km)
-        binding.summaryCo2GridIntensity.text =
-            String.format(java.util.Locale.getDefault(), "%.0f gCO₂/kWh", state.gridIntensityGCo2PerKwh)
         // Electricity Maps rows only render when CO₂ tracking is opted in.
-        // The static ICE baseline + grid intensity rows stay visible because
-        // they are the manual fallback when the API key is blank or fetch fails.
+        // The ICE baseline row stays visible — it powers the counterfactual
+        // and is independent of grid data.
         val emVisibility = if (state.co2Enabled) View.VISIBLE else View.GONE
         binding.rowCo2ApiKey.visibility = emVisibility
         binding.rowCo2Zone.visibility = emVisibility
@@ -411,14 +409,6 @@ class SettingsFragment : Fragment() {
             titleRes = R.string.settings_co2_ice_baseline,
             currentValue = viewModel.uiState.value.iceBaselineLPer100km,
             onAccept = { viewModel.onIceBaselineSelected(it) },
-        )
-    }
-
-    private fun showGridIntensityDialog() {
-        showCo2NumberDialog(
-            titleRes = R.string.settings_co2_grid_intensity,
-            currentValue = viewModel.uiState.value.gridIntensityGCo2PerKwh,
-            onAccept = { viewModel.onGridIntensitySelected(it) },
         )
     }
 

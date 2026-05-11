@@ -224,7 +224,6 @@
     <string name="co2_card_footnote">Kıbrıs 2025 şebeke ortalamasına dayalıdır, gerçek emisyonlar gün içinde değişir.</string>
     <string name="settings_section_co2">CO₂ takibi</string>
     <string name="settings_co2_ice_baseline">Benzin tüketimi (L/100km)</string>
-    <string name="settings_co2_grid_intensity">Şebeke yoğunluğu (gCO₂/kWh)</string>
     <string name="settings_co2_dialog_invalid">Pozitif bir sayı girin.</string>
     <string name="settings_co2_enable_toggle">CO₂ takibini etkinleştir</string>
     <string name="settings_co2_enable_helper">Varsayılan olarak kapalı. Kapalıyken CO₂ kartları ve grafikleri gizlenir, ağ çağrısı yapılmaz.</string>

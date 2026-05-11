@@ -224,7 +224,6 @@
     <string name="co2_card_footnote">Βάσει του μέσου όρου του δικτύου Κύπρου 2025, οι πραγματικές εκπομπές διαφέρουν ανά ώρα της ημέρας.</string>
     <string name="settings_section_co2">Παρακολούθηση CO₂</string>
     <string name="settings_co2_ice_baseline">Βενζινοκίνητη κατανάλωση (L/100km)</string>
-    <string name="settings_co2_grid_intensity">Ένταση δικτύου (gCO₂/kWh)</string>
     <string name="settings_co2_dialog_invalid">Εισαγάγετε έναν θετικό αριθμό.</string>
     <string name="settings_co2_enable_toggle">Ενεργοποίηση παρακολούθησης CO₂</string>
     <string name="settings_co2_enable_helper">Απενεργοποιημένο εξ ορισμού. Όταν είναι ανενεργό, οι κάρτες και τα γραφήματα CO₂ αποκρύπτονται και δεν γίνονται κλήσεις δικτύου.</string>

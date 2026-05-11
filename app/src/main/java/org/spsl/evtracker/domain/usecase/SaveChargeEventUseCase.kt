@@ -43,16 +43,16 @@ class SaveChargeEventUseCase @Inject constructor(
         } ?: Pair(null, null)
         val currency = if (costTotal != null) input.costInput?.currency else null
 
-        // 3. Resolve the per-event grid intensity. Hierarchy:
-        //    co2Enabled=false → null (CO₂ tracking off entirely).
-        //    blank API key   → fall back to the static manual preference.
-        //    fetch returns null (network / 4xx / parse error) → manual fallback.
-        //    fetch returns a value → use it; the repository caches per zone
-        //    for 1 h, so a second save in the same hour reuses one call.
+        // 3. Resolve the per-event grid intensity from the Electricity Maps
+        //    live feed only. No manual fallback exists by design (issue #1
+        //    follow-up): either a live value is captured at save time, or
+        //    the column stays null and the dashboard / charts CO₂ surfaces
+        //    stay hidden for this event. The repository caches per zone for
+        //    1 h, so two saves in the same hour share one API call.
         val co2Enabled = settingsReader.co2Enabled.first()
         val gridIntensityGCo2PerKwh: Double? = if (co2Enabled) {
             val apiKey = settingsReader.electricityMapsApiKey.first()
-            val live = if (apiKey.isNotBlank()) {
+            if (apiKey.isNotBlank()) {
                 carbonIntensitySource.fetchCarbonIntensity(
                     settingsReader.electricityMapsZone.first(),
                     apiKey,
@@ -60,7 +60,6 @@ class SaveChargeEventUseCase @Inject constructor(
             } else {
                 null
             }
-            live ?: settingsReader.gridIntensityGCo2PerKwh.first()
         } else {
             null
         }

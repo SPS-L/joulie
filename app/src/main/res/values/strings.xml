@@ -160,7 +160,6 @@
     <!-- CO₂ tracker preferences -->
     <string name="settings_section_co2">CO₂ tracker</string>
     <string name="settings_co2_ice_baseline">Petrol baseline (L/100km)</string>
-    <string name="settings_co2_grid_intensity">Grid intensity (gCO₂/kWh)</string>
     <string name="settings_co2_dialog_invalid">Enter a positive number.</string>
     <string name="settings_co2_enable_toggle">Enable CO₂ tracking</string>
     <string name="settings_co2_enable_helper">Off by default. When off, CO₂ stats and charts are hidden and no network calls are made.</string>

@@ -58,9 +58,6 @@ interface SettingsWriter {
     /** Persist the user-edited ICE petrol baseline in L/100km. */
     suspend fun setIceBaselineLPer100km(value: Double)
 
-    /** Persist the user-edited grid carbon intensity in gCO₂/kWh. */
-    suspend fun setGridIntensityGCo2PerKwh(value: Double)
-
     /** Toggle the opt-in CO₂ master switch. */
     suspend fun setCo2Enabled(enabled: Boolean)
 
@@ -69,4 +66,15 @@ interface SettingsWriter {
 
     /** Persist the Electricity Maps grid-zone code (uppercase, e.g. `"CY"`). */
     suspend fun setElectricityMapsZone(value: String)
+
+    /**
+     * Atomic 3-key write of the persistent 1-hour throttle. Caller
+     * passes the wall-clock epoch-ms of the successful fetch. The
+     * repository reads these together — partial state would let the
+     * throttle silently degrade.
+     */
+    suspend fun setElectricityMapsCache(zone: String, intensityGCo2PerKwh: Double, fetchedAtMs: Long)
+
+    /** Wipe the persistent throttle cache. Called on reset-all-data. */
+    suspend fun clearElectricityMapsCache()
 }

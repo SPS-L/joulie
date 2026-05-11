@@ -10,9 +10,11 @@ import javax.inject.Inject
 /**
  * Pure-domain CO₂ tracker.
  *
- * Surfaces two numbers side-by-side:
+ * Surfaces two numbers side-by-side, but only when at least one event in
+ * the period carries a per-event live grid-intensity captured at save time
+ * from the Electricity Maps API:
  * - **EV emissions** — actual grid-attributable CO₂ from the energy
- *   the user charged into the car.
+ *   the user charged into the car, summed across contributing events.
  * - **ICE counterfactual** — CO₂ a comparable petrol car would have
  *   emitted over the same distance, using the user's editable
  *   `iceBaselineLPer100km` preference.
@@ -20,31 +22,46 @@ import javax.inject.Inject
  *   high-grid-intensity periods or short distances; the Dashboard
  *   labels both numbers rather than relying on this aggregate).
  *
- * Coefficients live in the companion. Methodology + sources documented
- * in `docs/METHODOLOGY.md`; do NOT change the coefficients without
- * updating that file.
+ * No-fallback contract: when an event has `gridIntensityGCo2PerKwh = null`
+ * (either CO₂ was disabled at save time, or no Electricity Maps key was
+ * set, or the fetch failed), the event contributes nothing to the EV
+ * side. When NO event in the period contributes, [evCo2Kg] returns null
+ * and the consumer hides the CO₂ surface entirely. This is by design —
+ * see issue #1 follow-up: guessing CO₂ from a typed grid-intensity
+ * preference was misleading and is gone.
  *
- * Static-grid caveat: this calculator reads `gridIntensityGCo2PerKwh`
- * from the user preference (default 577 = Cyprus 2025 average) and
- * applies it uniformly to every event in the period. Per-event live
- * grid-mix values are deferred until a free real-time data source is
- * available — see `docs/METHODOLOGY.md`.
+ * Methodology + sources documented in `docs/METHODOLOGY.md`.
  */
 class CO2Calculator @Inject constructor() {
 
     /**
      * Total kg CO₂ emitted by the EV-side energy use across [events],
-     * computed as `Σ kwhAdded × gridIntensityGCo2PerKwh / 1000`.
+     * computed as `Σ kwhAdded × event.gridIntensityGCo2PerKwh / 1000`
+     * over events where the per-event intensity is non-null and positive
+     * and `kwhAdded > 0`.
      *
-     * Returns `0.0` for an empty list. Negative `kwhAdded` is treated
-     * as 0 (defensive — a negative entry would make the total
-     * misleadingly small).
+     * Returns `null` when no event in [events] contributes — that's the
+     * "no live grid data anywhere in this period" signal and the
+     * Dashboard / Charts CO₂ surface stays hidden. Returns `0.0` only on
+     * the pathological "every contributing event had `kwhAdded = 0`" path.
      */
-    fun evCo2Kg(events: List<ChargeEventEntity>, gridIntensityGCo2PerKwh: Double): Double {
-        if (events.isEmpty()) return 0.0
-        if (gridIntensityGCo2PerKwh <= 0.0) return 0.0
-        val totalKwh = events.sumOf { e -> if (e.kwhAdded > 0.0) e.kwhAdded else 0.0 }
-        return totalKwh * gridIntensityGCo2PerKwh / G_PER_KG
+    fun evCo2Kg(events: List<ChargeEventEntity>): Double? {
+        var total = 0.0
+        var contributed = false
+        for (e in events) {
+            val intensity = e.gridIntensityGCo2PerKwh ?: continue
+            if (intensity <= 0.0) continue
+            if (e.kwhAdded <= 0.0) {
+                // Mark as a contributing-event-row even if kWh is zero; the
+                // user explicitly captured grid data for it, so the
+                // aggregate is still "computable" — just zero.
+                contributed = true
+                continue
+            }
+            total += e.kwhAdded * intensity / G_PER_KG
+            contributed = true
+        }
+        return if (contributed) total else null
     }
 
     /**
@@ -53,6 +70,9 @@ class CO2Calculator @Inject constructor() {
      * `(distanceKm / 100) × iceBaselineLPer100km × PETROL_CO2_KG_PER_LITRE`.
      *
      * Returns `0.0` for non-positive distance or non-positive baseline.
+     * Caller is responsible for gating this on whether the EV side
+     * contributed at all — surfacing the ICE counterfactual alongside a
+     * null EV would be misleading.
      */
     fun iceCounterfactualCo2Kg(distanceKm: Double, iceBaselineLPer100km: Double): Double {
         if (distanceKm <= 0.0) return 0.0
@@ -61,28 +81,38 @@ class CO2Calculator @Inject constructor() {
     }
 
     /**
-     * Convenience: `iceCounterfactualCo2Kg − evCo2Kg`. May be negative
-     * — the Dashboard should label both numbers side-by-side rather
-     * than relying on this aggregate.
+     * Convenience: `iceCounterfactualCo2Kg − evCo2Kg`. Returns null when
+     * the EV side itself is null (no live grid data). May be negative —
+     * the Dashboard should label both numbers side-by-side rather than
+     * relying on this aggregate.
      */
     fun savedCo2Kg(
         events: List<ChargeEventEntity>,
         distanceKm: Double,
         iceBaselineLPer100km: Double,
-        gridIntensityGCo2PerKwh: Double,
-    ): Double {
-        return iceCounterfactualCo2Kg(distanceKm, iceBaselineLPer100km) -
-            evCo2Kg(events, gridIntensityGCo2PerKwh)
+    ): Double? {
+        val ev = evCo2Kg(events) ?: return null
+        return iceCounterfactualCo2Kg(distanceKm, iceBaselineLPer100km) - ev
     }
 
     /**
      * Charts: cumulative EV CO₂ + cumulative ICE counterfactual,
-     * indexed by event date. Used by the Charts CO₂ tab. Distance for
-     * each event is the delta-odometer to the previous event in the
-     * sorted-by-date sequence (matching `StatsCalculator.computeEfficiencyTrend`
-     * convention from DESIGN.md §7); first event contributes nothing
-     * to the ICE running total because there's no prior odometer to
-     * delta against.
+     * indexed by event date. Used by the Charts CO₂ tab.
+     *
+     * EV contribution per event: `kwhAdded × event.gridIntensityGCo2PerKwh / 1000`
+     * if that intensity is non-null and positive; otherwise the EV running
+     * total does not advance for this event.
+     *
+     * ICE contribution per event: delta-odometer to the previous event in
+     * the sorted-by-date sequence (matching `StatsCalculator.computeEfficiencyTrend`
+     * convention from DESIGN.md §7). First event contributes nothing to
+     * the ICE running total because there's no prior odometer to delta
+     * against; rolled-back odometers contribute nothing but the chain
+     * advances unconditionally.
+     *
+     * Returns empty list when no event in [events] has a per-event
+     * intensity — the Charts CO₂ tab then renders the "enable Electricity
+     * Maps to track CO₂" empty state.
      */
     data class CumulativePoint(
         val eventTimeMillis: Long,
@@ -93,25 +123,22 @@ class CO2Calculator @Inject constructor() {
     fun cumulativeTrend(
         events: List<ChargeEventEntity>,
         iceBaselineLPer100km: Double,
-        gridIntensityGCo2PerKwh: Double,
     ): List<CumulativePoint> {
         if (events.isEmpty()) return emptyList()
+        val anyHasIntensity = events.any { it.gridIntensityGCo2PerKwh != null }
+        if (!anyHasIntensity) return emptyList()
         val sorted = events.sortedBy { it.eventDate }
         var evRunning = 0.0
         var iceRunning = 0.0
         val out = ArrayList<CumulativePoint>(sorted.size)
         var prevOdo: Double? = null
         for (e in sorted) {
-            // EV side: every event contributes (kwhAdded * intensity).
-            if (e.kwhAdded > 0.0 && gridIntensityGCo2PerKwh > 0.0) {
-                evRunning += e.kwhAdded * gridIntensityGCo2PerKwh / G_PER_KG
+            val intensity = e.gridIntensityGCo2PerKwh
+            if (intensity != null && intensity > 0.0 && e.kwhAdded > 0.0) {
+                evRunning += e.kwhAdded * intensity / G_PER_KG
             }
-            // ICE side: only delta-pairs contribute (no distance for the
-            // first event). Skip rolled-back odometers (dist <= 0); the
-            // chain advances unconditionally so a transient rollback
-            // doesn't break the next valid delta.
             if (prevOdo != null && iceBaselineLPer100km > 0.0) {
-                val dist = e.odometerKm - prevOdo!!
+                val dist = e.odometerKm - prevOdo
                 if (dist > 0.0) {
                     iceRunning += dist / 100.0 * iceBaselineLPer100km * PETROL_CO2_KG_PER_LITRE
                 }

@@ -15,17 +15,18 @@ import org.spsl.evtracker.testing.FakeCarbonIntensitySource
 import org.spsl.evtracker.testing.FakeSaveChargeEventGateway
 
 /**
- * Verifies the four CO₂ branches of [SaveChargeEventUseCase] (TASK-80):
+ * Per-event grid-intensity behaviour for [SaveChargeEventUseCase] (TASK-80,
+ * TASK-81). The contract is strict — there is NO manual fallback:
  *
- *  - off entirely → entity column stays `null`, no fetch call.
- *  - on + valid API key + live value → live value persisted.
- *  - on + blank API key → static manual preference persisted.
- *  - on + fetch returns `null` → static manual fallback persisted.
+ *  - co2Enabled=false → null, no fetch.
+ *  - co2Enabled=true + valid key + live value → live value stored.
+ *  - co2Enabled=true + blank key → null (no fetch, no fallback).
+ *  - co2Enabled=true + fetch returns null → null (no fallback).
  *
  * The "cache hit within the hour" assertion lives at the repository level
- * — exercising it through the use case would just retest the fake's
- * pass-through behaviour. The real cache is in `ElectricityMapsRepository`
- * and is JVM-testable directly (see `ElectricityMapsRepositoryTest`).
+ * — exercising it through the use case would retest the fake's
+ * pass-through. The real cache (in-memory + persistent) is JVM-testable
+ * directly via `ElectricityMapsRepositoryTest`.
  */
 class SaveChargeEventCo2Test {
 
@@ -59,7 +60,6 @@ class SaveChargeEventCo2Test {
         gw.settingsReader.setCo2Enabled(true)
         gw.settingsReader.setElectricityMapsApiKey("key")
         gw.settingsReader.setElectricityMapsZone("CY")
-        gw.settingsReader.setGridIntensityGCo2PerKwh(577.0)
         gw.carbonIntensitySource.nextValue = 412.0
 
         gw.useCase(input())
@@ -72,41 +72,38 @@ class SaveChargeEventCo2Test {
     }
 
     @Test
-    fun co2_enabled_withBlankApiKey_skipsFetch_andFallsBackToManual() = runTest {
+    fun co2_enabled_blankApiKey_storesNull_noFetch_noFallback() = runTest {
         val gw = FakeSaveChargeEventGateway()
         gw.settingsReader.setCo2Enabled(true)
         gw.settingsReader.setElectricityMapsApiKey("")
-        gw.settingsReader.setGridIntensityGCo2PerKwh(577.0)
 
         gw.useCase(input())
 
         val saved = gw.queries.getAllForCarSorted(1L).single()
-        assertEquals(577.0, saved.gridIntensityGCo2PerKwh!!, 0.0)
+        assertNull("blank key with no fallback must yield null intensity", saved.gridIntensityGCo2PerKwh)
         assertEquals("blank key must skip the network call", 0, gw.carbonIntensitySource.callCount)
     }
 
     @Test
-    fun co2_enabled_fetchReturnsNull_fallsBackToManual() = runTest {
+    fun co2_enabled_fetchReturnsNull_storesNull_noFallback() = runTest {
         val gw = FakeSaveChargeEventGateway()
         gw.settingsReader.setCo2Enabled(true)
         gw.settingsReader.setElectricityMapsApiKey("key")
-        gw.settingsReader.setGridIntensityGCo2PerKwh(577.0)
         gw.carbonIntensitySource.nextValue = null
 
         gw.useCase(input())
 
         val saved = gw.queries.getAllForCarSorted(1L).single()
-        assertEquals(577.0, saved.gridIntensityGCo2PerKwh!!, 0.0)
+        assertNull("network failure with no fallback must yield null intensity", saved.gridIntensityGCo2PerKwh)
         assertEquals(1, gw.carbonIntensitySource.callCount)
     }
 
     @Test
     fun twoSaves_inSameSession_callFetchOncePerSave_cacheLivesInRepository() = runTest {
-        // The fake source is a thin pass-through; the production cache lives
-        // in ElectricityMapsRepository. Verify the use case does call the source
-        // both times — caching is the repository's responsibility, not the
-        // use case's. (If the use case ever absorbed caching itself, this test
-        // would catch that drift.)
+        // The fake source is a pass-through; the real cache (in-memory +
+        // persistent) lives in ElectricityMapsRepository. The use case
+        // delegates fully — verify it calls the source both times so
+        // future drift (e.g. accidental use-case-side caching) is caught.
         val gw = FakeSaveChargeEventGateway()
         gw.settingsReader.setCo2Enabled(true)
         gw.settingsReader.setElectricityMapsApiKey("key")

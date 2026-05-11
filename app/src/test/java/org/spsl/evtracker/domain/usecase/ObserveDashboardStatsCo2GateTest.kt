@@ -23,15 +23,15 @@ import org.spsl.evtracker.testing.FakeNowProvider
 import org.spsl.evtracker.testing.FakeSettingsReader
 
 /**
- * CO₂ gate for [ObserveDashboardStatsUseCase] (TASK-80).
+ * CO₂ gate for [ObserveDashboardStatsUseCase] (TASK-80 / TASK-81).
  *
- * Asserts:
- *  - `co2Enabled=false` → both EV and ICE CO₂ stats are null even when
- *    grid intensity / baseline are populated.
- *  - `co2Enabled=true` + per-event intensity present → that value is used
- *    in preference to the static manual preference.
- *  - `co2Enabled=true` + no per-event intensity → the manual preference
- *    is used as the fallback.
+ * Asserts the no-fallback contract:
+ *  - `co2Enabled=false` → both EV and ICE CO₂ stats are null.
+ *  - `co2Enabled=true` + at least one event with live intensity → EV
+ *    summed across contributing events; ICE shown over the period's
+ *    full distance.
+ *  - `co2Enabled=true` + zero events with live intensity → both null
+ *    (the period had no live grid data, so the comparison is hidden).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ObserveDashboardStatsCo2GateTest {
@@ -39,7 +39,6 @@ class ObserveDashboardStatsCo2GateTest {
     private fun build(
         events: List<ChargeEventEntity>,
         co2Enabled: Boolean,
-        gridIntensity: Double = 577.0,
     ): ObserveDashboardStatsUseCase {
         val car = CarEntity(id = 1L, name = "T", createdAt = 0L)
         val queries = FakeChargeEventQueries()
@@ -47,7 +46,6 @@ class ObserveDashboardStatsCo2GateTest {
         val settings = FakeSettingsReader(
             activeCarIdInit = 1L,
             co2EnabledInit = co2Enabled,
-            gridIntensityGCo2PerKwhInit = gridIntensity,
             iceBaselineLPer100kmInit = 7.0,
         )
         return ObserveDashboardStatsUseCase(
@@ -89,60 +87,60 @@ class ObserveDashboardStatsCo2GateTest {
             co2Enabled = false,
         )
         val state = useCase.observe(DashboardPeriod.Last30Days, ChargeTypeFilter.ALL).first()
-        assertNull("CO₂ off must zero out evCo2Kg", state.stats?.evCo2Kg)
-        assertNull("CO₂ off must zero out iceCo2Kg", state.stats?.iceCo2Kg)
+        assertNull("CO₂ off must null out evCo2Kg", state.stats?.evCo2Kg)
+        assertNull("CO₂ off must null out iceCo2Kg", state.stats?.iceCo2Kg)
     }
 
     @Test
-    fun co2Enabled_perEventIntensity_preferredOverManual() = runTest {
+    fun co2Enabled_perEventIntensitiesSumOnContributingEvents() = runTest {
         val now = System.currentTimeMillis()
-        // Two events. Per-event intensity 200 g/kWh on one, 300 on the other.
-        // Manual preference is 999 g/kWh — should NOT be used because every
-        // row already carries its own intensity.
-        // Expected EV kg: (10 * 200 + 10 * 300) / 1000 = 5.0 kg
+        // Two events, both with live intensity captured at save time.
+        // 10 × 200 + 10 × 300 = 5000 g → 5.0 kg
         val useCase = build(
             events = listOf(
                 event(now - 1000, kwh = 10.0, odo = 100.0, intensity = 200.0),
                 event(now - 500, kwh = 10.0, odo = 200.0, intensity = 300.0),
             ),
             co2Enabled = true,
-            gridIntensity = 999.0,
         )
         val state = useCase.observe(DashboardPeriod.Last30Days, ChargeTypeFilter.ALL).first()
         assertEquals(5.0, state.stats!!.evCo2Kg!!, 1e-9)
+        // ICE side present because EV side is computable. Distance is the
+        // delta-odometer (200 - 100 = 100 km) × 7 / 100 × 2.31 = 16.17 kg.
+        assertEquals(16.17, state.stats!!.iceCo2Kg!!, 1e-9)
     }
 
     @Test
-    fun co2Enabled_noPerEventIntensity_fallsBackToManual() = runTest {
+    fun co2Enabled_noPerEventIntensity_bothNull_noFallback() = runTest {
         val now = System.currentTimeMillis()
-        // 20 kWh total at manual 500 g/kWh → 10 kg
+        // No event carries live intensity → EV is null → ICE is null too.
+        // The dashboard hides the whole card; no asymmetric ICE-only view.
         val useCase = build(
             events = listOf(
                 event(now - 1000, kwh = 10.0, odo = 100.0, intensity = null),
                 event(now - 500, kwh = 10.0, odo = 200.0, intensity = null),
             ),
             co2Enabled = true,
-            gridIntensity = 500.0,
         )
         val state = useCase.observe(DashboardPeriod.Last30Days, ChargeTypeFilter.ALL).first()
-        assertEquals(10.0, state.stats!!.evCo2Kg!!, 1e-9)
+        assertNull("no per-event intensity must yield null EV", state.stats?.evCo2Kg)
+        assertNull("no per-event intensity must yield null ICE too", state.stats?.iceCo2Kg)
     }
 
     @Test
-    fun co2Enabled_mixedPerEventAndNull_blendsPerEventWithManualFallback() = runTest {
+    fun co2Enabled_partialIntensities_contributingEventsSum_iceShown() = runTest {
         val now = System.currentTimeMillis()
-        // First event: per-event 200 g/kWh × 10 kWh = 2 kg
-        // Second event: null intensity → falls back to manual 500 g/kWh × 10 kWh = 5 kg
-        // Total: 7 kg
+        // One of two events has live intensity. EV = 10 × 200 / 1000 = 2.0 kg.
+        // ICE counterfactual is over the full period distance regardless.
         val useCase = build(
             events = listOf(
                 event(now - 1000, kwh = 10.0, odo = 100.0, intensity = 200.0),
                 event(now - 500, kwh = 10.0, odo = 200.0, intensity = null),
             ),
             co2Enabled = true,
-            gridIntensity = 500.0,
         )
         val state = useCase.observe(DashboardPeriod.Last30Days, ChargeTypeFilter.ALL).first()
-        assertEquals(7.0, state.stats!!.evCo2Kg!!, 1e-9)
+        assertEquals(2.0, state.stats!!.evCo2Kg!!, 1e-9)
+        assertEquals(16.17, state.stats!!.iceCo2Kg!!, 1e-9)
     }
 }

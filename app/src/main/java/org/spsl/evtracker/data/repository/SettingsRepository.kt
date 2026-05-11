@@ -58,9 +58,6 @@ class SettingsRepository @Inject constructor(
     override val iceBaselineLPer100km: Flow<Double> =
         dataStore.data.map { it[PreferenceKeys.ICE_BASELINE_L_PER_100KM] ?: 7.0 }
 
-    override val gridIntensityGCo2PerKwh: Flow<Double> =
-        dataStore.data.map { it[PreferenceKeys.GRID_INTENSITY_G_CO2_PER_KWH] ?: 577.0 }
-
     override val co2Enabled: Flow<Boolean> =
         dataStore.data.map { it[PreferenceKeys.CO2_ENABLED] ?: false }
 
@@ -69,6 +66,15 @@ class SettingsRepository @Inject constructor(
 
     override val electricityMapsZone: Flow<String> =
         dataStore.data.map { it[PreferenceKeys.ELECTRICITY_MAPS_ZONE] ?: "CY" }
+
+    override val electricityMapsCacheZone: Flow<String> =
+        dataStore.data.map { it[PreferenceKeys.ELECTRICITY_MAPS_CACHE_ZONE] ?: "" }
+
+    override val electricityMapsCacheIntensity: Flow<Double> =
+        dataStore.data.map { it[PreferenceKeys.ELECTRICITY_MAPS_CACHE_INTENSITY] ?: 0.0 }
+
+    override val electricityMapsCacheFetchedAtMs: Flow<Long> =
+        dataStore.data.map { it[PreferenceKeys.ELECTRICITY_MAPS_CACHE_FETCHED_AT_MS] ?: 0L }
 
     // ACTIVE_CAR_ID stays an `intPreferencesKey` (didn't touch DataStore
     // backing types — switching `intPreferencesKey` to `longPreferencesKey` with
@@ -157,10 +163,6 @@ class SettingsRepository @Inject constructor(
         dataStore.edit { it[PreferenceKeys.ICE_BASELINE_L_PER_100KM] = value }
     }
 
-    override suspend fun setGridIntensityGCo2PerKwh(value: Double) {
-        dataStore.edit { it[PreferenceKeys.GRID_INTENSITY_G_CO2_PER_KWH] = value }
-    }
-
     override suspend fun setCo2Enabled(enabled: Boolean) {
         dataStore.edit { it[PreferenceKeys.CO2_ENABLED] = enabled }
     }
@@ -171,6 +173,26 @@ class SettingsRepository @Inject constructor(
 
     override suspend fun setElectricityMapsZone(value: String) {
         dataStore.edit { it[PreferenceKeys.ELECTRICITY_MAPS_ZONE] = value }
+    }
+
+    override suspend fun setElectricityMapsCache(
+        zone: String,
+        intensityGCo2PerKwh: Double,
+        fetchedAtMs: Long,
+    ) {
+        dataStore.edit { prefs ->
+            prefs[PreferenceKeys.ELECTRICITY_MAPS_CACHE_ZONE] = zone
+            prefs[PreferenceKeys.ELECTRICITY_MAPS_CACHE_INTENSITY] = intensityGCo2PerKwh
+            prefs[PreferenceKeys.ELECTRICITY_MAPS_CACHE_FETCHED_AT_MS] = fetchedAtMs
+        }
+    }
+
+    override suspend fun clearElectricityMapsCache() {
+        dataStore.edit { prefs ->
+            prefs.remove(PreferenceKeys.ELECTRICITY_MAPS_CACHE_ZONE)
+            prefs.remove(PreferenceKeys.ELECTRICITY_MAPS_CACHE_INTENSITY)
+            prefs.remove(PreferenceKeys.ELECTRICITY_MAPS_CACHE_FETCHED_AT_MS)
+        }
     }
 
     /** Flips `setupComplete` back to `false` so the wizard re-fires on next launch. */
