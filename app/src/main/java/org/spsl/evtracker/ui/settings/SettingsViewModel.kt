@@ -427,11 +427,33 @@ class SettingsViewModel @Inject constructor(
      * so the API call uses a canonical form regardless of the dialog's
      * keyboard hints. Blank input is silently dropped (the dialog
      * already validates non-blank).
+     *
+     * **TASK-85.** After persisting a *new* zone (different from the
+     * current one), fires a refresh against `CarbonIntensitySource` with
+     * the new zone passed explicitly so the dashboard pill picks up the
+     * new zone's intensity — or surfaces the matching error reason
+     * (most commonly [org.spsl.evtracker.domain.repository.FetchOutcome.AuthError]
+     * because free-tier keys are bound to a single zone at signup; TASK-89
+     * surfaces that expectation in the UI before the user gets here).
+     *
+     * The fetch is dispatched directly rather than via
+     * [org.spsl.evtracker.domain.usecase.RefreshCarbonIntensityUseCase] so
+     * the new zone arrives at the repo immediately, bypassing the
+     * DataStore write-then-read race that would otherwise have the
+     * use case re-read the *old* zone from settings.
      */
     fun onElectricityMapsZoneSet(value: String) {
         val normalized = value.trim().uppercase(Locale.US)
         if (normalized.isBlank()) return
-        viewModelScope.launch { settingsWriter.setElectricityMapsZone(normalized) }
+        viewModelScope.launch {
+            val previous = settingsReader.electricityMapsZone.first()
+            settingsWriter.setElectricityMapsZone(normalized)
+            if (normalized == previous) return@launch
+            if (!settingsReader.co2Enabled.first()) return@launch
+            val apiKey = settingsReader.electricityMapsApiKey.first()
+            if (apiKey.isBlank()) return@launch
+            runCatching { carbonIntensitySource.fetchCarbonIntensity(normalized, apiKey) }
+        }
     }
 
     fun onResetPreferences() {
