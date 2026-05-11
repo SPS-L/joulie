@@ -6,26 +6,31 @@ This document explains how the **Settings → CO₂** card and the **Charts → 
 
 ## Formulas
 
+CO₂ tracking is **opt-in** (`co2Enabled` in DataStore, default `false`). When enabled with an Electricity Maps API key + zone, each charge event captures the grid carbon intensity at save time into `event.gridIntensityGCo2PerKwh`. Events saved while CO₂ was disabled (or while the API key was missing / unreachable) carry `gridIntensityGCo2PerKwh = null` and do **not** contribute to the formulas below — there is no static-grid-intensity fallback (TASK-81).
+
 For each charge event in the visible period:
 
 - **EV-side emissions** (kg CO₂)
-  `kwhAdded × gridIntensityGCo2PerKwh / 1000`
+  `event.kwhAdded × event.gridIntensityGCo2PerKwh / 1000` (when `gridIntensityGCo2PerKwh != null`)
 
 For the period as a whole:
 
 - **Period EV emissions** (kg CO₂)
-  `Σ kwhAdded over period events × gridIntensityGCo2PerKwh / 1000`
+  `Σ (event.kwhAdded × event.gridIntensityGCo2PerKwh / 1000)` over events with a live intensity captured.
+  Returns `null` when no event in the period contributed — the Dashboard CO₂ card hides on null.
 
 - **Period ICE counterfactual** (kg CO₂)
   `(periodTotalDistanceKm / 100) × iceBaselineLPer100km × 2.31`
+  Suppressed by the consumer when EV emissions are `null` so the comparison stays symmetric.
 
 - **Period saved** (kg CO₂, may be negative)
   `iceCounterfactual − evEmissions`
 
 The Charts CO₂ tab renders the cumulative running totals over the period's events:
 
-- **Cumulative EV emissions** advances on every event by `kwhAdded × gridIntensityGCo2PerKwh / 1000`.
+- **Cumulative EV emissions** advances on every event by `event.kwhAdded × event.gridIntensityGCo2PerKwh / 1000` when the per-event intensity is non-null; otherwise the running total holds.
 - **Cumulative ICE counterfactual** advances only on positive odometer deltas (mirrors the StatsCalculator pairwise convention from `DESIGN.md §7`); the first event in the period contributes 0 because there is no prior odometer to delta against.
+- The whole series is empty when no event in the period carries a live intensity — the CO₂ tab renders an empty-state "enable Electricity Maps to track CO₂" message rather than a misleading 0-vs-ICE chart.
 
 ---
 
@@ -43,18 +48,25 @@ Source: European Environment Agency, *Real-world fuel consumption of new passeng
 
 The user can edit this value in **Settings → CO₂ tracker → Petrol baseline** to match their specific vehicle.
 
-### Grid carbon intensity, **577 gCO₂/kWh (default)**
+### Grid carbon intensity (live, per-event)
 
-Source: [cyprusgrid.com](https://cyprusgrid.com/realtime), the publicly-published live Cyprus grid-intensity tracker. The 577 figure is the 2025 annual average, Cyprus's electricity mix is still dominated by oil-fired generation (heavy fuel oil and diesel) but PV penetration has grown rapidly, so historical TSOC/IEA figures (around 600 gCO₂/kWh) understate the renewable share by about 4%.
+Source: the [Electricity Maps API](https://www.electricitymaps.com/free-tier) `v3/carbon-intensity/latest?zone=…` endpoint. The user supplies a personal API token (free tier) and a zone code (default `CY`) in **Settings → CO₂ tracker → Enable CO₂ tracking**. `SaveChargeEventUseCase` fetches the current intensity at save time and stores it on the charge-event row; `ObserveDashboardStatsUseCase` + `CO2Calculator` use the per-event values directly.
+
+The repository (`ElectricityMapsRepository`) enforces a hard 1-hour throttle: the API is called **at most once per zone per hour**, even across process restarts. The cache is two-layer:
+
+- **In-memory** (fast path) — scoped to the current process; cleared on `clearCache()`.
+- **Persistent** (DataStore) — `electricityMapsCacheZone` + `electricityMapsCacheIntensity` + `electricityMapsCacheFetchedAtMs` written atomically after every successful fetch. Survives kill / restart.
+
+A `Mutex` serialises concurrent fetches so two simultaneous saves can't both miss the cache.
 
 Real Cyprus grid intensity varies meaningfully by hour of day:
 
 - **Morning solar peak (10am–4pm)** can drop below 350 gCO₂/kWh on clear summer days.
 - **Evening peak (7pm–11pm)** can exceed 700 gCO₂/kWh when oil-fired plants ramp to cover residential demand without solar.
 
-The current implementation uses a static yearly average; per-event variation is on the backlog (see *Open issues* below).
+The Dashboard "Carbon intensity" pill (TASK-82) surfaces the live value at the top of the screen, colour-coded across five bands so the user can tell at a glance whether now is a good time to charge.
 
-The user can edit this value in **Settings → CO₂ tracker → Grid intensity** to reflect their charging habits or a different region.
+**No manual fallback.** When CO₂ is enabled but the API key is blank, the fetch returns null, or the network is unreachable, the per-event column is left `null` and the dashboard / charts CO₂ surfaces stay hidden. There used to be a static-grid-intensity preference (`gridIntensityGCo2PerKwh = 577.0`); it was removed in TASK-81 because guessing CO₂ from a user-typed number was misleading.
 
 ---
 
@@ -80,17 +92,17 @@ On a high-grid-intensity period with low driven distance, EV emissions can excee
 
 ## Open issues
 
-### Per-event grid intensity
+### Per-event grid intensity ✅ shipped
 
-A future iteration will replace the static `gridIntensityGCo2PerKwh` preference with a per-event live value fetched at save time. The intent is to surface "charge during the solar peak for cleaner CO₂" as a behavioural nudge. Required: a free real-time Cyprus grid-mix data source. Candidates evaluated and not yet adopted:
+Resolved by TASK-80 (Electricity Maps integration) + TASK-81 (drop static fallback + persistent throttle) + TASK-82 (dashboard pill + boot refresh). The user supplies their own Electricity Maps API key on the free tier; Joulie respects the once-per-zone-per-hour rate limit and never falls back to a typed-by-the-user grid-intensity number.
 
-- **Electricity Maps API**, closest fit functionally, but priced at €6,000/year per zone for Carbon Intensity. Out of budget.
-- **CO2Signal**, was free; absorbed into Electricity Maps' paid product.
-- **cyprusgrid.com direct**, bot-blocked behind a WAF; not stable enough as a production data source.
-- **ENTSO-E Transparency Platform**, free, registered API, Cyprus covered, but returns hourly generation mix per production type (not pre-computed carbon intensity). Would require deriving intensity from per-source CO₂ emission factors. Real work; deferred.
-- **TSOC direct API access**, best long-term answer; needs email correspondence.
+Earlier candidates (kept here for historical context):
 
-When per-event grid intensity lands, this document will be extended with the per-event source's methodology and emission factors.
+- **Electricity Maps API** — adopted. Free tier is once-per-hour-per-zone; matches our throttle exactly.
+- **CO2Signal** — absorbed into Electricity Maps' product.
+- **cyprusgrid.com direct** — bot-blocked behind a WAF; not stable enough.
+- **ENTSO-E Transparency Platform** — covers Cyprus but returns hourly generation mix per production type, not pre-computed carbon intensity. Possible future "without an Electricity Maps key" fallback if/when we want zero-config tracking; not adopted today.
+- **TSOC direct API access** — needs email correspondence; not pursued.
 
 ### ICE-baseline personalisation
 

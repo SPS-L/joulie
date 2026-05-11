@@ -497,21 +497,44 @@ First charge event for a car **cannot** compute efficiency (no prior odometer). 
 
 ### 7.1 CO₂ tracker
 
+Opt-in feature gated on **Settings → CO₂ tracker → Enable CO₂ tracking** (`co2Enabled`, default `false`). When on, the user supplies an Electricity Maps API key + a zone code (default `CY`); the grid carbon intensity is fetched once per zone per hour and captured per-event on save. There is **no static grid-intensity preference** — either live data flows or the CO₂ surfaces stay hidden (TASK-81). The petrol baseline `iceBaselineLPer100km` (default 7.0 L/100 km, user-editable) is the only configurable coefficient.
+
 Two numbers, surfaced side-by-side on the Dashboard CO₂ card and as cumulative series on the Charts CO₂ tab:
 
 | Number | Formula |
 |--------|---------|
-| EV emissions (kg) | `Σ kwhAdded over period × gridIntensityGCo2PerKwh / 1000` |
+| EV emissions (kg) | `Σ (event.kwhAdded × event.gridIntensityGCo2PerKwh / 1000)` over events with `gridIntensityGCo2PerKwh != null` |
 | ICE counterfactual (kg) | `(periodTotalDistanceKm / 100) × iceBaselineLPer100km × 2.31` |
 | Saved (kg, may be ±) | `iceCounterfactual − evEmissions` |
 
-Coefficients live on `CO2Calculator.companion`. Defaults: `iceBaselineLPer100km = 7.0` (EU real-world fleet average), `gridIntensityGCo2PerKwh = 577.0` (Cyprus 2025 average per cyprusgrid.com), `PETROL_CO2_KG_PER_LITRE = 2.31` (EPA tank-to-wheel). Both prefs are user-editable in **Settings → CO₂ tracker**.
+Coefficients live on `CO2Calculator.companion`: `PETROL_CO2_KG_PER_LITRE = 2.31` (EPA tank-to-wheel), `G_PER_KG = 1000.0`. The ICE counterfactual is gated on the EV side being non-null — the dashboard never shows ICE emissions without the EV companion. `CO2Calculator.evCo2Kg` returns `Double?` (null when no event in the period carries a live grid intensity); the consumer hides the card on null.
 
-The card hides entirely when either pref is unset / 0 (never show one number without its companion). Saved can be negative on dirty-grid + short-distance periods; the card surfaces this honestly with a `±X.X kg vs petrol` line rather than hiding the result. Full methodology + caveats (tank-to-wheel vs well-to-wheel, average vs marginal grid intensity) live in [`docs/METHODOLOGY.md`](METHODOLOGY.md).
+Saved can be negative on dirty-grid + short-distance periods; the card surfaces this honestly with a `±X.X kg vs petrol` line rather than hiding the result. Full methodology + caveats (tank-to-wheel vs well-to-wheel, average vs marginal grid intensity) live in [`docs/METHODOLOGY.md`](METHODOLOGY.md).
 
-The Charts CO₂ tab renders cumulative running totals: solid EV line + dashed ICE-counterfactual line. The dashed style visually distinguishes "would have emitted" from "actually emitted". `prevOdo` chain advances unconditionally so a transient odometer rollback doesn't break the chain for subsequent valid deltas (mirrors the StatsCalculator pairwise convention above).
+The Charts CO₂ tab renders cumulative running totals: solid EV line + dashed ICE-counterfactual line. The dashed style visually distinguishes "would have emitted" from "actually emitted". `CO2Calculator.cumulativeTrend` returns `emptyList()` when no event in the period has a captured live intensity. The `prevOdo` chain advances unconditionally so a transient odometer rollback doesn't break the chain for subsequent valid deltas (mirrors the StatsCalculator pairwise convention above).
 
-**(per-event live grid intensity) deferred.** No free real-time Cyprus carbon-intensity API is available today. The viable next path is ENTSO-E hourly mix + per-source IPCC AR6 emission factors. See `docs/METHODOLOGY.md` Open Issues for the data-source survey notes.
+### 7.2 Dashboard carbon-intensity pill (TASK-82)
+
+Top-of-dashboard `MaterialCardView` that shows the **current** grid carbon intensity for the user's zone, colour-coded across five bands sampled from the Electricity Maps gradient:
+
+| Bucket | Range (g/kWh) | Background | Text |
+|---|---|---|---|
+| `VERY_LOW` | < 150 | green `#3DC047` | black |
+| `LOW` | 150 – 399 | lime `#9CC747` | black |
+| `MODERATE` | 400 – 649 | orange `#E29A2C` | black |
+| `HIGH` | 650 – 899 | red `#A53A26` | white |
+| `VERY_HIGH` | ≥ 900 | near-black `#1A1A1A` | white |
+
+State machine (`CarbonIntensityUiState` sealed + `CarbonIntensityFormatter` pure mapper): `Hidden` when CO₂ off or no API key; `Loading` skeleton during the first refresh; `Ready(value, bucket, fetchedAtMs)` when the cache is valid for the current zone within the 1-hour TTL; `Error` (tap-to-retry) when refresh failed.
+
+Refresh trigger sites — all serialised by the existing `ElectricityMapsRepository.Mutex` and the persistent 1-hour throttle, so the API is called **at most once per zone per hour**:
+
+1. `MainViewModel.init` — cold-start warm-up.
+2. `DashboardViewModel.init` — first-attach catch-all.
+3. `SaveChargeEventUseCase` — per-save (unchanged from TASK-80).
+4. `DashboardViewModel.onRefreshCarbonIntensity` — user-initiated retry from the `Error` state.
+
+The History list adds a per-row metadata line `⚡ X kg CO₂ · Y g/kWh` gated on `co2Enabled && event.gridIntensityGCo2PerKwh != null`.
 
 ---
 
