@@ -6,7 +6,7 @@ This document explains how the **Settings → CO₂** card and the **Charts → 
 
 ## Formulas
 
-CO₂ tracking is **opt-in** (`co2Enabled` in DataStore, default `false`). When enabled with an Electricity Maps API key + zone, each charge event captures the grid carbon intensity at save time into `event.gridIntensityGCo2PerKwh`. Events saved while CO₂ was disabled (or while the API key was missing / unreachable) carry `gridIntensityGCo2PerKwh = null` and do **not** contribute to the formulas below — there is no static-grid-intensity fallback (TASK-81).
+CO₂ tracking is **opt-in** (`co2Enabled` in DataStore, default `false`). When enabled with an Electricity Maps API key + zone, each charge event captures the grid carbon intensity at save time into `event.gridIntensityGCo2PerKwh`. Events saved while CO₂ was disabled (or while the API key was missing / unreachable) carry `gridIntensityGCo2PerKwh = null` and do **not** contribute to the formulas below; there is no static-grid-intensity fallback (TASK-81).
 
 For each charge event in the visible period:
 
@@ -17,7 +17,7 @@ For the period as a whole:
 
 - **Period EV emissions** (kg CO₂)
   `Σ (event.kwhAdded × event.gridIntensityGCo2PerKwh / 1000)` over events with a live intensity captured.
-  Returns `null` when no event in the period contributed — the Dashboard CO₂ card hides on null.
+  Returns `null` when no event in the period contributed. The Dashboard CO₂ card hides on null.
 
 - **Period ICE counterfactual** (kg CO₂)
   `(periodTotalDistanceKm / 100) × iceBaselineLPer100km × 2.31`
@@ -30,7 +30,7 @@ The Charts CO₂ tab renders the cumulative running totals over the period's eve
 
 - **Cumulative EV emissions** advances on every event by `event.kwhAdded × event.gridIntensityGCo2PerKwh / 1000` when the per-event intensity is non-null; otherwise the running total holds.
 - **Cumulative ICE counterfactual** advances only on positive odometer deltas (mirrors the StatsCalculator pairwise convention from `DESIGN.md §7`); the first event in the period contributes 0 because there is no prior odometer to delta against.
-- The whole series is empty when no event in the period carries a live intensity — the CO₂ tab renders an empty-state "enable Electricity Maps to track CO₂" message rather than a misleading 0-vs-ICE chart.
+- The whole series is empty when no event in the period carries a live intensity. The CO₂ tab renders an empty-state "enable Electricity Maps to track CO₂" message rather than a misleading 0-vs-ICE chart.
 
 ---
 
@@ -54,8 +54,8 @@ Source: the [Electricity Maps API](https://www.electricitymaps.com/free-tier) `v
 
 The repository (`ElectricityMapsRepository`) enforces a hard 1-hour throttle: the API is called **at most once per zone per hour**, even across process restarts. The cache is two-layer:
 
-- **In-memory** (fast path) — scoped to the current process; cleared on `clearCache()`.
-- **Persistent** (DataStore) — `electricityMapsCacheZone` + `electricityMapsCacheIntensity` + `electricityMapsCacheFetchedAtMs` written atomically after every successful fetch. Survives kill / restart.
+- **In-memory** (fast path), scoped to the current process; cleared on `clearCache()`.
+- **Persistent** (DataStore): `electricityMapsCacheZone` + `electricityMapsCacheIntensity` + `electricityMapsCacheFetchedAtMs` written atomically after every successful fetch. Survives kill / restart.
 
 A `Mutex` serialises concurrent fetches so two simultaneous saves can't both miss the cache.
 
@@ -78,7 +78,7 @@ Both sides of the comparison are tank-to-wheel. **Well-to-wheel** numbers (which
 
 ### Average vs marginal grid intensity
 
-The 577 gCO₂/kWh default is an **average** intensity, what a kWh "looks like" on the Cyprus grid as a whole. But every additional kWh the user draws is met by the **marginal** plant on the margin at that moment, which is almost always the most expensive (typically oil-fired) generator in the merit order. Marginal intensity in Cyprus is often *higher* than average. Researchers comparing EV impact should treat the 577 figure as a lower bound for genuinely-induced emissions.
+The intensity Electricity Maps returns is an **average** value, what a kWh "looks like" on the user's zone as a whole at that moment. But every additional kWh the user draws is met by the **marginal** plant on the margin, which is almost always the most expensive (typically oil-fired) generator in the merit order. Marginal intensity is usually *higher* than average. Researchers comparing EV impact should treat the per-event values stored by Joulie as a lower bound for genuinely-induced emissions; TASK-49 in the backlog tracks an opt-in marginal-factor extension for research-grade exports.
 
 ### Period scoping
 
@@ -98,11 +98,11 @@ Resolved by TASK-80 (Electricity Maps integration) + TASK-81 (drop static fallba
 
 Earlier candidates (kept here for historical context):
 
-- **Electricity Maps API** — adopted. Free tier is once-per-hour-per-zone; matches our throttle exactly.
-- **CO2Signal** — absorbed into Electricity Maps' product.
-- **cyprusgrid.com direct** — bot-blocked behind a WAF; not stable enough.
-- **ENTSO-E Transparency Platform** — covers Cyprus but returns hourly generation mix per production type, not pre-computed carbon intensity. Possible future "without an Electricity Maps key" fallback if/when we want zero-config tracking; not adopted today.
-- **TSOC direct API access** — needs email correspondence; not pursued.
+- **Electricity Maps API**, adopted. Free tier is once-per-hour-per-zone; matches our throttle exactly.
+- **CO2Signal**, absorbed into Electricity Maps' product.
+- **cyprusgrid.com direct**, bot-blocked behind a WAF; not stable enough.
+- **ENTSO-E Transparency Platform**, covers Cyprus but returns hourly generation mix per production type, not pre-computed carbon intensity. Possible future "without an Electricity Maps key" fallback if/when we want zero-config tracking; not adopted today.
+- **TSOC direct API access**, needs email correspondence; not pursued.
 
 ### ICE-baseline personalisation
 
