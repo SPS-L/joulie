@@ -69,11 +69,9 @@ class CarsFragment : Fragment() {
     private fun handleEvent(event: CarsEvent) {
         when (event) {
             CarsEvent.ShowAddDialog ->
-                CarEditDialog.showAdd(requireContext()) { viewModel.submitAdd(it) }
+                showCarDialog(existing = null)
             is CarsEvent.ShowEditDialog ->
-                CarEditDialog.showEdit(requireContext(), event.car) { form ->
-                    viewModel.submitRename(event.car.id, form.name)
-                }
+                showCarDialog(existing = event.car)
             is CarsEvent.ShowDeleteConfirm ->
                 MaterialAlertDialogBuilder(requireContext())
                     .setTitle(R.string.car_delete_title)
@@ -85,6 +83,36 @@ class CarsFragment : Fragment() {
                     .show()
             is CarsEvent.ShowError ->
                 Snackbar.make(binding.root, event.messageRes, Snackbar.LENGTH_SHORT).show()
+        }
+    }
+
+    /**
+     * Pre-loads the make list off-thread (TASK-91), then opens the
+     * dialog wired with the EV-database autocomplete. Defer the
+     * dropdown content load to here rather than constructing it inside
+     * the dialog so the dialog stays a pure object — no Hilt entry,
+     * no ViewModel lookup inside a static `object`.
+     */
+    private fun showCarDialog(existing: org.spsl.evtracker.data.local.entity.CarEntity?) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val makes = runCatching { viewModel.loadMakes() }.getOrDefault(emptyList())
+            if (existing == null) {
+                CarEditDialog.showAdd(
+                    context = requireContext(),
+                    makes = makes,
+                    coroutineScope = viewLifecycleOwner.lifecycleScope,
+                    modelsLoader = viewModel::loadModelsForMake,
+                    onSubmit = viewModel::submitAdd,
+                )
+            } else {
+                CarEditDialog.showEdit(
+                    context = requireContext(),
+                    car = existing,
+                    makes = makes,
+                    coroutineScope = viewLifecycleOwner.lifecycleScope,
+                    modelsLoader = viewModel::loadModelsForMake,
+                ) { form -> viewModel.submitEdit(existing.id, form) }
+            }
         }
     }
 

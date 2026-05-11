@@ -77,4 +77,12 @@ interface SettingsWriter {
 
     /** Wipe the persistent throttle cache. Called on reset-all-data. */
     suspend fun clearElectricityMapsCache()
+
+    /**
+     * Atomic 3-key write of the EV-models-database cache metadata
+     * (TASK-91). Called by [org.spsl.evtracker.domain.usecase.UpdateEvDatabaseUseCase]
+     * after a successful remote refresh — the summary row in Settings
+     * reads all three together, so they must move as one.
+     */
+    suspend fun setEvDbCache(lastUpdatedAtMs: Long, version: String, vehicleCount: Int)
 }

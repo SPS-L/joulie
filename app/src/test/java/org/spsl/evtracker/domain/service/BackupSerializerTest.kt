@@ -207,10 +207,11 @@ class BackupSerializerTest {
     }
 
     @Test
-    fun currentVersion_isEight() {
+    fun currentVersion_isNine() {
         // Sanity check so a future bump that forgets to update the version
-        // constant gets caught.
-        assertEquals(8, BackupData.CURRENT_VERSION)
+        // constant gets caught. Bumped to 9 by TASK-91 when the
+        // CarDto gained the nullable wltp_kwh_per_100km field.
+        assertEquals(9, BackupData.CURRENT_VERSION)
     }
 
     @Test

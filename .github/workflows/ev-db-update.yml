@@ -1,0 +1,46 @@
+name: EV models database refresh
+
+# TASK-92: runs `scripts/update_ev_db.py` on the first of every month at
+# 03:00 UTC, plus on-demand from the Actions tab. The script pulls the
+# latest OpenEV Data release, transforms each vehicle into Joulie's
+# compact schema, and publishes the result as the `ev_models.json` asset
+# on the `ev-db-latest` GitHub release of this repo (the Android app
+# downloads from that URL when the user taps Settings → "Update EV
+# database"). The auto-issued `secrets.GITHUB_TOKEN` already has the
+# `contents: write` scope needed to manage the release asset; no PAT
+# lifecycle is involved.
+
+on:
+  schedule:
+    - cron: "0 3 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ev-db-update
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Refresh ev_models.json
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r scripts/requirements.txt
+
+      - name: Run the update script
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 scripts/update_ev_db.py

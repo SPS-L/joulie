@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.spsl.evtracker.R
+import org.spsl.evtracker.core.model.EvDbUpdateState
 import org.spsl.evtracker.core.model.RestoreResult
 import org.spsl.evtracker.core.model.SettingsEvent
 import org.spsl.evtracker.core.model.SettingsUiState
@@ -34,11 +35,13 @@ import org.spsl.evtracker.domain.repository.FetchOutcome
 import org.spsl.evtracker.domain.repository.LocationReader
 import org.spsl.evtracker.domain.repository.SettingsReader
 import org.spsl.evtracker.domain.repository.SettingsWriter
+import org.spsl.evtracker.domain.repository.UpdateResult
 import org.spsl.evtracker.domain.usecase.ExportCsvUseCase
 import org.spsl.evtracker.domain.usecase.PushBackupNowUseCase
 import org.spsl.evtracker.domain.usecase.ResetActiveCarDataUseCase
 import org.spsl.evtracker.domain.usecase.ResetAllDataUseCase
 import org.spsl.evtracker.domain.usecase.RestoreBackupUseCase
+import org.spsl.evtracker.domain.usecase.UpdateEvDatabaseUseCase
 import org.spsl.evtracker.domain.usecase.WipeRemoteBackupUseCase
 import java.io.IOException
 import java.text.SimpleDateFormat
@@ -64,6 +67,7 @@ class SettingsViewModel @Inject constructor(
     private val wipeRemoteBackupUseCase: WipeRemoteBackupUseCase,
     private val localeApplier: LocaleApplier,
     private val carbonIntensitySource: CarbonIntensitySource,
+    private val updateEvDatabase: UpdateEvDatabaseUseCase,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -133,6 +137,58 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update { it.copy(customLocationCount = list.size) }
             }
         }
+        // EV-database refresh metadata (TASK-91). Three flows that
+        // together drive the "Last updated" summary line in Settings.
+        viewModelScope.launch {
+            settingsReader.evDbLastUpdatedAt.collect { v ->
+                _uiState.update { it.copy(evDbLastUpdatedAt = v) }
+            }
+        }
+        viewModelScope.launch {
+            settingsReader.evDbVersion.collect { v ->
+                _uiState.update { it.copy(evDbVersion = v) }
+            }
+        }
+        viewModelScope.launch {
+            settingsReader.evDbVehicleCount.collect { v ->
+                _uiState.update { it.copy(evDbVehicleCount = v) }
+            }
+        }
+    }
+
+    /**
+     * Tap handler for Settings → "Update EV database" (TASK-91).
+     * Idempotent: a second tap while [EvDbUpdateState.Loading] is on
+     * screen is a no-op. The result state is purely UI-side; the
+     * persistent cache + summary line are driven by the DataStore
+     * flows wired in `init`.
+     */
+    fun onUpdateEvDatabase() {
+        if (_uiState.value.evDbState is EvDbUpdateState.Loading) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(evDbState = EvDbUpdateState.Loading) }
+            val next = when (val r = updateEvDatabase()) {
+                is UpdateResult.Success ->
+                    EvDbUpdateState.Success(r.version, r.vehicleCount)
+                is UpdateResult.ValidationFailed ->
+                    EvDbUpdateState.Failure(R.string.settings_ev_db_error_validation)
+                is UpdateResult.NetworkError ->
+                    EvDbUpdateState.Failure(R.string.settings_ev_db_error_network)
+                is UpdateResult.ParseError ->
+                    EvDbUpdateState.Failure(R.string.settings_ev_db_error_parse)
+            }
+            _uiState.update { it.copy(evDbState = next) }
+        }
+    }
+
+    /**
+     * Clear the transient EV-DB update outcome so the Settings row
+     * returns to Idle after the Fragment has rendered the Snackbar.
+     * The persisted summary line keeps the "Last updated" text either
+     * way — this purely controls the Snackbar one-shot.
+     */
+    fun onEvDbStateConsumed() {
+        _uiState.update { it.copy(evDbState = EvDbUpdateState.Idle) }
     }
 
     // -- Drive ----------------------------------------------------------------

@@ -106,6 +106,8 @@ class SettingsViewModelTest {
         val wipeRemoteBackup = WipeRemoteBackupUseCase(backupRepo, writer)
         val localeApplier = org.spsl.evtracker.testing.FakeLocaleApplier()
         val carbonIntensitySource = org.spsl.evtracker.testing.FakeCarbonIntensitySource()
+        val evModelReader = org.spsl.evtracker.testing.FakeEvModelReader()
+        val updateEvDb = org.spsl.evtracker.domain.usecase.UpdateEvDatabaseUseCase(evModelReader)
         val vm = SettingsViewModel(
             reader, writer, locationReader, carReader,
             backupRepo, scheduler, workManager, restoreUseCase,
@@ -113,6 +115,7 @@ class SettingsViewModelTest {
             pushBackupNow, wipeRemoteBackup,
             localeApplier,
             carbonIntensitySource,
+            updateEvDb,
         )
         return Setup(
             vm, reader, writer, backupRepo, scheduler, workManager,

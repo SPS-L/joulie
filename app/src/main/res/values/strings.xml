@@ -370,6 +370,17 @@
     <string name="car_form_model">Model</string>
     <string name="car_form_year">Year</string>
     <string name="car_form_battery_kwh">Battery (kWh)</string>
+    <!-- TASK-91 EV-database autocomplete -->
+    <string name="car_form_make_helper">Type to search the EV database</string>
+    <string name="car_form_model_helper">Pick a model to auto-fill battery</string>
+    <string name="settings_ev_db_header">EV Database</string>
+    <string name="settings_ev_db_using_bundled">Using bundled database</string>
+    <string name="settings_ev_db_last_updated_summary">Last updated %1$s, %2$d vehicles</string>
+    <string name="settings_ev_db_update_button">Update EV database</string>
+    <string name="settings_ev_db_update_success">EV database updated, %1$d vehicles</string>
+    <string name="settings_ev_db_error_network">No internet connection</string>
+    <string name="settings_ev_db_error_parse">Update failed, invalid data</string>
+    <string name="settings_ev_db_error_validation">Update failed, too few vehicles in payload</string>
 
     <!-- Charts -->
     <string name="charts_title">Charts</string>

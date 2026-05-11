@@ -14,6 +14,7 @@ import org.spsl.evtracker.data.backup.RoomRestoreTransactionRunner
 import org.spsl.evtracker.data.repository.CarRepository
 import org.spsl.evtracker.data.repository.ChargeEventRepository
 import org.spsl.evtracker.data.repository.ElectricityMapsRepository
+import org.spsl.evtracker.data.repository.EvModelRepository
 import org.spsl.evtracker.data.repository.LocationRepository
 import org.spsl.evtracker.data.repository.SettingsRepository
 import org.spsl.evtracker.domain.backup.BackupRepository
@@ -26,6 +27,7 @@ import org.spsl.evtracker.domain.repository.CarWriter
 import org.spsl.evtracker.domain.repository.CarbonIntensitySource
 import org.spsl.evtracker.domain.repository.ChargeEventQueries
 import org.spsl.evtracker.domain.repository.ChargeEventWriter
+import org.spsl.evtracker.domain.repository.EvModelReader
 import org.spsl.evtracker.domain.repository.LocationReader
 import org.spsl.evtracker.domain.repository.LocationWriter
 import org.spsl.evtracker.domain.repository.SettingsReader
@@ -56,6 +58,8 @@ abstract class DomainModule {
     abstract fun bindCarbonIntensitySource(
         impl: ElectricityMapsRepository,
     ): CarbonIntensitySource
+
+    @Binds abstract fun bindEvModelReader(impl: EvModelRepository): EvModelReader
 
     // Backup interfaces — bound to E's real implementations.
     @Binds abstract fun bindBackupScheduler(impl: org.spsl.evtracker.data.backup.WorkManagerBackupScheduler): BackupScheduler

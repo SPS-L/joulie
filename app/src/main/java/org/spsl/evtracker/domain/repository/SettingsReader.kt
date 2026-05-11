@@ -108,4 +108,23 @@ interface SettingsReader {
     val electricityMapsCacheZone: Flow<String>
     val electricityMapsCacheIntensity: Flow<Double>
     val electricityMapsCacheFetchedAtMs: Flow<Long>
+
+    /**
+     * Wall-clock epoch-ms of the last successful EV models database
+     * refresh from the GitHub release asset (TASK-91). Zero means the
+     * app is still using the bundled fallback.
+     */
+    val evDbLastUpdatedAt: Flow<Long>
+
+    /**
+     * `version` string from the JSON root of the EV models database
+     * the app is currently consuming. Empty string = bundled fallback.
+     */
+    val evDbVersion: Flow<String>
+
+    /**
+     * Cached vehicle count from the EV models database. Zero = bundled
+     * fallback.
+     */
+    val evDbVehicleCount: Flow<Int>
 }

@@ -8,6 +8,15 @@ import android.net.Uri
 import androidx.annotation.StringRes
 
 data class SettingsUiState(
+    // EV-database refresh (TASK-91):
+    /** Idle / Loading / Success / Failure of the most recent refresh. */
+    val evDbState: EvDbUpdateState = EvDbUpdateState.Idle,
+    /** Epoch-ms of the last successful refresh; 0 = bundled fallback. */
+    val evDbLastUpdatedAt: Long = 0L,
+    /** Cached `version` from the JSON root; "" = bundled fallback. */
+    val evDbVersion: String = "",
+    /** Cached vehicle count; 0 = bundled fallback. */
+    val evDbVehicleCount: Int = 0,
     // Drive backup:
     val driveEnabled: Boolean = false,
     val lastBackupAt: Long? = null,

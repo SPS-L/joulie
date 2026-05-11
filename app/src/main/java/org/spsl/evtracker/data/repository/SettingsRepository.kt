@@ -76,6 +76,15 @@ class SettingsRepository @Inject constructor(
     override val electricityMapsCacheFetchedAtMs: Flow<Long> =
         dataStore.data.map { it[PreferenceKeys.ELECTRICITY_MAPS_CACHE_FETCHED_AT_MS] ?: 0L }
 
+    override val evDbLastUpdatedAt: Flow<Long> =
+        dataStore.data.map { it[PreferenceKeys.EV_DB_LAST_UPDATED_AT] ?: 0L }
+
+    override val evDbVersion: Flow<String> =
+        dataStore.data.map { it[PreferenceKeys.EV_DB_VERSION] ?: "" }
+
+    override val evDbVehicleCount: Flow<Int> =
+        dataStore.data.map { it[PreferenceKeys.EV_DB_VEHICLE_COUNT] ?: 0 }
+
     // ACTIVE_CAR_ID stays an `intPreferencesKey` (didn't touch DataStore
     // backing types — switching `intPreferencesKey` to `longPreferencesKey` with
     // the same key name would silently lose the existing Int value). We widen
@@ -192,6 +201,18 @@ class SettingsRepository @Inject constructor(
             prefs.remove(PreferenceKeys.ELECTRICITY_MAPS_CACHE_ZONE)
             prefs.remove(PreferenceKeys.ELECTRICITY_MAPS_CACHE_INTENSITY)
             prefs.remove(PreferenceKeys.ELECTRICITY_MAPS_CACHE_FETCHED_AT_MS)
+        }
+    }
+
+    override suspend fun setEvDbCache(
+        lastUpdatedAtMs: Long,
+        version: String,
+        vehicleCount: Int,
+    ) {
+        dataStore.edit { prefs ->
+            prefs[PreferenceKeys.EV_DB_LAST_UPDATED_AT] = lastUpdatedAtMs
+            prefs[PreferenceKeys.EV_DB_VERSION] = version
+            prefs[PreferenceKeys.EV_DB_VEHICLE_COUNT] = vehicleCount
         }
     }
 

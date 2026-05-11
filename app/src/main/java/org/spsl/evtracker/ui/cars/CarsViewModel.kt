@@ -21,12 +21,14 @@ import org.spsl.evtracker.core.model.CarFormState
 import org.spsl.evtracker.core.model.CarsEvent
 import org.spsl.evtracker.core.model.CarsUiState
 import org.spsl.evtracker.data.local.entity.CarEntity
+import org.spsl.evtracker.data.local.evdb.EvModel
 import org.spsl.evtracker.domain.repository.CarReader
+import org.spsl.evtracker.domain.repository.EvModelReader
 import org.spsl.evtracker.domain.repository.SettingsReader
 import org.spsl.evtracker.domain.repository.SettingsWriter
 import org.spsl.evtracker.domain.usecase.AddCarUseCase
 import org.spsl.evtracker.domain.usecase.DeleteCarUseCase
-import org.spsl.evtracker.domain.usecase.RenameCarUseCase
+import org.spsl.evtracker.domain.usecase.UpdateCarUseCase
 import javax.inject.Inject
 
 @HiltViewModel
@@ -35,8 +37,9 @@ class CarsViewModel @Inject constructor(
     settingsReader: SettingsReader,
     private val settingsWriter: SettingsWriter,
     private val addCar: AddCarUseCase,
-    private val renameCar: RenameCarUseCase,
+    private val updateCar: UpdateCarUseCase,
     private val deleteCar: DeleteCarUseCase,
+    private val evModelReader: EvModelReader,
 ) : ViewModel() {
 
     private val _events = MutableSharedFlow<CarsEvent>(
@@ -77,12 +80,19 @@ class CarsViewModel @Inject constructor(
         }
     }
 
-    fun submitRename(carId: Long, newName: String) {
+    /**
+     * Persist the Edit Car dialog (TASK-91). Replaces the legacy
+     * rename-only path so the make / model / year / battery / WLTP
+     * fields the user touches in the dialog actually round-trip to
+     * [org.spsl.evtracker.data.local.entity.CarEntity].
+     */
+    fun submitEdit(carId: Long, form: CarFormState) {
         viewModelScope.launch {
-            when (renameCar(carId, newName)) {
-                RenameCarUseCase.Result.NameBlank ->
+            when (updateCar(carId, form)) {
+                UpdateCarUseCase.Result.NameBlank ->
                     _events.tryEmit(CarsEvent.ShowError(R.string.error_car_name_required))
-                RenameCarUseCase.Result.Success -> Unit
+                UpdateCarUseCase.Result.NotFound -> Unit
+                UpdateCarUseCase.Result.Success -> Unit
             }
         }
     }
@@ -90,4 +100,19 @@ class CarsViewModel @Inject constructor(
     fun confirmDelete(carId: Long) {
         viewModelScope.launch { deleteCar(carId) }
     }
+
+    /**
+     * EV-database autocomplete adapter source (TASK-91). Suspending so
+     * the dialog can call it from `lifecycleScope.launch` without
+     * blocking the binding thread. Returns the distinct sorted make
+     * list from the loaded [EvModelReader] cache.
+     */
+    suspend fun loadMakes(): List<String> = evModelReader.makes()
+
+    /**
+     * Filtered model list for the picked make (TASK-91). Empty list
+     * when [make] is blank or the make is unknown.
+     */
+    suspend fun loadModelsForMake(make: String): List<EvModel> =
+        evModelReader.modelsForMake(make)
 }

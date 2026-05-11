@@ -18,7 +18,7 @@ data class BackupData(
     @SerializedName("custom_locations") val customLocations: List<CustomLocationDto>,
 ) {
     companion object {
-        const val CURRENT_VERSION = 8
+        const val CURRENT_VERSION = 9
 
         fun fromEntities(
             cars: List<CarEntity>,
@@ -49,13 +49,37 @@ data class CarDto(
     @SerializedName("model") val model: String,
     @SerializedName("year") val year: Int?,
     @SerializedName("battery_kwh") val batteryKwh: Double?,
+    /**
+     * Manufacturer WLTP reference in kWh per 100 km. Absent on v3..v8
+     * backups — Gson defaults to `null`, matching the entity's
+     * nullable column added in Room v8 → v9 (TASK-91).
+     */
+    @SerializedName("wltp_kwh_per_100km") val wltpKwhPer100km: Double? = null,
     @SerializedName("created_at") val createdAt: Long,
 ) {
-    fun toEntity() = CarEntity(id, name, make, model, year, batteryKwh, createdAt)
+    fun toEntity() = CarEntity(
+        id = id,
+        name = name,
+        make = make,
+        model = model,
+        year = year,
+        batteryKwh = batteryKwh,
+        wltpKwhPer100km = wltpKwhPer100km,
+        createdAt = createdAt,
+    )
 
     companion object {
         fun fromEntity(e: CarEntity) =
-            CarDto(e.id, e.name, e.make, e.model, e.year, e.batteryKwh, e.createdAt)
+            CarDto(
+                id = e.id,
+                name = e.name,
+                make = e.make,
+                model = e.model,
+                year = e.year,
+                batteryKwh = e.batteryKwh,
+                wltpKwhPer100km = e.wltpKwhPer100km,
+                createdAt = e.createdAt,
+            )
     }
 }
 
