@@ -6,11 +6,11 @@ package org.spsl.evtracker.ui.cars
 
 import android.content.Context
 import android.view.LayoutInflater
-import android.view.WindowManager
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
 import androidx.lifecycle.LifecycleCoroutineScope
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import kotlinx.coroutines.launch
 import org.spsl.evtracker.R
 import org.spsl.evtracker.core.model.CarFormState
@@ -19,27 +19,30 @@ import org.spsl.evtracker.data.local.evdb.EvModel
 import org.spsl.evtracker.databinding.DialogEditCarBinding
 
 /**
- * Add / Edit Car dialog (TASK-91).
+ * Add / Edit Car form (TASK-91).
  *
- * Wraps the existing `dialog_edit_car.xml` form with EV-database
- * autocomplete. The Make and Model fields are stock
- * `android.widget.AutoCompleteTextView` instances backed by a plain
- * [ArrayAdapter] (default prefix-match `ArrayFilter`).
+ * Hosted in a `BottomSheetDialog` (v1.13.4 fix). Earlier iterations
+ * used `MaterialAlertDialog`, but the AutoCompleteTextView popup
+ * window does not render reliably inside MaterialAlertDialog on real
+ * devices — neither Material's `MaterialAutoCompleteTextView`
+ * (v1.13.0–v1.13.2) nor the stock `android.widget.AutoCompleteTextView`
+ * (v1.13.3) showed the dropdown despite the adapter holding the full
+ * 1,189-row dataset. BottomSheetDialog uses a different window layer
+ * where popups render correctly.
  *
- * The earlier v1.13.0 / v1.13.2 attempts used Material's
- * `MaterialAutoCompleteTextView` wrapped in a TextInputLayout with the
- * `ExposedDropdownMenu` style. That combination produced a known but
- * undocumented bug inside `MaterialAlertDialog`: the popup window was
- * created (the trailing arrow icon rotated to "open") but never
- * appeared visibly. v1.13.3 drops Material's variant and uses the
- * stock widget, which renders the popup reliably inside any dialog.
+ * The Make and Model fields are stock `AutoCompleteTextView` instances
+ * backed by a plain [ArrayAdapter] (default prefix-match `ArrayFilter`).
+ * Tapping a field calls `showDropDown()` via the explicit
+ * OnFocusChangeListener / OnClickListener wired below; typing filters
+ * by prefix. Picking a model auto-fills the battery field and stashes
+ * the WLTP figure onto [CarFormState] so the Add / Update use case
+ * persists it. All fields remain manually editable — the autocomplete
+ * is a convenience, not a lock.
  *
  * Display format for the model dropdown: `"$model · $variant"` if the
  * variant is non-blank (Brand Guide §1 voice rule — no em-dash). The
  * caller selects from the displayed strings; the dialog round-trips
- * back to `(model, variant)` via the in-memory lookup map. All fields
- * remain manually editable — the autocomplete is a convenience, not
- * a lock — so users with rare or modded vehicles aren't locked out.
+ * back to `(model, variant)` via the in-memory lookup map.
  */
 object CarEditDialog {
 
@@ -90,6 +93,7 @@ object CarEditDialog {
         onSubmit: (CarFormState) -> Unit,
     ) {
         val binding = DialogEditCarBinding.inflate(LayoutInflater.from(context))
+        binding.carDialogTitle.setText(titleRes)
 
         // Local lookup so we can recover the picked EvModel from the
         // displayed "Model · Variant" string without re-parsing.
@@ -157,31 +161,30 @@ object CarEditDialog {
             }
         }
 
-        val dialog = MaterialAlertDialogBuilder(context)
-            .setTitle(titleRes)
-            .setView(binding.root)
-            .setPositiveButton(R.string.car_dialog_save) { _, _ ->
-                onSubmit(
-                    CarFormState(
-                        name = binding.carDialogName.text?.toString().orEmpty(),
-                        make = binding.carDialogMake.text?.toString().orEmpty(),
-                        model = binding.carDialogModel.text?.toString().orEmpty(),
-                        year = binding.carDialogYear.text?.toString().orEmpty(),
-                        batteryKwh = binding.carDialogBattery.text?.toString().orEmpty(),
-                        wltpKwhPer100km = stashedWltp,
-                    ),
-                )
-            }
-            .setNegativeButton(R.string.car_dialog_cancel, null)
-            .create()
+        val dialog = BottomSheetDialog(context)
+        dialog.setContentView(binding.root)
+        // Start fully expanded so the user sees all form fields
+        // immediately, rather than a small peek the user has to drag
+        // up. EXPANDED state also gives the AutoCompleteTextView
+        // popup the full vertical space below the field.
+        dialog.behavior.state = BottomSheetBehavior.STATE_EXPANDED
+        dialog.behavior.skipCollapsed = true
 
-        // SOFT_INPUT_ADJUST_RESIZE (the default for many themes)
-        // shrinks the dialog when the keyboard opens, which can
-        // collapse the room available for the AutoCompleteTextView
-        // popup. ADJUST_PAN keeps the dialog at full height and pans
-        // it up — the popup has predictable vertical space below the
-        // anchor.
-        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN)
+        binding.carDialogCancel.setOnClickListener { dialog.dismiss() }
+        binding.carDialogSave.setOnClickListener {
+            onSubmit(
+                CarFormState(
+                    name = binding.carDialogName.text?.toString().orEmpty(),
+                    make = binding.carDialogMake.text?.toString().orEmpty(),
+                    model = binding.carDialogModel.text?.toString().orEmpty(),
+                    year = binding.carDialogYear.text?.toString().orEmpty(),
+                    batteryKwh = binding.carDialogBattery.text?.toString().orEmpty(),
+                    wltpKwhPer100km = stashedWltp,
+                ),
+            )
+            dialog.dismiss()
+        }
+
         dialog.show()
     }
 
@@ -200,15 +203,13 @@ object CarEditDialog {
      * Installs:
      *   - A stock [ArrayAdapter] with default prefix-match `ArrayFilter`
      *     so typing filters the dropdown by the typed prefix.
-     *   - An [AutoCompleteTextView.setOnFocusChangeListener] that calls
-     *     [AutoCompleteTextView.showDropDown] when the field gains
-     *     focus. Compensates for the missing M3 "dropdown arrow" end
-     *     icon: tapping the field is equivalent to tapping the arrow,
-     *     and the popup appears with the full list.
-     *   - An [AutoCompleteTextView.setOnClickListener] that calls
-     *     [AutoCompleteTextView.showDropDown] on every tap (covers the
-     *     case where the field already had focus and a second tap is
-     *     expected to re-open a dismissed popup).
+     *   - An [AutoCompleteTextView.setOnFocusChangeListener] that
+     *     defers `showDropDown()` to the next frame (`view.post {…}`),
+     *     so the view is fully attached + windowToken'd by the time
+     *     the popup window is requested.
+     *   - An [AutoCompleteTextView.setOnClickListener] that does the
+     *     same, covering the case where the field already has focus
+     *     and a tap is expected to re-open the popup.
      */
     private fun AutoCompleteTextView.bindAutocomplete(
         context: Context,
@@ -221,15 +222,11 @@ object CarEditDialog {
                 items,
             ),
         )
-        setOnFocusChangeListener { _, hasFocus ->
-            if (hasFocus && !isPopupShowing && adapter != null && adapter.count > 0) {
-                showDropDown()
-            }
+        setOnFocusChangeListener { view, hasFocus ->
+            if (hasFocus) view.post { showDropDown() }
         }
-        setOnClickListener {
-            if (!isPopupShowing && adapter != null && adapter.count > 0) {
-                showDropDown()
-            }
+        setOnClickListener { view ->
+            view.post { showDropDown() }
         }
     }
 }
