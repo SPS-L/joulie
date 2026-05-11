@@ -105,17 +105,19 @@ class SettingsViewModelTest {
         val pushBackupNow = PushBackupNowUseCase(backupRepo, writer, org.spsl.evtracker.testing.FakeNowProvider(time = 1_700_000_000_000L))
         val wipeRemoteBackup = WipeRemoteBackupUseCase(backupRepo, writer)
         val localeApplier = org.spsl.evtracker.testing.FakeLocaleApplier()
+        val carbonIntensitySource = org.spsl.evtracker.testing.FakeCarbonIntensitySource()
         val vm = SettingsViewModel(
             reader, writer, locationReader, carReader,
             backupRepo, scheduler, workManager, restoreUseCase,
             resetActive, resetAll, exportCsv,
             pushBackupNow, wipeRemoteBackup,
             localeApplier,
-            org.spsl.evtracker.testing.FakeCarbonIntensitySource(),
+            carbonIntensitySource,
         )
         return Setup(
             vm, reader, writer, backupRepo, scheduler, workManager,
             locationReader, carReader, csvSink, chargeEventQueries, localeApplier,
+            carbonIntensitySource,
         )
     }
 
@@ -131,6 +133,7 @@ class SettingsViewModelTest {
         val csvSink: FakeCsvFileSink,
         val chargeEventQueries: FakeChargeEventQueries,
         val localeApplier: org.spsl.evtracker.testing.FakeLocaleApplier,
+        val carbonIntensitySource: org.spsl.evtracker.testing.FakeCarbonIntensitySource,
     )
 
     /** Like FakeBackupRepository but lets a test throw from readRemoteBackup. */
@@ -784,5 +787,70 @@ class SettingsViewModelTest {
         s.reader.setLanguageTag("tr")
         advanceUntilIdle()
         assertEquals("tr", s.vm.uiState.value.languageTag)
+    }
+
+    // ── TASK-85: auto-refresh on zone change ─────────────────────────────
+
+    @Test
+    fun onZoneSet_differentZone_persistsAndTriggersRefresh() = runTest {
+        val s = build()
+        s.reader.setElectricityMapsZone("CY")
+        s.reader.setCo2Enabled(true)
+        s.reader.setElectricityMapsApiKey("k")
+        advanceUntilIdle()
+        val callsBefore = s.carbonIntensitySource.callCount
+
+        s.vm.onElectricityMapsZoneSet("DE")
+        advanceUntilIdle()
+
+        assertEquals("DE", s.writer.electricityMapsZone)
+        assertEquals("refresh fired on different zone", callsBefore + 1, s.carbonIntensitySource.callCount)
+        assertEquals("DE", s.carbonIntensitySource.lastZone)
+    }
+
+    @Test
+    fun onZoneSet_sameZone_persistsButDoesNotRefresh() = runTest {
+        val s = build()
+        s.reader.setElectricityMapsZone("CY")
+        s.reader.setCo2Enabled(true)
+        s.reader.setElectricityMapsApiKey("k")
+        advanceUntilIdle()
+        val callsBefore = s.carbonIntensitySource.callCount
+
+        s.vm.onElectricityMapsZoneSet("CY")
+        advanceUntilIdle()
+
+        assertEquals("CY", s.writer.electricityMapsZone)
+        assertEquals("no-op write must not refresh", callsBefore, s.carbonIntensitySource.callCount)
+    }
+
+    @Test
+    fun onZoneSet_isCaseInsensitive_lowercaseInputDoesNotRefreshWhenAlreadyUppercase() = runTest {
+        // VM normalises to uppercase before comparing — so typing "cy" when
+        // the current zone is already "CY" is a no-op.
+        val s = build()
+        s.reader.setElectricityMapsZone("CY")
+        s.reader.setCo2Enabled(true)
+        s.reader.setElectricityMapsApiKey("k")
+        advanceUntilIdle()
+        val callsBefore = s.carbonIntensitySource.callCount
+
+        s.vm.onElectricityMapsZoneSet("cy")
+        advanceUntilIdle()
+
+        assertEquals(callsBefore, s.carbonIntensitySource.callCount)
+    }
+
+    @Test
+    fun onZoneSet_blankInput_isSilentlyDropped() = runTest {
+        val s = build()
+        s.reader.setElectricityMapsZone("CY")
+        advanceUntilIdle()
+
+        s.vm.onElectricityMapsZoneSet("   ")
+        advanceUntilIdle()
+
+        assertEquals("CY", s.writer.electricityMapsZone) // unchanged
+        assertEquals(0, s.carbonIntensitySource.callCount)
     }
 }
