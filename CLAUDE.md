@@ -137,7 +137,7 @@ These are easy to break by accident; the canonical source of truth is `docs/DESI
 - **Location chips:** the form always shows three fixed chips (🏠 Home · 💼 Work · ⚡ Public) followed by the **top 5** custom labels from `custom_locations` (`ORDER BY useCount DESC, lastUsed DESC LIMIT 5`), then a `+ Add` chip. On save, call `LocationRepository.recordUsage(label)` (insert-or-increment).
 - **Multi-car scope:** `activeCarId` lives in DataStore (`-1` = none). All queries filter by `carId`. Deleting a car cascades to its `charge_events` (FK `ON DELETE CASCADE`). "Reset all data" supports per-car or global.
 
-## Database, Room v7
+## Database, Room v8
 
 Entities: `Car`, `ChargeEvent`, `CustomLocation`. Current `@Database(version = 8)`. All three entities use `@PrimaryKey val id: Long` and `ChargeEventEntity.carId: Long`. The `@TypeConverters(ChargeTypeConverter::class, ChargeKwhSourceConverter::class)` annotation on `AppDatabase` lets Room round-trip the `chargeType` column between SQLite TEXT and the `ChargeType` enum, and the `kwhSource` column between SQLite TEXT and the `ChargeKwhSource` enum. `ChargeEventEntity` carries optional `socBefore: Double?` and `socAfter: Double?` fields stored as fractions in `0.0..1.0`, a non-null `kwhSource: ChargeKwhSource = ChargeKwhSource.MEASURED` provenance flag, and an optional `gridIntensityGCo2PerKwh: Double?` capturing the Electricity Maps grid mix at save time (TASK-80).
 
