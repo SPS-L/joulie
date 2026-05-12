@@ -225,12 +225,23 @@ def merge(upstream: list[dict], supplement: list[dict]) -> list[dict]:
     return merged
 
 
-def fetch_upstream() -> tuple[str, list[dict]]:
-    """Return `(upstream_tag, raw_vehicles)` from the latest OpenEV release."""
+def fetch_upstream(token: str | None = None) -> tuple[str, list[dict]]:
+    """Return `(upstream_tag, raw_vehicles)` from the latest OpenEV release.
+
+    `token` (when supplied) lifts the api.github.com rate limit from 60
+    req/hr per runner IP to 5000 req/hr for the caller. CI passes
+    `secrets.GITHUB_TOKEN`; cron and local runs can also pass a PAT.
+    Public-repo reads work with any valid token regardless of scope, so
+    the `secrets.GITHUB_TOKEN` minted for `SPS-L/joulie` is sufficient
+    to authenticate against `open-ev-data/open-ev-data-dataset`.
+    """
     log_info("Fetching upstream release metadata")
+    headers = {"Accept": "application/vnd.github+json"}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
     r = requests.get(
         UPSTREAM_LATEST_URL,
-        headers={"Accept": "application/vnd.github+json"},
+        headers=headers,
         timeout=30,
     )
     r.raise_for_status()
@@ -430,7 +441,7 @@ def main() -> int:
     if not token:
         die("GITHUB_TOKEN env var not set")
     try:
-        upstream_tag, raw = fetch_upstream()
+        upstream_tag, raw = fetch_upstream(token)
         log_info(f"Fetched {len(raw)} vehicles from OpenEV Data {upstream_tag}")
         fresh = transform(raw)
         log_info(f"After filtering: {len(fresh)} fresh vehicles retained")
