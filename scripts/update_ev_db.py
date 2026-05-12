@@ -27,10 +27,13 @@ import datetime as _dt
 import io
 import json
 import os
+import pathlib
 import sys
 from typing import Any
 
 import requests
+
+SUPPLEMENT_PATH = pathlib.Path(__file__).parent / "ev_models_supplement.json"
 
 UPSTREAM_LATEST_URL = (
     "https://api.github.com/repos/open-ev-data/open-ev-data-dataset/releases/latest"
@@ -201,6 +204,25 @@ def transform(raw: list[dict]) -> list[dict]:
         )
     )
     return out
+
+
+def load_supplement() -> list[dict]:
+    if not SUPPLEMENT_PATH.exists():
+        return []
+    with SUPPLEMENT_PATH.open(encoding="utf-8") as f:
+        data = json.load(f)
+    entries = data.get("vehicles", [])
+    log_info(f"Loaded {len(entries)} vehicles from supplement")
+    return entries
+
+
+def merge(upstream: list[dict], supplement: list[dict]) -> list[dict]:
+    """Supplement entries win on exact (make, model, variant, year) collision."""
+    seen = {(v["make"], v["model"], v["variant"], v["year"]) for v in supplement}
+    merged = [v for v in upstream if (v["make"], v["model"], v["variant"], v["year"]) not in seen]
+    merged.extend(supplement)
+    merged.sort(key=lambda v: (v["make"].lower(), v["model"].lower(), v["year"] or 99_999))
+    return merged
 
 
 def fetch_upstream() -> tuple[str, list[dict]]:
@@ -405,6 +427,15 @@ def main() -> int:
         log_info(f"Fetched {len(raw)} vehicles from OpenEV Data {upstream_tag}")
         fresh = transform(raw)
         log_info(f"After filtering: {len(fresh)} fresh vehicles retained")
+        supplement = load_supplement()
+        if supplement:
+            before = len(fresh)
+            fresh = merge(fresh, supplement)
+            added = len(fresh) - before
+            log_info(
+                f"After supplement merge: {len(fresh)} vehicles "
+                f"({added} added, {len(supplement) - added} collisions resolved in favour of supplement)"
+            )
         if len(fresh) < VALIDATION_FLOOR:
             die(
                 f"Refusing to publish: only {len(fresh)} fresh vehicles passed "

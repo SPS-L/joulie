@@ -44,3 +44,9 @@ app/src/test/screenshots/*.diff.png
 app/src/test/screenshots/*_actual.png
 app/src/test/screenshots/*_diff.png
 app/build/outputs/roborazzi/
+
+# EV-DB supplement scraper — local-only helper that fills gaps in the
+# upstream OpenEV Data feed. The scraper itself stays out of git; its
+# output (scripts/ev_models_supplement.json) IS tracked so the CI run
+# of scripts/update_ev_db.py picks it up at merge time.
+scripts/scrape_ev_database.py
