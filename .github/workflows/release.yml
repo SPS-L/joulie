@@ -60,6 +60,25 @@ jobs:
           mkdir -p app/src/main/assets
           printf '%s' "$ADI_REGISTRATION_TOKEN" > app/src/main/assets/adi-registration.properties
 
+      # Refresh app/src/main/assets/ev_models.json with a fresh
+      # upstream + supplement merge so the tagged APK bundles the
+      # latest data, even if the monthly ev-db-update workflow hasn't
+      # run since the supplement changed. The committed asset acts as
+      # a baseline; this step overwrites it for the build only — it
+      # is NOT committed back to the repo.
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Refresh bundled ev_models.json (upstream + supplement merge)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EV_DB_LOCAL_OUTPUT: app/src/main/assets/ev_models.json
+        run: |
+          pip install -r scripts/requirements.txt
+          python3 scripts/update_ev_db.py
+
       - name: Build release APK
         run: ./gradlew :app:assembleRelease --no-daemon --stacktrace
 
