@@ -60,6 +60,18 @@
 -keep class org.spsl.evtracker.core.model.ChargeEventDto { *; }
 -keep class org.spsl.evtracker.core.model.CustomLocationDto { *; }
 
+# --- TASK-91 EV-database DTOs (deserialized by Gson) -----------------------
+# Without these keeps, R8 obfuscates EvModel / EvModelDatabase enough that
+# gson.fromJson() returns a non-null object with an empty `vehicles` list
+# on release builds. The Settings "vehicle count" looks fine because it is
+# read from a separately-persisted DataStore key (evDbVehicleCount), but
+# the in-memory data is unusable, so the Add/Edit Car autocomplete shows
+# no suggestions. This was the actual root cause of the TASK-91 "dropdown
+# never renders" bug that v1.13.0..v1.13.7 chased through the widget /
+# dialog / popup layers without finding.
+-keep class org.spsl.evtracker.data.local.evdb.EvModel { *; }
+-keep class org.spsl.evtracker.data.local.evdb.EvModelDatabase { *; }
+
 # --- Hilt + Room: no app-side rules required -------------------------------
 # Both libraries ship comprehensive consumer ProGuard rules with their AARs.
 # Verified against build/outputs/mapping/release/configuration.txt (TASK-17):
