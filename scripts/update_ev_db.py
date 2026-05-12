@@ -419,6 +419,13 @@ def _upload_asset(token: str, release: dict, payload_bytes: bytes) -> None:
 
 
 def main() -> int:
+    # When EV_DB_LOCAL_OUTPUT is set, the script regenerates the merged
+    # payload and writes it to that path *without* uploading to the
+    # `ev-db-latest` GitHub release. Used by the release-APK workflow to
+    # bundle a fresh upstream+supplement merge into assets/ev_models.json
+    # at build time, so a tagged APK ships with the latest data even if
+    # the monthly publish hasn't run since the supplement changed.
+    local_output = os.environ.get("EV_DB_LOCAL_OUTPUT")
     token = os.environ.get("GITHUB_TOKEN")
     if not token:
         die("GITHUB_TOKEN env var not set")
@@ -465,6 +472,16 @@ def main() -> int:
             "utf-8"
         )
         log_info(f"Output size: {len(payload_bytes) / 1024:.1f} KB")
+
+        if local_output:
+            out = pathlib.Path(local_output)
+            out.parent.mkdir(parents=True, exist_ok=True)
+            out.write_bytes(payload_bytes)
+            log_info(
+                f"Wrote merged payload to {out} ({len(vehicles)} vehicles) "
+                f"and skipped {TARGET_REPO} release upload"
+            )
+            return 0
 
         if release is None:
             log_info(f"Creating release {TARGET_TAG} on {TARGET_REPO}")
