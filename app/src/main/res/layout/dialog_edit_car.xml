@@ -33,46 +33,64 @@
                 android:inputType="textCapWords"/>
         </com.google.android.material.textfield.TextInputLayout>
 
-        <!-- Make + Model are MaterialAutoCompleteTextView inside
-             TextInputLayout's ExposedDropdownMenu style (v1.13.5 fix).
-             v1.13.3 and v1.13.4 tried plain android.widget.AutoCompleteTextView,
-             which TextInputLayout cannot lay out correctly because the
-             outlined-box / floating-label integration is only defined for
-             TextInputEditText and MaterialAutoCompleteTextView. Visible
-             symptom was the floating "Make" label overlapping the typed
-             input and the popup never rendering. v1.13.0..v1.13.2 used
-             this canonical pattern but inside MaterialAlertDialog, where
-             the popup got clipped. Now hosted in BottomSheetDialog
-             (v1.13.4) the same pattern that works in fragment_wizard_page3.xml. -->
+        <!-- Make + Model use an inline suggestion list rendered in
+             this same view tree (v1.13.6 fix). v1.13.0..v1.13.5
+             cycled through every (widget × dialog host) combination
+             of AutoCompleteTextView / MaterialAutoCompleteTextView
+             inside MaterialAlertDialog / BottomSheetDialog; the
+             popup window never rendered on the user's Pixel 6a in
+             any combination. The inline-list approach renders the
+             filtered matches as plain TextViews inside the same
+             scrollable bottom-sheet content, so no PopupWindow is
+             involved and the rendering is independent of dialog /
+             window-layer behaviour. -->
         <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="@string/car_form_make"
             app:helperText="@string/car_form_make_helper">
-            <com.google.android.material.textfield.MaterialAutoCompleteTextView
+            <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/car_dialog_make"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:inputType="textCapWords"
-                android:completionThreshold="1"
                 android:imeOptions="actionNext"/>
         </com.google.android.material.textfield.TextInputLayout>
 
+        <LinearLayout
+            android:id="@+id/car_dialog_make_suggestions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone"
+            android:layout_marginTop="4dp"
+            android:background="@drawable/bg_suggestion_list"
+            tools:ignore="UseCompoundDrawables"/>
+
         <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="@string/car_form_model"
             app:helperText="@string/car_form_model_helper">
-            <com.google.android.material.textfield.MaterialAutoCompleteTextView
+            <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/car_dialog_model"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:inputType="textCapWords"
-                android:completionThreshold="1"
                 android:imeOptions="actionNext"/>
         </com.google.android.material.textfield.TextInputLayout>
+
+        <LinearLayout
+            android:id="@+id/car_dialog_model_suggestions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone"
+            android:layout_marginTop="4dp"
+            android:background="@drawable/bg_suggestion_list"
+            tools:ignore="UseCompoundDrawables"/>
 
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
