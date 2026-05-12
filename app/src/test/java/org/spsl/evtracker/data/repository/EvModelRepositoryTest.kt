@@ -129,13 +129,17 @@ class EvModelRepositoryTest {
         val result = repo.updateFromRemote()
         assertTrue(result is UpdateResult.Success)
         val success = result as UpdateResult.Success
-        assertEquals(60, success.vehicleCount)
+        // Merge semantics (TASK-91 v1.14.0): the 60 fresh vehicles
+        // unionise with the 2 bundled rows (Tesla Model 3 LR RWD 2024,
+        // renault Zoe R135 2023) because they have disjoint identity
+        // keys. Total: 62.
+        assertEquals(62, success.vehicleCount)
         assertEquals("2026-06-01", success.version)
 
-        // Persisted via the atomic 3-key setter.
+        // Persisted via the atomic 3-key setter — count reflects the merge.
         assertEquals(12_345L, writer.evDbLastUpdatedAt)
         assertEquals("2026-06-01", writer.evDbVersion)
-        assertEquals(60, writer.evDbVehicleCount)
+        assertEquals(62, writer.evDbVehicleCount)
 
         // Cache file written atomically.
         val cache = File(filesDir, "ev_models.json")
@@ -144,16 +148,56 @@ class EvModelRepositoryTest {
     }
 
     @Test
-    fun updateFromRemote_invalidatesInMemoryCache() = runTest {
+    fun updateFromRemote_mergesLocalAndRemote() = runTest {
         val repo = newRepo()
         // Prime the in-memory cache via a query against the bundled fallback.
         assertEquals(listOf("renault", "Tesla"), repo.makes())
-        // Refresh — the cache file replaces the bundled fallback as
-        // the source on the next load() call.
+        // Refresh — merge semantics: remote rows are added but the
+        // bundled Tesla / renault rows survive.
         repo.updateFromRemote()
         val makesAfter = repo.makes()
-        assertEquals(60, makesAfter.size)
-        assertTrue(makesAfter.first().startsWith("Make"))
+        assertEquals(62, makesAfter.size)
+        assertTrue("Tesla" in makesAfter)
+        assertTrue("renault" in makesAfter)
+        assertTrue(makesAfter.any { it.startsWith("Make") })
+    }
+
+    @Test
+    fun updateFromRemote_neverShrinks() = runTest {
+        // Pre-populate the cache file with 10 vehicles that have no
+        // overlap with the 60-row remote payload. The merged DB must
+        // therefore have exactly 70 entries.
+        val priorRows = (1..10).joinToString(",") { i ->
+            """{ "make": "Prior$i", "model": "P$i", "variant": "", "year": 2023, "battery_kwh": 60.0, "wltp_kwh_100km": 15.0 }"""
+        }
+        File(filesDir, "ev_models.json").writeText(
+            """{ "version": "old", "source": "test", "vehicle_count": 10, "vehicles": [ $priorRows ] }""",
+        )
+        val repo = newRepo()
+        val result = repo.updateFromRemote()
+        assertTrue(result is UpdateResult.Success)
+        assertEquals(70, (result as UpdateResult.Success).vehicleCount)
+        val makesAfter = repo.makes()
+        assertTrue(makesAfter.any { it == "Prior1" })
+        assertTrue(makesAfter.any { it == "Make1" })
+    }
+
+    @Test
+    fun updateFromRemote_remoteWinsOnConflict() = runTest {
+        // Same identity key (make, model, variant, year) in cache as in
+        // remote, but with a different battery. The remote value must
+        // overwrite the local row.
+        File(filesDir, "ev_models.json").writeText(
+            """{ "version": "old", "source": "test", "vehicle_count": 1, "vehicles": [
+                { "make": "Make1", "model": "Model1", "variant": "v", "year": 2024, "battery_kwh": 999.0, "wltp_kwh_100km": 99.0 }
+            ] }""",
+        )
+        val repo = newRepo()
+        repo.updateFromRemote()
+        val rows = repo.modelsForMake("Make1")
+        assertEquals(1, rows.size)
+        // Remote payload uses battery_kwh = 50.0 for Make1.
+        assertEquals(50.0, rows[0].batteryKwh, 0.0001)
     }
 
     @Test
