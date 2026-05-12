@@ -134,6 +134,13 @@ object CarEditDialog {
             itemsProvider = { makes },
             labelOf = { it },
         ) { picked ->
+            // Persist the picked make into the EditText — the
+            // bindInlineSuggestions contract leaves setText to the
+            // caller (because the Model picker writes the bare
+            // `picked.model`, not the "Model · Variant" display
+            // string).
+            binding.carDialogMake.setText(picked)
+            binding.carDialogMake.setSelection(picked.length)
             // Reload model list for the new make. Run on the lifecycle
             // scope so a teardown mid-load cancels cleanly. Clear any
             // stale model + WLTP so the user sees the empty hint
