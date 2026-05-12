@@ -100,6 +100,24 @@ class EvModelRepository internal constructor(
             .toList()
     }
 
+    /**
+     * Refresh the local DB from [REMOTE_URL] using **merge semantics**:
+     * remote entries are added or update existing ones, but nothing is
+     * ever removed. If a vehicle disappears upstream (OpenEV drops a
+     * row, a model is retired, etc.) it stays in the local DB so users
+     * who already saw it in the autocomplete still find it.
+     *
+     * Identity for the merge is `(make, model, variant, year)`,
+     * normalised by trim + lowercase to be tolerant of whitespace and
+     * casing changes upstream. On collision the remote row wins, so
+     * battery / WLTP / variant-spelling corrections from upstream
+     * propagate.
+     *
+     * Validation floor still applies to the **remote** payload (a
+     * legit refresh must ship ≥ [EvModelReader.VALIDATION_FLOOR] rows,
+     * otherwise we treat the response as bogus and refuse the merge).
+     * The merged size grows monotonically across refreshes.
+     */
     override suspend fun updateFromRemote(): UpdateResult = withContext(Dispatchers.IO) {
         val body = try {
             httpFetch(REMOTE_URL)
@@ -118,20 +136,71 @@ class EvModelRepository internal constructor(
         if (parsed == null || parsed.vehicles.size < EvModelReader.VALIDATION_FLOOR) {
             return@withContext UpdateResult.ValidationFailed(parsed?.vehicles?.size ?: 0)
         }
+
+        // Pre-load whatever's on disk / bundled to merge against.
+        // Going through `load()` keeps the in-memory cache, file
+        // cache, and bundled-asset fallback order in sync with reads.
+        val existing = load()
+        val merged = mergeIncremental(existing, parsed)
+        val mergedJson = gson.toJson(merged)
         try {
-            atomicWriteCache(body)
+            atomicWriteCache(mergedJson)
         } catch (e: IOException) {
             return@withContext UpdateResult.NetworkError(e)
         }
-        mutex.withLock { cached = parsed }
+        mutex.withLock { cached = merged }
         val version = parsed.version.ifBlank { "remote" }
         settingsWriter.setEvDbCache(
             lastUpdatedAtMs = nowProvider(),
             version = version,
-            vehicleCount = parsed.vehicles.size,
+            vehicleCount = merged.vehicles.size,
         )
-        UpdateResult.Success(version, parsed.vehicles.size)
+        UpdateResult.Success(version, merged.vehicles.size)
     }
+
+    /**
+     * Merge two [EvModelDatabase]s by `(make, model, variant, year)`
+     * identity (trim + lowercase). Entries unique to either side are
+     * kept; entries present in both are replaced by the remote version
+     * (remote wins on conflict).
+     *
+     * The returned database carries [remote]'s `version` / `source`
+     * metadata (this merge is performed at remote-refresh time, so the
+     * metadata reflects the refresh that produced it) and an accurate
+     * `vehicle_count`.
+     *
+     * Internal visibility (instead of private) so the unit tests can
+     * exercise the merge directly without a remote fetch.
+     */
+    internal fun mergeIncremental(
+        existing: EvModelDatabase,
+        remote: EvModelDatabase,
+    ): EvModelDatabase {
+        val merged = LinkedHashMap<String, EvModel>(existing.vehicles.size + remote.vehicles.size)
+        for (v in existing.vehicles) {
+            merged[identityKey(v)] = v
+        }
+        for (v in remote.vehicles) {
+            merged[identityKey(v)] = v
+        }
+        return EvModelDatabase(
+            version = remote.version,
+            source = remote.source,
+            vehicleCount = merged.size,
+            vehicles = merged.values.toList(),
+        )
+    }
+
+    private fun identityKey(v: EvModel): String =
+        buildString {
+            append(v.make.trim().lowercase())
+            append('|')
+            append(v.model.trim().lowercase())
+            append('|')
+            append(v.variant.trim().lowercase())
+            append('|')
+            append(v.year ?: -1)
+        }
 
     private fun readCacheFile(): EvModelDatabase? {
         val file = cacheFile()

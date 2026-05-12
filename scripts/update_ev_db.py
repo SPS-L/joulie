@@ -248,6 +248,90 @@ def build_payload(upstream_tag: str, vehicles: list[dict]) -> dict:
     }
 
 
+def _identity_key(vehicle: dict) -> tuple[str, str, str, int]:
+    """Identity tuple for the merge: (make, model, variant, year).
+
+    Normalised to trim + lowercase on the string fields so that
+    whitespace and casing changes upstream don't fork the entry. Year
+    falls back to a sentinel -1 when absent, matching the Android side
+    in `EvModelRepository.identityKey()`.
+    """
+    return (
+        _as_str(vehicle.get("make")).lower(),
+        _as_str(vehicle.get("model")).lower(),
+        _as_str(vehicle.get("variant")).lower(),
+        vehicle.get("year") if isinstance(vehicle.get("year"), int) else -1,
+    )
+
+
+def merge_incremental(
+    existing: list[dict],
+    fresh: list[dict],
+) -> list[dict]:
+    """Union `existing` and `fresh` by [_identity_key]. Fresh wins.
+
+    The published `ev_models.json` grows monotonically across runs:
+    entries unique to either side are kept; entries present in both
+    are replaced by the upstream-derived row from this run (so battery
+    / WLTP corrections propagate). A model retired upstream stays in
+    the published asset so devices that already showed it in the
+    autocomplete keep finding it after the monthly refresh.
+
+    The output is sorted with the same key as [transform] so diffs
+    across publish runs are minimal.
+    """
+    merged: dict[tuple[str, str, str, int], dict] = {}
+    for v in existing:
+        if isinstance(v, dict):
+            merged[_identity_key(v)] = v
+    for v in fresh:
+        merged[_identity_key(v)] = v
+    out = list(merged.values())
+    out.sort(
+        key=lambda v: (
+            _as_str(v.get("make")).lower(),
+            _as_str(v.get("model")).lower(),
+            v["year"] if isinstance(v.get("year"), int) else 99_999,
+        )
+    )
+    return out
+
+
+def fetch_published_vehicles(release: dict | None) -> list[dict]:
+    """Return the vehicle list from the previously-published asset.
+
+    Used as the merge base so this script never drops rows the
+    published asset already shipped. Failure modes (no release yet, no
+    asset on the release, network error, malformed JSON) all degrade
+    to an empty list — a clean first publish is the expected path on
+    the very first run.
+    """
+    if release is None:
+        return []
+    asset_url: str | None = None
+    for asset in release.get("assets") or []:
+        if asset.get("name") == TARGET_ASSET_NAME:
+            asset_url = asset.get("browser_download_url")
+            break
+    if not asset_url:
+        return []
+    try:
+        r = requests.get(asset_url, timeout=60)
+        r.raise_for_status()
+        data = r.json()
+    except (requests.RequestException, ValueError):
+        log_info(
+            "Could not download or parse the previously-published asset; "
+            "proceeding with fresh upstream only."
+        )
+        return []
+    if isinstance(data, dict):
+        vehicles = data.get("vehicles")
+        if isinstance(vehicles, list):
+            return [v for v in vehicles if isinstance(v, dict)]
+    return []
+
+
 def _gh_headers(token: str) -> dict:
     return {
         "Accept": "application/vnd.github+json",
@@ -319,20 +403,38 @@ def main() -> int:
     try:
         upstream_tag, raw = fetch_upstream()
         log_info(f"Fetched {len(raw)} vehicles from OpenEV Data {upstream_tag}")
-        vehicles = transform(raw)
-        log_info(f"After filtering: {len(vehicles)} vehicles retained")
-        if len(vehicles) < VALIDATION_FLOOR:
+        fresh = transform(raw)
+        log_info(f"After filtering: {len(fresh)} fresh vehicles retained")
+        if len(fresh) < VALIDATION_FLOOR:
             die(
-                f"Refusing to publish: only {len(vehicles)} vehicles passed "
-                f"the filter, floor is {VALIDATION_FLOOR}"
+                f"Refusing to publish: only {len(fresh)} fresh vehicles passed "
+                f"the filter, floor is {VALIDATION_FLOOR}. Aborting before "
+                f"merging into the previously-published asset, so a broken "
+                f"upstream cannot poison the existing data."
             )
+
+        # Fetch the existing release (if any) first, so we can:
+        #   (a) feed its assets into the incremental merge,
+        #   (b) then re-use the same release object below to delete the
+        #       outdated asset and upload the new one.
+        release = _get_release(token)
+        previously_published = fetch_published_vehicles(release)
+        log_info(
+            f"Previously-published asset: {len(previously_published)} vehicles"
+        )
+        vehicles = merge_incremental(previously_published, fresh)
+        added = len(vehicles) - len(previously_published)
+        log_info(
+            f"After merge: {len(vehicles)} vehicles (added/restored {added} vs "
+            f"the previously-published asset; upstream contributed {len(fresh)})"
+        )
+
         payload = build_payload(upstream_tag, vehicles)
         payload_bytes = json.dumps(payload, ensure_ascii=False, indent=2).encode(
             "utf-8"
         )
         log_info(f"Output size: {len(payload_bytes) / 1024:.1f} KB")
 
-        release = _get_release(token)
         if release is None:
             log_info(f"Creating release {TARGET_TAG} on {TARGET_REPO}")
             release = _create_release(token, upstream_tag)
