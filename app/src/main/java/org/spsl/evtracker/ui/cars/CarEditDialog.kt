@@ -202,17 +202,26 @@ object CarEditDialog {
     /**
      * Wire an in-document suggestion list against a [TextInputEditText].
      *
-     * As the user types, [container] is populated with up to
-     * [MAX_SUGGESTIONS] TextView rows whose label is produced by
-     * [labelOf] from each match. Picking a row sets [onPick] with the
-     * canonical item value; the caller is responsible for updating the
-     * EditText text (so the model picker can write the bare model name
-     * rather than the "Model · Variant" display string).
+     * Renders one of three states whenever the field is focused OR the
+     * text changes:
+     *   - Empty database -> "EV database not loaded" status row. This
+     *     surfaces the v1.13.0..v1.13.6 mystery directly in the UI:
+     *     prior versions silently fell back to an empty list via
+     *     `runCatching {}.getOrDefault(emptyList())` on the caller
+     *     side, which made the bug look like a popup-rendering issue
+     *     when it was really a data-loading issue.
+     *   - Empty query, database loaded -> first [MAX_SUGGESTIONS]
+     *     items as a "what's available" preview, so the user sees the
+     *     list immediately on focus (mirrors the Material exposed-
+     *     dropdown affordance the popup-based widget was supposed to
+     *     provide).
+     *   - Non-empty query -> filtered matches OR a "No matches for X"
+     *     status row.
      *
-     * `userTyping` guards against the auto-recursion that would
-     * otherwise fire when [onPick] writes back into the EditText: the
-     * watcher re-enters with the canonical value, the suggestion list
-     * matches itself, and the popup never closes.
+     * `userTyping` guards the auto-recursion that would otherwise fire
+     * when [onPick] writes back into the EditText (the watcher would
+     * re-enter with the canonical value, match itself, and never close
+     * the list).
      */
     private fun <T> TextInputEditText.bindInlineSuggestions(
         container: LinearLayout,
@@ -221,6 +230,41 @@ object CarEditDialog {
         onPick: (T) -> Unit,
     ) {
         var userTyping = true
+
+        fun renderNow() {
+            val items = itemsProvider()
+            val query = text?.toString().orEmpty().trim()
+            when {
+                items.isEmpty() -> {
+                    container.renderStatus("EV database not loaded")
+                }
+                query.isEmpty() -> {
+                    val preview = items.take(MAX_SUGGESTIONS)
+                    container.renderSuggestionsTyped(preview.map(labelOf)) { index ->
+                        userTyping = false
+                        onPick(preview[index])
+                        container.hideSuggestions()
+                        userTyping = true
+                    }
+                }
+                else -> {
+                    val matches = items
+                        .filter { labelOf(it).startsWith(query, ignoreCase = true) }
+                        .take(MAX_SUGGESTIONS)
+                    if (matches.isEmpty()) {
+                        container.renderStatus("No matches for \"$query\"")
+                    } else {
+                        container.renderSuggestionsTyped(matches.map(labelOf)) { index ->
+                            userTyping = false
+                            onPick(matches[index])
+                            container.hideSuggestions()
+                            userTyping = true
+                        }
+                    }
+                }
+            }
+        }
+
         addTextChangedListener(
             object : TextWatcher {
                 override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
@@ -229,33 +273,15 @@ object CarEditDialog {
 
                 override fun afterTextChanged(s: Editable?) {
                     if (!userTyping) return
-                    val query = s?.toString().orEmpty().trim()
-                    if (query.isEmpty()) {
-                        container.hideSuggestions()
-                        return
-                    }
-                    val matches = itemsProvider()
-                        .filter { labelOf(it).startsWith(query, ignoreCase = true) }
-                        .take(MAX_SUGGESTIONS)
-                    if (matches.isEmpty()) {
-                        container.hideSuggestions()
-                        return
-                    }
-                    container.renderSuggestions(matches.map(labelOf)) { index ->
-                        userTyping = false
-                        onPick(matches[index])
-                        container.hideSuggestions()
-                        userTyping = true
-                    }
+                    // Only re-render when the field has focus, so the
+                    // initial pre-fill on Edit doesn't surface a list
+                    // the user didn't ask for.
+                    if (hasFocus()) renderNow()
                 }
             },
         )
-        // If the user re-focuses the field after picking, surface the
-        // current suggestions again. Tap on the field itself (already
-        // focused) is also covered by the text watcher firing on the
-        // next keystroke, so no explicit click handler is needed.
         setOnFocusChangeListener { _, hasFocus ->
-            if (!hasFocus) container.hideSuggestions()
+            if (hasFocus) renderNow() else container.hideSuggestions()
         }
     }
 
@@ -266,7 +292,25 @@ object CarEditDialog {
         }
     }
 
-    private fun LinearLayout.renderSuggestions(
+    private fun LinearLayout.renderStatus(message: String) {
+        removeAllViews()
+        val tv = TextView(context).apply {
+            text = message
+            textSize = 14f
+            setTextColor(resolveColorAttr(android.R.attr.textColorSecondary))
+            val padH = dp(16)
+            val padV = dp(12)
+            setPadding(padH, padV, padH, padV)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+            )
+        }
+        addView(tv)
+        visibility = View.VISIBLE
+    }
+
+    private fun LinearLayout.renderSuggestionsTyped(
         labels: List<String>,
         onClickIndex: (Int) -> Unit,
     ) {

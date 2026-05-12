@@ -92,10 +92,32 @@ class CarsFragment : Fragment() {
      * dropdown content load to here rather than constructing it inside
      * the dialog so the dialog stays a pure object — no Hilt entry,
      * no ViewModel lookup inside a static `object`.
+     *
+     * v1.13.7 stopped swallowing `loadMakes()` failures behind
+     * `runCatching {}.getOrDefault(emptyList())`. The silent fallback
+     * masked the v1.13.0..v1.13.6 dropdown bug for six iterations: the
+     * popup looked broken because matches were never produced, but the
+     * actual failure was upstream in the data path. Now any exception
+     * surfaces as a Snackbar with the message, and the dialog still
+     * opens with an empty `makes` list so the user can still type
+     * freely.
      */
     private fun showCarDialog(existing: org.spsl.evtracker.data.local.entity.CarEntity?) {
         viewLifecycleOwner.lifecycleScope.launch {
-            val makes = runCatching { viewModel.loadMakes() }.getOrDefault(emptyList())
+            val result = runCatching { viewModel.loadMakes() }
+            val makes = result.getOrNull().orEmpty()
+            result.exceptionOrNull()?.let { e ->
+                android.util.Log.e(
+                    "CarsFragment",
+                    "loadMakes() failed: ${e::class.java.simpleName}: ${e.message}",
+                    e,
+                )
+                Snackbar.make(
+                    binding.root,
+                    "EV makes failed to load: ${e.message ?: e::class.java.simpleName}",
+                    Snackbar.LENGTH_LONG,
+                ).show()
+            }
             if (existing == null) {
                 CarEditDialog.showAdd(
                     context = requireContext(),
